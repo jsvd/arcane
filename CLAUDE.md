@@ -12,9 +12,12 @@ Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for 
 arcane/
 ├── README.md                      — Vision, elevator pitch, quick overview
 ├── CLAUDE.md                      — You are here
+├── CONTRIBUTING.md                — How to contribute (humans and agents)
 ├── LICENSE                        — Apache 2.0
 ├── docs/
 │   ├── engineering-philosophy.md  — The Three Laws, development principles, code personality
+│   ├── api-design.md              — LLM-friendly API rules, error design, naming
+│   ├── glossary.md                — Canonical definitions for all terms
 │   ├── architecture.md            — Two-layer design (Rust + TypeScript)
 │   ├── agent-protocol.md          — How AI agents interact with the engine
 │   ├── game-state.md              — State management, transactions, queries

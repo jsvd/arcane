@@ -103,6 +103,8 @@ See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 ## Documentation
 
 - [Engineering Philosophy](docs/engineering-philosophy.md) — The Three Laws, development principles, verification framework
+- [API Design](docs/api-design.md) — LLM-friendly API rules, error design, naming conventions
+- [Glossary](docs/glossary.md) — Canonical definitions for all project terminology
 - [Architecture](docs/architecture.md) — Two-layer design, Rust core, TypeScript runtime
 - [Agent Protocol](docs/agent-protocol.md) — How AI agents interact with the engine
 - [Game State](docs/game-state.md) — State management, transactions, queries
@@ -111,6 +113,7 @@ See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 - [Agent Tooling](docs/agent-tooling.md) — Claude Code agents, skills, and MCP tools for development
 - [Roadmap](docs/roadmap.md) — Phased development plan
 - [Technical Decisions](docs/technical-decisions.md) — ADR-style decision log
+- [Contributing](CONTRIBUTING.md) — How to contribute (humans and agents)
 
 ## License
 
