@@ -4,7 +4,7 @@
 
 Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for performance, TypeScript scripting for game logic.
 
-**Current status: Phase 0 — Design documents only. No code yet.**
+**Current status: Phase 1 — Core TypeScript interfaces and implementation.**
 
 ## Repository Structure
 
@@ -27,6 +27,16 @@ arcane/
 │   ├── development-workflow.md    — Parallel dev, model selection, worktrees
 │   ├── roadmap.md                 — Phased development plan
 │   └── technical-decisions.md     — ADR-style decision log
+├── runtime/
+│   └── state/
+│       ├── types.ts               — EntityId, Vec2, DeepReadonly
+│       ├── error.ts               — ArcaneError, createError()
+│       ├── prng.ts                — PRNGState, seed(), rollDice(), xoshiro128**
+│       ├── transaction.ts         — Mutation, Diff, transaction(), computeDiff()
+│       ├── query.ts               — query(), get(), has(), filter combinators
+│       ├── observe.ts             — ObserverRegistry, path pattern matching
+│       ├── store.ts               — GameStore, createStore()
+│       └── index.ts               — Public API barrel export
 ```
 
 ## Conventions
@@ -69,11 +79,13 @@ Read `docs/engineering-philosophy.md` first. It governs everything else.
 5. **Explicit over implicit** — No hidden state, no singletons, no magic strings.
 6. **Functional core** — State in, state out. Pure functions for game logic.
 
-## What NOT to Do (Phase 0)
+## Phase 1 Constraints
 
-- Do not write implementation code. This is design phase only.
-- Do not create Cargo.toml, package.json, or any build files.
-- Do not scaffold directory structures beyond `docs/`.
+- All TypeScript code lives under `runtime/`. No Rust code yet.
+- Zero external dependencies. Standard library only.
+- All state management functions are pure: state in, state out.
+- No build system yet — files use `.ts` extension imports.
+- Do not create Cargo.toml, package.json, or CI/CD configuration.
 - Do not make technology commitments beyond what's documented in `technical-decisions.md`.
 
 ## Agent Tooling
