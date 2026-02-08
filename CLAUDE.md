@@ -24,6 +24,7 @@ arcane/
 │   ├── systems-and-recipes.md     — Declarative game systems framework
 │   ├── world-authoring.md         — Code-defined scenes, worlds, tilemaps
 │   ├── agent-tooling.md           — Claude Code agents, skills, MCP tools
+│   ├── development-workflow.md    — Parallel dev, model selection, worktrees
 │   ├── roadmap.md                 — Phased development plan
 │   └── technical-decisions.md     — ADR-style decision log
 ```

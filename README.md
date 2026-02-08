@@ -113,6 +113,7 @@ See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 - [Agent Tooling](docs/agent-tooling.md) — Claude Code agents, skills, and MCP tools for development
 - [Roadmap](docs/roadmap.md) — Phased development plan
 - [Technical Decisions](docs/technical-decisions.md) — ADR-style decision log
+- [Development Workflow](docs/development-workflow.md) — Parallel development, model selection, session management
 - [Contributing](CONTRIBUTING.md) — How to contribute (humans and agents)
 
 ## License
