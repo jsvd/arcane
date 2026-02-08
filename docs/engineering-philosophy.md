@@ -10,6 +10,8 @@ The voice of Arcane is **calm, precise, and opinionated**. It doesn't hedge. It 
 
 This identity carries through everything: error messages are helpful and specific. APIs are small and obvious. Documentation assumes intelligence but not context. Tests describe behavior, not implementation.
 
+But above all: **we are building a game engine.** This is supposed to be fun. Not fun as an afterthought — fun as a load-bearing requirement. The moment this project starts feeling like a chore, something has gone wrong and needs fixing as urgently as any bug.
+
 ---
 
 ## The Three Laws
@@ -188,3 +190,36 @@ These principles are not permanent. They are the best understanding we have *now
 4. Update this document and any affected code/docs
 
 **What doesn't change:** the commitment to correctness, clarity, and minimality — in that order. Those are load-bearing walls. Everything else is interior design.
+
+---
+
+## The Zeroth Law: Have Fun
+
+The Three Laws are numbered 1, 2, 3. This one comes before all of them.
+
+We are building a game engine. A thing whose entire purpose is to create joy, wonder, surprise, and delight. If the process of building it doesn't carry some of that same energy, we're doing it wrong.
+
+This isn't a platitude. It's a design principle with real consequences:
+
+### Fun is a signal
+When work feels fun, it usually means the abstractions are right, the scope is clear, and the tools are working. When it feels like a slog, that's a smell — something is over-engineered, under-specified, or pointed in the wrong direction. Pay attention to that signal.
+
+### Fun sustains the project
+Open source projects don't die from technical problems. They die from burnout. The contributors — human and agent alike — who stick around are the ones who enjoy the work. Protecting that enjoyment is not indulgent; it's strategic.
+
+### Fun shows up in the product
+An engine built with care and enthusiasm produces different work than one built out of obligation. The examples are more creative. The error messages have personality. The API names are a little more evocative. The documentation teaches instead of lecturing. Users can feel it, even if they can't name it.
+
+### What this means in practice
+
+**Name things with flavor.** The engine is called Arcane — as in spellcasting through incantations. Lean into it. A recipe called `fog-of-war` is more fun than `visibility-system`. A function called `rollInitiative` is more fun than `calculateTurnOrder`. When two names are equally clear, pick the one that makes you smile.
+
+**Celebrate milestones.** When a phase is complete, when the first sprite renders, when combat actually works — pause and appreciate it. These are real achievements.
+
+**Make the demo game fun.** The BFRPG showcase isn't a test harness. It's a game. It should have personality, surprises, and moments that make you want to keep playing. If the showcase is boring, the engine has failed its purpose.
+
+**Keep the feedback loop tight.** The most fun part of game development is the cycle: change something → see the result → change it again. Hot reload, instant tests, text descriptions — all of these serve fun by keeping the loop fast. If the loop slows down, fix it before anything else.
+
+**Experiment freely.** Not every idea needs to survive. Trying weird things — a combat system with morale, a dungeon that reshapes itself, an NPC that remembers your mistakes — is how good games get discovered. The architecture (headless testing, state-as-database, seeded PRNG) makes experimentation cheap. Use that.
+
+**Don't let process kill play.** The principles in this document exist to prevent chaos, not to prevent joy. If following a principle makes the work worse and less enjoyable with no corresponding benefit, the principle is wrong. Challenge it.
