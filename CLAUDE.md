@@ -14,6 +14,7 @@ arcane/
 ├── CLAUDE.md                      — You are here
 ├── LICENSE                        — Apache 2.0
 ├── docs/
+│   ├── engineering-philosophy.md  — The Three Laws, development principles, code personality
 │   ├── architecture.md            — Two-layer design (Rust + TypeScript)
 │   ├── agent-protocol.md          — How AI agents interact with the engine
 │   ├── game-state.md              — State management, transactions, queries
@@ -41,6 +42,19 @@ arcane/
 - All TypeScript examples should be valid, readable, and illustrate the actual intended API.
 - Use realistic game scenarios (BFRPG RPG examples preferred).
 - Show both the "what" (API usage) and the "why" (what problem it solves).
+
+## Engineering Philosophy
+
+Read `docs/engineering-philosophy.md` first. It governs everything else.
+
+**The Three Laws** (in priority order):
+1. **Is it correct?** — Verified by tests, not inspection.
+2. **Is it clear?** — Readable by a human or agent six months from now.
+3. **Is it minimal?** — The least code/complexity that achieves correctness and clarity.
+
+**Definition of Done**: It works, it's tested, it's consistent, it's documented, it's reviewed.
+
+**Acceptance criteria before implementation**: Write what "done" looks like before writing code. Write the tests (or test signatures) before the implementation.
 
 ## Key Design Principles
 

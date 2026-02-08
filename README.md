@@ -102,6 +102,7 @@ See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 
 ## Documentation
 
+- [Engineering Philosophy](docs/engineering-philosophy.md) — The Three Laws, development principles, verification framework
 - [Architecture](docs/architecture.md) — Two-layer design, Rust core, TypeScript runtime
 - [Agent Protocol](docs/agent-protocol.md) — How AI agents interact with the engine
 - [Game State](docs/game-state.md) — State management, transactions, queries
