@@ -8,9 +8,32 @@ Arcane is built by AI agents. The engine is the proof of concept. If an agent-na
 2. Claude builds core runtime (state management, transactions, event loop)
 3. Claude builds first renderer
 4. Claude builds test framework integration
-5. Claude builds first game system recipes
-6. Claude builds showcase game (BFRPG RPG ported from Godot)
-7. Showcase game validates the engine. Gaps surface as pain points. Fix. Iterate.
+5. Claude builds game system recipes
+6. Claude builds mini-game demos across genres — each validates new capabilities
+7. Claude builds showcase game (BFRPG RPG ported from Godot)
+8. Demos and showcase surface pain points. Fix. Iterate.
+
+## Demo Games — Genre Validation Strategy
+
+The engine must serve the breadth of 2D games, not just RPGs. Each demo is small (< 500 lines of game logic) but exercises distinct engine capabilities. Demos are built at the phase where their prerequisites land.
+
+| Demo | Phase | Genre | What It Validates |
+|---|---|---|---|
+| **Sokoban** | 1 | Puzzle | State + transactions, undo/redo via replaceState, win detection |
+| **Card Battler** | 1 | Card game | Non-entity state shapes (deck/hand/discard zones), PRNG shuffle |
+| **Roguelike** | 2 | Roguelike | Procedural generation, tile rendering, fog of war |
+| **Breakout** | 2 | Action | Real-time loop, collision, physics, frame-rate independence |
+| **Tower Defense** | 4 | Strategy | Spatial queries, pathfinding, entity waves, spawn/despawn |
+| **BFRPG RPG** | 5 | RPG | Full integration: combat, inventory, dialogue, save/load |
+
+### Why These Games
+
+- **Sokoban**: Smallest possible "real game". If the state model can't handle a grid puzzle cleanly, it can't handle anything.
+- **Card Battler**: State tree looks nothing like an entity-position game. Proves the state model is generic, not RPG-shaped.
+- **Roguelike**: Procedural content generation is the acid test for PRNG determinism and tile map support.
+- **Breakout**: The simplest real-time game. If the engine can't do Breakout at 60 FPS, the frame loop is broken.
+- **Tower Defense**: Exercises spatial queries and pathfinding together under entity churn (constant spawn/despawn).
+- **BFRPG RPG**: The capstone. Everything composes into a full game.
 
 ---
 
@@ -40,27 +63,42 @@ Establish the vision, architecture, and design decisions before writing code.
 
 ---
 
-## Phase 1: Rust Skeleton + TypeScript Runtime + Headless Game Logic
+## Phase 1: TypeScript Runtime + Headless Game Logic
 
-Build the foundation: a TypeScript game runtime that runs headless, with the Rust project scaffolded.
+Build the foundation: a TypeScript game runtime that runs headless. Prove the state model works across game genres, not just RPGs.
+
+### Deliverables
+- TypeScript runtime: state management, transactions, queries, diffs
+- Observation/subscription system
+- Deterministic PRNG
+- Headless test harness — game logic runs without rendering
+- **Demo: Sokoban** — pure state + transactions, undo via replaceState(), win detection
+- **Demo: Card battler** — deck/hand/discard zones, PRNG shuffle, turn phases
+
+### Success Criteria
+- State model supports both grid-puzzle and card-zone game shapes
+- Sokoban is playable headless with full undo/redo
+- Card battler runs deterministic matches from seed
+- State transactions produce correct diffs
+- Seeded PRNG produces deterministic results
+- Tests cover all core modules
+
+---
+
+## Phase 1.5: Rust Skeleton + Bridge
+
+Scaffold the Rust project and wire TypeScript into it.
 
 ### Deliverables
 - Rust project with Cargo workspace (core, cli crates)
 - V8/deno_core embedding — TypeScript runs inside Rust
-- TypeScript runtime: state management, transactions, queries, diffs
-- Observation/subscription system
-- Deterministic PRNG
-- Headless test harness — game logic runs in Node without engine
-- First system definition: a minimal turn-based combat
 - `arcane test` CLI command (runs TS tests headless)
 - CI pipeline (Rust + TS tests)
+- Tests pass in both Node and embedded V8
 
 ### Success Criteria
-- Can define a combat system in TypeScript
-- Can run a full combat encounter headless (no rendering)
-- Tests pass in Node and in embedded V8
-- State transactions produce correct diffs
-- Seeded PRNG produces deterministic results
+- TS runtime from Phase 1 runs identically inside Rust V8 embedding
+- CI validates both Rust and TS
 
 ---
 
@@ -76,12 +114,13 @@ Build the visual layer. The game should look like a game.
 - Basic 2D lighting (point lights, ambient)
 - Rendering bridge: TypeScript issues render commands, Rust executes them
 - `arcane dev` command (launches game with hot-reload)
+- **Demo: Roguelike** — procedural dungeon generation + tile rendering + fog of war
+- **Demo: Breakout** — real-time game loop, collision detection, physics
 
 ### Success Criteria
-- A tilemap dungeon renders on screen
-- Sprites animate (walk, attack, idle)
+- Roguelike generates and renders tile dungeons
+- Breakout runs at 60 FPS with real-time collision
 - Camera follows the player
-- Lighting creates atmosphere
 - Hot-reload works: change TS → see result in < 1 second
 
 ---
@@ -113,9 +152,9 @@ Make the engine agent-native. This is what differentiates Arcane.
 
 ---
 
-## Phase 4: First Recipes (Combat, Inventory, Movement)
+## Phase 4: First Recipes (Combat, Inventory, Movement, Pathfinding)
 
-Build the first composable game systems. Prove the recipe pattern works.
+Build the first composable game systems. Prove the recipe pattern works across genres.
 
 ### Deliverables
 - `@arcane/turn-based-combat` recipe
@@ -124,19 +163,23 @@ Build the first composable game systems. Prove the recipe pattern works.
 - `@arcane/inventory-equipment` recipe
   - Items, stacking, equipment slots
   - Wiring into combat (armor, weapons)
-- `@arcane/movement` recipe
+- `@arcane/grid-movement` recipe
   - Grid-based movement
   - Pathfinding integration
   - Collision with tilemap
 - `@arcane/fog-of-war` recipe
   - Visibility calculation
   - Explored/unexplored/visible states
+- `@arcane/pathfinding` recipe
+  - A* over grid maps, reusable across genres
 - `npx arcane add` CLI command
 - Recipe documentation and test patterns
+- **Demo: Tower defense** — spatial queries, pathfinding, entity waves, spawn/despawn lifecycle
 
 ### Success Criteria
 - Each recipe works standalone
 - Recipes compose without conflicts
+- Tower defense demo uses pathfinding + spatial query recipes together
 - `extend` pattern allows meaningful customization
 - Each recipe ships with comprehensive tests
 - An agent can install, configure, and customize a recipe
@@ -145,7 +188,7 @@ Build the first composable game systems. Prove the recipe pattern works.
 
 ## Phase 5: Showcase Game (BFRPG RPG)
 
-Port the existing Godot BFRPG RPG to Arcane. This validates everything.
+Port the existing Godot BFRPG RPG to Arcane. This is the capstone, not the only validation — the mini-game demos proved individual capabilities; this proves they compose into a full game.
 
 ### Deliverables
 - BFRPG combat system (extending turn-based-combat recipe)
@@ -174,9 +217,9 @@ Ship it.
 - Public GitHub repository
 - Documentation site
 - Getting started guide
-- Tutorial: "Build an RPG in 30 minutes with Claude"
+- Tutorials: "Build a Sokoban in 10 minutes", "Build an RPG in 30 minutes with Claude"
 - Recipe contribution guide
-- Example projects (RPG, roguelike, tactics)
+- Example projects spanning genres (puzzle, card game, roguelike, platformer, tower defense, RPG)
 - npm packages published
 - Crates.io packages published
 
