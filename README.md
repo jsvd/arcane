@@ -96,7 +96,7 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phase 0: Design documents.** No code yet. These docs are the north star.
+**Phase 2a complete.** Window creation, sprite rendering, camera system, `arcane dev` command with hot-reload. 163 tests passing in both Node and V8.
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 
