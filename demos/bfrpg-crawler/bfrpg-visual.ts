@@ -295,11 +295,7 @@ function renderHUD() {
   const panelW = 200.0;
   const panelH = 120.0;
 
-  drawPanel({
-    x: panelX,
-    y: panelY,
-    w: panelW,
-    h: panelH,
+  drawPanel(panelX, panelY, panelW, panelH, {
     fillColor: COLOR_BG,
     borderColor: COLOR_PANEL,
     borderWidth: 2.0,
@@ -325,20 +321,21 @@ function renderHUD() {
   // HP bar
   drawLabel("HP:", panelX + 10.0, panelY + 45.0, { layer: 11, screenSpace: true });
 
-  drawBar({
-    x: panelX + 40.0,
-    y: panelY + 45.0,
-    w: 150.0,
-    h: 12.0,
-    value: character.hp,
-    maxValue: character.maxHp,
-    fillColor: { r: 60/255, g: 180/255, b: 60/255, a: 1.0 },
-    bgColor: { r: 180/255, g: 60/255, b: 60/255, a: 1.0 },
-    borderColor: COLOR_PANEL,
-    borderWidth: 1.0,
-    layer: 11,
-    screenSpace: true,
-  });
+  drawBar(
+    panelX + 40.0,
+    panelY + 45.0,
+    150.0,
+    12.0,
+    character.hp / character.maxHp,
+    {
+      fillColor: { r: 60/255, g: 180/255, b: 60/255, a: 1.0 },
+      bgColor: { r: 180/255, g: 60/255, b: 60/255, a: 1.0 },
+      borderColor: COLOR_PANEL,
+      borderWidth: 1.0,
+      layer: 11,
+      screenSpace: true,
+    }
+  );
 
   drawText(
     `${character.hp}/${character.maxHp}`,
@@ -377,11 +374,7 @@ function renderHUD() {
   const logPanelW = 780.0;
   const logPanelH = 40.0;
 
-  drawPanel({
-    x: logPanelX,
-    y: logPanelY,
-    w: logPanelW,
-    h: logPanelH,
+  drawPanel(logPanelX, logPanelY, logPanelW, logPanelH, {
     fillColor: COLOR_BG,
     borderColor: COLOR_PANEL,
     borderWidth: 2.0,
@@ -401,11 +394,7 @@ function renderCombatUI() {
   // For now, just show a simple indicator
   const font = getDefaultFont();
 
-  drawPanel({
-    x: 600.0,
-    y: 10.0,
-    w: 190.0,
-    h: 80.0,
+  drawPanel(600.0, 10.0, 190.0, 80.0, {
     fillColor: COLOR_BG,
     borderColor: { r: 1.0, g: 0.4, b: 0.4, a: 1.0 },
     borderWidth: 3.0,
@@ -424,11 +413,7 @@ function renderDeathScreen() {
   const font = getDefaultFont();
 
   // Darken overlay
-  drawPanel({
-    x: 0.0,
-    y: 0.0,
-    w: 800.0,
-    h: 600.0,
+  drawPanel(0.0, 0.0, 800.0, 600.0, {
     fillColor: { r: 0.0, g: 0.0, b: 0.0, a: 0.8 },
     borderColor: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
     borderWidth: 0.0,
@@ -458,11 +443,7 @@ function renderVictoryScreen() {
   const font = getDefaultFont();
 
   // Victory overlay
-  drawPanel({
-    x: 0.0,
-    y: 0.0,
-    w: 800.0,
-    h: 600.0,
+  drawPanel(0.0, 0.0, 800.0, 600.0, {
     fillColor: { r: 20/255, g: 30/255, b: 20/255, a: 0.9 },
     borderColor: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
     borderWidth: 0.0,

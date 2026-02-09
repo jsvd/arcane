@@ -108,23 +108,43 @@ export function drawPanel(
 
   // Fill (inset by border width)
   const fill = toWorld(x + bw, y + bw, w - 2 * bw, h - 2 * bw, ss);
-  drawSprite({ textureId: fillTex, x: fill.x, y: fill.y, w: fill.w, h: fill.h, layer });
+  const fillX = fill.x;
+  const fillY = fill.y;
+  const fillW = fill.w;
+  const fillH = fill.h;
+  drawSprite({ textureId: fillTex, x: fillX, y: fillY, w: fillW, h: fillH, layer });
 
   // Top border
   const top = toWorld(x, y, w, bw, ss);
-  drawSprite({ textureId: borderTex, x: top.x, y: top.y, w: top.w, h: top.h, layer: layer + 1 });
+  const topX = top.x;
+  const topY = top.y;
+  const topW = top.w;
+  const topH = top.h;
+  drawSprite({ textureId: borderTex, x: topX, y: topY, w: topW, h: topH, layer: layer + 1 });
 
   // Bottom border
   const bot = toWorld(x, y + h - bw, w, bw, ss);
-  drawSprite({ textureId: borderTex, x: bot.x, y: bot.y, w: bot.w, h: bot.h, layer: layer + 1 });
+  const botX = bot.x;
+  const botY = bot.y;
+  const botW = bot.w;
+  const botH = bot.h;
+  drawSprite({ textureId: borderTex, x: botX, y: botY, w: botW, h: botH, layer: layer + 1 });
 
   // Left border
   const left = toWorld(x, y + bw, bw, h - 2 * bw, ss);
-  drawSprite({ textureId: borderTex, x: left.x, y: left.y, w: left.w, h: left.h, layer: layer + 1 });
+  const leftX = left.x;
+  const leftY = left.y;
+  const leftW = left.w;
+  const leftH = left.h;
+  drawSprite({ textureId: borderTex, x: leftX, y: leftY, w: leftW, h: leftH, layer: layer + 1 });
 
   // Right border
   const right = toWorld(x + w - bw, y + bw, bw, h - 2 * bw, ss);
-  drawSprite({ textureId: borderTex, x: right.x, y: right.y, w: right.w, h: right.h, layer: layer + 1 });
+  const rightX = right.x;
+  const rightY = right.y;
+  const rightW = right.w;
+  const rightH = right.h;
+  drawSprite({ textureId: borderTex, x: rightX, y: rightY, w: rightW, h: rightH, layer: layer + 1 });
 }
 
 /**
@@ -152,7 +172,11 @@ export function drawBar(
   // Background
   const bg = toWorld(x, y, w, h, ss);
   const bgTex = getColorTexture(bgColor);
-  drawSprite({ textureId: bgTex, x: bg.x, y: bg.y, w: bg.w, h: bg.h, layer });
+  const bgX = bg.x;
+  const bgY = bg.y;
+  const bgW = bg.w;
+  const bgH = bg.h;
+  drawSprite({ textureId: bgTex, x: bgX, y: bgY, w: bgW, h: bgH, layer });
 
   // Fill (inset by border if present)
   const inset = bw;
@@ -160,20 +184,40 @@ export function drawBar(
   if (fillW > 0) {
     const fill = toWorld(x + inset, y + inset, fillW, h - 2 * inset, ss);
     const fillTex = getColorTexture(fillColor);
-    drawSprite({ textureId: fillTex, x: fill.x, y: fill.y, w: fill.w, h: fill.h, layer: layer + 1 });
+    const fillX = fill.x;
+    const fillY = fill.y;
+    const fillW2 = fill.w;
+    const fillH = fill.h;
+    drawSprite({ textureId: fillTex, x: fillX, y: fillY, w: fillW2, h: fillH, layer: layer + 1 });
   }
 
   // Optional border
   if (borderColor && bw > 0) {
     const borderTex = getColorTexture(borderColor);
     const top = toWorld(x, y, w, bw, ss);
-    drawSprite({ textureId: borderTex, x: top.x, y: top.y, w: top.w, h: top.h, layer: layer + 2 });
+    const topX = top.x;
+    const topY = top.y;
+    const topW = top.w;
+    const topH = top.h;
+    drawSprite({ textureId: borderTex, x: topX, y: topY, w: topW, h: topH, layer: layer + 2 });
     const bot = toWorld(x, y + h - bw, w, bw, ss);
-    drawSprite({ textureId: borderTex, x: bot.x, y: bot.y, w: bot.w, h: bot.h, layer: layer + 2 });
+    const botX = bot.x;
+    const botY = bot.y;
+    const botW = bot.w;
+    const botH = bot.h;
+    drawSprite({ textureId: borderTex, x: botX, y: botY, w: botW, h: botH, layer: layer + 2 });
     const left = toWorld(x, y + bw, bw, h - 2 * bw, ss);
-    drawSprite({ textureId: borderTex, x: left.x, y: left.y, w: left.w, h: left.h, layer: layer + 2 });
+    const leftX = left.x;
+    const leftY = left.y;
+    const leftW = left.w;
+    const leftH = left.h;
+    drawSprite({ textureId: borderTex, x: leftX, y: leftY, w: leftW, h: leftH, layer: layer + 2 });
     const right = toWorld(x + w - bw, y + bw, bw, h - 2 * bw, ss);
-    drawSprite({ textureId: borderTex, x: right.x, y: right.y, w: right.w, h: right.h, layer: layer + 2 });
+    const rightX = right.x;
+    const rightY = right.y;
+    const rightW = right.w;
+    const rightH = right.h;
+    drawSprite({ textureId: borderTex, x: rightX, y: rightY, w: rightW, h: rightH, layer: layer + 2 });
   }
 }
 

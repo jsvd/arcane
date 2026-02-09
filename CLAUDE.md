@@ -124,7 +124,8 @@ arcane/
 │   ├── roguelike/                 — Phase 2b demo: procedural dungeon, FOV, fog of war
 │   ├── platformer/                — Phase 4 demo: gravity, platforms, coins, text HUD, UI bars
 │   ├── tower-defense/             — Phase 5 demo: tower placement, enemy waves, pathfinding
-│   └── sprite-demo/               — Phase 5.5 demo: asset loading validation with sprite sheet + sound
+│   ├── sprite-demo/               — Phase 5.5 demo: asset loading validation with sprite sheet + sound
+│   └── bfrpg-crawler/             — Phase 6 demo: BFRPG dungeon crawler with character creation, combat, AI
 ├── recipes/
 │   ├── turn-based-combat/         — Initiative, attack/defend, victory detection
 │   ├── inventory-equipment/       — Items, stacking, weight, equipment slots, stat bonuses
@@ -172,7 +173,7 @@ Read `docs/engineering-philosophy.md` first. It governs everything else.
 5. **Explicit over implicit** — No hidden state, no singletons, no magic strings.
 6. **Functional core** — State in, state out. Pure functions for game logic.
 
-## Current Constraints (Phase 5.5)
+## Current Constraints (Phase 6)
 
 - TypeScript code lives under `runtime/`. Rust code under `core/` and `cli/`.
 - TS runtime has zero external dependencies. Rust crates use deno_core, deno_ast, clap, tokio, anyhow, wgpu, winit, image, bytemuck, notify, tiny_http, rodio.
