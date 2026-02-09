@@ -74,6 +74,13 @@ You are a first-class contributor. The codebase is designed for you.
 - If a design doc contradicts itself, open an issue rather than guessing
 - If you discover a gap in the design, document it — don't silently work around it
 
+**Working as a teammate:**
+- Check the shared task list for assigned or available work
+- Claim unblocked tasks, prefer lowest ID first
+- Own your files — don't edit files another teammate is working on
+- Message the lead when blocked or when a task surfaces new work
+- Mark tasks completed when done, then check for next available work
+
 ## For Humans
 
 Arcane is agent-native, but human-usable. You don't need to work like an agent.
@@ -89,6 +96,43 @@ Arcane is agent-native, but human-usable. You don't need to work like an agent.
 - Playtesting and "feel" feedback
 - Architecture review (do the pieces actually fit together?)
 - Edge cases that emerge from real gameplay, not synthetic tests
+
+## Building and Testing
+
+### Prerequisites
+- **Node.js 24+** (native TypeScript stripping via `--experimental-strip-types`)
+- **Rust stable** (latest, with `cargo`)
+
+### Running Tests
+
+```bash
+# TypeScript tests via Node
+./run-tests.sh
+
+# TypeScript tests via V8 (embedded in Rust)
+cargo run -- test
+
+# Rust integration tests
+cargo test --workspace
+
+# All three should pass before submitting a PR.
+```
+
+### Building
+
+```bash
+# Check compilation
+cargo check --workspace
+
+# Full build (debug)
+cargo build --workspace
+
+# The CLI binary is at target/debug/arcane
+```
+
+### Test Harness
+
+All test files import from `runtime/testing/harness.ts` — a universal harness that works in both Node and V8. **Do not import from `node:test` or `node:assert` directly.** The harness provides `describe`, `it`, and `assert` (with `equal`, `deepEqual`, `notEqual`, `notDeepEqual`, `ok`, `match`, `throws`).
 
 ## Code Style
 

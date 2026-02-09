@@ -24,6 +24,67 @@ Not every task needs the same model. Using the right model for the task saves ti
 - Code that other systems will depend on heavily
 - First-time implementations of core patterns (the pattern needs to be right)
 
+## Agent Teams
+
+### What Agent Teams Are
+
+Agent teams let a lead Claude Code session spawn multiple teammate sessions that coordinate via a shared task list and messaging. The lead designs and decomposes work; teammates claim tasks, implement them independently, and report back. All sessions share the same repository and branch.
+
+```
+                  ┌─────────────┐
+                  │  Team Lead  │
+                  │ (Opus/main) │
+                  └──────┬──────┘
+            ┌────────────┼────────────┐
+            ▼            ▼            ▼
+     ┌────────────┐┌────────────┐┌────────────┐
+     │ Teammate A ││ Teammate B ││ Teammate C │
+     │  (Sonnet)  ││  (Sonnet)  ││  (Sonnet)  │
+     └────────────┘└────────────┘└────────────┘
+            │            │            │
+            └────────────┼────────────┘
+                    Shared Task List
+```
+
+### Subagents vs Agent Teams vs Worktrees
+
+| Dimension | Subagents | Agent Teams | Git Worktrees |
+|---|---|---|---|
+| **Scope** | Quick research, narrow tasks | Multi-file implementation, full features | Long-lived parallel workstreams |
+| **Coordination** | Parent waits for result | Task list + messaging | Manual merge |
+| **File access** | Read-only (Explore) or single-task | Full read/write, file ownership rules | Separate branch per worktree |
+| **Duration** | Seconds to minutes | Minutes to an hour | Hours to days |
+| **Context** | Inherits parent context | Reads CLAUDE.md, gets spawn prompt | Independent session |
+| **Best for** | Parallel searches, quick lookups | Decomposed implementation work | Cross-cutting features, experiments |
+
+### When to Use Agent Teams
+
+Use agent teams when:
+- A task decomposes into 3+ independent subtasks that touch different files
+- You want parallel implementation without branch management overhead
+- The work fits in one session and doesn't need long-lived branches
+
+Don't use agent teams when:
+- Tasks are sequential (each depends on the previous)
+- Multiple teammates would need to edit the same files (use worktrees instead)
+- The task is small enough for one agent or a subagent
+
+### File Ownership Rule
+
+**Each teammate owns distinct files. No two teammates edit the same file simultaneously.** This is the most important discipline in team mode. The lead assigns file scope when creating tasks, and teammates respect those boundaries. If a teammate discovers they need to modify a file owned by another, they message the lead to coordinate.
+
+### Task Sizing for Teammates
+
+Good teammate tasks:
+- 5-6 tasks per teammate, each self-contained
+- Clear deliverables and acceptance criteria
+- Explicit file scope (which files to create or modify)
+- Can be verified independently (tests pass, file exists, etc.)
+
+### Model Selection for Teammates
+
+The lead typically runs on Opus (coordination, design decisions). Teammates run on Sonnet (implementation) or Haiku (simple tasks). Match the model to the task complexity — see the [Model Selection](#model-selection) table above.
+
 ## Parallel Development with Git Worktrees
 
 ### Why Worktrees
@@ -104,6 +165,11 @@ Workstream A needs zero Rust. Workstream B needs minimal TS. They converge when 
 - Exploring different parts of the codebase in parallel
 - Reading multiple files/docs to gather context
 
+**Across sessions, use agent teams for:**
+- Decomposed implementation work where each teammate owns different files
+- Parallelizing a feature that spans multiple modules (e.g., state + queries + tests)
+- Tasks that benefit from full read/write access but don't need separate branches
+
 ### What Must Be Sequential
 
 - **Core patterns first.** The state tree type system, the transaction model, the query API — these set patterns everything else follows. Get these right with Opus before parallelizing the work that depends on them.
@@ -120,8 +186,9 @@ Most efficient pattern for a phase:
    This is the "fork point" — everything downstream depends on this.
 
 2. IMPLEMENT (parallel, Sonnet)
-   Fork into worktrees. Each implements against the defined interfaces.
-   Independent workstreams, independent Claude Code sessions.
+   Fork into worktrees or spawn an agent team. Each implements against the defined interfaces.
+   Worktrees: independent branches, independent sessions.
+   Agent teams: shared branch, coordinated via task list, file ownership per teammate.
 
 3. INTEGRATE (sequential, Opus)
    Merge branches. Run integration tests. Fix conflicts.

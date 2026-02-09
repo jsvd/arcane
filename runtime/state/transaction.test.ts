@@ -1,5 +1,4 @@
-import { describe, it } from "node:test";
-import { strict as assert } from "node:assert";
+import { describe, it, assert } from "../testing/harness.ts";
 import {
   set,
   update,

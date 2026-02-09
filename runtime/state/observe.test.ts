@@ -1,5 +1,4 @@
-import { describe, it } from "node:test";
-import { strict as assert } from "node:assert";
+import { describe, it, assert } from "../testing/harness.ts";
 import { createObserverRegistry } from "./observe.ts";
 import { computeDiff } from "./transaction.ts";
 import type { Diff } from "./transaction.ts";

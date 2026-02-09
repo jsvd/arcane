@@ -1,5 +1,4 @@
-import { describe, it } from "node:test";
-import { strict as assert } from "node:assert";
+import { describe, it, assert } from "../../runtime/testing/harness.ts";
 import { parseLevel, buildMove, createSokobanGame } from "./sokoban.ts";
 
 // Simple 1-box level (solvable in 2 moves: up, up)

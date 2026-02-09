@@ -65,40 +65,45 @@ Establish the vision, architecture, and design decisions before writing code.
 
 ## Phase 1: TypeScript Runtime + Headless Game Logic
 
+**Status: Complete**
+
 Build the foundation: a TypeScript game runtime that runs headless. Prove the state model works across game genres, not just RPGs.
 
 ### Deliverables
-- TypeScript runtime: state management, transactions, queries, diffs
-- Observation/subscription system
-- Deterministic PRNG
-- Headless test harness — game logic runs without rendering
-- **Demo: Sokoban** — pure state + transactions, undo via replaceState(), win detection
-- **Demo: Card battler** — deck/hand/discard zones, PRNG shuffle, turn phases
+- [x] TypeScript runtime: state management, transactions, queries, diffs
+- [x] Observation/subscription system
+- [x] Deterministic PRNG
+- [x] Headless test harness — game logic runs without rendering
+- [x] **Demo: Sokoban** — pure state + transactions, undo via replaceState(), win detection
+- [x] **Demo: Card battler** — deck/hand/discard zones, PRNG shuffle, turn phases
 
 ### Success Criteria
-- State model supports both grid-puzzle and card-zone game shapes
-- Sokoban is playable headless with full undo/redo
-- Card battler runs deterministic matches from seed
-- State transactions produce correct diffs
-- Seeded PRNG produces deterministic results
-- Tests cover all core modules
+- [x] State model supports both grid-puzzle and card-zone game shapes
+- [x] Sokoban is playable headless with full undo/redo
+- [x] Card battler runs deterministic matches from seed
+- [x] State transactions produce correct diffs
+- [x] Seeded PRNG produces deterministic results
+- [x] Tests cover all core modules (160 tests)
 
 ---
 
 ## Phase 1.5: Rust Skeleton + Bridge
 
+**Status: Complete**
+
 Scaffold the Rust project and wire TypeScript into it.
 
 ### Deliverables
-- Rust project with Cargo workspace (core, cli crates)
-- V8/deno_core embedding — TypeScript runs inside Rust
-- `arcane test` CLI command (runs TS tests headless)
-- CI pipeline (Rust + TS tests)
-- Tests pass in both Node and embedded V8
+- [x] Rust project with Cargo workspace (core, cli crates)
+- [x] V8/deno_core embedding — TypeScript runs inside Rust
+- [x] `arcane test` CLI command (runs TS tests headless)
+- [x] CI pipeline (Rust + TS tests)
+- [x] Tests pass in both Node and embedded V8
+- [x] Universal test harness (Node + V8 dual-mode)
 
 ### Success Criteria
-- TS runtime from Phase 1 runs identically inside Rust V8 embedding
-- CI validates both Rust and TS
+- [x] TS runtime from Phase 1 runs identically inside Rust V8 embedding (160 tests pass in both)
+- [x] CI validates both Rust and TS
 
 ---
 

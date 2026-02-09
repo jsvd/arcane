@@ -11,6 +11,29 @@ Arcane is built by AI agents. The tooling for building Arcane should itself be a
 3. **MCP tools** for engine-specific operations (inspect state, describe scene, run headless)
 4. **Self-evolution** — the tooling set is reviewed and updated as the project matures
 
+## Agent Teams
+
+Agent teams coordinate multiple Claude Code sessions working on the same repository. The agent definitions below describe *roles* — when spawning teammates, use these roles to scope each teammate's domain, file access, and knowledge.
+
+### Mapping Agents to Teammates
+
+Each agent definition (e.g., `ts-runtime`, `arcane-test`) describes a role a teammate can fill. When the team lead spawns a teammate, the spawn prompt should include:
+
+1. **Domain** — which agent role this teammate fills (e.g., "You are the ts-runtime agent")
+2. **File scope** — which files the teammate owns (from the agent's file scope)
+3. **Relevant knowledge** — key patterns, conventions, or context the teammate needs
+
+Teammates load `CLAUDE.md` automatically, so project-wide rules (The Three Laws, Phase 1 constraints, conventions) don't need to be repeated in spawn prompts.
+
+### Task List Conventions
+
+- Task subjects use imperative form: "Add observer batching tests", not "Observer batching tests"
+- Task descriptions include acceptance criteria and file scope
+- Each task lists the specific files the teammate should create or modify
+- Tasks are self-contained — a teammate should be able to complete one without waiting on others
+
+See [Development Workflow](development-workflow.md#agent-teams) for when to use agent teams vs subagents vs worktrees.
+
 ## Agents
 
 Agents are defined in `AGENTS.md` files. Each handles a specific domain.
@@ -200,7 +223,7 @@ Track all tooling changes here:
 | Date | Change | Reason |
 |---|---|---|
 | Phase 0 | Initial agent/skill/MCP tool definitions | Project bootstrap |
-| | | |
+| Phase 1.5 | Add agent teams guidance | Enable coordinated multi-session development |
 
 ### Creating New Agents
 

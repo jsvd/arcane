@@ -198,3 +198,27 @@ TypeScript game frameworks already exist. Why build a new engine?
   - Testing as a first-class primitive (not an afterthought)
 - The Rust core provides performance that pure JS frameworks can't match for spatial queries, pathfinding, and rendering
 - The agent protocol is architectural, not a plugin — it shapes every design decision
+
+---
+
+## ADR-009: Universal Test Harness (Node + V8)
+
+### Context
+Phase 1 tests imported `node:test` and `node:assert` directly. Phase 1.5 embeds V8 via `deno_core` — these Node-specific modules don't exist in bare V8. Tests need to run identically in both environments.
+
+### Options Considered
+1. **Maintain two copies of tests** — one for Node, one for V8. Keeps drifting apart.
+2. **Shim `node:test`/`node:assert` in V8** — complex, fragile, incomplete emulation.
+3. **Universal harness** — environment-detecting module that delegates to Node or provides standalone V8 implementations.
+
+### Decision
+**Universal harness at `runtime/testing/harness.ts`.**
+
+### Rationale
+- Single source of truth: every test file imports `{ describe, it, assert }` from one place.
+- In Node: delegates to `node:test` and `node:assert/strict` via dynamic `import()`.
+- In V8: standalone implementations of `describe`/`it` (test collector + runner) and 7 assert methods (`equal`, `deepEqual`, `notEqual`, `notDeepEqual`, `ok`, `match`, `throws`).
+- `deepEqual` only handles primitives, arrays, and plain objects — sufficient for all game state tests and avoids complex edge cases (Map, Set, Date, etc.).
+- V8 runner exposes `globalThis.__runTests()` which iterates collected tests, reports via `globalThis.__reportTest()`, and returns `{ total, passed, failed }`.
+- Mechanical migration: only the import line changes per test file, zero logic changes.
+- Keeps zero-dependency guarantee on the TS side (no test framework needed).
