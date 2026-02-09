@@ -40,8 +40,9 @@ type State = {
 
 // --- Asset Loading ---
 // Try to load real assets, fall back to placeholders
-const SPRITE_PATH = "demos/sprite-demo/assets/character.png";
-const SOUND_PATH = "demos/sprite-demo/assets/jump.wav";
+// Paths are relative to the entry script directory
+const SPRITE_PATH = "assets/character.png";
+const SOUND_PATH = "assets/jump.wav";
 
 let characterTexture = 0;
 let jumpSound = 0;
