@@ -377,7 +377,7 @@ describe("BFRPGCombat system", () => {
       const targetAfter = result.state.combatants.find((c) => c.id === "target");
       // Either hit and reduced HP, or missed and HP unchanged
       assert.ok(targetAfter);
-      assertRange(targetAfter.hp, 0, 20);
+      assertRange(targetAfter!.hp, 0, 20);
     });
 
     it("marks target as dead when HP reaches 0", () => {
@@ -422,9 +422,9 @@ describe("BFRPGCombat system", () => {
       const result = applyRule(BFRPGCombat, "dodge", state, {});
 
       assert.ok(result.ok, result.error?.message);
-      const dodgerAfter = result.state.combatants.find((c) => c.id === "dodger");
+      const dodgerAfter = result.state.combatants.find((c) => c.id === "dodger") as BFRPGCombatant | undefined;
       assert.ok(dodgerAfter, "Dodger should still exist");
-      assert.ok(dodgerAfter.dodgingThisRound, "Dodging flag should be set");
+      assert.ok(dodgerAfter!.dodgingThisRound, "Dodging flag should be set");
       assert.ok(
         result.state.log.some((l) => l.message.includes("dodges") && l.message.includes("+2 AC")),
         "Log should mention dodge and +2 AC",

@@ -262,5 +262,5 @@ const dodgeRule = rule<BFRPGCombatState>("dodge")
  */
 export const BFRPGCombat = extend(TurnBasedCombat, {
   remove: ["attack"],
-  rules: [bfrpgAttackRule, dodgeRule],
+  rules: [bfrpgAttackRule, dodgeRule] as any,
 });
