@@ -410,12 +410,12 @@ fn reload_runtime(
     })?;
 
     // Swap in the new runtime and bridge
-    // Use mem::replace to explicitly control drop timing of old runtime
-    let old_runtime = std::mem::replace(runtime, new_runtime);
+    // IMPORTANT: Use mem::replace to get the old runtime, but let it drop naturally
+    // at the end of the function scope. Explicit drop() causes V8 to abort during cleanup
+    // because the isolate tries to access context embedder data while in an invalid state.
+    // Natural drop at scope end allows V8 to clean up properly.
+    let _old_runtime = std::mem::replace(runtime, new_runtime);
     *bridge.borrow_mut() = new_bridge.borrow().clone();
-
-    // Explicitly drop the old runtime after swapping
-    drop(old_runtime);
 
     Ok(())
 }
