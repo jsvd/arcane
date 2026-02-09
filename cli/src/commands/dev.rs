@@ -5,8 +5,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
+use arcane_core::audio::{self, AudioCommand, AudioSender};
 use arcane_core::platform::window::{DevConfig, RenderState};
-use arcane_core::scripting::render_ops::RenderBridgeState;
+use arcane_core::scripting::render_ops::{BridgeAudioCommand, RenderBridgeState};
 use arcane_core::scripting::ArcaneRuntime;
 
 /// Run the dev server: open a window, load TS entry file, run game loop.
@@ -57,6 +58,10 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
         rx
     });
 
+    // Start audio thread
+    let (audio_tx, audio_rx) = audio::audio_channel();
+    let _audio_thread = audio::start_audio_thread(audio_rx);
+
     // Hot-reload: file watcher sets a flag when .ts files change
     let reload_flag = Arc::new(AtomicBool::new(false));
     let _watcher = start_file_watcher(&base_dir, &entry_path, reload_flag.clone());
@@ -70,6 +75,12 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
 
     // Frame callback: sync input → call TS → collect sprite commands
     let frame_callback = Box::new(move |state: &mut RenderState| -> Result<()> {
+        // Sync viewport size from renderer to bridge
+        if let Some(ref renderer) = state.renderer {
+            let mut bridge = bridge_for_loop.borrow_mut();
+            bridge.viewport_width = renderer.camera.viewport_size[0];
+            bridge.viewport_height = renderer.camera.viewport_size[1];
+        }
         // Check for hot-reload
         if reload_flag.swap(false, Ordering::Relaxed) {
             eprintln!("[hot-reload] File change detected, reloading...");
@@ -163,6 +174,36 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
                     }
                 }
             }
+        }
+
+        // Process font texture creation requests
+        let pending_fonts: Vec<u32> = {
+            let mut bridge = bridge_for_loop.borrow_mut();
+            std::mem::take(&mut bridge.font_texture_queue)
+        };
+
+        if let Some(ref mut renderer) = state.renderer {
+            for font_tex_id in pending_fonts {
+                let (pixels, width, height) = arcane_core::renderer::font::generate_builtin_font();
+                renderer.textures.upload_raw(
+                    &renderer.gpu,
+                    &renderer.sprites.texture_bind_group_layout,
+                    font_tex_id,
+                    &pixels,
+                    width,
+                    height,
+                );
+            }
+        }
+
+        // Drain audio commands from bridge and send to audio thread
+        let audio_cmds: Vec<BridgeAudioCommand> = {
+            let mut bridge = bridge_for_loop.borrow_mut();
+            std::mem::take(&mut bridge.audio_commands)
+        };
+
+        for cmd in audio_cmds {
+            let _ = process_audio_command(&audio_tx, cmd, &bridge_for_loop);
         }
 
         // Collect sprite commands and lighting from bridge
@@ -295,6 +336,40 @@ fn write_error_snapshot(snapshot_json: &str, error_msg: &str) {
     }
 }
 
+/// Process a bridge audio command and send it to the audio thread.
+fn process_audio_command(
+    audio_tx: &AudioSender,
+    cmd: BridgeAudioCommand,
+    bridge: &Rc<RefCell<RenderBridgeState>>,
+) -> Result<()> {
+    match cmd {
+        BridgeAudioCommand::LoadSound { id, path } => {
+            match std::fs::read(&path) {
+                Ok(data) => {
+                    let _ = audio_tx.send(AudioCommand::LoadSound { id, data });
+                }
+                Err(e) => {
+                    let _ = bridge;
+                    eprintln!("[audio] Failed to read sound file {path}: {e}");
+                }
+            }
+        }
+        BridgeAudioCommand::PlaySound { id, volume, looping } => {
+            let _ = audio_tx.send(AudioCommand::PlaySound { id, volume, looping });
+        }
+        BridgeAudioCommand::StopSound { id } => {
+            let _ = audio_tx.send(AudioCommand::StopSound { id });
+        }
+        BridgeAudioCommand::StopAll => {
+            let _ = audio_tx.send(AudioCommand::StopAll);
+        }
+        BridgeAudioCommand::SetMasterVolume { volume } => {
+            let _ = audio_tx.send(AudioCommand::SetMasterVolume { volume });
+        }
+    }
+    Ok(())
+}
+
 /// Reload the JS runtime: create a new one, re-execute the entry file.
 fn reload_runtime(
     entry_path: &Path,
@@ -311,13 +386,15 @@ fn reload_runtime(
     // Create a fresh runtime
     let new_bridge = Rc::new(RefCell::new(RenderBridgeState::new(base_dir.to_path_buf())));
 
-    // Copy texture ID mappings and tilemap state from old bridge for ID stability
+    // Copy ID mappings and tilemap state from old bridge for ID stability
     {
         let old = bridge.borrow();
         let mut new_b = new_bridge.borrow_mut();
         new_b.texture_path_to_id = old.texture_path_to_id.clone();
         new_b.next_texture_id = old.next_texture_id;
         new_b.tilemaps = old.tilemaps.clone();
+        new_b.sound_path_to_id = old.sound_path_to_id.clone();
+        new_b.next_sound_id = old.next_sound_id;
     }
 
     let mut new_runtime = ArcaneRuntime::new_with_render_bridge(new_bridge.clone());

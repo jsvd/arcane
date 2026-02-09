@@ -4,7 +4,7 @@
 
 Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for performance, TypeScript scripting for game logic.
 
-**Current status: Phase 3 complete — Agent protocol, CLI commands (describe, inspect), HTTP inspector, error snapshots. 264 TS + 35 Rust tests passing.**
+**Current status: Phase 4 complete — Text, UI, animation, A* pathfinding, audio, platformer demo. 327 TS + 38 Rust tests passing.**
 
 ## Repository Structure
 
@@ -38,15 +38,16 @@ arcane/
 │   │   │   ├── module_loader.rs   — TsModuleLoader: TS transpilation via deno_ast
 │   │   │   ├── runtime.rs         — ArcaneRuntime: V8 + module loader + crypto polyfill
 │   │   │   ├── test_runner.rs     — V8 test runner with #[op2] result reporting
-│   │   │   └── render_ops.rs      — #[op2] ops: sprites, camera, tilemap, lighting, input
+│   │   │   └── render_ops.rs      — #[op2] ops: sprites, camera, tilemap, lighting, input, audio, font, viewport
 │   │   ├── renderer/              — [feature = "renderer"]
 │   │   │   ├── mod.rs             — Renderer: owns GPU, sprite pipeline, textures, lighting
 │   │   │   ├── gpu.rs             — GpuContext: wgpu device/surface/pipeline setup
 │   │   │   ├── sprite.rs          — SpritePipeline: instanced quad rendering + lighting
-│   │   │   ├── texture.rs         — TextureStore: handle-based texture loading
+│   │   │   ├── texture.rs         — TextureStore: handle-based texture loading + raw upload
 │   │   │   ├── camera.rs          — Camera2D: position, zoom, view/proj matrix
 │   │   │   ├── tilemap.rs         — Tilemap + TilemapStore: tile data, atlas UV, camera culling
 │   │   │   ├── lighting.rs        — LightingState, PointLight, LightingUniform for GPU
+│   │   │   ├── font.rs            — CP437 8×8 bitmap font data, generate_builtin_font()
 │   │   │   └── shaders/
 │   │   │       └── sprite.wgsl    — Instanced sprite shader with lighting (3 bind groups)
 │   │   ├── platform/              — [feature = "renderer"]
@@ -56,6 +57,8 @@ arcane/
 │   │   └── agent/                 — [feature = "renderer"]
 │   │       ├── mod.rs             — InspectorRequest/Response types, channel types
 │   │       └── inspector.rs       — tiny_http HTTP server on background thread
+│   │   └── audio/                 — [feature = "renderer"]
+│   │       └── mod.rs             — AudioCommand, audio_channel(), start_audio_thread() (rodio)
 │   └── tests/                     — Rust integration tests
 ├── cli/                           — arcane-cli bin crate
 │   ├── Cargo.toml
@@ -64,7 +67,7 @@ arcane/
 │       └── commands/
 │           ├── mod.rs
 │           ├── test.rs            — `arcane test` — discovers & runs *.test.ts in V8
-│           ├── dev.rs             — `arcane dev` — window + game loop + hot-reload + inspector
+│           ├── dev.rs             — `arcane dev` — window + game loop + hot-reload + inspector + audio
 │           ├── describe.rs        — `arcane describe` — text description of game state
 │           └── inspect.rs         — `arcane inspect` — query specific state paths
 ├── runtime/
@@ -91,6 +94,17 @@ arcane/
 │   │   ├── lighting.ts            — setAmbientLight(), addPointLight(), clearLights()
 │   │   ├── texture.ts             — loadTexture(), createSolidTexture()
 │   │   ├── loop.ts                — onFrame(), getDeltaTime()
+│   │   ├── text.ts                — drawText(), measureText(), loadFont(), getDefaultFont()
+│   │   ├── animation.ts           — createAnimation(), updateAnimation(), drawAnimatedSprite()
+│   │   ├── audio.ts               — loadSound(), playSound(), playMusic(), stopSound(), setVolume()
+│   │   └── index.ts               — Barrel export
+│   ├── ui/
+│   │   ├── types.ts               — Color, RectOptions, PanelOptions, BarOptions, LabelOptions
+│   │   ├── primitives.ts          — drawRect(), drawPanel(), drawBar(), drawLabel()
+│   │   └── index.ts               — Barrel export
+│   ├── pathfinding/
+│   │   ├── types.ts               — PathGrid, PathOptions, PathResult
+│   │   ├── astar.ts               — findPath() A* with binary min-heap
 │   │   └── index.ts               — Barrel export
 │   └── agent/
 │       ├── types.ts               — AgentConfig, ActionInfo, DescribeOptions, etc.
@@ -102,7 +116,8 @@ arcane/
 │   ├── sokoban/                   — Phase 1 demo: grid puzzle + Phase 2a visual demo
 │   ├── card-battler/              — Phase 1 demo: card game
 │   ├── breakout/                  — Phase 2b demo: real-time arcade (paddle, ball, bricks)
-│   └── roguelike/                 — Phase 2b demo: procedural dungeon, FOV, fog of war
+│   ├── roguelike/                 — Phase 2b demo: procedural dungeon, FOV, fog of war
+│   └── platformer/               — Phase 4 demo: gravity, platforms, coins, text HUD, UI bars
 ```
 
 ## Conventions
@@ -145,10 +160,10 @@ Read `docs/engineering-philosophy.md` first. It governs everything else.
 5. **Explicit over implicit** — No hidden state, no singletons, no magic strings.
 6. **Functional core** — State in, state out. Pure functions for game logic.
 
-## Current Constraints (Phase 3)
+## Current Constraints (Phase 4)
 
 - TypeScript code lives under `runtime/`. Rust code under `core/` and `cli/`.
-- TS runtime has zero external dependencies. Rust crates use deno_core, deno_ast, clap, tokio, anyhow, wgpu, winit, image, bytemuck, notify, tiny_http.
+- TS runtime has zero external dependencies. Rust crates use deno_core, deno_ast, clap, tokio, anyhow, wgpu, winit, image, bytemuck, notify, tiny_http, rodio.
 - All state management functions are pure: state in, state out.
 - TS files use `.ts` extension imports (no bundler).
 - Test files import from `runtime/testing/harness.ts` (not `node:test`/`node:assert` directly).

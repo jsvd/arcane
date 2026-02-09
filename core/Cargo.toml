@@ -22,7 +22,8 @@ pollster = { version = "0.4", optional = true }
 log = { version = "0.4", optional = true }
 env_logger = { version = "0.11", optional = true }
 tiny_http = { version = "0.12", optional = true }
+rodio = { version = "0.20", optional = true }
 
 [features]
 default = ["renderer"]
-renderer = ["dep:wgpu", "dep:winit", "dep:image", "dep:bytemuck", "dep:notify", "dep:notify-debouncer-mini", "dep:pollster", "dep:log", "dep:env_logger", "dep:tiny_http"]
+renderer = ["dep:wgpu", "dep:winit", "dep:image", "dep:bytemuck", "dep:notify", "dep:notify-debouncer-mini", "dep:pollster", "dep:log", "dep:env_logger", "dep:tiny_http", "dep:rodio"]

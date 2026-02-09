@@ -4,6 +4,7 @@ mod texture;
 mod camera;
 mod tilemap;
 mod lighting;
+pub mod font;
 
 pub use gpu::GpuContext;
 pub use sprite::{SpriteCommand, SpritePipeline};

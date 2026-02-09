@@ -27,3 +27,23 @@ export { createTilemap, setTile, getTile, drawTilemap } from "./tilemap.ts";
 
 // Lighting
 export { setAmbientLight, addPointLight, clearLights } from "./lighting.ts";
+
+// Text
+export type { BitmapFont, TextOptions, TextMeasurement } from "./text.ts";
+export { loadFont, getDefaultFont, measureText, drawText } from "./text.ts";
+
+// Animation
+export type { AnimationId, AnimationDef, AnimationState } from "./animation.ts";
+export {
+  createAnimation,
+  playAnimation,
+  updateAnimation,
+  getAnimationUV,
+  drawAnimatedSprite,
+  resetAnimation,
+  stopAnimation,
+} from "./animation.ts";
+
+// Audio
+export type { SoundId, PlayOptions } from "./audio.ts";
+export { loadSound, playSound, playMusic, stopSound, stopAll, setVolume } from "./audio.ts";

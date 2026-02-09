@@ -8,6 +8,16 @@ use crate::renderer::SpriteCommand;
 use crate::renderer::TilemapStore;
 use crate::renderer::PointLight;
 
+/// Audio command queued from TS ops, drained by the frame callback.
+#[derive(Clone, Debug)]
+pub enum BridgeAudioCommand {
+    LoadSound { id: u32, path: String },
+    PlaySound { id: u32, volume: f32, looping: bool },
+    StopSound { id: u32 },
+    StopAll,
+    SetMasterVolume { volume: f32 },
+}
+
 /// Shared state between render ops and the main loop.
 /// This is placed into `OpState` when running in renderer mode.
 #[derive(Clone)]
@@ -36,6 +46,17 @@ pub struct RenderBridgeState {
     pub ambient_light: [f32; 3],
     /// Lighting: point lights for this frame.
     pub point_lights: Vec<PointLight>,
+    /// Audio commands queued by TS, drained each frame.
+    pub audio_commands: Vec<BridgeAudioCommand>,
+    /// Next sound ID to assign.
+    pub next_sound_id: u32,
+    /// Map of sound path → assigned sound ID.
+    pub sound_path_to_id: std::collections::HashMap<String, u32>,
+    /// Font texture creation queue (texture IDs to create as built-in font).
+    pub font_texture_queue: Vec<u32>,
+    /// Current viewport dimensions (synced from renderer each frame).
+    pub viewport_width: f32,
+    pub viewport_height: f32,
 }
 
 impl RenderBridgeState {
@@ -57,6 +78,12 @@ impl RenderBridgeState {
             tilemaps: TilemapStore::new(),
             ambient_light: [1.0, 1.0, 1.0],
             point_lights: Vec::new(),
+            audio_commands: Vec::new(),
+            next_sound_id: 1,
+            sound_path_to_id: std::collections::HashMap::new(),
+            font_texture_queue: Vec::new(),
+            viewport_width: 800.0,
+            viewport_height: 600.0,
         }
     }
 }
@@ -306,6 +333,90 @@ pub fn op_clear_lights(state: &mut OpState) {
     bridge.borrow_mut().point_lights.clear();
 }
 
+// --- Audio ops ---
+
+/// Load a sound file. Returns a sound ID.
+#[deno_core::op2(fast)]
+pub fn op_load_sound(state: &mut OpState, #[string] path: &str) -> u32 {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let mut b = bridge.borrow_mut();
+
+    let resolved = if std::path::Path::new(path).is_absolute() {
+        path.to_string()
+    } else {
+        b.base_dir.join(path).to_string_lossy().to_string()
+    };
+
+    if let Some(&id) = b.sound_path_to_id.get(&resolved) {
+        return id;
+    }
+
+    let id = b.next_sound_id;
+    b.next_sound_id += 1;
+    b.sound_path_to_id.insert(resolved.clone(), id);
+    b.audio_commands.push(BridgeAudioCommand::LoadSound { id, path: resolved });
+    id
+}
+
+/// Play a loaded sound.
+#[deno_core::op2(fast)]
+pub fn op_play_sound(state: &mut OpState, id: u32, volume: f32, looping: bool) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().audio_commands.push(BridgeAudioCommand::PlaySound { id, volume, looping });
+}
+
+/// Stop a specific sound.
+#[deno_core::op2(fast)]
+pub fn op_stop_sound(state: &mut OpState, id: u32) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().audio_commands.push(BridgeAudioCommand::StopSound { id });
+}
+
+/// Stop all sounds.
+#[deno_core::op2(fast)]
+pub fn op_stop_all_sounds(state: &mut OpState) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().audio_commands.push(BridgeAudioCommand::StopAll);
+}
+
+/// Set the master volume.
+#[deno_core::op2(fast)]
+pub fn op_set_master_volume(state: &mut OpState, volume: f32) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().audio_commands.push(BridgeAudioCommand::SetMasterVolume { volume });
+}
+
+// --- Font ops ---
+
+/// Create the built-in font texture. Returns a texture ID.
+#[deno_core::op2(fast)]
+pub fn op_create_font_texture(state: &mut OpState) -> u32 {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let mut b = bridge.borrow_mut();
+
+    let key = "__builtin_font__".to_string();
+    if let Some(&id) = b.texture_path_to_id.get(&key) {
+        return id;
+    }
+
+    let id = b.next_texture_id;
+    b.next_texture_id += 1;
+    b.texture_path_to_id.insert(key, id);
+    b.font_texture_queue.push(id);
+    id
+}
+
+// --- Viewport ops ---
+
+/// Get the current viewport size as [width, height].
+#[deno_core::op2]
+#[serde]
+pub fn op_get_viewport_size(state: &mut OpState) -> Vec<f64> {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let b = bridge.borrow();
+    vec![b.viewport_width as f64, b.viewport_height as f64]
+}
+
 deno_core::extension!(
     render_ext,
     ops = [
@@ -326,5 +437,12 @@ deno_core::extension!(
         op_set_ambient_light,
         op_add_point_light,
         op_clear_lights,
+        op_load_sound,
+        op_play_sound,
+        op_stop_sound,
+        op_stop_all_sounds,
+        op_set_master_volume,
+        op_create_font_texture,
+        op_get_viewport_size,
     ],
 );

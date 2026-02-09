@@ -96,7 +96,7 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phase 3 complete.** Agent protocol (TS library + CLI + HTTP inspector). AI agents can query game state, execute actions, and "see" games as text. 264 TS tests + 35 Rust tests passing.
+**Phase 4 complete.** Text rendering, UI primitives, sprite animation, A* pathfinding, audio system, and platformer demo. 327 TS tests + 38 Rust tests passing.
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 
