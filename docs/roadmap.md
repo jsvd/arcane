@@ -247,7 +247,7 @@ Build composable game system recipes. Now that the engine has text, UI, animatio
 - [x] Tower defense demo uses pathfinding + UI + text rendering
 - [x] `extend` pattern allows meaningful customization (tested)
 - [x] Each recipe ships with comprehensive tests
-- [x] 468 TS tests + 38 Rust tests passing
+- [x] 472 TS tests + 38 Rust tests passing
 - [x] Headless build compiles without GPU deps
 
 ---

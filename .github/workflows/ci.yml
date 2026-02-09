@@ -21,22 +21,22 @@ jobs:
       - run: ./run-tests.sh
 
   rust-tests:
-    name: Rust tests
+    name: Rust tests (headless)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --workspace
+      - run: cargo test --workspace --no-default-features
 
   ts-tests-v8:
-    name: TypeScript tests (V8)
+    name: TypeScript tests (V8 headless)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo run -- test
+      - run: cargo run --no-default-features -- test
 
   headless-check:
     name: Headless build (no GPU)

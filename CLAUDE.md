@@ -4,7 +4,7 @@
 
 Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for performance, TypeScript scripting for game logic.
 
-**Current status: Phase 5 complete — Recipe framework, 4 recipes, Tower Defense demo, `arcane add` CLI. 468 TS + 38 Rust tests passing.**
+**Current status: Phase 5.5 complete — Asset validation with sprite demo, real CC0 assets, comprehensive asset docs. Recipe framework, 4 recipes, Tower Defense demo, `arcane add` CLI. 472 TS + 38 Rust tests passing.**
 
 ## Repository Structure
 
@@ -122,8 +122,9 @@ arcane/
 │   ├── card-battler/              — Phase 1 demo: card game
 │   ├── breakout/                  — Phase 2b demo: real-time arcade (paddle, ball, bricks)
 │   ├── roguelike/                 — Phase 2b demo: procedural dungeon, FOV, fog of war
-│   ├── platformer/               — Phase 4 demo: gravity, platforms, coins, text HUD, UI bars
-│   └── tower-defense/            — Phase 5 demo: tower placement, enemy waves, pathfinding
+│   ├── platformer/                — Phase 4 demo: gravity, platforms, coins, text HUD, UI bars
+│   ├── tower-defense/             — Phase 5 demo: tower placement, enemy waves, pathfinding
+│   └── sprite-demo/               — Phase 5.5 demo: asset loading validation with sprite sheet + sound
 ├── recipes/
 │   ├── turn-based-combat/         — Initiative, attack/defend, victory detection
 │   ├── inventory-equipment/       — Items, stacking, weight, equipment slots, stat bonuses
@@ -171,7 +172,7 @@ Read `docs/engineering-philosophy.md` first. It governs everything else.
 5. **Explicit over implicit** — No hidden state, no singletons, no magic strings.
 6. **Functional core** — State in, state out. Pure functions for game logic.
 
-## Current Constraints (Phase 5)
+## Current Constraints (Phase 5.5)
 
 - TypeScript code lives under `runtime/`. Rust code under `core/` and `cli/`.
 - TS runtime has zero external dependencies. Rust crates use deno_core, deno_ast, clap, tokio, anyhow, wgpu, winit, image, bytemuck, notify, tiny_http, rodio.
