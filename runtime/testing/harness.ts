@@ -260,7 +260,7 @@ if (isNode) {
     notDeepEqual: nodeAssert.strict.notDeepEqual,
     ok: nodeAssert.strict.ok,
     match: nodeAssert.strict.match,
-    throws: nodeAssert.strict.throws,
+    throws: nodeAssert.strict.throws as any, // Node's throws has more overloads
   };
 } else {
   describe = v8Describe;

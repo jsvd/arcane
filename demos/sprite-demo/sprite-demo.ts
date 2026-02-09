@@ -125,7 +125,10 @@ registerAgent<State>({
         return s;
       },
       description: "Move character to position",
-      args: { x: "number", y: "number" },
+      args: [
+        { name: "x", type: "number" },
+        { name: "y", type: "number" },
+      ],
     },
     jump: {
       handler: (s) => {
@@ -210,7 +213,7 @@ onFrame(() => {
       FRAME_SIZE,
       {
         layer: 1,
-        flipX: !state.facingRight,
+        // TODO: Add flipX support to SpriteOptions
       },
     );
   } else {
@@ -223,7 +226,7 @@ onFrame(() => {
       h: FRAME_SIZE,
       uv: assetsExist ? { x: 0, y: 0, w: 1 / 6, h: 1 / 4 } : undefined, // First frame (top-left) of 6×4 grid
       layer: 1,
-      flipX: !state.facingRight,
+      // TODO: Add flipX support to SpriteOptions
     });
   }
 

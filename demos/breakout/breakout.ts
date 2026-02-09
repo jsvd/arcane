@@ -90,7 +90,8 @@ export function stepPhysics(state: BreakoutState, rawDt: number): BreakoutState 
   if (state.phase !== "playing") return state;
 
   const dt = Math.min(rawDt, MAX_DT);
-  let { ballX, ballY, ballVX, ballVY, bricks, score, lives, phase } = state;
+  let { ballX, ballY, ballVX, ballVY, bricks, score, lives } = state;
+  let phase: "ready" | "playing" | "won" | "lost" = state.phase;
   const paddleX = state.paddleX;
 
   // Move ball

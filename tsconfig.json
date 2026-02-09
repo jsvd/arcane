@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    // Type checking
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+
+    // Module resolution
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+
+    // Output (we don't emit, just check types)
+    "noEmit": true,
+
+    // Advanced
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Target
+    "target": "es2022",
+    "lib": ["es2022"],
+
+    // Types
+    "types": ["node"]
+  },
+  "include": [
+    "runtime/**/*.ts",
+    "demos/**/*.ts",
+    "recipes/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "target",
+    ".arcane"
+  ]
+}

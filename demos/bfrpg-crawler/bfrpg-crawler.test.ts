@@ -296,9 +296,9 @@ describe("Movement and Exploration", () => {
         for (let x = 0; x < state.dungeon.width; x++) {
           const tile = state.dungeon.tiles[y][x];
           if (tile === "floor" || tile === "corridor" || tile === "stairs") {
-            assert.ok(grid[y][x], `Tile at (${x},${y}) should be walkable`);
+            assert.ok(grid.isWalkable(x, y), `Tile at (${x},${y}) should be walkable`);
           } else if (tile === "wall") {
-            assert.equal(grid[y][x], false, `Wall at (${x},${y}) should not be walkable`);
+            assert.equal(grid.isWalkable(x, y), false, `Wall at (${x},${y}) should not be walkable`);
           }
         }
       }
@@ -310,7 +310,7 @@ describe("Movement and Exploration", () => {
 
       const grid = createPathGrid(state.dungeon.tiles, [monster]);
 
-      assert.equal(grid[5][5], false);
+      assert.equal(grid.isWalkable(5, 5), false);
     });
 
     it("should not mark moving monster position as obstacle", () => {
@@ -321,7 +321,7 @@ describe("Movement and Exploration", () => {
 
       // If the tile itself is walkable, it should be true
       if (state.dungeon.tiles[5][5] !== "wall") {
-        assert.ok(grid[5][5]);
+        assert.ok(grid.isWalkable(5, 5));
       }
     });
   });

@@ -12,7 +12,7 @@ export function query<S, R = unknown>(
   const value = getByPath(state, path);
 
   if (!Array.isArray(value)) {
-    return value !== undefined ? ([value] as readonly R[]) : [];
+    return value !== undefined ? ([value] as unknown as readonly R[]) : [];
   }
 
   if (!filter) return value as readonly R[];

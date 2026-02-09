@@ -176,15 +176,15 @@ export function moveMonster(
   if (playerVisible && dist <= 5) {
     // A* toward player
     const grid = createPathGrid(dungeon.tiles, monsters, monster.id);
-    const path = findPath(
+    const result = findPath(
       grid,
       { x: monster.pos.x, y: monster.pos.y },
       { x: playerPos.x, y: playerPos.y },
     );
 
-    if (path && path.length > 1) {
+    if (result.found && result.path.length > 1) {
       // Move to next step (path[0] is current position, path[1] is next)
-      newPos = path[1];
+      newPos = result.path[1];
     }
   } else {
     // Random walk

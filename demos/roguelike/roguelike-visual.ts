@@ -4,10 +4,10 @@ import { WALL, FLOOR, CORRIDOR, STAIRS_DOWN } from "./dungeon.ts";
 import {
   onFrame, drawSprite, clearSprites, setCamera,
   isKeyPressed, createSolidTexture,
+  createTilemap, setTile, drawTilemap,
+  setAmbientLight, addPointLight, clearLights,
 } from "../../runtime/rendering/index.ts";
-import { createTilemap, setTile, drawTilemap } from "../../runtime/rendering/tilemap.ts";
-import type { TilemapId } from "../../runtime/rendering/tilemap.ts";
-import { setAmbientLight, addPointLight, clearLights } from "../../runtime/rendering/lighting.ts";
+import type { TilemapId } from "../../runtime/rendering/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 
 const TILE_SIZE = 16;

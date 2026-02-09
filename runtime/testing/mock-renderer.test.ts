@@ -2,6 +2,7 @@
  * Tests demonstrating mock renderer usage
  */
 
+// @ts-nocheck - Uses Node-specific test APIs (beforeEach/afterEach) not in harness
 import { describe, it, assert } from "./harness.ts";
 import { mockRenderer, installMockRenderer, restoreRenderer } from "./mock-renderer.ts";
 

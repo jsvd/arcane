@@ -62,7 +62,11 @@ registerAgent<TDState>({
     placeTower: {
       handler: (s, args) => placeTower(s, args.x as number, args.y as number, args.type as TowerType),
       description: "Place a tower at (x, y) of given type",
-      args: { x: "number", y: "number", type: "arrow | slow | splash" },
+      args: [
+        { name: "x", type: "number" },
+        { name: "y", type: "number" },
+        { name: "type", type: "arrow | slow | splash" },
+      ],
     },
     startWave: {
       handler: (s) => startWave(s),
@@ -71,7 +75,9 @@ registerAgent<TDState>({
     sellTower: {
       handler: (s, args) => sellTower(s, args.towerId as string),
       description: "Sell a tower by ID",
-      args: { towerId: "string" },
+      args: [
+        { name: "towerId", type: "string" },
+      ],
     },
   },
 });
