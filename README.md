@@ -100,6 +100,55 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 
+## Development
+
+### Prerequisites
+- Rust 1.75+ (`cargo --version`)
+- Node.js 18+ (for TypeScript testing)
+- TypeScript 5+ (`tsc --version`)
+
+### Build & Test
+```bash
+# Build release binary
+cargo build --release
+
+# Run all tests (Node + V8 + Rust)
+./run-tests.sh                    # TypeScript tests in Node
+cargo run --release -- test       # TypeScript tests in V8
+cargo test --workspace            # Rust unit tests
+
+# Type checking (IMPORTANT: Run before commits!)
+./check-types.sh                  # or: tsc --noEmit
+
+# Verify headless mode
+cargo check --no-default-features
+```
+
+### Running Demos
+```bash
+# Visual demos (with window)
+cargo run --release -- dev demos/platformer/platformer-visual.ts
+cargo run --release -- dev demos/roguelike/roguelike-visual.ts
+cargo run --release -- dev demos/bfrpg-crawler/bfrpg-visual.ts
+
+# With hot-reload (edit .ts files while running)
+cargo run --release -- dev demos/platformer/platformer-visual.ts
+
+# With HTTP inspector (query state from browser)
+cargo run --release -- dev demos/roguelike/roguelike-visual.ts --inspector 4321
+# Then: http://localhost:4321/describe
+```
+
+### Agent Protocol
+```bash
+# Text description of game state
+cargo run --release -- describe demos/roguelike/roguelike-visual.ts
+
+# Query specific state paths
+cargo run --release -- inspect demos/roguelike/roguelike-visual.ts "player"
+cargo run --release -- inspect demos/roguelike/roguelike-visual.ts "dungeon.tiles"
+```
+
 ## Documentation
 
 - [Engineering Philosophy](docs/engineering-philosophy.md) — The Three Laws, development principles, verification framework
