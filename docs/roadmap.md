@@ -252,6 +252,30 @@ Build composable game system recipes. Now that the engine has text, UI, animatio
 
 ---
 
+## Phase 5.5: Asset Validation
+
+**Status: Complete**
+
+Validate that real asset loading works end-to-end with actual sprite sheets and sounds.
+
+### Deliverables
+- [x] `demos/sprite-demo/` — Character with walk animation and sound effect
+- [x] `docs/assets.md` — Asset workflow documentation
+- [x] Example of loading PNG sprite sheets
+- [x] Example of loading audio files
+- [x] Fallback to placeholders when assets missing
+- [x] Path resolution and caching verified
+
+### Success Criteria
+- [x] Demo loads and displays sprite sheets (or placeholders)
+- [x] Animation system works with real horizontal sprite strips
+- [x] Audio loading and playback works
+- [x] Asset workflow is documented with examples
+- [x] Free asset sources documented
+- [x] 472 TS tests + 38 Rust tests passing
+
+---
+
 ## Phase 6: Showcase Game (BFRPG RPG)
 
 Port the existing Godot BFRPG RPG to Arcane. This is the capstone, not the only validation — the mini-game demos proved individual capabilities; this proves they compose into a full game.
