@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "arcane-assets": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/arcane/mcp/arcane-assets/dist/index.js"
+      ],
+      "disabled": false
+    }
+  }
+}
