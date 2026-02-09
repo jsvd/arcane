@@ -1,0 +1,6 @@
+{
+  "name": "inventory-equipment",
+  "description": "Item inventory with stacking, weight limits, equipment slots, and stat bonuses",
+  "version": "0.1.0",
+  "files": ["types.ts", "inventory.ts", "index.ts"]
+}

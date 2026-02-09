@@ -4,7 +4,7 @@
 
 Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for performance, TypeScript scripting for game logic.
 
-**Current status: Phase 4 complete — Text, UI, animation, A* pathfinding, audio, platformer demo. 327 TS + 38 Rust tests passing.**
+**Current status: Phase 5 complete — Recipe framework, 4 recipes, Tower Defense demo, `arcane add` CLI. 468 TS + 38 Rust tests passing.**
 
 ## Repository Structure
 
@@ -69,7 +69,8 @@ arcane/
 │           ├── test.rs            — `arcane test` — discovers & runs *.test.ts in V8
 │           ├── dev.rs             — `arcane dev` — window + game loop + hot-reload + inspector + audio
 │           ├── describe.rs        — `arcane describe` — text description of game state
-│           └── inspect.rs         — `arcane inspect` — query specific state paths
+│           ├── inspect.rs         — `arcane inspect` — query specific state paths
+│           └── add.rs             — `arcane add` — copy recipe into project
 ├── runtime/
 │   ├── testing/
 │   │   └── harness.ts             — Universal test harness (Node + V8)
@@ -106,6 +107,10 @@ arcane/
 │   │   ├── types.ts               — PathGrid, PathOptions, PathResult
 │   │   ├── astar.ts               — findPath() A* with binary min-heap
 │   │   └── index.ts               — Barrel export
+│   ├── systems/
+│   │   ├── types.ts               — Rule, SystemDef, RuleResult, ExtendOptions
+│   │   ├── system.ts              — system(), rule(), applyRule(), extend()
+│   │   └── index.ts               — Barrel export
 │   └── agent/
 │       ├── types.ts               — AgentConfig, ActionInfo, DescribeOptions, etc.
 │       ├── protocol.ts            — registerAgent(), AgentProtocol on globalThis
@@ -117,7 +122,13 @@ arcane/
 │   ├── card-battler/              — Phase 1 demo: card game
 │   ├── breakout/                  — Phase 2b demo: real-time arcade (paddle, ball, bricks)
 │   ├── roguelike/                 — Phase 2b demo: procedural dungeon, FOV, fog of war
-│   └── platformer/               — Phase 4 demo: gravity, platforms, coins, text HUD, UI bars
+│   ├── platformer/               — Phase 4 demo: gravity, platforms, coins, text HUD, UI bars
+│   └── tower-defense/            — Phase 5 demo: tower placement, enemy waves, pathfinding
+├── recipes/
+│   ├── turn-based-combat/         — Initiative, attack/defend, victory detection
+│   ├── inventory-equipment/       — Items, stacking, weight, equipment slots, stat bonuses
+│   ├── grid-movement/             — Grid entity movement, pathfinding integration
+│   └── fog-of-war/                — 8-octant shadowcasting FOV, visibility states
 ```
 
 ## Conventions
@@ -160,7 +171,7 @@ Read `docs/engineering-philosophy.md` first. It governs everything else.
 5. **Explicit over implicit** — No hidden state, no singletons, no magic strings.
 6. **Functional core** — State in, state out. Pure functions for game logic.
 
-## Current Constraints (Phase 4)
+## Current Constraints (Phase 5)
 
 - TypeScript code lives under `runtime/`. Rust code under `core/` and `cli/`.
 - TS runtime has zero external dependencies. Rust crates use deno_core, deno_ast, clap, tokio, anyhow, wgpu, winit, image, bytemuck, notify, tiny_http, rodio.

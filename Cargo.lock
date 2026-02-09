@@ -185,6 +185,7 @@ dependencies = [
  "image",
  "notify",
  "notify-debouncer-mini",
+ "serde_json",
  "tokio",
 ]
 

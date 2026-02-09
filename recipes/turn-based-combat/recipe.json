@@ -1,0 +1,6 @@
+{
+  "name": "turn-based-combat",
+  "description": "Turn-based RPG combat with initiative, attack/defend, and victory detection",
+  "version": "0.1.0",
+  "files": ["types.ts", "combat.ts", "index.ts"]
+}

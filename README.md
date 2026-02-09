@@ -96,7 +96,7 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phase 4 complete.** Text rendering, UI primitives, sprite animation, A* pathfinding, audio system, and platformer demo. 327 TS tests + 38 Rust tests passing.
+**Phase 5 complete.** Recipe framework, four composable recipes (turn-based combat, inventory-equipment, grid-movement, fog-of-war), `arcane add` CLI, and Tower Defense demo. 468 TS tests + 38 Rust tests passing.
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 

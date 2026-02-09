@@ -39,6 +39,14 @@ enum Commands {
         /// Dot-separated state path (e.g. "player.hp")
         path: String,
     },
+    /// Add a recipe to the current project
+    Add {
+        /// Recipe name (e.g. "turn-based-combat")
+        name: Option<String>,
+        /// List all available recipes
+        #[arg(long)]
+        list: bool,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -49,5 +57,6 @@ fn main() -> anyhow::Result<()> {
         Commands::Dev { entry, inspector } => commands::dev::run(entry, inspector),
         Commands::Describe { entry, verbosity } => commands::describe::run(entry, verbosity),
         Commands::Inspect { entry, path } => commands::inspect::run(entry, path),
+        Commands::Add { name, list } => commands::add::run(name, list),
     }
 }
