@@ -40,8 +40,8 @@ const TEX_MONSTER = createSolidTexture("monster", 255, 60, 60);
 const TEX_EXPLORED = createSolidTexture("explored", 40, 40, 55);
 
 // UI colors
-const COLOR_BG = createSolidTexture("ui_bg", 20, 20, 30);
-const COLOR_PANEL = createSolidTexture("ui_panel", 40, 40, 50);
+const COLOR_BG = { r: 20/255, g: 20/255, b: 30/255, a: 0.9 };
+const COLOR_PANEL = { r: 40/255, g: 40/255, b: 50/255, a: 1.0 };
 
 // Initialize game
 let state = createGame("Thrain", "Fighter", "Dwarf", SEED);
@@ -300,7 +300,7 @@ function renderHUD() {
     y: panelY,
     w: panelW,
     h: panelH,
-    bgColor: COLOR_BG,
+    fillColor: COLOR_BG,
     borderColor: COLOR_PANEL,
     borderWidth: 2.0,
     layer: 10,
@@ -343,8 +343,8 @@ function renderHUD() {
     h: 12.0,
     value: character.hp,
     maxValue: character.maxHp,
-    fillColor: createSolidTexture("hp_fill", 60, 180, 60),
-    emptyColor: createSolidTexture("hp_empty", 180, 60, 60),
+    fillColor: { r: 60/255, g: 180/255, b: 60/255, a: 1.0 },
+    bgColor: { r: 180/255, g: 60/255, b: 60/255, a: 1.0 },
     borderColor: COLOR_PANEL,
     borderWidth: 1.0,
     layer: 11,
@@ -401,7 +401,7 @@ function renderHUD() {
     y: logPanelY,
     w: logPanelW,
     h: logPanelH,
-    bgColor: COLOR_BG,
+    fillColor: COLOR_BG,
     borderColor: COLOR_PANEL,
     borderWidth: 2.0,
     layer: 10,
@@ -432,8 +432,8 @@ function renderCombatUI() {
     y: 10.0,
     w: 190.0,
     h: 80.0,
-    bgColor: COLOR_BG,
-    borderColor: createSolidTexture("combat_border", 255, 100, 100),
+    fillColor: COLOR_BG,
+    borderColor: { r: 1.0, g: 0.4, b: 0.4, a: 1.0 },
     borderWidth: 3.0,
     layer: 10,
     screenSpace: true,
@@ -476,8 +476,8 @@ function renderDeathScreen() {
     y: 0.0,
     w: 800.0,
     h: 600.0,
-    bgColor: createSolidTexture("death_overlay", 0, 0, 0),
-    borderColor: 0,
+    fillColor: { r: 0.0, g: 0.0, b: 0.0, a: 0.8 },
+    borderColor: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
     borderWidth: 0.0,
     layer: 20,
     screenSpace: true,
@@ -521,8 +521,8 @@ function renderVictoryScreen() {
     y: 0.0,
     w: 800.0,
     h: 600.0,
-    bgColor: createSolidTexture("victory_overlay", 20, 30, 20),
-    borderColor: 0,
+    fillColor: { r: 20/255, g: 30/255, b: 20/255, a: 0.9 },
+    borderColor: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
     borderWidth: 0.0,
     layer: 20,
     screenSpace: true,
