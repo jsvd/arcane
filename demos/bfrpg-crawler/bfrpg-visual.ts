@@ -27,7 +27,7 @@ import {
 } from "./bfrpg-crawler.ts";
 import type { BFRPGState } from "./types.ts";
 
-const TILE_SIZE = 16;
+const TILE_SIZE = 16.0;
 const SEED = 12345;
 
 // Textures
@@ -139,9 +139,9 @@ onFrame(() => {
 
   // Camera follows player
   setCamera(
-    state.character.pos.x * TILE_SIZE + TILE_SIZE / 2,
-    state.character.pos.y * TILE_SIZE + TILE_SIZE / 2,
-    2,
+    state.character.pos.x * TILE_SIZE + TILE_SIZE / 2.0,
+    state.character.pos.y * TILE_SIZE + TILE_SIZE / 2.0,
+    2.0,
   );
 
   // Lighting
@@ -209,9 +209,9 @@ function setupLighting() {
   clearLights();
   setAmbientLight(0.05, 0.05, 0.08);
   addPointLight(
-    state.character.pos.x * TILE_SIZE + TILE_SIZE / 2,
-    state.character.pos.y * TILE_SIZE + TILE_SIZE / 2,
-    TILE_SIZE * 10,
+    state.character.pos.x * TILE_SIZE + TILE_SIZE / 2.0,
+    state.character.pos.y * TILE_SIZE + TILE_SIZE / 2.0,
+    TILE_SIZE * 10.0,
     1.0,
     0.9,
     0.7,
@@ -262,10 +262,10 @@ function renderMonsters() {
 
     drawSprite({
       textureId: TEX_MONSTER,
-      x: monster.pos.x * TILE_SIZE + 2,
-      y: monster.pos.y * TILE_SIZE + 2,
-      w: TILE_SIZE - 4,
-      h: TILE_SIZE - 4,
+      x: monster.pos.x * TILE_SIZE + 2.0,
+      y: monster.pos.y * TILE_SIZE + 2.0,
+      w: TILE_SIZE - 4.0,
+      h: TILE_SIZE - 4.0,
       layer: 2,
     });
   }
@@ -276,10 +276,10 @@ function renderCharacter() {
 
   drawSprite({
     textureId: TEX_PLAYER,
-    x: character.pos.x * TILE_SIZE + 2,
-    y: character.pos.y * TILE_SIZE + 2,
-    w: TILE_SIZE - 4,
-    h: TILE_SIZE - 4,
+    x: character.pos.x * TILE_SIZE + 2.0,
+    y: character.pos.y * TILE_SIZE + 2.0,
+    w: TILE_SIZE - 4.0,
+    h: TILE_SIZE - 4.0,
     layer: 3,
   });
 }
@@ -290,10 +290,10 @@ function renderHUD() {
   const fontId = getDefaultFont();
 
   // Character info panel (top-left, screen-space)
-  const panelX = 10;
-  const panelY = 10;
-  const panelW = 200;
-  const panelH = 120;
+  const panelX = 10.0;
+  const panelY = 10.0;
+  const panelW = 200.0;
+  const panelH = 120.0;
 
   drawPanel({
     x: panelX,
@@ -302,7 +302,7 @@ function renderHUD() {
     h: panelH,
     bgColor: COLOR_BG,
     borderColor: COLOR_PANEL,
-    borderWidth: 2,
+    borderWidth: 2.0,
     layer: 10,
     screenSpace: true,
   });
@@ -310,8 +310,8 @@ function renderHUD() {
   // Character name and class
   drawText({
     text: `${character.name}`,
-    x: panelX + 10,
-    y: panelY + 10,
+    x: panelX + 10.0,
+    y: panelY + 10.0,
     fontId,
     layer: 11,
     screenSpace: true,
@@ -319,8 +319,8 @@ function renderHUD() {
 
   drawText({
     text: `L${character.level} ${character.race} ${character.class}`,
-    x: panelX + 10,
-    y: panelY + 25,
+    x: panelX + 10.0,
+    y: panelY + 25.0,
     fontId,
     layer: 11,
     screenSpace: true,
@@ -329,32 +329,32 @@ function renderHUD() {
   // HP bar
   drawLabel({
     text: "HP:",
-    x: panelX + 10,
-    y: panelY + 45,
+    x: panelX + 10.0,
+    y: panelY + 45.0,
     fontId,
     layer: 11,
     screenSpace: true,
   });
 
   drawBar({
-    x: panelX + 40,
-    y: panelY + 45,
-    w: 150,
-    h: 12,
+    x: panelX + 40.0,
+    y: panelY + 45.0,
+    w: 150.0,
+    h: 12.0,
     value: character.hp,
     maxValue: character.maxHp,
     fillColor: createSolidTexture("hp_fill", 60, 180, 60),
     emptyColor: createSolidTexture("hp_empty", 180, 60, 60),
     borderColor: COLOR_PANEL,
-    borderWidth: 1,
+    borderWidth: 1.0,
     layer: 11,
     screenSpace: true,
   });
 
   drawText({
     text: `${character.hp}/${character.maxHp}`,
-    x: panelX + 100,
-    y: panelY + 46,
+    x: panelX + 100.0,
+    y: panelY + 46.0,
     fontId,
     layer: 12,
     screenSpace: true,
@@ -363,8 +363,8 @@ function renderHUD() {
   // Stats
   drawText({
     text: `AC: ${character.ac}  BAB: +${character.bab}`,
-    x: panelX + 10,
-    y: panelY + 65,
+    x: panelX + 10.0,
+    y: panelY + 65.0,
     fontId,
     layer: 11,
     screenSpace: true,
@@ -373,8 +373,8 @@ function renderHUD() {
   // Floor and gold
   drawText({
     text: `Floor: ${dungeon.floor}  Gold: ${character.gold}`,
-    x: panelX + 10,
-    y: panelY + 80,
+    x: panelX + 10.0,
+    y: panelY + 80.0,
     fontId,
     layer: 11,
     screenSpace: true,
@@ -383,18 +383,18 @@ function renderHUD() {
   // Kills
   drawText({
     text: `Kills: ${character.kills}`,
-    x: panelX + 10,
-    y: panelY + 95,
+    x: panelX + 10.0,
+    y: panelY + 95.0,
     fontId,
     layer: 11,
     screenSpace: true,
   });
 
   // Message log (bottom panel, screen-space)
-  const logPanelX = 10;
-  const logPanelY = 550;
-  const logPanelW = 780;
-  const logPanelH = 40;
+  const logPanelX = 10.0;
+  const logPanelY = 550.0;
+  const logPanelW = 780.0;
+  const logPanelH = 40.0;
 
   drawPanel({
     x: logPanelX,
@@ -403,7 +403,7 @@ function renderHUD() {
     h: logPanelH,
     bgColor: COLOR_BG,
     borderColor: COLOR_PANEL,
-    borderWidth: 2,
+    borderWidth: 2.0,
     layer: 10,
     screenSpace: true,
   });
@@ -413,8 +413,8 @@ function renderHUD() {
   for (let i = 0; i < recentLogs.length; i++) {
     drawText({
       text: recentLogs[i].message,
-      x: logPanelX + 10,
-      y: logPanelY + 10 + i * 12,
+      x: logPanelX + 10.0,
+      y: logPanelY + 10.0 + i * 12.0,
       fontId,
       layer: 11,
       screenSpace: true,
@@ -428,21 +428,21 @@ function renderCombatUI() {
   const fontId = getDefaultFont();
 
   drawPanel({
-    x: 600,
-    y: 10,
-    w: 190,
-    h: 80,
+    x: 600.0,
+    y: 10.0,
+    w: 190.0,
+    h: 80.0,
     bgColor: COLOR_BG,
     borderColor: createSolidTexture("combat_border", 255, 100, 100),
-    borderWidth: 3,
+    borderWidth: 3.0,
     layer: 10,
     screenSpace: true,
   });
 
   drawText({
     text: "COMBAT!",
-    x: 620,
-    y: 20,
+    x: 620.0,
+    y: 20.0,
     fontId,
     layer: 11,
     screenSpace: true,
@@ -450,8 +450,8 @@ function renderCombatUI() {
 
   drawText({
     text: "A - Attack",
-    x: 620,
-    y: 40,
+    x: 620.0,
+    y: 40.0,
     fontId,
     layer: 11,
     screenSpace: true,
@@ -459,8 +459,8 @@ function renderCombatUI() {
 
   drawText({
     text: "D - Dodge",
-    x: 620,
-    y: 55,
+    x: 620.0,
+    y: 55.0,
     fontId,
     layer: 11,
     screenSpace: true,
@@ -472,13 +472,13 @@ function renderDeathScreen() {
 
   // Darken overlay
   drawPanel({
-    x: 0,
-    y: 0,
-    w: 800,
-    h: 600,
+    x: 0.0,
+    y: 0.0,
+    w: 800.0,
+    h: 600.0,
     bgColor: createSolidTexture("death_overlay", 0, 0, 0),
     borderColor: 0,
-    borderWidth: 0,
+    borderWidth: 0.0,
     layer: 20,
     screenSpace: true,
   });
@@ -486,8 +486,8 @@ function renderDeathScreen() {
   // Death message
   drawText({
     text: "YOU DIED",
-    x: 320,
-    y: 250,
+    x: 320.0,
+    y: 250.0,
     fontId,
     layer: 21,
     screenSpace: true,
@@ -495,8 +495,8 @@ function renderDeathScreen() {
 
   drawText({
     text: `Floor reached: ${state.dungeon.floor}`,
-    x: 280,
-    y: 280,
+    x: 280.0,
+    y: 280.0,
     fontId,
     layer: 21,
     screenSpace: true,
@@ -504,8 +504,8 @@ function renderDeathScreen() {
 
   drawText({
     text: `Monsters slain: ${state.character.kills}`,
-    x: 270,
-    y: 300,
+    x: 270.0,
+    y: 300.0,
     fontId,
     layer: 21,
     screenSpace: true,
@@ -517,13 +517,13 @@ function renderVictoryScreen() {
 
   // Victory overlay
   drawPanel({
-    x: 0,
-    y: 0,
-    w: 800,
-    h: 600,
+    x: 0.0,
+    y: 0.0,
+    w: 800.0,
+    h: 600.0,
     bgColor: createSolidTexture("victory_overlay", 20, 30, 20),
     borderColor: 0,
-    borderWidth: 0,
+    borderWidth: 0.0,
     layer: 20,
     screenSpace: true,
   });
@@ -531,8 +531,8 @@ function renderVictoryScreen() {
   // Victory message
   drawText({
     text: "VICTORY!",
-    x: 320,
-    y: 250,
+    x: 320.0,
+    y: 250.0,
     fontId,
     layer: 21,
     screenSpace: true,
@@ -540,8 +540,8 @@ function renderVictoryScreen() {
 
   drawText({
     text: `You conquered ${state.dungeon.floor} floors!`,
-    x: 240,
-    y: 280,
+    x: 240.0,
+    y: 280.0,
     fontId,
     layer: 21,
     screenSpace: true,
@@ -549,8 +549,8 @@ function renderVictoryScreen() {
 
   drawText({
     text: `Final level: ${state.character.level}`,
-    x: 280,
-    y: 300,
+    x: 280.0,
+    y: 300.0,
     fontId,
     layer: 21,
     screenSpace: true,
@@ -558,8 +558,8 @@ function renderVictoryScreen() {
 
   drawText({
     text: `Total kills: ${state.character.kills}`,
-    x: 280,
-    y: 320,
+    x: 280.0,
+    y: 320.0,
     fontId,
     layer: 21,
     screenSpace: true,
