@@ -182,6 +182,7 @@ dependencies = [
  "anyhow",
  "arcane-core",
  "clap",
+ "image",
  "notify",
  "notify-debouncer-mini",
  "tokio",

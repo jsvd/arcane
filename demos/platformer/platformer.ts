@@ -3,7 +3,7 @@ import type { AABB } from "../../runtime/physics/index.ts";
 
 // Constants
 export const GRAVITY = 800;
-export const JUMP_VEL = -350;
+export const JUMP_VEL = -450;
 export const MOVE_SPEED = 200;
 export const PLAYER_W = 24;
 export const PLAYER_H = 32;

@@ -137,40 +137,41 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
                     // Parse solid color: __solid__:name:r:g:b:a
                     let parts: Vec<&str> = path.splitn(6, ':').collect();
                     if parts.len() == 6 {
-                        let name = parts[1];
                         let r = parts[2].parse::<u8>().unwrap_or(255);
                         let g = parts[3].parse::<u8>().unwrap_or(255);
                         let b = parts[4].parse::<u8>().unwrap_or(255);
                         let a = parts[5].parse::<u8>().unwrap_or(255);
-                        let actual_id = renderer.textures.create_solid_color(
+                        // Use upload_raw with the bridge-assigned ID to avoid ID mismatch
+                        renderer.textures.upload_raw(
                             &renderer.gpu,
                             &renderer.sprites.texture_bind_group_layout,
-                            name,
-                            r,
-                            g,
-                            b,
-                            a,
+                            id,
+                            &[r, g, b, a],
+                            1,
+                            1,
                         );
-                        if actual_id != id {
-                            eprintln!(
-                                "Warning: texture ID mismatch for {name}: expected {id}, got {actual_id}"
-                            );
-                        }
                     }
                 } else {
-                    match renderer.textures.load(
-                        &renderer.gpu,
-                        &renderer.sprites.texture_bind_group_layout,
-                        Path::new(&path),
-                    ) {
-                        Ok(actual_id) => {
-                            if actual_id != id {
-                                eprintln!(
-                                    "Warning: texture ID mismatch for {path}: expected {id}, got {actual_id}"
-                                );
+                    // For file textures, also use upload_raw with pre-assigned ID
+                    match std::fs::read(&path) {
+                        Ok(img_data) => {
+                            match image::load_from_memory(&img_data) {
+                                Ok(img) => {
+                                    let rgba = img.to_rgba8();
+                                    let (w, h) = rgba.dimensions();
+                                    renderer.textures.upload_raw(
+                                        &renderer.gpu,
+                                        &renderer.sprites.texture_bind_group_layout,
+                                        id,
+                                        &rgba,
+                                        w,
+                                        h,
+                                    );
+                                }
+                                Err(e) => eprintln!("Failed to decode texture {path}: {e}"),
                             }
                         }
-                        Err(e) => eprintln!("Failed to load texture {path}: {e}"),
+                        Err(e) => eprintln!("Failed to read texture {path}: {e}"),
                     }
                 }
             }
