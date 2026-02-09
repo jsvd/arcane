@@ -287,7 +287,7 @@ function renderCharacter() {
 function renderHUD() {
   const { character, dungeon, log } = state;
 
-  const fontId = getDefaultFont();
+  const font = getDefaultFont();
 
   // Character info panel (top-left, screen-space)
   const panelX = 10.0;
@@ -308,33 +308,22 @@ function renderHUD() {
   });
 
   // Character name and class
-  drawText({
-    text: `${character.name}`,
-    x: panelX + 10.0,
-    y: panelY + 10.0,
-    fontId,
-    layer: 11,
-    screenSpace: true,
-  });
+  drawText(
+    `${character.name}`,
+    panelX + 10.0,
+    panelY + 10.0,
+    { font, layer: 11, screenSpace: true }
+  );
 
-  drawText({
-    text: `L${character.level} ${character.race} ${character.class}`,
-    x: panelX + 10.0,
-    y: panelY + 25.0,
-    fontId,
-    layer: 11,
-    screenSpace: true,
-  });
+  drawText(
+    `L${character.level} ${character.race} ${character.class}`,
+    panelX + 10.0,
+    panelY + 25.0,
+    { font, layer: 11, screenSpace: true }
+  );
 
   // HP bar
-  drawLabel({
-    text: "HP:",
-    x: panelX + 10.0,
-    y: panelY + 45.0,
-    fontId,
-    layer: 11,
-    screenSpace: true,
-  });
+  drawLabel("HP:", panelX + 10.0, panelY + 45.0, { layer: 11, screenSpace: true });
 
   drawBar({
     x: panelX + 40.0,
@@ -351,44 +340,36 @@ function renderHUD() {
     screenSpace: true,
   });
 
-  drawText({
-    text: `${character.hp}/${character.maxHp}`,
-    x: panelX + 100.0,
-    y: panelY + 46.0,
-    fontId,
-    layer: 12,
-    screenSpace: true,
-  });
+  drawText(
+    `${character.hp}/${character.maxHp}`,
+    panelX + 100.0,
+    panelY + 46.0,
+    { font, layer: 12, screenSpace: true }
+  );
 
   // Stats
-  drawText({
-    text: `AC: ${character.ac}  BAB: +${character.bab}`,
-    x: panelX + 10.0,
-    y: panelY + 65.0,
-    fontId,
-    layer: 11,
-    screenSpace: true,
-  });
+  drawText(
+    `AC: ${character.ac}  BAB: +${character.bab}`,
+    panelX + 10.0,
+    panelY + 65.0,
+    { font, layer: 11, screenSpace: true }
+  );
 
   // Floor and gold
-  drawText({
-    text: `Floor: ${dungeon.floor}  Gold: ${character.gold}`,
-    x: panelX + 10.0,
-    y: panelY + 80.0,
-    fontId,
-    layer: 11,
-    screenSpace: true,
-  });
+  drawText(
+    `Floor: ${dungeon.floor}  Gold: ${character.gold}`,
+    panelX + 10.0,
+    panelY + 80.0,
+    { font, layer: 11, screenSpace: true }
+  );
 
   // Kills
-  drawText({
-    text: `Kills: ${character.kills}`,
-    x: panelX + 10.0,
-    y: panelY + 95.0,
-    fontId,
-    layer: 11,
-    screenSpace: true,
-  });
+  drawText(
+    `Kills: ${character.kills}`,
+    panelX + 10.0,
+    panelY + 95.0,
+    { font, layer: 11, screenSpace: true }
+  );
 
   // Message log (bottom panel, screen-space)
   const logPanelX = 10.0;
@@ -411,21 +392,14 @@ function renderHUD() {
   // Show last 2 log messages
   const recentLogs = log.slice(-2);
   for (let i = 0; i < recentLogs.length; i++) {
-    drawText({
-      text: recentLogs[i].message,
-      x: logPanelX + 10.0,
-      y: logPanelY + 10.0 + i * 12.0,
-      fontId,
-      layer: 11,
-      screenSpace: true,
-    });
+    drawText(recentLogs[i].message, logPanelX + 10.0, logPanelY + 10.0 + i * 12.0, { font, layer: 11, screenSpace: true });
   }
 }
 
 function renderCombatUI() {
   // TODO: Implement combat UI
   // For now, just show a simple indicator
-  const fontId = getDefaultFont();
+  const font = getDefaultFont();
 
   drawPanel({
     x: 600.0,
@@ -439,36 +413,15 @@ function renderCombatUI() {
     screenSpace: true,
   });
 
-  drawText({
-    text: "COMBAT!",
-    x: 620.0,
-    y: 20.0,
-    fontId,
-    layer: 11,
-    screenSpace: true,
-  });
+  drawText("COMBAT!", 620.0, 20.0, { font, layer: 11, screenSpace: true });
 
-  drawText({
-    text: "A - Attack",
-    x: 620.0,
-    y: 40.0,
-    fontId,
-    layer: 11,
-    screenSpace: true,
-  });
+  drawText("A - Attack", 620.0, 40.0, { font, layer: 11, screenSpace: true });
 
-  drawText({
-    text: "D - Dodge",
-    x: 620.0,
-    y: 55.0,
-    fontId,
-    layer: 11,
-    screenSpace: true,
-  });
+  drawText("D - Dodge", 620.0, 55.0, { font, layer: 11, screenSpace: true });
 }
 
 function renderDeathScreen() {
-  const fontId = getDefaultFont();
+  const font = getDefaultFont();
 
   // Darken overlay
   drawPanel({
@@ -484,36 +437,25 @@ function renderDeathScreen() {
   });
 
   // Death message
-  drawText({
-    text: "YOU DIED",
-    x: 320.0,
-    y: 250.0,
-    fontId,
-    layer: 21,
-    screenSpace: true,
-  });
+  drawText("YOU DIED", 320.0, 250.0, { font, layer: 21, screenSpace: true });
 
-  drawText({
-    text: `Floor reached: ${state.dungeon.floor}`,
-    x: 280.0,
-    y: 280.0,
-    fontId,
-    layer: 21,
-    screenSpace: true,
-  });
+  drawText(
+    `Floor reached: ${state.dungeon.floor}`,
+    280.0,
+    280.0,
+    { font, layer: 21, screenSpace: true }
+  );
 
-  drawText({
-    text: `Monsters slain: ${state.character.kills}`,
-    x: 270.0,
-    y: 300.0,
-    fontId,
-    layer: 21,
-    screenSpace: true,
-  });
+  drawText(
+    `Monsters slain: ${state.character.kills}`,
+    270.0,
+    300.0,
+    { font, layer: 21, screenSpace: true }
+  );
 }
 
 function renderVictoryScreen() {
-  const fontId = getDefaultFont();
+  const font = getDefaultFont();
 
   // Victory overlay
   drawPanel({
@@ -529,39 +471,26 @@ function renderVictoryScreen() {
   });
 
   // Victory message
-  drawText({
-    text: "VICTORY!",
-    x: 320.0,
-    y: 250.0,
-    fontId,
-    layer: 21,
-    screenSpace: true,
-  });
+  drawText("VICTORY!", 320.0, 250.0, { font, layer: 21, screenSpace: true });
 
-  drawText({
-    text: `You conquered ${state.dungeon.floor} floors!`,
-    x: 240.0,
-    y: 280.0,
-    fontId,
-    layer: 21,
-    screenSpace: true,
-  });
+  drawText(
+    `You conquered ${state.dungeon.floor} floors!`,
+    240.0,
+    280.0,
+    { font, layer: 21, screenSpace: true }
+  );
 
-  drawText({
-    text: `Final level: ${state.character.level}`,
-    x: 280.0,
-    y: 300.0,
-    fontId,
-    layer: 21,
-    screenSpace: true,
-  });
+  drawText(
+    `Final level: ${state.character.level}`,
+    280.0,
+    300.0,
+    { font, layer: 21, screenSpace: true }
+  );
 
-  drawText({
-    text: `Total kills: ${state.character.kills}`,
-    x: 280.0,
-    y: 320.0,
-    fontId,
-    layer: 21,
-    screenSpace: true,
-  });
+  drawText(
+    `Total kills: ${state.character.kills}`,
+    280.0,
+    320.0,
+    { font, layer: 21, screenSpace: true }
+  );
 }
