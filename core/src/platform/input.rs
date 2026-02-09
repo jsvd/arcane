@@ -53,3 +53,74 @@ impl InputState {
         self.keys_pressed.contains(key)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn key_pressed_survives_until_read() {
+        // Simulates the winit event loop sequence:
+        // 1. Key event arrives between frames
+        // 2. Frame callback reads input
+        // 3. begin_frame() clears per-frame state for next frame
+        let mut input = InputState::default();
+
+        // Between frames: key event arrives
+        input.key_down("ArrowUp");
+        assert!(input.is_key_pressed("ArrowUp"));
+        assert!(input.is_key_down("ArrowUp"));
+
+        // Frame callback reads it — must still be visible
+        assert!(input.is_key_pressed("ArrowUp"));
+
+        // AFTER callback: clear for next frame
+        input.begin_frame();
+        assert!(!input.is_key_pressed("ArrowUp"));
+        assert!(input.is_key_down("ArrowUp")); // still held
+    }
+
+    #[test]
+    fn begin_frame_before_read_loses_input() {
+        // Documents the bug we hit: if begin_frame() runs BEFORE
+        // the callback reads, keys_pressed is empty.
+        let mut input = InputState::default();
+
+        input.key_down("w");
+        assert!(input.is_key_pressed("w"));
+
+        // Wrong order: clear before read
+        input.begin_frame();
+        assert!(!input.is_key_pressed("w")); // lost!
+    }
+
+    #[test]
+    fn held_key_does_not_re_trigger_pressed() {
+        let mut input = InputState::default();
+
+        input.key_down("a");
+        assert!(input.is_key_pressed("a"));
+
+        input.begin_frame();
+
+        // Same key still held — should NOT appear as pressed again
+        input.key_down("a");
+        assert!(!input.is_key_pressed("a"));
+        assert!(input.is_key_down("a"));
+    }
+
+    #[test]
+    fn key_release_tracked() {
+        let mut input = InputState::default();
+
+        input.key_down("Space");
+        input.begin_frame();
+        input.key_up("Space");
+
+        assert!(!input.is_key_down("Space"));
+        assert!(input.keys_released.contains("Space"));
+
+        input.begin_frame();
+        assert!(!input.keys_released.contains("Space"));
+    }
+}
