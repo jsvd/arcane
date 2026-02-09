@@ -20,3 +20,10 @@ export { loadTexture, createSolidTexture } from "./texture.ts";
 
 // Game loop
 export { onFrame, getDeltaTime } from "./loop.ts";
+
+// Tilemap
+export type { TilemapId, TilemapOptions } from "./types.ts";
+export { createTilemap, setTile, getTile, drawTilemap } from "./tilemap.ts";
+
+// Lighting
+export { setAmbientLight, addPointLight, clearLights } from "./lighting.ts";

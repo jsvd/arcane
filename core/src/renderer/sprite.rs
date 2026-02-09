@@ -3,6 +3,7 @@ use wgpu::util::DeviceExt;
 
 use super::camera::Camera2D;
 use super::gpu::GpuContext;
+use super::lighting::LightingUniform;
 use super::texture::TextureStore;
 
 /// A sprite draw command queued from TypeScript.
@@ -67,6 +68,8 @@ pub struct SpritePipeline {
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
     pub texture_bind_group_layout: wgpu::BindGroupLayout,
+    lighting_buffer: wgpu::Buffer,
+    lighting_bind_group: wgpu::BindGroup,
 }
 
 impl SpritePipeline {
@@ -120,11 +123,32 @@ impl SpritePipeline {
                     ],
                 });
 
+        // Lighting uniform bind group layout (group 2)
+        let lighting_bind_group_layout =
+            gpu.device
+                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("lighting_bind_group_layout"),
+                    entries: &[wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    }],
+                });
+
         let pipeline_layout =
             gpu.device
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("sprite_pipeline_layout"),
-                    bind_group_layouts: &[&camera_bind_group_layout, &texture_bind_group_layout],
+                    bind_group_layouts: &[
+                        &camera_bind_group_layout,
+                        &texture_bind_group_layout,
+                        &lighting_bind_group_layout,
+                    ],
                     push_constant_ranges: &[],
                 });
 
@@ -243,6 +267,31 @@ impl SpritePipeline {
             }],
         });
 
+        // Lighting uniform buffer (272 bytes = LightingUniform size)
+        let default_lighting = LightingUniform {
+            ambient: [1.0, 1.0, 1.0],
+            light_count: 0,
+            lights: [super::lighting::LightData {
+                pos_radius: [0.0; 4],
+                color_intensity: [0.0; 4],
+            }; super::lighting::MAX_LIGHTS],
+        };
+
+        let lighting_buffer = gpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("lighting_uniform_buffer"),
+            contents: bytemuck::cast_slice(&[default_lighting]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let lighting_bind_group = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("lighting_bind_group"),
+            layout: &lighting_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: lighting_buffer.as_entire_binding(),
+            }],
+        });
+
         Self {
             pipeline,
             vertex_buffer,
@@ -250,6 +299,8 @@ impl SpritePipeline {
             camera_buffer,
             camera_bind_group,
             texture_bind_group_layout,
+            lighting_buffer,
+            lighting_bind_group,
         }
     }
 
@@ -259,6 +310,7 @@ impl SpritePipeline {
         gpu: &GpuContext,
         textures: &TextureStore,
         camera: &Camera2D,
+        lighting: &LightingUniform,
         commands: &[SpriteCommand],
         target: &wgpu::TextureView,
         encoder: &mut wgpu::CommandEncoder,
@@ -271,6 +323,13 @@ impl SpritePipeline {
             &self.camera_buffer,
             0,
             bytemuck::cast_slice(&[camera_uniform]),
+        );
+
+        // Update lighting uniform
+        gpu.queue.write_buffer(
+            &self.lighting_buffer,
+            0,
+            bytemuck::cast_slice(&[*lighting]),
         );
 
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -295,6 +354,7 @@ impl SpritePipeline {
 
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
+        render_pass.set_bind_group(2, &self.lighting_bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 

@@ -33,3 +33,22 @@ export type MousePosition = {
   x: number;
   y: number;
 };
+
+/** Opaque handle to a tilemap. */
+export type TilemapId = number;
+
+/** Options for creating a tilemap. */
+export type TilemapOptions = {
+  /** Texture atlas handle from loadTexture(). */
+  textureId: number;
+  /** Grid width in tiles. */
+  width: number;
+  /** Grid height in tiles. */
+  height: number;
+  /** Size of each tile in world units. */
+  tileSize: number;
+  /** Number of columns in the texture atlas. */
+  atlasColumns: number;
+  /** Number of rows in the texture atlas. */
+  atlasRows: number;
+};

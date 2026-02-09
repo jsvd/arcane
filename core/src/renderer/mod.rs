@@ -2,11 +2,15 @@ mod gpu;
 mod sprite;
 mod texture;
 mod camera;
+mod tilemap;
+mod lighting;
 
 pub use gpu::GpuContext;
 pub use sprite::{SpriteCommand, SpritePipeline};
 pub use texture::{TextureId, TextureStore};
 pub use camera::Camera2D;
+pub use tilemap::{Tilemap, TilemapStore};
+pub use lighting::{LightingState, LightingUniform, PointLight, LightData, MAX_LIGHTS};
 
 use anyhow::Result;
 
@@ -16,6 +20,7 @@ pub struct Renderer {
     pub sprites: SpritePipeline,
     pub textures: TextureStore,
     pub camera: Camera2D,
+    pub lighting: LightingState,
     /// Sprite commands queued for the current frame.
     pub frame_commands: Vec<SpriteCommand>,
 }
@@ -32,6 +37,7 @@ impl Renderer {
             sprites,
             textures,
             camera,
+            lighting: LightingState::default(),
             frame_commands: Vec::new(),
         })
     }
@@ -50,10 +56,13 @@ impl Renderer {
             a.layer.cmp(&b.layer).then(a.texture_id.cmp(&b.texture_id))
         });
 
+        let lighting_uniform = self.lighting.to_uniform();
+
         self.sprites.render(
             &self.gpu,
             &self.textures,
             &self.camera,
+            &lighting_uniform,
             &self.frame_commands,
             &view,
             &mut encoder,

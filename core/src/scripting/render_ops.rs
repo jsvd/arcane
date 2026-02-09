@@ -5,6 +5,8 @@ use std::rc::Rc;
 use deno_core::OpState;
 
 use crate::renderer::SpriteCommand;
+use crate::renderer::TilemapStore;
+use crate::renderer::PointLight;
 
 /// Shared state between render ops and the main loop.
 /// This is placed into `OpState` when running in renderer mode.
@@ -28,6 +30,12 @@ pub struct RenderBridgeState {
     pub next_texture_id: u32,
     /// Map of path → already-assigned texture ID.
     pub texture_path_to_id: std::collections::HashMap<String, u32>,
+    /// Tilemap storage (managed by tilemap ops).
+    pub tilemaps: TilemapStore,
+    /// Lighting: ambient color (0-1 per channel). Default white = no darkening.
+    pub ambient_light: [f32; 3],
+    /// Lighting: point lights for this frame.
+    pub point_lights: Vec<PointLight>,
 }
 
 impl RenderBridgeState {
@@ -46,6 +54,9 @@ impl RenderBridgeState {
             base_dir,
             next_texture_id: 1,
             texture_path_to_id: std::collections::HashMap::new(),
+            tilemaps: TilemapStore::new(),
+            ambient_light: [1.0, 1.0, 1.0],
+            point_lights: Vec::new(),
         }
     }
 }
@@ -198,6 +209,103 @@ pub fn op_create_solid_texture(
     id
 }
 
+/// Create a tilemap. Returns tilemap ID.
+#[deno_core::op2(fast)]
+pub fn op_create_tilemap(
+    state: &mut OpState,
+    texture_id: u32,
+    width: u32,
+    height: u32,
+    tile_size: f64,
+    atlas_columns: u32,
+    atlas_rows: u32,
+) -> u32 {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge
+        .borrow_mut()
+        .tilemaps
+        .create(texture_id, width, height, tile_size as f32, atlas_columns, atlas_rows)
+}
+
+/// Set a tile in a tilemap.
+#[deno_core::op2(fast)]
+pub fn op_set_tile(state: &mut OpState, tilemap_id: u32, gx: u32, gy: u32, tile_id: u32) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    if let Some(tm) = bridge.borrow_mut().tilemaps.get_mut(tilemap_id) {
+        tm.set_tile(gx, gy, tile_id as u16);
+    }
+}
+
+/// Get a tile from a tilemap.
+#[deno_core::op2(fast)]
+pub fn op_get_tile(state: &mut OpState, tilemap_id: u32, gx: u32, gy: u32) -> u32 {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge
+        .borrow()
+        .tilemaps
+        .get(tilemap_id)
+        .map(|tm| tm.get_tile(gx, gy) as u32)
+        .unwrap_or(0)
+}
+
+/// Draw a tilemap's visible tiles as sprite commands (camera-culled).
+#[deno_core::op2(fast)]
+pub fn op_draw_tilemap(state: &mut OpState, tilemap_id: u32, world_x: f32, world_y: f32, layer: i32) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let mut b = bridge.borrow_mut();
+    let cam_x = b.camera_x;
+    let cam_y = b.camera_y;
+    let cam_zoom = b.camera_zoom;
+    // Default viewport for culling; actual viewport is synced by renderer
+    let vp_w = 800.0;
+    let vp_h = 600.0;
+
+    if let Some(tm) = b.tilemaps.get(tilemap_id) {
+        let cmds = tm.bake_visible(world_x, world_y, layer, cam_x, cam_y, cam_zoom, vp_w, vp_h);
+        b.sprite_commands.extend(cmds);
+    }
+}
+
+// --- Lighting ops ---
+
+/// Set the ambient light color (0-1 per channel).
+#[deno_core::op2(fast)]
+pub fn op_set_ambient_light(state: &mut OpState, r: f32, g: f32, b: f32) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().ambient_light = [r, g, b];
+}
+
+/// Add a point light at world position (x,y) with radius, color, and intensity.
+#[deno_core::op2(fast)]
+pub fn op_add_point_light(
+    state: &mut OpState,
+    x: f32,
+    y: f32,
+    radius: f32,
+    r: f32,
+    g: f32,
+    b: f32,
+    intensity: f32,
+) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().point_lights.push(PointLight {
+        x,
+        y,
+        radius,
+        r,
+        g,
+        b,
+        intensity,
+    });
+}
+
+/// Clear all point lights for this frame.
+#[deno_core::op2(fast)]
+pub fn op_clear_lights(state: &mut OpState) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().point_lights.clear();
+}
+
 deno_core::extension!(
     render_ext,
     ops = [
@@ -211,5 +319,12 @@ deno_core::extension!(
         op_get_mouse_position,
         op_get_delta_time,
         op_create_solid_texture,
+        op_create_tilemap,
+        op_set_tile,
+        op_get_tile,
+        op_draw_tilemap,
+        op_set_ambient_light,
+        op_add_point_light,
+        op_clear_lights,
     ],
 );

@@ -142,13 +142,21 @@ pub fn run(entry: String) -> Result<()> {
             }
         }
 
-        // Collect sprite commands from bridge
+        // Collect sprite commands and lighting from bridge
         {
             let mut bridge = bridge_for_loop.borrow_mut();
             state.sprite_commands.append(&mut bridge.sprite_commands);
             state.camera_x = bridge.camera_x;
             state.camera_y = bridge.camera_y;
             state.camera_zoom = bridge.camera_zoom;
+
+            // Sync lighting state to renderer
+            if let Some(ref mut renderer) = state.renderer {
+                renderer.lighting.ambient = bridge.ambient_light;
+                renderer.lighting.lights = bridge.point_lights.drain(..).collect();
+            } else {
+                bridge.point_lights.clear();
+            }
         }
 
         Ok(())
@@ -176,12 +184,13 @@ fn reload_runtime(
     // Create a fresh runtime
     let new_bridge = Rc::new(RefCell::new(RenderBridgeState::new(base_dir.to_path_buf())));
 
-    // Copy texture ID mappings from old bridge so textures keep their IDs
+    // Copy texture ID mappings and tilemap state from old bridge for ID stability
     {
         let old = bridge.borrow();
         let mut new_b = new_bridge.borrow_mut();
         new_b.texture_path_to_id = old.texture_path_to_id.clone();
         new_b.next_texture_id = old.next_texture_id;
+        new_b.tilemaps = old.tilemaps.clone();
     }
 
     let mut new_runtime = ArcaneRuntime::new_with_render_bridge(new_bridge.clone());

@@ -4,7 +4,7 @@
 
 Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for performance, TypeScript scripting for game logic.
 
-**Current status: Phase 2a complete — Window, sprites, camera, `arcane dev` command. Visual Sokoban demo renders with hot-reload.**
+**Current status: Phase 2b complete — Tilemap, lighting, Breakout demo, Roguelike demo. 227 tests passing in both Node and V8.**
 
 ## Repository Structure
 
@@ -38,15 +38,17 @@ arcane/
 │   │   │   ├── module_loader.rs   — TsModuleLoader: TS transpilation via deno_ast
 │   │   │   ├── runtime.rs         — ArcaneRuntime: V8 + module loader + crypto polyfill
 │   │   │   ├── test_runner.rs     — V8 test runner with #[op2] result reporting
-│   │   │   └── render_ops.rs      — #[op2] ops: draw_sprite, set_camera, load_texture, etc.
+│   │   │   └── render_ops.rs      — #[op2] ops: sprites, camera, tilemap, lighting, input
 │   │   ├── renderer/              — [feature = "renderer"]
-│   │   │   ├── mod.rs             — Renderer: owns GPU, sprite pipeline, textures
+│   │   │   ├── mod.rs             — Renderer: owns GPU, sprite pipeline, textures, lighting
 │   │   │   ├── gpu.rs             — GpuContext: wgpu device/surface/pipeline setup
-│   │   │   ├── sprite.rs          — SpritePipeline: instanced quad rendering
+│   │   │   ├── sprite.rs          — SpritePipeline: instanced quad rendering + lighting
 │   │   │   ├── texture.rs         — TextureStore: handle-based texture loading
 │   │   │   ├── camera.rs          — Camera2D: position, zoom, view/proj matrix
+│   │   │   ├── tilemap.rs         — Tilemap + TilemapStore: tile data, atlas UV, camera culling
+│   │   │   ├── lighting.rs        — LightingState, PointLight, LightingUniform for GPU
 │   │   │   └── shaders/
-│   │   │       └── sprite.wgsl    — Instanced sprite vertex + fragment shader
+│   │   │       └── sprite.wgsl    — Instanced sprite shader with lighting (3 bind groups)
 │   │   └── platform/              — [feature = "renderer"]
 │   │       ├── mod.rs             — Platform public API
 │   │       ├── window.rs          — winit ApplicationHandler + event loop
@@ -72,17 +74,24 @@ arcane/
 │   │   ├── observe.ts             — ObserverRegistry, path pattern matching
 │   │   ├── store.ts               — GameStore, createStore()
 │   │   └── index.ts               — Public API barrel export
+│   ├── physics/
+│   │   ├── aabb.ts                — AABB type, aabbOverlap(), circleAABBOverlap/Resolve()
+│   │   └── index.ts               — Barrel export
 │   └── rendering/
-│       ├── types.ts               — TextureId, SpriteOptions, CameraState
+│       ├── types.ts               — TextureId, SpriteOptions, CameraState, TilemapId
 │       ├── sprites.ts             — drawSprite(), clearSprites()
 │       ├── camera.ts              — setCamera(), getCamera(), followTarget()
 │       ├── input.ts               — isKeyDown(), isKeyPressed(), getMousePosition()
+│       ├── tilemap.ts             — createTilemap(), setTile(), getTile(), drawTilemap()
+│       ├── lighting.ts            — setAmbientLight(), addPointLight(), clearLights()
 │       ├── texture.ts             — loadTexture(), createSolidTexture()
 │       ├── loop.ts                — onFrame(), getDeltaTime()
 │       └── index.ts               — Barrel export
 ├── demos/
 │   ├── sokoban/                   — Phase 1 demo: grid puzzle + Phase 2a visual demo
-│   └── card-battler/              — Phase 1 demo: card game
+│   ├── card-battler/              — Phase 1 demo: card game
+│   ├── breakout/                  — Phase 2b demo: real-time arcade (paddle, ball, bricks)
+│   └── roguelike/                 — Phase 2b demo: procedural dungeon, FOV, fog of war
 ```
 
 ## Conventions
@@ -125,7 +134,7 @@ Read `docs/engineering-philosophy.md` first. It governs everything else.
 5. **Explicit over implicit** — No hidden state, no singletons, no magic strings.
 6. **Functional core** — State in, state out. Pure functions for game logic.
 
-## Current Constraints (Phase 2a)
+## Current Constraints (Phase 2b)
 
 - TypeScript code lives under `runtime/`. Rust code under `core/` and `cli/`.
 - TS runtime has zero external dependencies. Rust crates use deno_core, deno_ast, clap, tokio, anyhow, wgpu, winit, image, bytemuck, notify.
