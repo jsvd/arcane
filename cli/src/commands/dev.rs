@@ -410,8 +410,12 @@ fn reload_runtime(
     })?;
 
     // Swap in the new runtime and bridge
-    *runtime = new_runtime;
+    // Use mem::replace to explicitly control drop timing of old runtime
+    let old_runtime = std::mem::replace(runtime, new_runtime);
     *bridge.borrow_mut() = new_bridge.borrow().clone();
+
+    // Explicitly drop the old runtime after swapping
+    drop(old_runtime);
 
     Ok(())
 }
