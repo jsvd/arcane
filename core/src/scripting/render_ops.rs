@@ -89,40 +89,41 @@ impl RenderBridgeState {
 }
 
 /// Queue a sprite draw command for this frame.
+/// Accepts f64 (JavaScript's native number type), converts to f32 for GPU.
 #[deno_core::op2(fast)]
 pub fn op_draw_sprite(
     state: &mut OpState,
     texture_id: u32,
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
     layer: i32,
-    uv_x: f32,
-    uv_y: f32,
-    uv_w: f32,
-    uv_h: f32,
-    tint_r: f32,
-    tint_g: f32,
-    tint_b: f32,
-    tint_a: f32,
+    uv_x: f64,
+    uv_y: f64,
+    uv_w: f64,
+    uv_h: f64,
+    tint_r: f64,
+    tint_g: f64,
+    tint_b: f64,
+    tint_a: f64,
 ) {
     let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
     bridge.borrow_mut().sprite_commands.push(SpriteCommand {
         texture_id,
-        x,
-        y,
-        w,
-        h,
+        x: x as f32,
+        y: y as f32,
+        w: w as f32,
+        h: h as f32,
         layer,
-        uv_x,
-        uv_y,
-        uv_w,
-        uv_h,
-        tint_r,
-        tint_g,
-        tint_b,
-        tint_a,
+        uv_x: uv_x as f32,
+        uv_y: uv_y as f32,
+        uv_w: uv_w as f32,
+        uv_h: uv_h as f32,
+        tint_r: tint_r as f32,
+        tint_g: tint_g as f32,
+        tint_b: tint_b as f32,
+        tint_a: tint_a as f32,
     });
 }
 
@@ -134,13 +135,14 @@ pub fn op_clear_sprites(state: &mut OpState) {
 }
 
 /// Update the camera position and zoom.
+/// Accepts f64 (JavaScript's native number type), converts to f32 for GPU.
 #[deno_core::op2(fast)]
-pub fn op_set_camera(state: &mut OpState, x: f32, y: f32, zoom: f32) {
+pub fn op_set_camera(state: &mut OpState, x: f64, y: f64, zoom: f64) {
     let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
     let mut b = bridge.borrow_mut();
-    b.camera_x = x;
-    b.camera_y = y;
-    b.camera_zoom = zoom;
+    b.camera_x = x as f32;
+    b.camera_y = y as f32;
+    b.camera_zoom = zoom as f32;
 }
 
 /// Get camera state as [x, y, zoom].
@@ -276,8 +278,9 @@ pub fn op_get_tile(state: &mut OpState, tilemap_id: u32, gx: u32, gy: u32) -> u3
 }
 
 /// Draw a tilemap's visible tiles as sprite commands (camera-culled).
+/// Accepts f64 (JavaScript's native number type), converts to f32 for GPU.
 #[deno_core::op2(fast)]
-pub fn op_draw_tilemap(state: &mut OpState, tilemap_id: u32, world_x: f32, world_y: f32, layer: i32) {
+pub fn op_draw_tilemap(state: &mut OpState, tilemap_id: u32, world_x: f64, world_y: f64, layer: i32) {
     let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
     let mut b = bridge.borrow_mut();
     let cam_x = b.camera_x;
@@ -288,7 +291,7 @@ pub fn op_draw_tilemap(state: &mut OpState, tilemap_id: u32, world_x: f32, world
     let vp_h = 600.0;
 
     if let Some(tm) = b.tilemaps.get(tilemap_id) {
-        let cmds = tm.bake_visible(world_x, world_y, layer, cam_x, cam_y, cam_zoom, vp_w, vp_h);
+        let cmds = tm.bake_visible(world_x as f32, world_y as f32, layer, cam_x, cam_y, cam_zoom, vp_w, vp_h);
         b.sprite_commands.extend(cmds);
     }
 }
@@ -296,33 +299,35 @@ pub fn op_draw_tilemap(state: &mut OpState, tilemap_id: u32, world_x: f32, world
 // --- Lighting ops ---
 
 /// Set the ambient light color (0-1 per channel).
+/// Accepts f64 (JavaScript's native number type), converts to f32 for GPU.
 #[deno_core::op2(fast)]
-pub fn op_set_ambient_light(state: &mut OpState, r: f32, g: f32, b: f32) {
+pub fn op_set_ambient_light(state: &mut OpState, r: f64, g: f64, b: f64) {
     let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
-    bridge.borrow_mut().ambient_light = [r, g, b];
+    bridge.borrow_mut().ambient_light = [r as f32, g as f32, b as f32];
 }
 
 /// Add a point light at world position (x,y) with radius, color, and intensity.
+/// Accepts f64 (JavaScript's native number type), converts to f32 for GPU.
 #[deno_core::op2(fast)]
 pub fn op_add_point_light(
     state: &mut OpState,
-    x: f32,
-    y: f32,
-    radius: f32,
-    r: f32,
-    g: f32,
-    b: f32,
-    intensity: f32,
+    x: f64,
+    y: f64,
+    radius: f64,
+    r: f64,
+    g: f64,
+    b: f64,
+    intensity: f64,
 ) {
     let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
     bridge.borrow_mut().point_lights.push(PointLight {
-        x,
-        y,
-        radius,
-        r,
-        g,
-        b,
-        intensity,
+        x: x as f32,
+        y: y as f32,
+        radius: radius as f32,
+        r: r as f32,
+        g: g as f32,
+        b: b as f32,
+        intensity: intensity as f32,
     });
 }
 
@@ -359,10 +364,11 @@ pub fn op_load_sound(state: &mut OpState, #[string] path: &str) -> u32 {
 }
 
 /// Play a loaded sound.
+/// Accepts f64 (JavaScript's native number type), converts to f32 for audio.
 #[deno_core::op2(fast)]
-pub fn op_play_sound(state: &mut OpState, id: u32, volume: f32, looping: bool) {
+pub fn op_play_sound(state: &mut OpState, id: u32, volume: f64, looping: bool) {
     let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
-    bridge.borrow_mut().audio_commands.push(BridgeAudioCommand::PlaySound { id, volume, looping });
+    bridge.borrow_mut().audio_commands.push(BridgeAudioCommand::PlaySound { id, volume: volume as f32, looping });
 }
 
 /// Stop a specific sound.
@@ -380,10 +386,11 @@ pub fn op_stop_all_sounds(state: &mut OpState) {
 }
 
 /// Set the master volume.
+/// Accepts f64 (JavaScript's native number type), converts to f32 for audio.
 #[deno_core::op2(fast)]
-pub fn op_set_master_volume(state: &mut OpState, volume: f32) {
+pub fn op_set_master_volume(state: &mut OpState, volume: f64) {
     let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
-    bridge.borrow_mut().audio_commands.push(BridgeAudioCommand::SetMasterVolume { volume });
+    bridge.borrow_mut().audio_commands.push(BridgeAudioCommand::SetMasterVolume { volume: volume as f32 });
 }
 
 // --- Font ops ---

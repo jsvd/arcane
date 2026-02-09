@@ -77,7 +77,11 @@ export function drawRect(
   const ss = options?.screenSpace ?? false;
   const tex = getColorTexture(color);
   const pos = toWorld(x, y, w, h, ss);
-  drawSprite({ textureId: tex, x: pos.x, y: pos.y, w: pos.w, h: pos.h, layer });
+  const posX = pos.x;
+  const posY = pos.y;
+  const posW = pos.w;
+  const posH = pos.h;
+  drawSprite({ textureId: tex, x: posX, y: posY, w: posW, h: posH, layer });
 }
 
 /**
