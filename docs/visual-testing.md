@@ -94,46 +94,65 @@ drawRect(0, 0, 800, 600, { color: { r: 255, g: 255, b: 255 } }); // Wrong color 
 
 ## API Cheat Sheet
 
+### Color Helper: rgb(r, g, b, a?)
+```typescript
+import { rgb } from "../arcane/runtime/ui/index.ts";
+
+// Create colors from 0-255 values (auto-normalized to 0.0-1.0)
+rgb(255, 128, 0)        // Orange, fully opaque
+rgb(255, 0, 0, 128)     // Red, 50% transparent
+
+// Equivalent to manual normalization:
+{ r: 1.0, g: 0.5, b: 0.0, a: 1.0 }
+```
+
 ### drawRect(x, y, w, h, options?)
 ```typescript
+import { rgb } from "../arcane/runtime/ui/index.ts";
+
 drawRect(
   10.0,     // x: float
   20.0,     // y: float
   100.0,    // w: float
   50.0,     // h: float
   {
-    color: { r: 1.0, g: 0.5, b: 0.0 },  // RGB 0.0-1.0
-    layer: 90,                            // optional
-    screenSpace: false                    // optional
+    color: rgb(255, 128, 0),  // RGB 0-255, auto-normalized
+    // or: color: { r: 1.0, g: 0.5, b: 0.0, a: 1.0 }  // manual
+    layer: 90,                // optional
+    screenSpace: false        // optional
   }
 );
 ```
 
 ### drawText(text, options)
 ```typescript
+import { rgb } from "../arcane/runtime/ui/index.ts";
+
 drawText(
   "Hello World",  // text: string
   {
-    x: 10.0,                             // float
-    y: 20.0,                             // float
-    size: 16.0,                          // float
-    color: { r: 1.0, g: 1.0, b: 1.0 },  // RGB 0.0-1.0
-    layer: 100                           // optional
+    x: 10.0,               // float
+    y: 20.0,               // float
+    size: 16.0,            // float
+    color: rgb(255, 255, 255),  // White (auto-normalized)
+    layer: 100             // optional
   }
 );
 ```
 
 ### drawSprite(options)
 ```typescript
+import { rgb } from "../arcane/runtime/ui/index.ts";
+
 drawSprite({
-  textureId: 1,                        // number
-  x: 100.0,                            // float
-  y: 100.0,                            // float
-  w: 32.0,                             // float
-  h: 32.0,                             // float
-  layer: 50,                           // optional
-  rotation: 0.0,                       // optional (radians)
-  color: { r: 1.0, g: 1.0, b: 1.0 }   // optional
+  textureId: 1,               // number
+  x: 100.0,                   // float
+  y: 100.0,                   // float
+  w: 32.0,                    // float
+  h: 32.0,                    // float
+  layer: 50,                  // optional
+  rotation: 0.0,              // optional (radians)
+  color: rgb(255, 255, 255)   // optional tint (white = no tint)
 });
 ```
 
@@ -162,8 +181,12 @@ drawText("Hello", { x: 10.0, y: 20.0, size: 16.0 });
 // ❌ WRONG (0-255 range)
 { color: { r: 255, g: 128, b: 0 } }
 
-// ✅ CORRECT (0.0-1.0 range)
+// ✅ CORRECT (0.0-1.0 range, manual normalization)
 { color: { r: 1.0, g: 0.5, b: 0.0 } }
+
+// ✅ BETTER (use rgb() helper for auto-normalization)
+import { rgb } from "../arcane/runtime/ui/index.ts";
+{ color: rgb(255, 128, 0) }  // Automatically normalized to 0.0-1.0
 ```
 
 ### 4. Missing Required Fields

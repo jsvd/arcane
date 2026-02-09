@@ -1,5 +1,48 @@
 import { describe, it, assert } from "../../runtime/testing/harness.ts";
 import { drawRect, drawPanel, drawBar, drawLabel } from "./primitives.ts";
+import { rgb } from "./types.ts";
+
+describe("rgb helper", () => {
+  it("should normalize 0-255 values to 0.0-1.0 range", () => {
+    const color = rgb(255, 128, 0);
+    assert.equal(color.r, 1.0, "r should be 1.0");
+    assert.equal(color.g, 128 / 255, "g should be ~0.502");
+    assert.equal(color.b, 0.0, "b should be 0.0");
+    assert.equal(color.a, 1.0, "a should default to 1.0");
+  });
+
+  it("should accept optional alpha parameter", () => {
+    const color = rgb(255, 0, 0, 128);
+    assert.equal(color.r, 1.0, "r should be 1.0");
+    assert.equal(color.g, 0.0, "g should be 0.0");
+    assert.equal(color.b, 0.0, "b should be 0.0");
+    assert.equal(color.a, 128 / 255, "a should be ~0.502");
+  });
+
+  it("should handle black (0, 0, 0)", () => {
+    const color = rgb(0, 0, 0);
+    assert.equal(color.r, 0.0, "r should be 0.0");
+    assert.equal(color.g, 0.0, "g should be 0.0");
+    assert.equal(color.b, 0.0, "b should be 0.0");
+    assert.equal(color.a, 1.0, "a should be 1.0");
+  });
+
+  it("should handle white (255, 255, 255)", () => {
+    const color = rgb(255, 255, 255);
+    assert.equal(color.r, 1.0, "r should be 1.0");
+    assert.equal(color.g, 1.0, "g should be 1.0");
+    assert.equal(color.b, 1.0, "b should be 1.0");
+    assert.equal(color.a, 1.0, "a should be 1.0");
+  });
+
+  it("should handle fully transparent (255, 255, 255, 0)", () => {
+    const color = rgb(255, 255, 255, 0);
+    assert.equal(color.r, 1.0, "r should be 1.0");
+    assert.equal(color.g, 1.0, "g should be 1.0");
+    assert.equal(color.b, 1.0, "b should be 1.0");
+    assert.equal(color.a, 0.0, "a should be 0.0");
+  });
+});
 
 describe("ui primitives", () => {
   it("drawRect does not throw in headless mode", () => {
