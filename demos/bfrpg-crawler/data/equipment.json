@@ -1,0 +1,56 @@
+{
+  "_license": "CC BY-SA 4.0",
+  "_source": "Basic Fantasy Role-Playing Game, 4th Edition",
+  "_attribution": "Chris Gonnerman & BFRPG community",
+  "_adaptation": "Simplified equipment data for Arcane BFRPG dungeon crawler",
+
+  "weapons": {
+    "dagger": {
+      "damage": "1d4",
+      "weight": 1,
+      "cost": 3,
+      "attackBonus": 0
+    },
+    "shortsword": {
+      "damage": "1d6",
+      "weight": 3,
+      "cost": 7,
+      "attackBonus": 0
+    },
+    "longsword": {
+      "damage": "1d8",
+      "weight": 4,
+      "cost": 10,
+      "attackBonus": 0
+    },
+    "mace": {
+      "damage": "1d6",
+      "weight": 4,
+      "cost": 5,
+      "attackBonus": 0
+    },
+    "battleaxe": {
+      "damage": "1d8",
+      "weight": 5,
+      "cost": 7,
+      "attackBonus": 0
+    }
+  },
+  "armor": {
+    "leather": {
+      "acBonus": 2,
+      "weight": 15,
+      "cost": 20
+    },
+    "chainmail": {
+      "acBonus": 4,
+      "weight": 40,
+      "cost": 75
+    },
+    "shield": {
+      "acBonus": 1,
+      "weight": 5,
+      "cost": 10
+    }
+  }
+}

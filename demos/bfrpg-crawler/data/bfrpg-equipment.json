@@ -1,0 +1,99 @@
+{
+  "_license": "CC BY-SA 4.0",
+  "_source": "Basic Fantasy Role-Playing Game, 4th Edition",
+  "_attribution": "Chris Gonnerman & BFRPG community",
+  "_adaptation": "Equipment data extracted from BFRPG v4 for Arcane dungeon crawler",
+
+  "weapons": {
+    "melee_simple": {
+      "dagger": {
+        "name": "Dagger",
+        "description": "A short, pointed blade suitable for close combat or throwing.",
+        "weapon_type": 0,
+        "damage_dice": "1d4",
+        "damage_type": 1,
+        "hands_required": 1,
+        "range_increment": 10,
+        "weight": 1.0,
+        "value": 2,
+        "is_light": true,
+        "is_finesse": true,
+        "rarity": 0
+      }
+    },
+    "melee_martial": {
+      "battleaxe": {
+        "name": "Battleaxe",
+        "description": "A heavy war axe with a broad blade.",
+        "weapon_type": 1,
+        "damage_dice": "1d8",
+        "damage_type": 0,
+        "hands_required": 1,
+        "weight": 6.0,
+        "value": 10,
+        "is_versatile": true,
+        "versatile_damage": "1d10",
+        "rarity": 0
+      },
+      "shortsword": {
+        "name": "Shortsword",
+        "description": "A light, quick blade.",
+        "weapon_type": 1,
+        "damage_dice": "1d6",
+        "damage_type": 1,
+        "hands_required": 1,
+        "weight": 2.0,
+        "value": 10,
+        "is_light": true,
+        "is_finesse": true,
+        "rarity": 0
+      }
+    }
+  },
+  "armor": {
+    "light": {
+      "leather": {
+        "name": "Leather Armor",
+        "description": "Soft, flexible leather formed into a chest piece.",
+        "armor_type": 1,
+        "armor_class": 11,
+        "max_dex_bonus": 99,
+        "armor_check_penalty": 0,
+        "spell_failure_chance": 10,
+        "weight": 15.0,
+        "value": 10,
+        "rarity": 0
+      }
+    },
+    "heavy": {
+      "chain_mail": {
+        "name": "Chain Mail",
+        "description": "Interlocking metal rings covering the entire body.",
+        "armor_type": 3,
+        "armor_class": 16,
+        "max_dex_bonus": 0,
+        "armor_check_penalty": 5,
+        "spell_failure_chance": 30,
+        "weight": 40.0,
+        "value": 150,
+        "rarity": 0
+      }
+    }
+  },
+  "shields": {
+    "large_shield": {
+      "name": "Large Shield",
+      "description": "A heavy shield about 3-4 feet in height.",
+      "armor_type": 4,
+      "armor_class": 0,
+      "shield_bonus": 2,
+      "max_dex_bonus": 99,
+      "armor_check_penalty": 2,
+      "spell_failure_chance": 15,
+      "shield_bash_damage": "1d6",
+      "weight": 15.0,
+      "value": 20,
+      "rarity": 0
+    }
+  }
+}

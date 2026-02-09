@@ -1,0 +1,32 @@
+{
+  "_license": "CC BY-SA 4.0",
+  "_source": "Basic Fantasy Role-Playing Game, 4th Edition",
+  "_attribution": "Chris Gonnerman & BFRPG community",
+  "_adaptation": "Simplified race data for Arcane BFRPG dungeon crawler",
+
+  "Human": {
+    "abilityBonuses": {},
+    "description": "Versatile and ambitious, humans are the most adaptable of the common races"
+  },
+  "Dwarf": {
+    "abilityBonuses": {
+      "constitution": 1,
+      "charisma": -1
+    },
+    "description": "Bold and hardy, dwarves are known as skilled warriors, miners, and workers of stone"
+  },
+  "Elf": {
+    "abilityBonuses": {
+      "dexterity": 1,
+      "constitution": -1
+    },
+    "description": "Elves are a magical people of otherworldly grace, living in harmony with nature"
+  },
+  "Halfling": {
+    "abilityBonuses": {
+      "dexterity": 1,
+      "strength": -1
+    },
+    "description": "The diminutive halflings survive in a world full of larger creatures by avoiding notice"
+  }
+}
