@@ -6,6 +6,7 @@ use std::rc::Rc;
 use anyhow::Context;
 use deno_core::JsRuntime;
 use deno_core::ModuleSpecifier;
+use deno_core::OpState;
 use deno_core::RuntimeOptions;
 
 use super::TsModuleLoader;
@@ -15,9 +16,12 @@ pub struct ArcaneRuntime {
     runtime: JsRuntime,
 }
 
+/// Newtype to store eval results in OpState.
+struct AgentEvalResult(String);
+
 deno_core::extension!(
     arcane_ext,
-    ops = [op_crypto_random_uuid],
+    ops = [op_crypto_random_uuid, op_agent_store_eval_result],
 );
 
 /// Polyfill for `crypto.randomUUID()` which deno_core's V8 doesn't provide.
@@ -25,6 +29,16 @@ deno_core::extension!(
 #[string]
 fn op_crypto_random_uuid() -> String {
     generate_uuid()
+}
+
+/// Store a string value from JS into OpState for eval_to_string to read back.
+#[deno_core::op2(fast)]
+fn op_agent_store_eval_result(state: &mut OpState, #[string] value: &str) {
+    // Replace any previous result
+    if state.has::<AgentEvalResult>() {
+        state.take::<AgentEvalResult>();
+    }
+    state.put(AgentEvalResult(value.to_string()));
 }
 
 /// Generate a v4 UUID string.
@@ -170,6 +184,30 @@ impl ArcaneRuntime {
             .execute_script(name, deno_core::FastString::from(source))
             .context("Script execution failed")?;
         Ok(())
+    }
+
+    /// Evaluate a script and return the result as a string.
+    /// Works in headless mode — used by agent protocol commands.
+    pub fn eval_to_string(&mut self, source: &str) -> anyhow::Result<String> {
+        // Wrap the expression: convert to string, then store via op
+        let script = format!(
+            "Deno.core.ops.op_agent_store_eval_result(String({}))",
+            source
+        );
+        self.runtime
+            .execute_script(
+                "<agent_eval>",
+                deno_core::FastString::from(script),
+            )
+            .context("Agent eval failed")?;
+
+        // Read result from OpState
+        let op_state = self.runtime.op_state();
+        let result = op_state
+            .borrow_mut()
+            .take::<AgentEvalResult>()
+            .0;
+        Ok(result)
     }
 
     /// Access the inner JsRuntime for advanced operations.

@@ -2,10 +2,12 @@ import {
   createBreakoutGame, stepPhysics, movePaddle, launchBall,
   FIELD_W, FIELD_H, PADDLE_W, PADDLE_H, PADDLE_Y, PADDLE_SPEED, BALL_RADIUS,
 } from "./breakout.ts";
+import type { BreakoutState } from "./breakout.ts";
 import {
   onFrame, drawSprite, clearSprites, setCamera,
   isKeyDown, isKeyPressed, getDeltaTime, createSolidTexture,
 } from "../../runtime/rendering/index.ts";
+import { registerAgent } from "../../runtime/agent/index.ts";
 
 // Textures
 const TEX_PADDLE = createSolidTexture("paddle", 220, 220, 240);
@@ -21,6 +23,34 @@ const BRICK_COLORS = [
 ];
 
 let state = createBreakoutGame();
+
+// Agent protocol
+registerAgent<BreakoutState>({
+  name: "breakout",
+  getState: () => state,
+  setState: (s) => { state = s; },
+  describe: (s, opts) => {
+    if (opts.verbosity === "minimal") {
+      return `Score: ${s.score}, Lives: ${s.lives}, Phase: ${s.phase}`;
+    }
+    const bricksLeft = s.bricks.filter((b) => b.hp > 0).length;
+    return `Score: ${s.score} | Lives: ${s.lives} | Bricks: ${bricksLeft} | Phase: ${s.phase} | Ball: (${s.ballX.toFixed(1)},${s.ballY.toFixed(1)}) | Paddle: ${s.paddleX.toFixed(1)}`;
+  },
+  actions: {
+    moveLeft: {
+      handler: (s) => movePaddle(s, -PADDLE_SPEED * (1 / 60)),
+      description: "Move paddle left one step",
+    },
+    moveRight: {
+      handler: (s) => movePaddle(s, PADDLE_SPEED * (1 / 60)),
+      description: "Move paddle right one step",
+    },
+    launch: {
+      handler: (s) => s.phase === "ready" ? launchBall(s) : s,
+      description: "Launch the ball (only works in ready phase)",
+    },
+  },
+});
 
 // Center camera on field
 setCamera(FIELD_W / 2, FIELD_H / 2, 1);

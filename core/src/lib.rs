@@ -5,3 +5,6 @@ pub mod renderer;
 
 #[cfg(feature = "renderer")]
 pub mod platform;
+
+#[cfg(feature = "renderer")]
+pub mod agent;

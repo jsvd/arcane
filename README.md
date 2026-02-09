@@ -96,7 +96,7 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phase 2b complete.** Tilemap renderer, 2D lighting (ambient + point lights), Breakout demo, Roguelike demo (procedural dungeons, FOV, fog of war). 227 tests passing in both Node and V8.
+**Phase 3 complete.** Agent protocol (TS library + CLI + HTTP inspector). AI agents can query game state, execute actions, and "see" games as text. 264 TS tests + 35 Rust tests passing.
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 

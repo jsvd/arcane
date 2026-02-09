@@ -10,7 +10,7 @@ use arcane_core::scripting::render_ops::RenderBridgeState;
 use arcane_core::scripting::ArcaneRuntime;
 
 /// Run the dev server: open a window, load TS entry file, run game loop.
-pub fn run(entry: String) -> Result<()> {
+pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
     let entry_path = std::fs::canonicalize(&entry)
         .with_context(|| format!("Cannot find entry file: {entry}"))?;
 
@@ -47,6 +47,15 @@ pub fn run(entry: String) -> Result<()> {
     })?;
 
     println!("Entry file loaded. Opening window...");
+
+    // Start HTTP inspector if requested
+    let inspector_rx = inspector_port.map(|port| {
+        let (tx, rx) = arcane_core::agent::inspector_channel();
+        let _handle = arcane_core::agent::inspector::start_inspector(port, tx);
+        // Leak the handle — inspector runs for the lifetime of the process
+        std::mem::forget(_handle);
+        rx
+    });
 
     // Hot-reload: file watcher sets a flag when .ts files change
     let reload_flag = Arc::new(AtomicBool::new(false));
@@ -86,10 +95,24 @@ pub fn run(entry: String) -> Result<()> {
         }
 
         // Call the TS frame callback
-        let _ = runtime.execute_script(
+        let frame_result = runtime.inner().execute_script(
             "<frame>",
             "if (globalThis.__frameCallback) { globalThis.__frameCallback(); }",
         );
+
+        // Handle frame callback errors with error snapshots
+        if let Err(ref e) = frame_result {
+            let error_msg = escape_js(&format!("{e}"));
+            let snapshot_script = format!(
+                "JSON.stringify(globalThis.__arcaneAgent?.captureSnapshot())"
+            );
+            if let Ok(snapshot_json) = runtime.eval_to_string(&snapshot_script) {
+                if snapshot_json != "undefined" && snapshot_json != "null" {
+                    write_error_snapshot(&snapshot_json, &error_msg);
+                }
+            }
+            eprintln!("[frame] Error: {e}");
+        }
 
         // Process any pending texture loads
         let pending_textures: Vec<(String, u32)> = {
@@ -159,6 +182,14 @@ pub fn run(entry: String) -> Result<()> {
             }
         }
 
+        // Poll inspector requests (if inspector is active)
+        if let Some(ref rx) = inspector_rx {
+            while let Ok((req, resp_tx)) = rx.try_recv() {
+                let response = process_inspector_request(&mut runtime, req);
+                let _ = resp_tx.send(response);
+            }
+        }
+
         Ok(())
     });
 
@@ -166,6 +197,102 @@ pub fn run(entry: String) -> Result<()> {
     arcane_core::platform::run_event_loop(config, render_state, frame_callback)?;
 
     Ok(())
+}
+
+/// Process a single inspector request by evaluating TS via the agent protocol.
+fn process_inspector_request(
+    runtime: &mut ArcaneRuntime,
+    req: arcane_core::agent::InspectorRequest,
+) -> arcane_core::agent::InspectorResponse {
+    use arcane_core::agent::{InspectorRequest, InspectorResponse};
+
+    match req {
+        InspectorRequest::Health => {
+            InspectorResponse::json(r#"{"status":"ok"}"#.into())
+        }
+        InspectorRequest::GetState { path: None } => {
+            eval_json(runtime, "JSON.stringify(globalThis.__arcaneAgent?.getState(), null, 2)")
+        }
+        InspectorRequest::GetState { path: Some(p) } => {
+            let escaped = escape_js(&p);
+            eval_json(runtime, &format!(
+                "JSON.stringify(globalThis.__arcaneAgent?.inspect('{}'), null, 2)", escaped
+            ))
+        }
+        InspectorRequest::Describe { verbosity } => {
+            let v = verbosity
+                .map(|v| format!("'{}'", escape_js(&v)))
+                .unwrap_or_else(|| "undefined".to_string());
+            let script = format!(
+                "globalThis.__arcaneAgent?.describe({{ verbosity: {} }}) ?? 'No agent registered.'", v
+            );
+            match runtime.eval_to_string(&script) {
+                Ok(result) => InspectorResponse::text(result),
+                Err(e) => InspectorResponse::error(500, format!("{e}")),
+            }
+        }
+        InspectorRequest::ListActions => {
+            eval_json(runtime, "JSON.stringify(globalThis.__arcaneAgent?.listActions())")
+        }
+        InspectorRequest::ExecuteAction { name, payload } => {
+            let escaped_name = escape_js(&name);
+            let escaped_payload = escape_js(&payload);
+            eval_json(runtime, &format!(
+                "JSON.stringify(globalThis.__arcaneAgent?.executeAction('{}', '{}'))",
+                escaped_name, escaped_payload
+            ))
+        }
+        InspectorRequest::Simulate { action } => {
+            let escaped = escape_js(&action);
+            eval_json(runtime, &format!(
+                "JSON.stringify(globalThis.__arcaneAgent?.simulate('{}'))", escaped
+            ))
+        }
+        InspectorRequest::Rewind { steps: _ } => {
+            eval_json(runtime, "JSON.stringify(globalThis.__arcaneAgent?.rewind())")
+        }
+        InspectorRequest::GetHistory => {
+            eval_json(runtime, "JSON.stringify(globalThis.__arcaneAgent?.captureSnapshot())")
+        }
+    }
+}
+
+/// Evaluate a script that returns JSON and wrap it as an InspectorResponse.
+fn eval_json(runtime: &mut ArcaneRuntime, script: &str) -> arcane_core::agent::InspectorResponse {
+    match runtime.eval_to_string(script) {
+        Ok(result) => arcane_core::agent::InspectorResponse::json(result),
+        Err(e) => arcane_core::agent::InspectorResponse::error(500, format!("{e}")),
+    }
+}
+
+/// Escape single quotes and backslashes in a string for safe JS interpolation.
+fn escape_js(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('\'', "\\'")
+}
+
+/// Write an error snapshot to .arcane/snapshots/<timestamp>.json
+fn write_error_snapshot(snapshot_json: &str, error_msg: &str) {
+    let dir = std::path::PathBuf::from(".arcane/snapshots");
+    if std::fs::create_dir_all(&dir).is_err() {
+        return;
+    }
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let filename = dir.join(format!("{timestamp}.json"));
+
+    // Wrap snapshot with error context
+    let content = format!(
+        "{{\"error\":\"{}\",\"snapshot\":{}}}",
+        escape_js(error_msg),
+        snapshot_json
+    );
+
+    match std::fs::write(&filename, &content) {
+        Ok(()) => eprintln!("[snapshot] Error snapshot saved to {}", filename.display()),
+        Err(e) => eprintln!("[snapshot] Failed to write snapshot: {e}"),
+    }
 }
 
 /// Reload the JS runtime: create a new one, re-execute the entry file.

@@ -1,5 +1,5 @@
 import { createRoguelikeGame, movePlayer } from "./roguelike.ts";
-import type { Direction } from "./roguelike.ts";
+import type { Direction, RoguelikeState } from "./roguelike.ts";
 import { WALL, FLOOR, CORRIDOR, STAIRS_DOWN } from "./dungeon.ts";
 import {
   onFrame, drawSprite, clearSprites, setCamera,
@@ -8,6 +8,7 @@ import {
 import { createTilemap, setTile, drawTilemap } from "../../runtime/rendering/tilemap.ts";
 import type { TilemapId } from "../../runtime/rendering/tilemap.ts";
 import { setAmbientLight, addPointLight, clearLights } from "../../runtime/rendering/lighting.ts";
+import { registerAgent } from "../../runtime/agent/index.ts";
 
 const TILE_SIZE = 16;
 const SEED = 12345;
@@ -22,6 +23,31 @@ const TEX_ENEMY = createSolidTexture("enemy", 255, 60, 60);
 const TEX_EXPLORED = createSolidTexture("explored", 40, 40, 55);
 
 let state = createRoguelikeGame(SEED);
+
+// Agent protocol
+registerAgent<RoguelikeState>({
+  name: "roguelike",
+  getState: () => state,
+  setState: (s) => { state = s; },
+  describe: (s, opts) => {
+    if (opts.verbosity === "minimal") {
+      return `Turn ${s.turn}, HP: ${s.player.hp}/${s.player.maxHp}, Phase: ${s.phase}`;
+    }
+    const alive = s.entities.filter((e) => e.hp > 0).length;
+    return `Turn ${s.turn} | HP: ${s.player.hp}/${s.player.maxHp} | Pos: (${s.player.pos.x},${s.player.pos.y}) | Enemies alive: ${alive} | Phase: ${s.phase}`;
+  },
+  actions: {
+    move: {
+      handler: (s, args) => movePlayer(s, (args.direction as Direction) ?? "wait"),
+      description: "Move the player in a direction",
+      args: [{ name: "direction", type: "string", description: "up, down, left, right, or wait" }],
+    },
+    wait: {
+      handler: (s) => movePlayer(s, "wait"),
+      description: "Wait one turn",
+    },
+  },
+});
 
 // Input mapping
 const KEY_MAP: Record<string, Direction> = {

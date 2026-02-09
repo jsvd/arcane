@@ -4,7 +4,7 @@
 
 Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for performance, TypeScript scripting for game logic.
 
-**Current status: Phase 2b complete — Tilemap, lighting, Breakout demo, Roguelike demo. 227 tests passing in both Node and V8.**
+**Current status: Phase 3 complete — Agent protocol, CLI commands (describe, inspect), HTTP inspector, error snapshots. 264 TS + 35 Rust tests passing.**
 
 ## Repository Structure
 
@@ -49,10 +49,13 @@ arcane/
 │   │   │   ├── lighting.rs        — LightingState, PointLight, LightingUniform for GPU
 │   │   │   └── shaders/
 │   │   │       └── sprite.wgsl    — Instanced sprite shader with lighting (3 bind groups)
-│   │   └── platform/              — [feature = "renderer"]
-│   │       ├── mod.rs             — Platform public API
-│   │       ├── window.rs          — winit ApplicationHandler + event loop
-│   │       └── input.rs           — Keyboard/mouse state tracking
+│   │   ├── platform/              — [feature = "renderer"]
+│   │   │   ├── mod.rs             — Platform public API
+│   │   │   ├── window.rs          — winit ApplicationHandler + event loop
+│   │   │   └── input.rs           — Keyboard/mouse state tracking
+│   │   └── agent/                 — [feature = "renderer"]
+│   │       ├── mod.rs             — InspectorRequest/Response types, channel types
+│   │       └── inspector.rs       — tiny_http HTTP server on background thread
 │   └── tests/                     — Rust integration tests
 ├── cli/                           — arcane-cli bin crate
 │   ├── Cargo.toml
@@ -61,7 +64,9 @@ arcane/
 │       └── commands/
 │           ├── mod.rs
 │           ├── test.rs            — `arcane test` — discovers & runs *.test.ts in V8
-│           └── dev.rs             — `arcane dev` — window + game loop + hot-reload
+│           ├── dev.rs             — `arcane dev` — window + game loop + hot-reload + inspector
+│           ├── describe.rs        — `arcane describe` — text description of game state
+│           └── inspect.rs         — `arcane inspect` — query specific state paths
 ├── runtime/
 │   ├── testing/
 │   │   └── harness.ts             — Universal test harness (Node + V8)
@@ -77,16 +82,22 @@ arcane/
 │   ├── physics/
 │   │   ├── aabb.ts                — AABB type, aabbOverlap(), circleAABBOverlap/Resolve()
 │   │   └── index.ts               — Barrel export
-│   └── rendering/
-│       ├── types.ts               — TextureId, SpriteOptions, CameraState, TilemapId
-│       ├── sprites.ts             — drawSprite(), clearSprites()
-│       ├── camera.ts              — setCamera(), getCamera(), followTarget()
-│       ├── input.ts               — isKeyDown(), isKeyPressed(), getMousePosition()
-│       ├── tilemap.ts             — createTilemap(), setTile(), getTile(), drawTilemap()
-│       ├── lighting.ts            — setAmbientLight(), addPointLight(), clearLights()
-│       ├── texture.ts             — loadTexture(), createSolidTexture()
-│       ├── loop.ts                — onFrame(), getDeltaTime()
-│       └── index.ts               — Barrel export
+│   ├── rendering/
+│   │   ├── types.ts               — TextureId, SpriteOptions, CameraState, TilemapId
+│   │   ├── sprites.ts             — drawSprite(), clearSprites()
+│   │   ├── camera.ts              — setCamera(), getCamera(), followTarget()
+│   │   ├── input.ts               — isKeyDown(), isKeyPressed(), getMousePosition()
+│   │   ├── tilemap.ts             — createTilemap(), setTile(), getTile(), drawTilemap()
+│   │   ├── lighting.ts            — setAmbientLight(), addPointLight(), clearLights()
+│   │   ├── texture.ts             — loadTexture(), createSolidTexture()
+│   │   ├── loop.ts                — onFrame(), getDeltaTime()
+│   │   └── index.ts               — Barrel export
+│   └── agent/
+│       ├── types.ts               — AgentConfig, ActionInfo, DescribeOptions, etc.
+│       ├── protocol.ts            — registerAgent(), AgentProtocol on globalThis
+│       ├── describe.ts            — Default text description renderer (minimal/normal/detailed)
+│       ├── index.ts               — Barrel export
+│       └── agent.test.ts          — Agent protocol tests (~37 tests)
 ├── demos/
 │   ├── sokoban/                   — Phase 1 demo: grid puzzle + Phase 2a visual demo
 │   ├── card-battler/              — Phase 1 demo: card game
@@ -134,10 +145,10 @@ Read `docs/engineering-philosophy.md` first. It governs everything else.
 5. **Explicit over implicit** — No hidden state, no singletons, no magic strings.
 6. **Functional core** — State in, state out. Pure functions for game logic.
 
-## Current Constraints (Phase 2b)
+## Current Constraints (Phase 3)
 
 - TypeScript code lives under `runtime/`. Rust code under `core/` and `cli/`.
-- TS runtime has zero external dependencies. Rust crates use deno_core, deno_ast, clap, tokio, anyhow, wgpu, winit, image, bytemuck, notify.
+- TS runtime has zero external dependencies. Rust crates use deno_core, deno_ast, clap, tokio, anyhow, wgpu, winit, image, bytemuck, notify, tiny_http.
 - All state management functions are pure: state in, state out.
 - TS files use `.ts` extension imports (no bundler).
 - Test files import from `runtime/testing/harness.ts` (not `node:test`/`node:assert` directly).
@@ -146,6 +157,9 @@ Read `docs/engineering-philosophy.md` first. It governs everything else.
 - Renderer is behind `renderer` Cargo feature (default on). Headless: `--no-default-features`.
 - Rendering API functions are no-ops in headless mode (safe to import anywhere).
 - `arcane dev <entry.ts>` opens a window with hot-reload. `arcane test` stays headless.
+- `arcane describe <entry.ts>` prints text description. `arcane inspect <entry.ts> <path>` queries state.
+- Agent protocol: games call `registerAgent()` to install `globalThis.__arcaneAgent`. Rust evals TS to interact.
+- HTTP inspector (`--inspector <port>` on dev): channel-based, polls requests in frame callback.
 
 ## Agent Tooling
 
