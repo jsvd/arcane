@@ -142,7 +142,6 @@ impl ApplicationHandler for AppState {
                 {
                     let mut state = self.render_state.borrow_mut();
                     state.delta_time = dt;
-                    state.input.begin_frame();
                 }
 
                 // Run the TS frame callback (calls ops that populate sprite_commands)
@@ -151,6 +150,12 @@ impl ApplicationHandler for AppState {
                     if let Err(e) = (self.frame_callback)(&mut state) {
                         eprintln!("Frame callback error: {e}");
                     }
+                }
+
+                // Clear per-frame input AFTER the callback has read it
+                {
+                    let mut state = self.render_state.borrow_mut();
+                    state.input.begin_frame();
                 }
 
                 // Transfer sprite commands and camera to renderer, then render
