@@ -303,7 +303,7 @@ Simplified dungeon crawler based on BFRPG v4 mechanics. Proves that all systems 
 - [x] Combat follows BFRPG v4 rules correctly
 - [x] An agent can query state and perform actions (describe, move, rest, descend)
 - [x] Performance is acceptable (60 FPS capability)
-- [x] 652 TS tests + 38 Rust tests passing
+- [x] 657 TS tests + 38 Rust tests passing
 - [x] All tests pass in both Node and V8
 - [x] Headless build compiles without GPU deps
 

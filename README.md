@@ -96,7 +96,7 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phase 6 complete.** BFRPG Dungeon Crawler showcase game fully implemented with character creation (4 classes, 4 races), BFRPG v4 combat mechanics (d20 to-hit, damage dice), BSP dungeon generation, monster AI with A* pathfinding, equipment system with loot tables, full rendering with lighting and UI, agent protocol, victory/death conditions, and comprehensive integration tests. 652 TS tests + 38 Rust tests passing.
+**Phase 6 complete.** BFRPG Dungeon Crawler showcase game fully implemented with character creation (4 classes, 4 races), BFRPG v4 combat mechanics (d20 to-hit, damage dice), BSP dungeon generation, monster AI with A* pathfinding, equipment system with loot tables, full rendering with lighting and UI, agent protocol, victory/death conditions, and comprehensive integration tests. 657 TS tests + 38 Rust tests passing.
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 
