@@ -84,7 +84,7 @@ Agents are defined in `AGENTS.md` files. Each handles a specific domain.
 - **Knowledge**: System/rule patterns, the `extend` API, state wiring, recipe publishing
 - **File scope**: `recipes/**/*`
 
-### Phase 5+ Agents (When Building Showcase Game)
+### Phase 6+ Agents (When Building Showcase Game)
 
 #### `showcase-game` — Showcase Game Agent
 - **When**: Building the BFRPG showcase game on top of Arcane
@@ -117,7 +117,7 @@ Skills are repeatable workflows invoked with `/command`.
 | `/new-world <name>` | Scaffold a new world/dungeon spec |
 | `/run-headless <scenario>` | Run a game scenario headless and report results |
 
-### Phase 4+ Skills
+### Phase 5+ Skills
 
 | Skill | Description |
 |---|---|
@@ -164,7 +164,7 @@ arcane_world.visualize(spec)   → ASCII visualization of world layout
 arcane_world.pathfind(from, to) → check connectivity between rooms
 ```
 
-### Phase 5 MCP Tools
+### Phase 6 MCP Tools
 
 #### `arcane-playtest` — Automated Playtesting
 ```

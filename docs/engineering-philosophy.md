@@ -144,7 +144,7 @@ How we ensure work achieves what we want, at every level:
 - Technical debt inventory — what shortcuts were taken? Which need addressing before the next phase?
 
 ### Per-Project Verification (Ongoing)
-- The showcase game (Phase 5) is the ultimate verification — if the engine can't build a real game, it doesn't work
+- The showcase game (Phase 6) is the ultimate verification — if the engine can't build a real game, it doesn't work
 - Dogfooding: building Arcane with Arcane's own tools validates the agent-native thesis
 - If an agent struggles to use an API, the API is wrong — not the agent
 
