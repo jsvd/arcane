@@ -266,3 +266,114 @@ The renderer depends on wgpu, winit, and a GPU. CI runners and headless test env
 - Existing tests don't need the GPU — `arcane test` runs in headless V8.
 - The CLI always enables the feature, so `cargo run -- dev` always has the renderer.
 - Separate crate would add workspace complexity without benefit — the renderer is tightly coupled to the scripting bridge.
+
+---
+
+## ADR-012: TypeScript-Rust Type Boundary Uses f64
+
+### Context
+
+All rendering operations cross a TypeScript → Rust boundary via deno_core `#[op2]` ops. Numbers in JavaScript are always IEEE 754 f64 (64-bit floats), but GPUs work with f32 (32-bit floats). The question is: where does the conversion happen?
+
+### The Problem We Had
+
+Initially, Rust ops accepted `f32` directly:
+
+```rust
+#[deno_core::op2(fast)]
+pub fn op_draw_sprite(state: &mut OpState, x: f32, y: f32, ...) {
+    // Use values directly
+}
+```
+
+This caused persistent "expected f32" errors that would appear randomly:
+- Tests would pass (headless, no rendering)
+- Game would crash at runtime with type errors
+- Fixing the error in one place made it appear elsewhere
+- No amount of TypeScript validation or `.0` float notation helped
+
+The root cause: **JavaScript has ONE numeric type, but we were designing the boundary as if it had TWO**.
+
+When TypeScript passes a number literal like `10` or `1`, V8 encodes it in various internal formats (Smi for small integers, heap number for floats). The deno_core bridge tries to convert to `f32`, but this conversion isn't reliable—it depends on V8's internal representation, which we don't control.
+
+### Options Considered
+
+1. **Keep f32, add coercion layer in TypeScript** — Call `Math.fround()` everywhere
+   - Pro: Explicit about f32 range
+   - Con: Pollutes every call site with boilerplate
+   - Con: Doesn't fix the root cause (V8 encoding)
+
+2. **Keep f32, add runtime validation** — Check values before passing to ops
+   - Pro: Catches errors early
+   - Con: Runtime overhead
+   - Con: Still doesn't fix V8 encoding issues
+
+3. **Change ops to accept f64, convert internally** — Match JavaScript's type system
+   - Pro: Boundary accepts what JavaScript actually provides
+   - Con: Small overhead from f64 → f32 conversion
+   - Pro: Conversion happens at ONE place we control (Rust), not hundreds we don't (TS)
+
+### Decision
+
+**Accept f64 in all rendering ops, convert to f32 internally.**
+
+```rust
+#[deno_core::op2(fast)]
+pub fn op_draw_sprite(state: &mut OpState, x: f64, y: f64, ...) {
+    bridge.borrow_mut().sprite_commands.push(SpriteCommand {
+        x: x as f32,  // Convert at the boundary
+        y: y as f32,
+        // ...
+    });
+}
+```
+
+### Rationale
+
+**Make illegal states unrepresentable—but we made the BOUNDARY illegal.**
+
+The boundary should accept what TypeScript **actually provides** (f64), not what we **wish** it provided (f32).
+
+Key insights:
+1. **JavaScript has ONE numeric type.** There is no f32 in JavaScript. All numbers are f64.
+2. **V8's encoding is opaque.** We can't control how V8 represents `10` vs `10.0`—they're the same value.
+3. **TypeScript can't enforce f32.** The `.0` suffix is notation, not type information.
+4. **The boundary is the choke point.** One conversion at the boundary beats scattered conversions everywhere else.
+
+This follows the same principle as ADR-011 (Feature-Gated Renderer): **match the architecture to reality, not idealized assumptions.**
+
+### Secondary Issue: Object Literal Property Access Bug
+
+During debugging, we discovered a V8 or TypeScript transpiler bug:
+
+```typescript
+const pos = { x: 10, y: 20, w: 30, h: 40 };
+drawSprite({ textureId: 1, x: pos.x, y: pos.y, w: pos.w, h: pos.h, layer: 5 });
+```
+
+In some cases, `pos.x`, `pos.y`, `pos.w`, and `pos.h` ALL evaluated to `pos` (the parent object) instead of the individual properties.
+
+**Workaround:**
+```typescript
+const posX = pos.x;  // Extract to temp variables
+const posY = pos.y;
+const posW = pos.w;
+const posH = pos.h;
+drawSprite({ textureId: 1, x: posX, y: posY, w: posW, h: posH, layer: 5 });
+```
+
+This is a known issue when using all four properties (x, y, w, h) from the same object in an object literal. The temp variable extraction forces correct evaluation.
+
+### Impact
+
+- ✅ No more "expected f32" errors
+- ✅ TypeScript code is simpler (no `toF32()` calls, no validation boilerplate)
+- ✅ Tests catch real issues, not boundary encoding artifacts
+- ✅ Clear principle: **boundary matches TypeScript's type system, conversion happens in Rust**
+
+### Related Issues
+
+- If we add more languages (Lua, Python), each has its own numeric types
+- The principle scales: accept what the source language provides, convert at the boundary
+- Performance: f64 → f32 conversion is negligible (~1 CPU cycle) vs. the alternatives (validation, runtime checks, scattered conversions)
+
