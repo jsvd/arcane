@@ -75,6 +75,71 @@ Tests are not a box to check. They are the proof that the system works. Every be
 - Tests are independent — no shared mutable state, no ordering dependencies
 - Test names describe the scenario: `attackAgainstHighACMisses`, not `testAttack3`
 
+### Visual Code Needs Testing Too
+
+**The Problem:** Game logic tests pass, but the game crashes on visual rendering.
+
+This happens because:
+- Tests run **headless** (no GPU, no rendering)
+- Rendering API calls are **not validated** in tests
+- Type errors only appear at **runtime** in V8
+
+**The Solution:** Three layers of protection:
+
+1. **Mock Renderer** (Testing)
+   - Test visual code without GPU using `runtime/testing/mock-renderer.ts`
+   - Validates API signatures, parameter types, value ranges
+   - Catches errors like wrong function signatures, invalid colors, NaN values
+   - Example: `mockRenderer.assertNoErrors()` fails if rendering code is broken
+
+2. **Runtime Validation** (Development)
+   - Add validation calls before rendering: `validateRectParams(x, y, w, h, opts)`
+   - Catches errors before they reach V8
+   - Can be stripped in production if needed
+   - Provides clear error messages: "drawRect: color.r must be 0.0-1.0, got 255"
+
+3. **Type Safety** (Static)
+   - Use correct TypeScript types and JSDoc
+   - Follow API signatures precisely
+   - Common mistakes:
+     - ❌ `drawRect({ x: 0, y: 0 })` → ✅ `drawRect(0.0, 0.0, 100.0, 50.0)`
+     - ❌ `color: { r: 255, g: 255, b: 255 }` → ✅ `color: { r: 1.0, g: 1.0, b: 1.0 }`
+     - ❌ `x: 10` → ✅ `x: 10.0` (explicit floats for V8)
+
+**Architecture Pattern:**
+
+```typescript
+// game-logic.ts (100% tested, no rendering)
+export function createGameEngine() {
+  return {
+    handleCommand,
+    getState,
+  };
+}
+
+// game-visual.ts (thin layer, validated)
+import { mockRenderer } from "arcane/testing/mock-renderer.ts";
+
+function renderState(state) {
+  drawRect(0.0, 0.0, 800.0, 600.0, { color: { r: 0.0, g: 0.0, b: 0.0 } });
+  drawText(`HP: ${state.player.health}`, { x: 10.0, y: 10.0, size: 16.0 });
+}
+
+// game-visual.test.ts
+describe("Visual Layer", () => {
+  it("should render without errors", () => {
+    mockRenderer.reset();
+    installMockRenderer();
+
+    renderState({ player: { health: 100 } });
+
+    mockRenderer.assertNoErrors(); // ✅ Validates all rendering calls
+  });
+});
+```
+
+**The Principle:** Visual code is code. Code needs tests. Rendering APIs are contracts that can be validated. Separate game logic (pure, tested) from rendering (thin, validated). See `docs/visual-testing.md` for complete guide.
+
 ### Definition of Done
 
 A piece of work is done when:
