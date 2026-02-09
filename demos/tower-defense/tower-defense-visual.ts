@@ -6,7 +6,7 @@ import type { TDState, TowerType } from "./tower-defense.ts";
 import {
   onFrame, clearSprites, drawSprite, setCamera,
   isKeyDown, isKeyPressed, getDeltaTime, createSolidTexture,
-  getMousePosition, drawText,
+  getMouseWorldPosition, drawText,
 } from "../../runtime/rendering/index.ts";
 import { drawRect, drawBar, drawLabel } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
@@ -85,8 +85,8 @@ onFrame(() => {
   if (isKeyPressed("2")) selectedTower = "slow";
   if (isKeyPressed("3")) selectedTower = "splash";
 
-  // Mouse to grid
-  const mouse = getMousePosition();
+  // Mouse to grid (in world coordinates)
+  const mouse = getMouseWorldPosition();
   const gridX = Math.floor(mouse.x / TILE_SIZE);
   const gridY = Math.floor(mouse.y / TILE_SIZE);
   const validGrid = gridX >= 0 && gridX < state.mapWidth && gridY >= 0 && gridY < state.mapHeight;

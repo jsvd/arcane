@@ -13,7 +13,14 @@ export { drawSprite, clearSprites } from "./sprites.ts";
 export { setCamera, getCamera, followTarget } from "./camera.ts";
 
 // Input
-export { isKeyDown, isKeyPressed, getMousePosition } from "./input.ts";
+export {
+  isKeyDown,
+  isKeyPressed,
+  getMousePosition,
+  getViewportSize,
+  screenToWorld,
+  getMouseWorldPosition,
+} from "./input.ts";
 
 // Textures
 export { loadTexture, createSolidTexture } from "./texture.ts";
