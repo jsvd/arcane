@@ -176,9 +176,9 @@ export function moveMonster(
     // A* toward player
     const grid = createPathGrid(dungeon.tiles, monsters, monster.id);
     const path = findPath(
+      grid,
       { x: monster.pos.x, y: monster.pos.y },
       { x: playerPos.x, y: playerPos.y },
-      grid,
     );
 
     if (path && path.length > 1) {
