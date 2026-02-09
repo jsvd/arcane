@@ -75,8 +75,9 @@ try {
 }
 
 // --- Animation Setup ---
-// If real sprite: 5 frames (1 idle + 4 walk), 32×32 each
-// If placeholder: 4 frames to show animation still works
+// Real sprite is 192×128 (6 frames × 4 rows = 32×32 per frame)
+// We'll use the first row (6 frames) for walking
+// Placeholder: 4 frames to show animation still works
 const FRAME_SIZE = 32;
 const WALK_FPS = 8;
 
@@ -84,7 +85,7 @@ const walkAnimDef = createAnimation(
   characterTexture,
   FRAME_SIZE,
   FRAME_SIZE,
-  assetsExist ? 4 : 4, // 4 walk frames
+  assetsExist ? 6 : 4, // 6 walk frames for real sprite, 4 for placeholder
   WALK_FPS,
   { loop: true },
 );
@@ -220,7 +221,7 @@ onFrame(() => {
       y: state.y - FRAME_SIZE / 2,
       w: FRAME_SIZE,
       h: FRAME_SIZE,
-      uv: assetsExist ? { x: 0, y: 0, w: 1 / 5, h: 1 } : undefined, // First frame if sprite sheet
+      uv: assetsExist ? { x: 0, y: 0, w: 1 / 6, h: 1 / 4 } : undefined, // First frame (top-left) of 6×4 grid
       layer: 1,
       flipX: !state.facingRight,
     });
