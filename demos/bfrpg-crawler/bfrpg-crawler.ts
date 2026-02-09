@@ -5,6 +5,7 @@
 import { rollDice } from "../../runtime/state/index.ts";
 import type { PRNGState } from "../../runtime/state/index.ts";
 import { findPath } from "../../runtime/pathfinding/index.ts";
+import type { PathGrid } from "../../runtime/pathfinding/index.ts";
 import type { BFRPGState, Vec2, Monster, VisibilityMap } from "./types.ts";
 import { generateDungeon, isWalkable, blocksVision } from "./dungeon/generation.ts";
 import { spawnMonsters } from "./dungeon/spawning.ts";
@@ -244,22 +245,29 @@ export function createPathGrid(
   tiles: readonly (readonly string[])[],
   monsters: readonly Monster[],
   movingMonsterId?: string,
-): boolean[][] {
+): PathGrid {
   const height = tiles.length;
   const width = tiles[0]?.length ?? 0;
 
-  const grid: boolean[][] = Array.from({ length: height }, (_, y) =>
+  const walkableGrid: boolean[][] = Array.from({ length: height }, (_, y) =>
     Array.from({ length: width }, (_, x) => isWalkable(tiles[y][x] as any)),
   );
 
   // Mark other monsters as obstacles
   for (const monster of monsters) {
     if (monster.alive && monster.id !== movingMonsterId) {
-      grid[monster.pos.y][monster.pos.x] = false;
+      walkableGrid[monster.pos.y][monster.pos.x] = false;
     }
   }
 
-  return grid;
+  return {
+    width,
+    height,
+    isWalkable(x: number, y: number): boolean {
+      if (x < 0 || x >= width || y < 0 || y >= height) return false;
+      return walkableGrid[y][x];
+    },
+  };
 }
 
 /**
