@@ -107,18 +107,38 @@ Scaffold the Rust project and wire TypeScript into it.
 
 ---
 
-## Phase 2: Renderer (Tilemap + Sprites + Basic Lighting)
+## Phase 2a: Window + Sprites + Camera + Dev Command
 
-Build the visual layer. The game should look like a game.
+**Status: Complete**
+
+The first visual layer. Window creation, sprite rendering, camera, and the dev command.
 
 ### Deliverables
-- wgpu initialization and window creation
+- [x] wgpu initialization and window creation (winit)
+- [x] Sprite renderer (instanced quads, texture atlas support)
+- [x] Camera system (position, zoom, follow target)
+- [x] Rendering bridge: TypeScript `#[op2]` ops → Rust renderer
+- [x] TypeScript rendering API (`runtime/rendering/`)
+- [x] `arcane dev` command (opens window, runs game loop, hot-reload via file watching)
+- [x] Visual demo: Sokoban rendered with sprites
+- [x] Feature-gated renderer (headless tests keep working without GPU)
+
+### Success Criteria
+- [x] `cargo check --no-default-features` — headless compiles without GPU deps
+- [x] All 163 TS tests pass in both Node and V8
+- [x] All Rust tests pass
+- [x] `cargo run -- dev demos/sokoban/sokoban-visual.ts` — window opens, Sokoban renders, arrow keys move player, hot-reload works
+- [x] CI green (no GPU-dependent tests in CI)
+
+---
+
+## Phase 2b: Tilemap + Lighting + More Demos
+
+Build the remaining visual layer. Tilemap renderer, basic lighting, and more genre demos.
+
+### Deliverables
 - Tilemap renderer (multiple layers, autotiling)
-- Sprite renderer (atlases, basic animation)
-- Camera system (follow, pan, zoom)
 - Basic 2D lighting (point lights, ambient)
-- Rendering bridge: TypeScript issues render commands, Rust executes them
-- `arcane dev` command (launches game with hot-reload)
 - **Demo: Roguelike** — procedural dungeon generation + tile rendering + fog of war
 - **Demo: Breakout** — real-time game loop, collision detection, physics
 
@@ -126,7 +146,7 @@ Build the visual layer. The game should look like a game.
 - Roguelike generates and renders tile dungeons
 - Breakout runs at 60 FPS with real-time collision
 - Camera follows the player
-- Hot-reload works: change TS → see result in < 1 second
+- Lighting system supports point lights and ambient
 
 ---
 

@@ -16,6 +16,11 @@ enum Commands {
         /// Optional directory or glob pattern (defaults to current directory)
         path: Option<String>,
     },
+    /// Open a window and run a game with hot-reload
+    Dev {
+        /// Path to the TypeScript entry file
+        entry: String,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -23,5 +28,6 @@ fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Test { path } => commands::test::run(path),
+        Commands::Dev { entry } => commands::dev::run(entry),
     }
 }

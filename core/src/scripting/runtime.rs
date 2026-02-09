@@ -1,3 +1,5 @@
+#[cfg(feature = "renderer")]
+use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
 
@@ -125,6 +127,48 @@ impl ArcaneRuntime {
             .await
             .context("Event loop error")?;
         result.await.context("Module evaluation failed")?;
+        Ok(())
+    }
+
+    /// Create a runtime with the render bridge extension for `arcane dev`.
+    /// Includes both crypto polyfill and render ops.
+    #[cfg(feature = "renderer")]
+    pub fn new_with_render_bridge(
+        bridge: Rc<RefCell<super::render_ops::RenderBridgeState>>,
+    ) -> Self {
+        let runtime = JsRuntime::new(RuntimeOptions {
+            module_loader: Some(Rc::new(TsModuleLoader)),
+            extensions: vec![
+                arcane_ext::init(),
+                super::render_ops::render_ext::init(),
+            ],
+            ..Default::default()
+        });
+
+        let mut rt = Self { runtime };
+
+        // Store bridge state in op_state
+        {
+            let op_state = rt.runtime.op_state();
+            op_state.borrow_mut().put(bridge);
+        }
+
+        rt.runtime
+            .execute_script("<crypto_polyfill>", CRYPTO_POLYFILL)
+            .expect("Failed to install crypto polyfill");
+        rt
+    }
+
+    /// Execute a non-static script string. Used for per-frame callbacks.
+    pub fn execute_script_string(
+        &mut self,
+        name: &'static str,
+        source: impl Into<String>,
+    ) -> anyhow::Result<()> {
+        let source: String = source.into();
+        self.runtime
+            .execute_script(name, deno_core::FastString::from(source))
+            .context("Script execution failed")?;
         Ok(())
     }
 

@@ -4,7 +4,7 @@
 
 Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for performance, TypeScript scripting for game logic.
 
-**Current status: Phase 1.5 — Rust skeleton + V8 bridge. TypeScript runs inside Rust.**
+**Current status: Phase 2a complete — Window, sprites, camera, `arcane dev` command. Visual Sokoban demo renders with hot-reload.**
 
 ## Repository Structure
 
@@ -30,14 +30,27 @@ arcane/
 │   ├── roadmap.md                 — Phased development plan
 │   └── technical-decisions.md     — ADR-style decision log
 ├── core/                          — arcane-core lib crate
-│   ├── Cargo.toml
+│   ├── Cargo.toml                 — Feature-gated: `renderer` (default on)
 │   ├── src/
 │   │   ├── lib.rs
-│   │   └── scripting/
-│   │       ├── mod.rs             — Public API: TsModuleLoader, ArcaneRuntime, run_test_file
-│   │       ├── module_loader.rs   — TsModuleLoader: TS transpilation via deno_ast
-│   │       ├── runtime.rs         — ArcaneRuntime: V8 + module loader + crypto polyfill
-│   │       └── test_runner.rs     — V8 test runner with #[op2] result reporting
+│   │   ├── scripting/
+│   │   │   ├── mod.rs             — Public API: TsModuleLoader, ArcaneRuntime, run_test_file
+│   │   │   ├── module_loader.rs   — TsModuleLoader: TS transpilation via deno_ast
+│   │   │   ├── runtime.rs         — ArcaneRuntime: V8 + module loader + crypto polyfill
+│   │   │   ├── test_runner.rs     — V8 test runner with #[op2] result reporting
+│   │   │   └── render_ops.rs      — #[op2] ops: draw_sprite, set_camera, load_texture, etc.
+│   │   ├── renderer/              — [feature = "renderer"]
+│   │   │   ├── mod.rs             — Renderer: owns GPU, sprite pipeline, textures
+│   │   │   ├── gpu.rs             — GpuContext: wgpu device/surface/pipeline setup
+│   │   │   ├── sprite.rs          — SpritePipeline: instanced quad rendering
+│   │   │   ├── texture.rs         — TextureStore: handle-based texture loading
+│   │   │   ├── camera.rs          — Camera2D: position, zoom, view/proj matrix
+│   │   │   └── shaders/
+│   │   │       └── sprite.wgsl    — Instanced sprite vertex + fragment shader
+│   │   └── platform/              — [feature = "renderer"]
+│   │       ├── mod.rs             — Platform public API
+│   │       ├── window.rs          — winit ApplicationHandler + event loop
+│   │       └── input.rs           — Keyboard/mouse state tracking
 │   └── tests/                     — Rust integration tests
 ├── cli/                           — arcane-cli bin crate
 │   ├── Cargo.toml
@@ -45,21 +58,30 @@ arcane/
 │       ├── main.rs                — clap CLI entrypoint
 │       └── commands/
 │           ├── mod.rs
-│           └── test.rs            — `arcane test` — discovers & runs *.test.ts in V8
+│           ├── test.rs            — `arcane test` — discovers & runs *.test.ts in V8
+│           └── dev.rs             — `arcane dev` — window + game loop + hot-reload
 ├── runtime/
 │   ├── testing/
 │   │   └── harness.ts             — Universal test harness (Node + V8)
-│   └── state/
-│       ├── types.ts               — EntityId, Vec2, DeepReadonly
-│       ├── error.ts               — ArcaneError, createError()
-│       ├── prng.ts                — PRNGState, seed(), rollDice(), xoshiro128**
-│       ├── transaction.ts         — Mutation, Diff, transaction(), computeDiff()
-│       ├── query.ts               — query(), get(), has(), filter combinators
-│       ├── observe.ts             — ObserverRegistry, path pattern matching
-│       ├── store.ts               — GameStore, createStore()
-│       └── index.ts               — Public API barrel export
+│   ├── state/
+│   │   ├── types.ts               — EntityId, Vec2, DeepReadonly
+│   │   ├── error.ts               — ArcaneError, createError()
+│   │   ├── prng.ts                — PRNGState, seed(), rollDice(), xoshiro128**
+│   │   ├── transaction.ts         — Mutation, Diff, transaction(), computeDiff()
+│   │   ├── query.ts               — query(), get(), has(), filter combinators
+│   │   ├── observe.ts             — ObserverRegistry, path pattern matching
+│   │   ├── store.ts               — GameStore, createStore()
+│   │   └── index.ts               — Public API barrel export
+│   └── rendering/
+│       ├── types.ts               — TextureId, SpriteOptions, CameraState
+│       ├── sprites.ts             — drawSprite(), clearSprites()
+│       ├── camera.ts              — setCamera(), getCamera(), followTarget()
+│       ├── input.ts               — isKeyDown(), isKeyPressed(), getMousePosition()
+│       ├── texture.ts             — loadTexture(), createSolidTexture()
+│       ├── loop.ts                — onFrame(), getDeltaTime()
+│       └── index.ts               — Barrel export
 ├── demos/
-│   ├── sokoban/                   — Phase 1 demo: grid puzzle
+│   ├── sokoban/                   — Phase 1 demo: grid puzzle + Phase 2a visual demo
 │   └── card-battler/              — Phase 1 demo: card game
 ```
 
@@ -103,15 +125,18 @@ Read `docs/engineering-philosophy.md` first. It governs everything else.
 5. **Explicit over implicit** — No hidden state, no singletons, no magic strings.
 6. **Functional core** — State in, state out. Pure functions for game logic.
 
-## Phase 1.5 Constraints
+## Current Constraints (Phase 2a)
 
 - TypeScript code lives under `runtime/`. Rust code under `core/` and `cli/`.
-- TS runtime has zero external dependencies. Rust crates use deno_core, deno_ast, clap, tokio, anyhow.
+- TS runtime has zero external dependencies. Rust crates use deno_core, deno_ast, clap, tokio, anyhow, wgpu, winit, image, bytemuck, notify.
 - All state management functions are pure: state in, state out.
 - TS files use `.ts` extension imports (no bundler).
 - Test files import from `runtime/testing/harness.ts` (not `node:test`/`node:assert` directly).
 - Tests must pass in both Node (`./run-tests.sh`) and V8 (`cargo run -- test`).
 - Pin exact versions of deno_core and deno_ast to avoid API churn.
+- Renderer is behind `renderer` Cargo feature (default on). Headless: `--no-default-features`.
+- Rendering API functions are no-ops in headless mode (safe to import anywhere).
+- `arcane dev <entry.ts>` opens a window with hot-reload. `arcane test` stays headless.
 
 ## Agent Tooling
 

@@ -9,7 +9,9 @@ name = "arcane"
 path = "src/main.rs"
 
 [dependencies]
-arcane-core = { path = "../core" }
+arcane-core = { path = "../core", features = ["renderer"] }
 clap = { version = "4", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 anyhow = "1"
+notify = "7"
+notify-debouncer-mini = "0.5"

@@ -124,10 +124,25 @@ cargo test --workspace
 # Check compilation
 cargo check --workspace
 
+# Check headless compilation (no GPU deps)
+cargo check -p arcane-core --no-default-features
+
 # Full build (debug)
 cargo build --workspace
 
 # The CLI binary is at target/debug/arcane
+```
+
+### Running Visual Demos
+
+Visual demos require a GPU. They use the `arcane dev` command which opens a window.
+
+```bash
+# Sokoban with solid-color sprites
+cargo run -- dev demos/sokoban/sokoban-visual.ts
+
+# Controls: Arrow keys or WASD to move, Z to undo, R to reset
+# Hot-reload: edit the .ts file and save — the game reloads automatically
 ```
 
 ### Test Harness

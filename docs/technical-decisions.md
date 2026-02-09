@@ -222,3 +222,47 @@ Phase 1 tests imported `node:test` and `node:assert` directly. Phase 1.5 embeds 
 - V8 runner exposes `globalThis.__runTests()` which iterates collected tests, reports via `globalThis.__reportTest()`, and returns `{ total, passed, failed }`.
 - Mechanical migration: only the import line changes per test file, zero logic changes.
 - Keeps zero-dependency guarantee on the TS side (no test framework needed).
+
+---
+
+## ADR-010: Rendering Bridge via #[op2] Ops (Not Shared Memory)
+
+### Context
+Phase 2a needs TypeScript to issue render commands (draw sprite, set camera, load texture) that Rust executes on the GPU. Two approaches: (1) per-command `#[op2]` ops, or (2) a shared-memory command buffer.
+
+### Options Considered
+1. **#[op2] per-command ops** — TypeScript calls `Deno.core.ops.op_draw_sprite(...)` for each command. Simple, type-safe, debuggable.
+2. **Shared-memory command buffer** — TypeScript writes binary commands into a SharedArrayBuffer, Rust reads them each frame. Lower overhead per call, but complex serialization/deserialization.
+
+### Decision
+**#[op2] per-command ops.**
+
+### Rationale
+- Simplicity: each op is a plain function call with typed parameters. Easy for agents to understand and extend.
+- Debuggability: each op can be logged, profiled, and inspected independently.
+- deno_core's op system is already optimized for fast Rust↔V8 calls (`fast` ops bypass V8 overhead).
+- For 2D games, the number of draw calls per frame is typically hundreds, not millions. The per-call overhead is negligible.
+- Shared-memory buffers add complexity (alignment, endianness, versioning) without meaningful benefit at this scale.
+- Migration path: if profiling later shows op overhead matters, we can batch commands on the TS side and pass a single typed array. The TS API stays the same.
+
+---
+
+## ADR-011: Feature-Gated Renderer
+
+### Context
+The renderer depends on wgpu, winit, and a GPU. CI runners and headless test environments don't have GPUs. How do we keep headless tests working?
+
+### Options Considered
+1. **Always compile renderer, mock GPU in tests** — complex mocking, fragile.
+2. **Feature gate** — `renderer` Cargo feature, default on. Headless builds use `--no-default-features`.
+3. **Separate crate** — renderer in its own crate, only linked by the CLI.
+
+### Decision
+**Feature gate in `arcane-core`.**
+
+### Rationale
+- Minimal ceremony: `#[cfg(feature = "renderer")]` on module declarations.
+- CI adds one job: `cargo check --no-default-features` to verify headless compiles.
+- Existing tests don't need the GPU — `arcane test` runs in headless V8.
+- The CLI always enables the feature, so `cargo run -- dev` always has the renderer.
+- Separate crate would add workspace complexity without benefit — the renderer is tightly coupled to the scripting bridge.
