@@ -170,11 +170,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           type?: AssetType;
         };
         const result = searchKenneyAssets(query, type);
+
+        let responseText = JSON.stringify(result, null, 2);
+
+        // Add helpful message if no results found
+        if (result.total === 0 && result.suggestions) {
+          responseText = `No results found for "${query}".\n\nSuggestions:\n${result.suggestions.map(s => `  • ${s}`).join('\n')}\n\n` + responseText;
+        }
+
         return {
           content: [
             {
               type: "text",
-              text: JSON.stringify(result, null, 2),
+              text: responseText,
             },
           ],
         };

@@ -18,6 +18,7 @@ export const KENNEY_CATALOG: AssetPack[] = [
     url: "https://kenney.nl/assets/platformer-pack-redux",
     downloadUrl: "https://kenney.nl/content/3-assets/145-platformer-pack-redux/platformerpackredux.zip",
     tags: ["platformer", "character", "tiles", "pixel-art"],
+    contents: ["player", "enemies", "slime", "bee", "snail", "tiles", "coins", "gems", "spikes"],
   },
   {
     id: "pixel-platformer",
@@ -77,6 +78,7 @@ export const KENNEY_CATALOG: AssetPack[] = [
     url: "https://kenney.nl/assets/tiny-dungeon",
     downloadUrl: "https://kenney.nl/content/3-assets/156-tiny-dungeon/tinydungeon.zip",
     tags: ["dungeon", "roguelike", "rpg", "pixel-art"],
+    contents: ["hero", "skeleton", "zombie", "goblin", "chest", "potion", "sword", "armor", "walls", "doors"],
   },
   {
     id: "tiny-town",
@@ -99,6 +101,7 @@ export const KENNEY_CATALOG: AssetPack[] = [
     url: "https://kenney.nl/assets/roguelike-rpg-pack",
     downloadUrl: "https://kenney.nl/content/3-assets/110-roguelike-rpg-pack/roguelikeroleplayingpack.zip",
     tags: ["roguelike", "rpg", "dungeon"],
+    contents: ["knight", "wizard", "skeleton", "orc", "chest", "potion", "weapon", "armor", "tiles", "ui"],
   },
 
   // 2D Sprites - Puzzle
@@ -136,6 +139,7 @@ export const KENNEY_CATALOG: AssetPack[] = [
     url: "https://kenney.nl/assets/space-shooter-redux",
     downloadUrl: "https://kenney.nl/content/3-assets/96-space-shooter-redux/spaceshooterredux.zip",
     tags: ["space", "shooter", "shmup"],
+    contents: ["spaceship", "enemy", "bullet", "laser", "meteor", "explosion", "background", "powerup"],
   },
 
   // UI
@@ -149,6 +153,7 @@ export const KENNEY_CATALOG: AssetPack[] = [
     url: "https://kenney.nl/assets/ui-pack",
     downloadUrl: "https://kenney.nl/content/3-assets/141-ui-pack/uipack.zip",
     tags: ["ui", "buttons", "interface"],
+    contents: ["button", "panel", "slider", "checkbox", "radio", "icon", "cursor", "arrow"],
   },
   {
     id: "ui-pack-rpg-expansion",
@@ -245,5 +250,67 @@ export const KENNEY_CATALOG: AssetPack[] = [
     url: "https://kenney.nl/assets/1-bit-pack",
     downloadUrl: "https://kenney.nl/content/3-assets/153-1-bit-pack/1bitpack.zip",
     tags: ["1-bit", "monochrome", "tileset"],
+  },
+
+  // Animals & Creatures
+  {
+    id: "animal-pack-redux",
+    name: "Animal Pack Redux (160 assets)",
+    description: "Cute cartoon animals including cats, dogs, birds, farm animals, and more",
+    source: "kenney",
+    type: ["2d-sprites"],
+    license: "CC0",
+    url: "https://kenney.nl/assets/animal-pack-redux",
+    downloadUrl: "https://kenney.nl/content/3-assets/130-animal-pack-redux/animalpackredux.zip",
+    tags: ["animals", "creatures", "cute", "cartoon"],
+    contents: ["cat", "dog", "bird", "chicken", "cow", "pig", "sheep", "horse", "rabbit", "mouse", "bear", "fox"],
+  },
+  {
+    id: "creature-mixer",
+    name: "Creature Mixer (100 assets)",
+    description: "Mix-and-match creature parts to create unique monsters and animals",
+    source: "kenney",
+    type: ["2d-sprites"],
+    license: "CC0",
+    url: "https://kenney.nl/assets/creature-mixer",
+    downloadUrl: "https://kenney.nl/content/3-assets/97-creature-mixer/creaturemixer.zip",
+    tags: ["creatures", "monsters", "modular"],
+    contents: ["bodies", "heads", "legs", "tails", "wings", "horns"],
+  },
+  {
+    id: "tiny-battle",
+    name: "Tiny Battle (234 assets)",
+    description: "Medieval battle units including knights, archers, cavalry, and fantasy creatures",
+    source: "kenney",
+    type: ["2d-sprites"],
+    license: "CC0",
+    url: "https://kenney.nl/assets/tiny-battle",
+    downloadUrl: "https://kenney.nl/content/3-assets/154-tiny-battle/tinybattle.zip",
+    tags: ["medieval", "battle", "units", "pixel-art"],
+    contents: ["knight", "archer", "cavalry", "wizard", "dragon", "skeleton", "orc"],
+  },
+  {
+    id: "fish-pack",
+    name: "Fish Pack (48 assets)",
+    description: "Underwater creatures including various fish, jellyfish, crabs, and sea life",
+    source: "kenney",
+    type: ["2d-sprites"],
+    license: "CC0",
+    url: "https://kenney.nl/assets/fish-pack",
+    downloadUrl: "https://kenney.nl/content/3-assets/99-fish-pack/fishpack.zip",
+    tags: ["underwater", "fish", "ocean"],
+    contents: ["fish", "jellyfish", "crab", "starfish", "seahorse", "octopus"],
+  },
+  {
+    id: "toon-characters-1",
+    name: "Toon Characters 1 (16 characters)",
+    description: "Cartoon character pack with adventurers, zombies, and fantasy heroes",
+    source: "kenney",
+    type: ["2d-sprites"],
+    license: "CC0",
+    url: "https://kenney.nl/assets/toon-characters-1",
+    downloadUrl: "https://kenney.nl/content/3-assets/120-toon-characters-1/tooncharacters1.zip",
+    tags: ["characters", "cartoon", "fantasy"],
+    contents: ["adventurer", "zombie", "robot", "female", "male"],
   },
 ];

@@ -35,6 +35,8 @@ export interface AssetPack {
   downloadUrl?: string;
   tags: string[];
   thumbnailUrl?: string;
+  /** Keywords describing specific content inside the pack (e.g., "cat", "dog", "wizard") */
+  contents?: string[];
 }
 
 /**
@@ -43,6 +45,8 @@ export interface AssetPack {
 export interface SearchResult {
   packs: AssetPack[];
   total: number;
+  /** Search suggestions when no results found */
+  suggestions?: string[];
 }
 
 /**

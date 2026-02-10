@@ -6,10 +6,13 @@ MCP server for discovering and downloading game assets for the Arcane game engin
 
 ### Kenney.nl Integration ✅
 
-- **24 curated asset packs** covering platformers, RPGs, shooters, puzzles, UI, audio, and more
+- **25+ curated asset packs** covering platformers, RPGs, shooters, puzzles, UI, audio, animals, and more
 - **CC0 (public domain)** - no attribution required, use in any project
 - **6 MCP tools** for browsing, searching, and downloading assets
 - **60,000+ total assets** across all packs
+- **Smart search** with synonym support (e.g., "kitty" finds cat assets, "unicorn" finds horse assets)
+- **Content-aware search** - searches inside packs for specific sprites (cat, dog, wizard, etc.)
+- **Helpful suggestions** when searches return no results
 
 ### Coming Soon
 
@@ -124,7 +127,57 @@ Get all tags used in the catalog (useful for discovering search keywords).
 
 **Returns:** Array of tag strings
 
+## Search Features
+
+### Smart Synonym Search
+
+The search automatically understands related terms:
+
+```typescript
+// These all find the same Animal Pack Redux:
+search_kenney_assets({ query: "cat" })
+search_kenney_assets({ query: "kitty" })
+search_kenney_assets({ query: "kitten" })
+
+// These find packs with horses:
+search_kenney_assets({ query: "horse" })
+search_kenney_assets({ query: "pony" })
+search_kenney_assets({ query: "unicorn" })
+```
+
+### Content-Aware Search
+
+The server knows what's inside each pack:
+
+```typescript
+// Finds packs containing wizard sprites
+search_kenney_assets({ query: "wizard" })
+// Returns: Tiny Battle, Roguelike RPG Pack
+
+// Finds packs containing explosions
+search_kenney_assets({ query: "explosion" })
+// Returns: Space Shooter Redux, Particle Pack
+```
+
+### Helpful Suggestions
+
+When no results are found, get suggestions for:
+- Related search terms
+- Available asset types
+- Popular packs
+
+```typescript
+search_kenney_assets({ query: "xyz123" })
+// Returns suggestions: "Try browsing by type: 2d-sprites, ui, audio..."
+```
+
 ## Asset Pack Highlights
+
+### Animals & Creatures
+- **animal-pack-redux** - 160 assets, cute cartoon animals (cats, dogs, farm animals)
+- **creature-mixer** - 100 assets, mix-and-match monster parts
+- **tiny-battle** - 234 assets, knights, wizards, dragons
+- **fish-pack** - 48 assets, underwater creatures
 
 ### Platformers
 - **platformer-pack-redux** - 360 assets, complete platformer art

@@ -5,10 +5,90 @@ import * as path from "node:path";
 import * as https from "node:https";
 
 /**
+ * Synonym map for better search results
+ */
+const SEARCH_SYNONYMS: Record<string, string[]> = {
+  "cat": ["kitty", "kitten", "feline"],
+  "dog": ["puppy", "canine", "hound"],
+  "horse": ["pony", "stallion", "mare", "unicorn"],
+  "bird": ["avian"],
+  "dragon": ["drake", "wyvern"],
+  "wizard": ["mage", "sorcerer", "magician"],
+  "knight": ["warrior", "paladin"],
+  "monster": ["creature", "beast", "enemy"],
+  "hero": ["player", "character", "protagonist"],
+  "coin": ["money", "gold", "treasure"],
+  "gem": ["jewel", "crystal"],
+  "tile": ["block", "terrain"],
+  "ui": ["interface", "hud", "menu"],
+  "button": ["widget"],
+  "animal": ["creature", "pet"],
+  "character": ["sprite", "avatar"],
+};
+
+/**
  * List all available Kenney asset packs
  */
 export function listKenneyAssets(): AssetPack[] {
   return KENNEY_CATALOG;
+}
+
+/**
+ * Get expanded search terms including synonyms
+ */
+function getSearchTerms(query: string): string[] {
+  const lowerQuery = query.toLowerCase();
+  const terms = [lowerQuery];
+
+  // Check if query is a synonym of something
+  for (const [mainTerm, synonyms] of Object.entries(SEARCH_SYNONYMS)) {
+    if (synonyms.includes(lowerQuery)) {
+      terms.push(mainTerm);
+      terms.push(...synonyms);
+    }
+  }
+
+  // Check if query is a main term
+  if (SEARCH_SYNONYMS[lowerQuery]) {
+    terms.push(...SEARCH_SYNONYMS[lowerQuery]);
+  }
+
+  return [...new Set(terms)]; // Remove duplicates
+}
+
+/**
+ * Calculate relevance score for search matching
+ */
+function calculateRelevance(pack: AssetPack, searchTerms: string[]): number {
+  let score = 0;
+
+  for (const term of searchTerms) {
+    // Exact name match = highest priority
+    if (pack.name.toLowerCase().includes(term)) {
+      score += 10;
+    }
+
+    // Contents match = high priority
+    if (pack.contents) {
+      for (const content of pack.contents) {
+        if (content.toLowerCase().includes(term)) {
+          score += 8;
+        }
+      }
+    }
+
+    // Tag match = medium priority
+    if (pack.tags.some((tag) => tag.toLowerCase().includes(term))) {
+      score += 5;
+    }
+
+    // Description match = lower priority
+    if (pack.description.toLowerCase().includes(term)) {
+      score += 3;
+    }
+  }
+
+  return score;
 }
 
 /**
@@ -18,23 +98,69 @@ export function searchKenneyAssets(
   query: string,
   type?: AssetType,
 ): SearchResult {
-  const lowerQuery = query.toLowerCase();
+  const searchTerms = getSearchTerms(query);
 
-  let filtered = KENNEY_CATALOG.filter((pack) => {
-    const matchesQuery =
-      pack.name.toLowerCase().includes(lowerQuery) ||
-      pack.description.toLowerCase().includes(lowerQuery) ||
-      pack.tags.some((tag) => tag.toLowerCase().includes(lowerQuery));
-
-    const matchesType = !type || pack.type.includes(type);
-
+  // Score and filter packs
+  const scored = KENNEY_CATALOG.map((pack) => ({
+    pack,
+    score: calculateRelevance(pack, searchTerms),
+  })).filter((item) => {
+    const matchesQuery = item.score > 0;
+    const matchesType = !type || item.pack.type.includes(type);
     return matchesQuery && matchesType;
   });
 
+  // Sort by score (highest first)
+  scored.sort((a, b) => b.score - a.score);
+
+  const packs = scored.map((item) => item.pack);
+
+  // Generate suggestions if no results
+  let suggestions: string[] | undefined;
+  if (packs.length === 0) {
+    suggestions = generateSearchSuggestions(query);
+  }
+
   return {
-    packs: filtered,
-    total: filtered.length,
+    packs,
+    total: packs.length,
+    suggestions,
   };
+}
+
+/**
+ * Generate helpful search suggestions when no results found
+ */
+function generateSearchSuggestions(query: string): string[] {
+  const suggestions: string[] = [];
+
+  // Suggest browsing by category
+  const allTypes = getAssetTypes();
+  suggestions.push(
+    `Try browsing by type: ${allTypes.join(", ")}`,
+  );
+
+  // Suggest related terms if available
+  const relatedTerms: string[] = [];
+  for (const [mainTerm, synonyms] of Object.entries(SEARCH_SYNONYMS)) {
+    if (mainTerm.includes(query.toLowerCase()) ||
+        synonyms.some(s => s.includes(query.toLowerCase()))) {
+      relatedTerms.push(mainTerm, ...synonyms);
+    }
+  }
+
+  if (relatedTerms.length > 0) {
+    suggestions.push(
+      `Try related terms: ${[...new Set(relatedTerms)].slice(0, 5).join(", ")}`,
+    );
+  }
+
+  // Suggest popular packs
+  suggestions.push(
+    "Popular packs: platformer-pack-redux, tiny-dungeon, animal-pack-redux, ui-pack",
+  );
+
+  return suggestions;
 }
 
 /**
