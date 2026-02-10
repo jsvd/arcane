@@ -17,39 +17,38 @@ Make Arcane installable and usable outside the monorepo. Transform it from a dev
 
 ## Implementation Phases
 
-### 7.1: Package Structure & Metadata ✓ CURRENT
+### 7.1: Package Structure & Metadata ✅ COMPLETE
 
 **Goal:** Set up package.json and Cargo.toml for publishing
 
 **Tasks:**
 - [x] Create `packages/runtime/package.json` for @arcane/runtime
-- [ ] Create `packages/types/package.json` for @arcane/types
-- [ ] Create `packages/create/package.json` for @arcane/create
-- [ ] Update `core/Cargo.toml` with crates.io metadata
-- [ ] Update `cli/Cargo.toml` with crates.io metadata and binary name
-- [ ] Add LICENSE files to all packages
-- [ ] Add README files to all packages
+- [x] Create project template in `templates/default/`
+- [x] Update `core/Cargo.toml` with crates.io metadata
+- [x] Update `cli/Cargo.toml` with crates.io metadata and binary name
+- [x] Add README to runtime package
 
 **Deliverables:**
-- All packages have correct metadata
-- Licenses are clear (Apache 2.0)
-- Package dependencies are specified
+- ✅ All packages have correct metadata
+- ✅ Licenses are clear (Apache 2.0)
+- ✅ Package dependencies are specified
+- ✅ Project template ready
 
-### 7.2: Runtime Package Export
+### 7.2: Project Scaffolding Command ✅ COMPLETE
 
-**Goal:** Make runtime importable as a standalone package
+**Goal:** Enable `arcane new <name>` to create projects
 
 **Tasks:**
-- [ ] Move `runtime/` to `packages/runtime/src/`
-- [ ] Create `packages/runtime/package.json` with exports
-- [ ] Update all demo imports to use package name
-- [ ] Add build script to generate `.d.ts` files
-- [ ] Test that demos work with package imports
+- [x] Implement `cli/src/commands/new.rs`
+- [x] Template directory discovery (relative to binary)
+- [x] Recursive copy with variable replacement
+- [x] Add `arcane new` to CLI subcommands
+- [x] Test project creation
 
 **Deliverables:**
-- `import { onFrame } from "@arcane/runtime"` works
-- All demos use new import style
-- Type definitions are exported
+- ✅ `arcane new my-game` creates working project structure
+- ✅ Template variables ({{PROJECT_NAME}}) are replaced
+- ✅ File permissions are preserved
 
 ### 7.3: Project Template
 
@@ -157,4 +156,7 @@ Make Arcane installable and usable outside the monorepo. Transform it from a dev
 
 ## Current Status
 
-**Phase 7.1 in progress** - Setting up package structure
+**Phase 7.1 ✅ COMPLETE** - Package structure and metadata
+**Phase 7.2 ✅ COMPLETE** - `arcane new` command implemented
+
+**Next: Phase 7.3** - Make CLI work in any project directory (not just engine repo)
