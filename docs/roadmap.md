@@ -309,6 +309,411 @@ Simplified dungeon crawler based on BFRPG v4 mechanics. Proves that all systems 
 
 ---
 
+## Phase 7: Polish & Stability
+
+**Status: Next**
+
+Fix critical issues identified in Phase 6 before adding new features.
+
+### Deliverables
+- [ ] Fix hot-reload architecture (see `docs/testing-hot-reload.md`)
+  - [ ] Refactor runtime lifecycle to support reload outside frame callback
+  - [ ] Or use Rc<RefCell<>> wrapper pattern
+  - [ ] Test with all existing demos
+- [ ] Fix all 31 TypeScript type errors
+  - [ ] Pathfinding API type consistency (PathResult vs array)
+  - [ ] BFRPG combat type narrowing
+  - [ ] Equipment test null checks
+  - [ ] Console/dom lib configuration
+- [ ] Document hot-reload limitation and workarounds in README
+- [ ] Add more Rust unit tests (target: 60+ tests)
+- [ ] Polish existing demos (consistent styling, better feedback)
+
+### Success Criteria
+- [ ] Hot-reload works without crashes
+- [ ] `tsc --noEmit` passes with zero errors
+- [ ] 60+ Rust tests passing
+- [ ] All demos use consistent visual styling
+- [ ] README documents all known limitations
+
+---
+
+## Phase 7.5: Tweening + Particles
+
+**Status: Planned**
+
+Add visual polish systems. Both are pure TypeScript, headless-testable, and provide massive "juice" improvements.
+
+### Deliverables
+- [ ] **Tweening system** (`runtime/tweening/`)
+  - [ ] Core API: `tween(target, props, duration, options)`
+  - [ ] Easing functions: linear, quad, cubic, elastic, bounce, back, expo
+  - [ ] Tween control: start, stop, pause, resume, reverse
+  - [ ] Chaining: `sequence()`, `parallel()`, `stagger()`
+  - [ ] Callbacks: onStart, onUpdate, onComplete
+  - [ ] Camera shake helper: `shakeCamera(intensity, duration)`
+  - [ ] Screen flash helper: `flashScreen(color, duration)`
+- [ ] **Particle system** (`runtime/particles/`)
+  - [ ] Emitter types: point, line, area, ring
+  - [ ] Particle properties: position, velocity, acceleration, lifetime, rotation, scale, color
+  - [ ] Color interpolation over lifetime (start color → end color)
+  - [ ] Emission control: rate (particles/sec), burst(count), one-shot
+  - [ ] Affectors: gravity, wind, attractor, repulsor, turbulence
+  - [ ] Particle pooling for performance
+  - [ ] Integration with sprite renderer (particles are sprites)
+- [ ] **Demo: Juice Showcase** (`demos/juice-showcase/`)
+  - [ ] Button hover effects (scale tween)
+  - [ ] Explosion particle system (burst, fading)
+  - [ ] Trail effects (continuous emission following object)
+  - [ ] Camera shake on impact
+  - [ ] Screen flash on events
+  - [ ] Smooth menu transitions (fade, slide)
+  - [ ] Compare "before" (no juice) vs "after" (juiced) for same interaction
+
+### Success Criteria
+- [ ] Tween any numeric property with any easing function
+- [ ] Camera shake feels impactful but not nauseating
+- [ ] Particle explosions look convincing (200+ particles at 60 FPS)
+- [ ] Trail effects follow moving entities smoothly
+- [ ] All systems tested headless (120+ new tests)
+- [ ] Juice demo makes existing games feel better when retrofitted
+- [ ] Zero performance regression on existing demos
+
+---
+
+## Phase 8: Scene Management + Save/Load
+
+**Status: Planned**
+
+Architectural features that unlock "real game" structure.
+
+### Deliverables
+- [ ] **Scene system** (`runtime/scenes/`)
+  - [ ] Scene interface: onEnter, onExit, onPause, onResume, onUpdate
+  - [ ] Scene stack: pushScene, popScene, replaceScene
+  - [ ] Scene transitions using Phase 7.5 tweens (fade, slide, wipe, custom)
+  - [ ] Multiple update callbacks per scene
+  - [ ] Scene-local state (isolated from global state)
+  - [ ] Scene preloading (load assets before transition)
+- [ ] **Save/Load system** (`runtime/persistence/`)
+  - [ ] State serialization to JSON (full game state)
+  - [ ] State deserialization with validation
+  - [ ] Save slots (multiple save files per game)
+  - [ ] Auto-save support (periodic + event-triggered)
+  - [ ] Schema migration helpers (handle version changes)
+  - [ ] Save metadata (timestamp, playtime, screenshot thumbnail)
+  - [ ] Browser localStorage for web, file system for desktop
+- [ ] **Demo: Menu Flow Game** (`demos/menu-flow/`)
+  - [ ] Title screen (press any key to continue)
+  - [ ] Main menu (New Game, Continue, Settings, Quit)
+  - [ ] Settings screen (volume sliders, controls)
+  - [ ] Character select screen
+  - [ ] Gameplay screen (simple roguelike)
+  - [ ] Pause menu (Resume, Settings, Quit to Menu)
+  - [ ] Game over screen (final score, retry, quit)
+  - [ ] Save/load integration (auto-save on level change, continue from save)
+  - [ ] Scene transitions between all screens
+
+### Success Criteria
+- [ ] Navigate between scenes without manual state machines
+- [ ] Scene transitions use tweening (smooth fades)
+- [ ] Can save mid-game and restore perfectly (deterministic)
+- [ ] Save files are human-readable JSON
+- [ ] Schema migration works (load old saves in new versions)
+- [ ] Menu demo exercises full game lifecycle
+- [ ] 100+ tests for scene management and persistence
+- [ ] Existing demos can be retrofitted with pause menus
+
+---
+
+## Phase 9: Physics System
+
+**Status: Planned**
+
+Replace hand-rolled physics with a proper rigid body system. This is the biggest architectural decision since Phase 1.
+
+### Key Decision: Box2D vs Pure TypeScript
+
+**Option A: Wrap Box2D**
+- **Pros**: Battle-tested, feature-complete, fast (C++)
+- **Cons**: Headless mode complications, C++ dependency, FFI complexity
+
+**Option B: Pure TypeScript**
+- **Pros**: Headless-testable, no external deps, agent-friendly, inspectable
+- **Cons**: More implementation work, performance unknown
+
+**Recommendation**: Start with **pure TypeScript** (aligns with Arcane philosophy). Migrate to Box2D only if profiling shows a bottleneck (per Performance Optimization section).
+
+### Deliverables
+- [ ] **Core physics** (`runtime/physics/rigid-body.ts`)
+  - [ ] RigidBody: mass, velocity, acceleration, angularVelocity, torque
+  - [ ] Collision shapes: Circle, AABB, Polygon, Compound
+  - [ ] Collision detection: shape vs shape (all pairs)
+  - [ ] Collision response: impulse resolution, restitution (bounciness), friction
+  - [ ] Integrator: Verlet or RK4 for stability
+- [ ] **Constraints/Joints** (`runtime/physics/constraints.ts`)
+  - [ ] Distance joint (rope, spring)
+  - [ ] Revolute joint (hinge, door)
+  - [ ] Prismatic joint (slider)
+  - [ ] Weld joint (glue objects together)
+- [ ] **Broad-phase optimization** (`runtime/physics/broadphase.ts`)
+  - [ ] Spatial hash grid for O(n) pair culling
+  - [ ] Only check nearby objects for collision
+- [ ] **Physics world** (`runtime/physics/world.ts`)
+  - [ ] World.step(dt): integrate, detect, resolve
+  - [ ] Collision layers/masks (filter what collides with what)
+  - [ ] Continuous collision detection (CCD) to prevent tunneling
+  - [ ] Sleep/wake system (static objects don't simulate)
+- [ ] **Integration with state system**
+  - [ ] PhysicsBody component in entity state
+  - [ ] Physics.step() produces state diffs
+  - [ ] Sync rendering positions from physics
+- [ ] **Demo: Physics Playground** (`demos/physics-playground/`)
+  - [ ] Falling blocks that stack and come to rest
+  - [ ] Seesaw with weight balance (revolute joint at center)
+  - [ ] Rope constraint (chain of distance joints)
+  - [ ] Bouncing projectiles (high restitution)
+  - [ ] Domino chain reaction
+  - [ ] Collision layer demo (some objects pass through others)
+- [ ] **Retrofit existing demos**
+  - [ ] Replace Breakout physics with RigidBody system
+  - [ ] Replace Platformer gravity with RigidBody + kinematic controller
+
+### Success Criteria
+- [ ] Stable stacking (objects come to rest, no jitter)
+- [ ] 60 FPS with 500+ rigid bodies
+- [ ] Constraints don't drift or explode
+- [ ] Fully testable headless (150+ physics tests)
+- [ ] Breakout and Platformer physics are simpler with new system
+- [ ] CCD prevents fast objects from tunneling
+- [ ] Agent can query physics state (velocities, forces, contacts)
+
+### Open Questions
+- [ ] Should physics be frame-rate independent? (fixed timestep vs variable)
+- [ ] How to handle physics <-> state sync? (ECS-style or manual sync?)
+- [ ] Trigger volumes (non-collision zones that fire events)?
+
+---
+
+## Phase 10: Sprite Transforms + Rendering Polish
+
+**Status: Planned**
+
+Complete the sprite rendering system with rotation, advanced blending, and custom shaders.
+
+### Deliverables
+- [ ] **Sprite transforms** (`core/src/renderer/sprite.rs`, `runtime/rendering/sprites.ts`)
+  - [ ] Rotation: arbitrary angles in radians
+  - [ ] Pivot/origin point: center, corner, or custom (affects rotation/scale)
+  - [ ] Flip: horizontal/vertical flip without separate atlas frames
+  - [ ] Opacity: per-sprite alpha channel
+  - [ ] Shader update: sprite.wgsl supports rotation matrix in vertex shader
+- [ ] **Blend modes** (`core/src/renderer/blend.rs`)
+  - [ ] Additive blending (for glowing particles)
+  - [ ] Multiply blending (for shadows, tinting)
+  - [ ] Screen blending (for highlights)
+  - [ ] Per-sprite blend mode setting
+- [ ] **Custom shader support** (`core/src/renderer/shader.rs`, `runtime/rendering/shader.ts`)
+  - [ ] User-defined WGSL fragment/vertex shaders
+  - [ ] Shader uniforms (pass data to shaders)
+  - [ ] Material system: assign shaders to sprites
+  - [ ] Shader hot-reload (reload WGSL on file change)
+- [ ] **Post-processing pipeline** (`core/src/renderer/postprocess.rs`)
+  - [ ] Render-to-texture (offscreen rendering)
+  - [ ] Full-screen quad for post-processing pass
+  - [ ] Built-in effects: bloom, blur, vignette, chromatic aberration
+  - [ ] Effect chaining (apply multiple effects in sequence)
+- [ ] **Demo: Asteroids Clone** (`demos/asteroids/`)
+  - [ ] Rotating spaceship sprite (arrow keys rotate, thrust moves forward)
+  - [ ] Rotating asteroid sprites (random angular velocity)
+  - [ ] Particle trails with additive blending
+  - [ ] Screen flash on death (post-processing)
+  - [ ] Bloom effect on explosions
+  - [ ] Custom CRT shader (scanlines, barrel distortion)
+
+### Success Criteria
+- [ ] Ship rotates smoothly (60 FPS with 100+ rotating sprites)
+- [ ] Additive particles glow convincingly
+- [ ] Custom shaders work (CRT effect looks retro)
+- [ ] Post-processing effects don't tank frame rate
+- [ ] Shader compilation errors reported clearly
+- [ ] Tests validate transform math (headless unit tests for rotation matrix)
+- [ ] Existing demos can opt-in to new features (backward compatible)
+
+---
+
+## Phase 11: Advanced Input + Interactive UI
+
+**Status: Planned**
+
+Expand platform reach and make UI interactive (not just draw-only).
+
+### Deliverables
+- [ ] **Gamepad support** (`core/src/platform/gamepad.rs`, `runtime/rendering/input.ts`)
+  - [ ] Detect connected gamepads
+  - [ ] Analog stick input (deadzone handling)
+  - [ ] Trigger input (analog triggers)
+  - [ ] Button mapping (Xbox, PlayStation, Switch layouts)
+  - [ ] Vibration/haptics
+- [ ] **Touch input** (`core/src/platform/touch.rs`)
+  - [ ] Tap, press, release
+  - [ ] Swipe gesture detection
+  - [ ] Multi-touch (pinch-to-zoom)
+  - [ ] Touch position in world space
+- [ ] **Input mapping system** (`runtime/input/actions.ts`)
+  - [ ] Named actions ("jump", "attack", "menu")
+  - [ ] Map actions to physical inputs (keyboard, gamepad, touch)
+  - [ ] Remappable controls (user can rebind)
+  - [ ] Input buffering (queue inputs for combos)
+- [ ] **Interactive UI** (`runtime/ui/interactive.ts`)
+  - [ ] Button: hover, pressed, released states
+  - [ ] Text input field (capture keyboard, cursor blink)
+  - [ ] Checkbox, radio button, slider
+  - [ ] Scroll container (overflow with scrollbar)
+  - [ ] Drag-and-drop (for inventory management)
+  - [ ] Focus system (tab navigation, gamepad navigation)
+  - [ ] Modal dialogs (confirm, cancel, text input)
+- [ ] **Layout system** (`runtime/ui/layout.ts`)
+  - [ ] Flexbox-style auto-layout (horizontal, vertical, grid)
+  - [ ] Anchoring (attach to screen edges/corners with margins)
+  - [ ] Responsive sizing (fill, fit-content, fixed)
+- [ ] **Demo: Gamepad Platformer + UI** (`demos/gamepad-ui/`)
+  - [ ] Platformer controlled via gamepad (analog stick movement)
+  - [ ] Menu with button hover states
+  - [ ] Settings screen (volume sliders, control remapping UI)
+  - [ ] Touch controls overlay for mobile
+
+### Success Criteria
+- [ ] Gamepad input works on Windows, macOS, Linux
+- [ ] Touch input works (test on mobile browser)
+- [ ] UI buttons respond to mouse, touch, and gamepad
+- [ ] Text input captures keyboard correctly
+- [ ] Drag-and-drop feels natural (inventory management)
+- [ ] Layout system handles screen resize gracefully
+- [ ] Tests validate input mapping and UI state (80+ tests)
+
+---
+
+## Phase 12: Audio + Camera Polish
+
+**Status: Planned**
+
+Complete the audio and camera systems with features expected in a modern 2D engine.
+
+### Deliverables
+- [ ] **Spatial/Positional audio** (`runtime/rendering/audio.ts`, `core/src/audio/spatial.rs`)
+  - [ ] Volume based on distance from listener
+  - [ ] Panning based on left/right position
+  - [ ] Set listener position (usually camera or player)
+- [ ] **Audio mixer** (`runtime/rendering/audio.ts`)
+  - [ ] Audio buses: SFX, music, ambient, voice
+  - [ ] Per-bus volume control
+  - [ ] Master volume
+- [ ] **Audio polish**
+  - [ ] Crossfade between music tracks
+  - [ ] Audio pooling (limit concurrent instances of same sound)
+  - [ ] Pitch variation (randomize pitch for repeated sounds)
+  - [ ] Audio effects: reverb, echo, low-pass filter
+- [ ] **Camera features** (`runtime/rendering/camera.ts`)
+  - [ ] Camera bounds/limits (clamp to map edges)
+  - [ ] Camera deadzone (target can move without camera following)
+  - [ ] Smooth zoom (animated zoom transitions using Phase 7.5 tweens)
+  - [ ] Parallax scrolling (multi-layer backgrounds at different speeds)
+  - [ ] Multiple viewports (split-screen support)
+- [ ] **Demo: Parallax Scroller + Audio** (`demos/parallax-audio/`)
+  - [ ] Side-scrolling platformer with 3-layer parallax background
+  - [ ] Spatial audio (enemies make sound based on position)
+  - [ ] Music crossfade between areas
+  - [ ] Camera deadzone (player can move in center without camera moving)
+  - [ ] Camera bounds (stops at map edges)
+
+### Success Criteria
+- [ ] Spatial audio feels natural (volume/panning based on position)
+- [ ] Music crossfade is smooth (no pops or clicks)
+- [ ] Parallax layers scroll at correct speeds (depth illusion)
+- [ ] Camera deadzone makes movement feel better
+- [ ] Split-screen works (two viewports on same game state)
+- [ ] 40+ tests for audio and camera features
+
+---
+
+## Phase 13: Tilemap + Animation Polish
+
+**Status: Planned**
+
+Complete the tilemap and animation systems with advanced features.
+
+### Deliverables
+- [ ] **Multiple tilemap layers** (`runtime/rendering/tilemap.ts`)
+  - [ ] Background, midground, foreground layers
+  - [ ] Per-layer parallax scrolling
+  - [ ] Collision layer (separate from visual layers)
+  - [ ] Layer visibility toggle
+- [ ] **Auto-tiling** (`runtime/rendering/autotile.ts`)
+  - [ ] Bitmask auto-tiling (Wang tiles, blob tiles)
+  - [ ] Automatic tile selection based on neighbors
+  - [ ] Support for 47-tile and 16-tile sets
+- [ ] **Animated tiles** (`runtime/rendering/tilemap.ts`)
+  - [ ] Per-tile animation (water, lava, torches)
+  - [ ] Frame cycling independent of sprite animations
+- [ ] **Isometric/Hexagonal grids** (`runtime/rendering/tilemap-iso.ts`)
+  - [ ] Isometric grid (diamond layout, 2:1 ratio)
+  - [ ] Hexagonal grid (pointy-top, flat-top)
+  - [ ] Screen-to-tile coordinate conversion
+- [ ] **Tile properties** (`runtime/rendering/tilemap.ts`)
+  - [ ] Custom metadata per tile (walkable, damage, friction, etc.)
+  - [ ] Query tile properties by position
+- [ ] **Animation state machine** (`runtime/rendering/animation-fsm.ts`)
+  - [ ] States: idle, walk, run, jump, attack
+  - [ ] Transitions with conditions
+  - [ ] Animation blending (smooth transitions)
+  - [ ] Animation events (trigger callbacks on specific frames)
+- [ ] **Multi-row sprite sheets** (`runtime/rendering/animation.ts`)
+  - [ ] Support sprite sheets with multiple rows (each row = one animation)
+  - [ ] Auto-detect grid layout
+- [ ] **Demo: Isometric RPG Town** (`demos/iso-town/`)
+  - [ ] Isometric tilemap (buildings, roads, trees)
+  - [ ] Multiple layers (ground, buildings, roofs)
+  - [ ] Animated water tiles
+  - [ ] Character with animation state machine (idle, walk transitions)
+  - [ ] Auto-tiling for roads
+
+### Success Criteria
+- [ ] Multiple layers render correctly (z-ordering)
+- [ ] Auto-tiling works (place one tile, neighbors update automatically)
+- [ ] Animated tiles cycle correctly (water ripples)
+- [ ] Isometric rendering looks correct (depth sorting)
+- [ ] Animation state machine handles transitions smoothly
+- [ ] 60+ tests for tilemap and animation features
+
+---
+
+## Phase 14: Open Source Launch
+
+**Status: Planned** (formerly Phase 7)
+
+Ship it.
+
+### Deliverables
+- [ ] Public GitHub repository
+- [ ] Documentation site
+- [ ] Getting started guide
+- [ ] Tutorials: "Build a Sokoban in 10 minutes", "Build an RPG in 30 minutes with Claude"
+- [ ] Recipe contribution guide
+- [ ] Example projects spanning genres (puzzle, card game, roguelike, platformer, tower defense, RPG)
+- [ ] npm packages published
+- [ ] Crates.io packages published
+- [ ] `npx arcane create` project scaffolding command
+
+### Success Criteria
+- [ ] A developer can `npx arcane create my-game` and have a working project
+- [ ] Documentation is comprehensive enough for AI agents to use without guidance
+- [ ] At least 3 example projects demonstrate different game types
+- [ ] Community can contribute recipes
+- [ ] The engine is actually used to build games
+
+---
+
 ## Performance Optimization (When Triggered)
 
 Not a phase — a standing item. All computationally non-trivial algorithms currently live in TypeScript and perform well within budget through Phase 4. V8 JITs typed arrays to near-native speed, and algorithmic improvements (spatial hashing) should always precede language migration.
