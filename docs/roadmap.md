@@ -335,8 +335,8 @@ Ship it.
   - [x] Issue templates (bug, feature, documentation)
   - [x] PR template
 - [x] Published packages
-  - [x] npm: `@arcane-engine/runtime@0.1.0`, `@arcane-engine/create@0.1.0`
-  - [x] crates.io: `arcane-engine@0.1.0`, `arcane-cli@0.1.0`
+  - [x] npm: `@arcane-engine/runtime@0.2.1`, `@arcane-engine/create@0.2.1`
+  - [x] crates.io: `arcane-engine@0.2.1`, `arcane-cli@0.2.1`
 
 ### Success Criteria
 - [x] A developer can `npm create @arcane-engine/game my-game` and have a working project
@@ -416,6 +416,33 @@ Add visual polish systems. Both are pure TypeScript, headless-testable, and prov
 - [x] All systems tested headless (132 new tests: 18 tween, 82 easing, 8 chain, 13 helpers, 11 particles)
 - [x] Juice demo showcases all features interactively
 - [x] Zero performance regression on existing demos
+
+---
+
+## Phase 9.5: LLM-Assisted Game Dev + Standalone Install
+
+**Status: Complete** ✅
+
+Make the engine installable and usable without cloning the repo. Improve the LLM development experience for scaffolded projects.
+
+### Deliverables
+- [x] **Standalone install** (`cargo install arcane-cli`)
+  - [x] Templates and recipes embedded in binary via `include_dir` + `build.rs`
+  - [x] Runtime resolved from `node_modules/@arcane-engine/runtime/src/` in standalone projects
+  - [x] Filesystem fallback for dev-from-repo (edits to templates/recipes take effect without recompiling)
+  - [x] `arcane new`, `arcane init`, `arcane add` all work from standalone binary
+- [x] **LLM development guide** (`templates/default/AGENTS.md`)
+  - [x] Scaffolded projects include agent-friendly development instructions
+  - [x] API declarations (`types/arcane.d.ts`) generated from runtime source
+- [x] **Type declarations generation** (`scripts/generate-declarations.sh`)
+  - [x] Auto-generates `arcane.d.ts` from runtime JSDoc annotations
+  - [x] Ships with scaffolded projects as primary LLM API reference
+- [x] Published packages: v0.2.1 on crates.io and npm
+
+### Success Criteria
+- [x] `cargo install arcane-cli && arcane new my-game && cd my-game && npm install && arcane dev` works end-to-end
+- [x] Dev-from-repo workflow unchanged (`cargo run -- dev demos/...` still works)
+- [x] 1022 TS tests + 60 Rust tests passing
 
 ---
 

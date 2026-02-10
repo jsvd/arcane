@@ -96,17 +96,18 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phase 9 complete (Tweening + Particles)!** 🎉
+**Phase 9.5 complete (Standalone Install + LLM Dev Experience)!** 🎉
 
 All packages published and ready to use:
-- **npm**: [@arcane-engine/runtime@0.2.0](https://www.npmjs.com/package/@arcane-engine/runtime), [@arcane-engine/create@0.2.0](https://www.npmjs.com/package/@arcane-engine/create)
-- **crates.io**: [arcane-engine@0.2.0](https://crates.io/crates/arcane-engine), [arcane-cli@0.2.0](https://crates.io/crates/arcane-cli)
+- **npm**: [@arcane-engine/runtime@0.2.1](https://www.npmjs.com/package/@arcane-engine/runtime), [@arcane-engine/create@0.2.1](https://www.npmjs.com/package/@arcane-engine/create)
+- **crates.io**: [arcane-engine@0.2.1](https://crates.io/crates/arcane-engine), [arcane-cli@0.2.1](https://crates.io/crates/arcane-cli)
 
 **Current features:**
 - ✅ Core engine: rendering, physics, audio, text, UI, animation, pathfinding, tweening, particles
 - ✅ Recipe framework with 4 recipes (turn-based combat, inventory, grid movement, fog of war)
 - ✅ Agent protocol (HTTP inspector, describe/inspect commands)
-- ✅ 1025 TS tests + 38 Rust tests passing
+- ✅ Standalone install: `cargo install arcane-cli` just works
+- ✅ 1022 TS tests + 60 Rust tests passing
 - ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
 - ✅ Example projects (Sokoban, Tower Defense, BFRPG dungeon crawler, Juice Showcase)
 
@@ -116,15 +117,18 @@ See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 
 ## Quick Start
 
-### Using npm (recommended)
+### Using cargo install (recommended)
 
 ```bash
-# Create a new game project
-npm create @arcane-engine/game my-game
-cd my-game
-
 # Install the Arcane CLI
 cargo install arcane-cli
+
+# Create a new game project
+arcane new my-game
+cd my-game
+
+# Install runtime
+npm install
 
 # Run with hot-reload
 arcane dev
@@ -146,6 +150,7 @@ cd arcane
 # Create a new game project
 cargo run --release -- new my-game
 cd my-game
+npm install
 
 # Run with hot-reload
 cargo run --release -- dev
