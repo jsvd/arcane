@@ -10,6 +10,7 @@ documentation = "https://docs.rs/arcane-cli"
 keywords = ["game-engine", "cli", "gamedev", "2d"]
 categories = ["command-line-utilities", "game-engines", "development-tools"]
 readme = "../README.md"
+include = ["src/**/*", "Cargo.toml", "build.rs", "data/**/*"]
 
 [[bin]]
 name = "arcane"

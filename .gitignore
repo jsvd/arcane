@@ -41,6 +41,7 @@ coverage/
 
 # Arcane runtime
 .arcane/
+cli/data/
 dist-types/
 cli/log
 *.log

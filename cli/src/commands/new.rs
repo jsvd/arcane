@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 pub(crate) static TEMPLATE_DIR: Dir<'static> =
-    include_dir!("$CARGO_MANIFEST_DIR/../templates/default");
+    include_dir!("$OUT_DIR/templates/default");
 
 /// Create a new Arcane project from template
 pub fn run(name: &str) -> Result<()> {

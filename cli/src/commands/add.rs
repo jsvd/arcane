@@ -3,7 +3,7 @@ use include_dir::{include_dir, Dir};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-static RECIPES_DIR: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/../recipes");
+static RECIPES_DIR: Dir<'static> = include_dir!("$OUT_DIR/recipes");
 
 /// Find the `recipes/` directory on the filesystem (for dev-from-repo).
 /// Returns None when running from a standalone install.
