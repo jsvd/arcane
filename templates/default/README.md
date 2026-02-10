@@ -1,27 +1,28 @@
 # {{PROJECT_NAME}}
 
-A 2D game built with [Arcane](https://github.com/anthropics/arcane) - an agent-native game engine.
+A 2D game built with [Arcane](https://github.com/anthropics/arcane) — an agent-native game engine.
 
 ## Getting Started
 
 ```bash
-# Install dependencies
-npm install
-
 # Run development server with hot-reload
-npm run dev
+arcane dev
 
 # Run tests
-npm run test
+arcane test
 ```
 
 ## Project Structure
 
 ```
 {{PROJECT_NAME}}/
+├── AGENTS.md             # LLM development guide (start here if using AI)
+├── types/
+│   └── arcane.d.ts       # Full API reference with JSDoc
 ├── src/
-│   ├── game.ts      # Pure game logic (state in, state out)
-│   └── visual.ts    # Rendering and input handling
+│   ├── game.ts           # Pure game logic (state in, state out)
+│   ├── game.test.ts      # Tests for game logic
+│   └── visual.ts         # Rendering and input handling
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -29,38 +30,21 @@ npm run test
 
 ## Development
 
-### Running the Game
-
-```bash
-arcane dev
-```
-
-Opens a window with your game. Changes to `src/visual.ts` trigger hot-reload.
+- `arcane dev` — Opens a window with your game. Hot-reloads on save.
+- `arcane test` — Discovers and runs `*.test.ts` files headlessly.
+- `arcane add <recipe>` — Adds pre-built game systems (e.g., `turn-based-combat`).
 
 ### Agent Protocol
 
 Query your game state using the agent protocol:
 
 ```bash
-# Get text description
-arcane describe src/visual.ts
-
-# Query specific state path
-arcane inspect src/visual.ts "rng.seed"
-
-# With HTTP inspector
-arcane dev --inspector 4321
-curl http://localhost:4321/describe
+arcane describe src/visual.ts        # Text description
+arcane inspect src/visual.ts "player" # Query specific state
+arcane dev --inspector 4321          # HTTP inspector
 ```
 
-## Next Steps
+## For LLMs
 
-- Read the [Arcane docs](https://github.com/anthropics/arcane/tree/main/docs)
-- Explore [example projects](https://github.com/anthropics/arcane/tree/main/demos)
-- Add [recipes](https://github.com/anthropics/arcane/tree/main/recipes) with `arcane add <recipe-name>`
-
-## Learn More
-
-- [Getting Started Guide](https://github.com/anthropics/arcane/blob/main/docs/getting-started.md)
-- [API Reference](https://github.com/anthropics/arcane/blob/main/docs/api-reference.md)
-- [Recipe Guide](https://github.com/anthropics/arcane/blob/main/docs/recipe-guide.md)
+Read `AGENTS.md` for architecture patterns, game loop examples, and API usage.
+The complete API with JSDoc is in `types/arcane.d.ts`.

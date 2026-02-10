@@ -76,6 +76,33 @@ function selectHeuristic(name: string): (dx: number, dy: number) => number {
 
 // --- A* ---
 
+/**
+ * Find the shortest path between two tiles on a grid using A* search
+ * with a binary min-heap for the open set.
+ *
+ * Returns immediately if start equals goal, or if either endpoint is
+ * out of bounds / unwalkable. Stops early if `maxIterations` is exceeded.
+ *
+ * @param grid - The pathfinding grid with dimensions, walkability, and optional cost function.
+ * @param start - Starting tile position (integer coordinates).
+ * @param goal - Goal tile position (integer coordinates).
+ * @param options - Optional search parameters: diagonal movement, max iterations, heuristic.
+ * @returns A {@link PathResult} with `found`, `path`, `cost`, and `explored` count.
+ *
+ * @example
+ * ```ts
+ * const grid: PathGrid = {
+ *   width: 10, height: 10,
+ *   isWalkable: (x, y) => map[y][x] !== "wall",
+ * };
+ * const result = findPath(grid, { x: 0, y: 0 }, { x: 9, y: 9 }, { diagonal: true });
+ * if (result.found) {
+ *   for (const step of result.path) {
+ *     console.log(`Move to (${step.x}, ${step.y})`);
+ *   }
+ * }
+ * ```
+ */
 export function findPath(
   grid: PathGrid,
   start: Vec2,

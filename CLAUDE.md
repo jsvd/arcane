@@ -189,6 +189,10 @@ Read `docs/engineering-philosophy.md` first. It governs everything else.
 - Agent protocol: games call `registerAgent()` to install `globalThis.__arcaneAgent`. Rust evals TS to interact.
 - HTTP inspector (`--inspector <port>` on dev): channel-based, polls requests in frame callback.
 
+## Maintaining API Declarations
+
+After changing any public API in `runtime/`, run `scripts/generate-declarations.sh` and commit the updated `templates/default/types/arcane.d.ts`. This file ships with scaffolded projects and is the primary API reference for LLMs.
+
 ## Agent Tooling
 
 See `docs/agent-tooling.md` for the full specification of agents, skills, and MCP tools used to develop Arcane. The tooling set evolves with the project — review it at each phase transition.

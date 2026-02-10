@@ -187,6 +187,10 @@ Examples:
 
 The first line is imperative mood, present tense, under 72 characters.
 
+## Maintaining API Declarations
+
+After changing any public API in `runtime/`, run `scripts/generate-declarations.sh` and commit the updated `templates/default/types/arcane.d.ts`. CI will fail if the declarations are stale.
+
 ## What We Don't Accept
 
 - Changes without tests

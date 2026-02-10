@@ -1,10 +1,13 @@
 /**
- * Runtime validation for rendering API calls
- * Add this to production code to catch errors early
+ * Runtime validation for rendering API calls.
+ * Add validation to catch type errors and invalid values early in development.
  */
 
+/** Options controlling how validation errors are reported. */
 export interface ValidationOptions {
+  /** If true, throw on validation failure. Default: true. */
   throwOnError?: boolean;
+  /** If true, log errors to console.error. Default: false. */
   logErrors?: boolean;
 }
 
@@ -13,6 +16,15 @@ const defaultOptions: ValidationOptions = {
   logErrors: false,
 };
 
+/**
+ * Validate that a value is a finite number (not NaN, not Infinity).
+ *
+ * @param api - Name of the calling API (for error messages).
+ * @param param - Name of the parameter being validated.
+ * @param value - The value to validate.
+ * @param options - Error reporting options.
+ * @returns true if valid, false or throws if invalid.
+ */
 export function validateNumber(
   api: string,
   param: string,
@@ -37,6 +49,14 @@ export function validateNumber(
   return true;
 }
 
+/**
+ * Validate that a value is a valid Color object with r, g, b channels in 0.0-1.0.
+ *
+ * @param api - Name of the calling API (for error messages).
+ * @param color - The color object to validate.
+ * @param options - Error reporting options.
+ * @returns true if valid, false or throws if invalid.
+ */
 export function validateColor(
   api: string,
   color: any,
@@ -67,6 +87,13 @@ export function validateColor(
   return true;
 }
 
+/**
+ * Validate drawText options (x, y, size must be valid numbers, color must be valid).
+ *
+ * @param opts - The text options object to validate.
+ * @param options - Error reporting options.
+ * @returns true if valid, false or throws if invalid.
+ */
 export function validateTextOptions(
   opts: any,
   options: ValidationOptions = defaultOptions
@@ -87,6 +114,17 @@ export function validateTextOptions(
   return true;
 }
 
+/**
+ * Validate drawRect parameters (x, y, w, h must be finite numbers, color must be valid).
+ *
+ * @param x - X position to validate.
+ * @param y - Y position to validate.
+ * @param w - Width to validate.
+ * @param h - Height to validate.
+ * @param opts - Optional rect options with color.
+ * @param options - Error reporting options.
+ * @returns true if valid, false or throws if invalid.
+ */
 export function validateRectParams(
   x: any,
   y: any,
@@ -119,7 +157,14 @@ function handleError(message: string, options: ValidationOptions): boolean {
   return false;
 }
 
-// Helper: wrap a rendering function with validation
+/**
+ * Wrap a rendering function with automatic parameter validation.
+ * If validation fails, the wrapped function is not called.
+ *
+ * @param fn - The rendering function to wrap.
+ * @param validator - Validation function that receives the same args. Returns true if valid.
+ * @returns Wrapped function that validates before calling the original.
+ */
 export function withValidation<T extends (...args: any[]) => any>(
   fn: T,
   validator: (...args: Parameters<T>) => boolean

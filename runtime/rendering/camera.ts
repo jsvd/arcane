@@ -5,8 +5,21 @@ const hasRenderOps =
   typeof (globalThis as any).Deno?.core?.ops?.op_set_camera === "function";
 
 /**
- * Set the camera position and zoom.
+ * Set the camera position and zoom level.
+ * The camera determines which part of the world is visible on screen.
  * No-op in headless mode.
+ *
+ * @param x - Camera center X in world units.
+ * @param y - Camera center Y in world units.
+ * @param zoom - Zoom level. 1.0 = default, >1.0 = zoomed in, <1.0 = zoomed out. Default: 1.
+ *
+ * @example
+ * // Center camera on the player
+ * setCamera(player.x, player.y);
+ *
+ * @example
+ * // Zoomed-in camera
+ * setCamera(player.x, player.y, 2.0);
  */
 export function setCamera(x: number, y: number, zoom: number = 1): void {
   if (!hasRenderOps) return;
@@ -14,8 +27,10 @@ export function setCamera(x: number, y: number, zoom: number = 1): void {
 }
 
 /**
- * Get the current camera state.
- * Returns default values in headless mode.
+ * Get the current camera state (position and zoom).
+ * Returns `{ x: 0, y: 0, zoom: 1 }` in headless mode.
+ *
+ * @returns Current camera position and zoom level.
  */
 export function getCamera(): CameraState {
   if (!hasRenderOps) return { x: 0, y: 0, zoom: 1 };
@@ -24,7 +39,16 @@ export function getCamera(): CameraState {
 }
 
 /**
- * Center the camera on a target position.
+ * Center the camera on a target position. Convenience wrapper around {@link setCamera}.
+ * Call every frame to follow a moving target.
+ *
+ * @param targetX - Target X position in world units to center on.
+ * @param targetY - Target Y position in world units to center on.
+ * @param zoom - Zoom level. Default: 1.
+ *
+ * @example
+ * // Follow the player each frame
+ * followTarget(player.x, player.y);
  */
 export function followTarget(
   targetX: number,

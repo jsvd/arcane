@@ -5,31 +5,35 @@
  * All functions are pure: state in, state out.
  */
 
-import { seed, rollDice } from "@arcane-engine/runtime/state";
-import type { PRNGState } from "@arcane-engine/runtime/state";
+import { seed } from "@arcane/runtime/state";
+import type { PRNGState } from "@arcane/runtime/state";
 
 // --- Types ---
 
 export type GameState = {
+  player: { x: number; y: number };
+  score: number;
   rng: PRNGState;
-  // Add your game state here
 };
 
 // --- Functions ---
 
-/**
- * Create initial game state
- */
+/** Create initial game state. */
 export function createGame(seedValue: number): GameState {
   return {
+    player: { x: 0, y: 0 },
+    score: 0,
     rng: seed(seedValue),
   };
 }
 
-/**
- * Update game state (example)
- */
-export function updateGame(state: GameState): GameState {
-  // Add your game logic here
-  return state;
+/** Move the player by a delta. Pure function: returns new state. */
+export function movePlayer(state: GameState, dx: number, dy: number): GameState {
+  return {
+    ...state,
+    player: {
+      x: state.player.x + dx,
+      y: state.player.y + dy,
+    },
+  };
 }

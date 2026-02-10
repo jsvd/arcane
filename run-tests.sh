@@ -7,6 +7,14 @@
 
 set -euo pipefail
 
-pattern="${1:-**/*.test.ts}"
-
-exec node --test --experimental-strip-types $pattern
+if [ $# -gt 0 ]; then
+  exec node --test --experimental-strip-types "$@"
+else
+  # Run all tests except templates/ (template test files use @arcane/runtime
+  # imports that only resolve inside scaffolded projects)
+  exec node --test --experimental-strip-types \
+    'runtime/**/*.test.ts' \
+    'packages/**/*.test.ts' \
+    'demos/**/*.test.ts' \
+    'recipes/**/*.test.ts'
+fi

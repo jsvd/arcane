@@ -13,18 +13,21 @@ import {
   createSolidTexture,
   drawText,
   getDefaultFont,
-} from "@arcane-engine/runtime/rendering";
-import { registerAgent } from "@arcane-engine/runtime/agent";
-import { createGame } from "./game.ts";
+  isKeyDown,
+} from "@arcane/runtime/rendering";
+import { registerAgent } from "@arcane/runtime/agent";
+import { createGame, movePlayer } from "./game.ts";
 import type { GameState } from "./game.ts";
 
 // --- Constants ---
 
 const CAMERA_ZOOM = 4.0;
+const MOVE_SPEED = 100; // pixels per second
 
 // --- Textures ---
 
 const TEX_PLAYER = createSolidTexture("player", 60, 180, 255);
+const TEX_GROUND = createSolidTexture("ground", 80, 80, 80);
 
 // --- State ---
 
@@ -35,15 +38,7 @@ let state: GameState = createGame(42);
 registerAgent({
   name: "{{PROJECT_NAME}}",
   getState: () => state,
-  setState: (s: GameState) => {
-    state = s;
-  },
-  describe: (s, opts) => {
-    if (opts.verbosity === "minimal") {
-      return "{{PROJECT_NAME}} is running";
-    }
-    return JSON.stringify(s, null, 2);
-  },
+  setState: (s: GameState) => { state = s; },
 });
 
 // --- Game Loop ---
@@ -51,22 +46,40 @@ registerAgent({
 onFrame(() => {
   const dt = getDeltaTime();
 
-  // Set camera
-  setCamera(0, 0, CAMERA_ZOOM);
+  // Input
+  let dx = 0;
+  let dy = 0;
+  if (isKeyDown("ArrowLeft") || isKeyDown("a")) dx -= 1;
+  if (isKeyDown("ArrowRight") || isKeyDown("d")) dx += 1;
+  if (isKeyDown("ArrowUp") || isKeyDown("w")) dy -= 1;
+  if (isKeyDown("ArrowDown") || isKeyDown("s")) dy += 1;
 
-  // Render example sprite
+  // Update
+  if (dx !== 0 || dy !== 0) {
+    state = movePlayer(state, dx * MOVE_SPEED * dt, dy * MOVE_SPEED * dt);
+  }
+
+  // Camera
+  setCamera(state.player.x, state.player.y, CAMERA_ZOOM);
+
+  // Render ground
+  drawSprite({ textureId: TEX_GROUND, x: -200, y: -200, w: 400, h: 400, layer: 0 });
+
+  // Render player
   drawSprite({
     textureId: TEX_PLAYER,
-    x: 0,
-    y: 0,
+    x: state.player.x - 16,
+    y: state.player.y - 16,
     w: 32,
     h: 32,
+    layer: 1,
   });
 
-  // Render example text
+  // Render HUD
   const font = getDefaultFont();
-  drawText("Hello, Arcane!", -100, 50, {
+  drawText(`Score: ${state.score}`, 10, 10, {
     font,
     scale: 2.0,
+    screenSpace: true,
   });
 });

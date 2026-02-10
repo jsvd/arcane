@@ -17,7 +17,41 @@ function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
 }
 
-/** Register an agent protocol, installing it on globalThis.__arcaneAgent */
+/**
+ * Register this game with Arcane's agent protocol.
+ *
+ * Must be called once at startup. Installs a protocol object on
+ * `globalThis.__arcaneAgent` that enables:
+ * - `arcane describe <entry.ts>` — text description of game state.
+ * - `arcane inspect <entry.ts> <path>` — query specific state values.
+ * - `arcane dev <entry.ts> --inspector <port>` — HTTP inspector for live interaction.
+ *
+ * The protocol supports executing/simulating actions, rewinding to initial state,
+ * and capturing snapshots.
+ *
+ * @typeParam S - The game state type.
+ * @param config - Agent configuration with name, state accessors, optional actions, and describe function.
+ *   Provide either a `store` (GameStore) or `getState`/`setState` functions.
+ * @returns The created {@link AgentProtocol} instance (also installed on globalThis).
+ *
+ * @example
+ * ```ts
+ * let state = { score: 0, player: { x: 0, y: 0, hp: 100 } };
+ *
+ * registerAgent({
+ *   name: "my-game",
+ *   getState: () => state,
+ *   setState: (s) => { state = s; },
+ *   describe: (s, opts) => `Score: ${s.score}, HP: ${s.player.hp}`,
+ *   actions: {
+ *     heal: {
+ *       handler: (s) => ({ ...s, player: { ...s.player, hp: 100 } }),
+ *       description: "Restore player to full health",
+ *     },
+ *   },
+ * });
+ * ```
+ */
 export function registerAgent<S>(config: AgentConfig<S>): AgentProtocol<S> {
   const getState = "store" in config
     ? () => config.store.getState() as S

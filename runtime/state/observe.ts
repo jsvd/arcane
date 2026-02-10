@@ -1,36 +1,62 @@
 import type { Diff } from "./transaction.ts";
 
-/** Observer callback — receives new value, old value, and context */
+/**
+ * Callback invoked when an observed path changes.
+ * Receives the new value, old value, and context about the change.
+ *
+ * @param newValue - The value after the change.
+ * @param oldValue - The value before the change.
+ * @param context - Metadata about the change (path, full diff).
+ */
 export type ObserverCallback<T = unknown> = (
   newValue: T,
   oldValue: T,
   context: ObserverContext,
 ) => void;
 
-/** Context provided to observer callbacks */
+/**
+ * Context provided to observer callbacks when a change is detected.
+ *
+ * - `path` - The specific path that changed (e.g., "player.hp").
+ * - `diff` - The full Diff from the transaction that triggered this notification.
+ */
 export type ObserverContext = Readonly<{
   path: string;
   diff: Diff;
 }>;
 
-/** Unsubscribe function */
+/**
+ * Function returned by observe() to unsubscribe from further notifications.
+ * Call it to stop receiving callbacks for that subscription.
+ */
 export type Unsubscribe = () => void;
 
-/** Pattern for path matching (supports * wildcards) */
+/**
+ * Pattern for matching state paths. Supports `*` wildcards at any segment position.
+ * Examples: "player.hp", "enemies.*.hp", "*.position".
+ * Each `*` matches exactly one path segment.
+ */
 export type PathPattern = string;
 
-/** Observer registry — manages subscriptions and dispatches notifications */
+/**
+ * Observer registry that manages subscriptions and dispatches change notifications.
+ * Created via {@link createObserverRegistry}. Used internally by GameStore.
+ *
+ * - `observe` - Subscribe to changes matching a path pattern. Returns an Unsubscribe function.
+ * - `notify` - Dispatch notifications to all matching observers for a given diff.
+ * - `clear` - Remove all observers (useful for cleanup/reset).
+ */
 export type ObserverRegistry<S> = Readonly<{
-  /** Subscribe to changes at a path pattern */
+  /** Subscribe to changes at a path pattern. Returns an unsubscribe function. */
   observe: <T = unknown>(
     pattern: PathPattern,
     callback: ObserverCallback<T>,
   ) => Unsubscribe;
 
-  /** Notify all matching observers after a transaction commits */
+  /** Notify all matching observers after a transaction commits. */
   notify: (oldState: S, newState: S, diff: Diff) => void;
 
-  /** Remove all observers */
+  /** Remove all observers. */
   clear: () => void;
 }>;
 
@@ -39,7 +65,12 @@ type Subscription = {
   callback: ObserverCallback;
 };
 
-/** Create a new observer registry */
+/**
+ * Create a new observer registry for tracking state change subscriptions.
+ * Used internally by {@link createStore} to power the store's observe() method.
+ *
+ * @returns A new ObserverRegistry with observe, notify, and clear methods.
+ */
 export function createObserverRegistry<S>(): ObserverRegistry<S> {
   const subscriptions = new Set<Subscription>();
 

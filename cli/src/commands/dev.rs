@@ -42,10 +42,20 @@ fn create_import_map(base_dir: &Path) -> ImportMap {
         import_map.add("@arcane/runtime/".to_string(), runtime_url.clone());
         import_map.add("@arcane/runtime".to_string(), format!("{}index.ts", runtime_url));
 
-        // Add subpath mappings
-        for subpath in ["state", "rendering", "ui", "physics", "pathfinding", "systems", "agent", "testing"] {
+        // Add subpath mappings for all runtime modules
+        for subpath in ["state", "rendering", "ui", "physics", "pathfinding", "systems", "agent", "testing", "tweening", "particles"] {
             import_map.add(
                 format!("@arcane/runtime/{}", subpath),
+                format!("{}{}/index.ts", runtime_url, subpath),
+            );
+        }
+
+        // Also support @arcane-engine/runtime imports (used by scaffolded projects)
+        import_map.add("@arcane-engine/runtime/".to_string(), runtime_url.clone());
+        import_map.add("@arcane-engine/runtime".to_string(), format!("{}index.ts", runtime_url));
+        for subpath in ["state", "rendering", "ui", "physics", "pathfinding", "systems", "agent", "testing", "tweening", "particles"] {
+            import_map.add(
+                format!("@arcane-engine/runtime/{}", subpath),
                 format!("{}{}/index.ts", runtime_url, subpath),
             );
         }
@@ -455,7 +465,8 @@ fn reload_runtime(
         new_b.next_sound_id = old.next_sound_id;
     }
 
-    let mut new_runtime = ArcaneRuntime::new_with_render_bridge(new_bridge.clone());
+    let import_map = create_import_map(base_dir);
+    let mut new_runtime = ArcaneRuntime::new_with_render_bridge_and_import_map(new_bridge.clone(), import_map);
 
     // Re-execute entry file
     let rt = tokio::runtime::Builder::new_current_thread()

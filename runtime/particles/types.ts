@@ -1,194 +1,236 @@
 /**
- * Particle system type definitions
+ * Particle system type definitions.
+ *
+ * Particles are small, short-lived visual elements (sparks, smoke, debris, etc.)
+ * spawned by {@link Emitter}s and optionally modified by {@link Affector}s.
  */
 
 import type { Color } from "../ui/types.ts";
 
 /**
- * A single particle
+ * A single particle managed by an emitter.
+ *
+ * Particles are pooled and reused. Check `alive` before rendering.
+ * Color interpolates from `startColor` to `endColor` over the particle's lifetime.
  */
 export interface Particle {
-  /** Position */
+  /** X position in world pixels. */
   x: number;
+  /** Y position in world pixels. */
   y: number;
 
-  /** Velocity (pixels per second) */
+  /** X velocity in pixels per second. */
   vx: number;
+  /** Y velocity in pixels per second. */
   vy: number;
 
-  /** Acceleration (pixels per second squared) */
+  /** X acceleration in pixels per second squared. Reset each frame after affectors run. */
   ax: number;
+  /** Y acceleration in pixels per second squared. Reset each frame after affectors run. */
   ay: number;
 
-  /** Rotation in radians */
+  /** Current rotation in radians. */
   rotation: number;
 
-  /** Rotation velocity (radians per second) */
+  /** Rotation speed in radians per second. */
   rotationSpeed: number;
 
-  /** Scale */
+  /** Current scale multiplier. 1.0 = original size. */
   scale: number;
 
-  /** Scale velocity (per second) */
+  /** Scale change rate per second (positive = growing, negative = shrinking). */
   scaleSpeed: number;
 
-  /** Color */
+  /** Current interpolated color (between startColor and endColor based on age/lifetime). */
   color: Color;
 
-  /** Start color (for interpolation) */
+  /** Color at birth (age = 0). */
   startColor: Color;
 
-  /** End color (for interpolation) */
+  /** Color at death (age = lifetime). */
   endColor: Color;
 
-  /** Lifetime in seconds */
+  /** Total lifetime in seconds. The particle dies when age >= lifetime. */
   lifetime: number;
 
-  /** Age in seconds */
+  /** Seconds since this particle was spawned. */
   age: number;
 
-  /** Whether this particle is alive */
+  /** Whether this particle is alive and should be updated/rendered. */
   alive: boolean;
 
-  /** Texture ID for rendering */
+  /** Texture ID used to render this particle via drawSprite(). */
   textureId: number;
 }
 
 /**
- * Emitter shape types
+ * Shape of the emitter's spawn area.
+ * - `"point"` — all particles spawn at the emitter's (x, y).
+ * - `"line"` — particles spawn along a line from (x, y) to (x2, y2).
+ * - `"area"` — particles spawn randomly within a rectangle.
+ * - `"ring"` — particles spawn in an annular region between innerRadius and outerRadius.
  */
 export type EmitterShape = "point" | "line" | "area" | "ring";
 
 /**
- * Emission mode
+ * How the emitter spawns particles.
+ * - `"continuous"` — spawns at a steady rate (particles/second) every frame.
+ * - `"burst"` — spawns `burstCount` particles all at once, then stops.
+ * - `"one-shot"` — spawns a single particle, then stops.
  */
 export type EmissionMode = "continuous" | "burst" | "one-shot";
 
 /**
- * Particle emitter configuration
+ * Configuration for creating a particle emitter via {@link createEmitter}.
+ *
+ * Range fields like `lifetime`, `velocityX`, etc. are `[min, max]` tuples.
+ * Each spawned particle picks a random value within the range.
  */
 export interface EmitterConfig {
-  /** Emitter shape */
+  /** Shape of the spawn area. See {@link EmitterShape}. */
   shape: EmitterShape;
 
-  /** Position */
+  /** X position of the emitter in world pixels. */
   x: number;
+  /** Y position of the emitter in world pixels. */
   y: number;
 
-  /** Shape-specific parameters */
+  /** Shape-specific parameters. Which fields are used depends on `shape`. */
   shapeParams?: {
-    /** Line: end point (x2, y2) */
+    /** End X for "line" shape. Default: same as emitter x. */
     x2?: number;
+    /** End Y for "line" shape. Default: same as emitter y. */
     y2?: number;
 
-    /** Area: width and height */
+    /** Width in pixels for "area" shape. Default: 100. */
     width?: number;
+    /** Height in pixels for "area" shape. Default: 100. */
     height?: number;
 
-    /** Ring: inner and outer radius */
+    /** Inner radius in pixels for "ring" shape. Default: 0. */
     innerRadius?: number;
+    /** Outer radius in pixels for "ring" shape. Default: 50. */
     outerRadius?: number;
   };
 
-  /** Emission mode */
+  /** How particles are spawned. See {@link EmissionMode}. */
   mode: EmissionMode;
 
-  /** Emission rate (particles per second, for continuous mode) */
+  /** Spawn rate in particles per second. Used when mode is "continuous". Default: 10. */
   rate?: number;
 
-  /** Burst count (for burst mode) */
+  /** Number of particles to spawn at once. Used when mode is "burst". Default: 10. */
   burstCount?: number;
 
-  /** Particle lifetime range [min, max] seconds */
+  /** Particle lifetime range [min, max] in seconds. Each particle gets a random value in range. */
   lifetime: [number, number];
 
-  /** Initial velocity range */
+  /** Initial X velocity range [min, max] in pixels/second. */
   velocityX: [number, number];
+  /** Initial Y velocity range [min, max] in pixels/second. */
   velocityY: [number, number];
 
-  /** Initial acceleration */
+  /** Initial X acceleration range [min, max] in pixels/second^2. Optional. */
   accelerationX?: [number, number];
+  /** Initial Y acceleration range [min, max] in pixels/second^2. Optional. */
   accelerationY?: [number, number];
 
-  /** Initial rotation range (radians) */
+  /** Initial rotation range [min, max] in radians. Optional. */
   rotation?: [number, number];
 
-  /** Rotation speed range (radians per second) */
+  /** Rotation speed range [min, max] in radians/second. Optional. */
   rotationSpeed?: [number, number];
 
-  /** Initial scale range */
+  /** Initial scale range [min, max]. 1.0 = original size. Optional. */
   scale?: [number, number];
 
-  /** Scale speed range (per second) */
+  /** Scale change rate range [min, max] per second. Optional. */
   scaleSpeed?: [number, number];
 
-  /** Start color */
+  /** Color at particle birth. RGBA with components 0.0..1.0. */
   startColor: Color;
 
-  /** End color (for interpolation over lifetime) */
+  /** Color at particle death. Interpolated linearly from startColor over lifetime. */
   endColor: Color;
 
-  /** Texture ID for particles */
+  /** Texture ID for rendering particles. Obtain via loadTexture() or createSolidTexture(). */
   textureId: number;
 
-  /** Maximum number of particles this emitter can have alive */
+  /** Maximum alive particles for this emitter. New particles are not spawned if at limit. Default: unlimited. */
   maxParticles?: number;
 }
 
 /**
- * Affector types
+ * Types of particle affectors that modify particle behavior each frame.
+ * - `"gravity"` — constant downward (or any direction) force.
+ * - `"wind"` — constant directional force (same as gravity, semantic distinction).
+ * - `"attractor"` — pulls particles toward a point.
+ * - `"repulsor"` — pushes particles away from a point.
+ * - `"turbulence"` — random jitter applied to acceleration each frame.
  */
 export type AffectorType = "gravity" | "wind" | "attractor" | "repulsor" | "turbulence";
 
 /**
- * Particle affector (modifies particle behavior)
+ * A particle affector that modifies particle acceleration each frame.
+ * Attach to an emitter via {@link addAffector}.
+ *
+ * Which fields are used depends on `type`:
+ * - gravity/wind: `forceX`, `forceY`
+ * - attractor/repulsor: `centerX`, `centerY`, `strength`, `radius`
+ * - turbulence: `turbulence`
  */
 export interface Affector {
+  /** The type of force this affector applies. See {@link AffectorType}. */
   type: AffectorType;
 
-  /** Gravity/wind: force vector */
+  /** X component of force vector. Used by "gravity" and "wind". Default: 0. */
   forceX?: number;
+  /** Y component of force vector. Used by "gravity" and "wind". Default: 0. */
   forceY?: number;
 
-  /** Attractor/repulsor: center point */
+  /** X position of attraction/repulsion center. Used by "attractor" and "repulsor". Default: 0. */
   centerX?: number;
+  /** Y position of attraction/repulsion center. Used by "attractor" and "repulsor". Default: 0. */
   centerY?: number;
 
-  /** Attractor/repulsor: strength */
+  /** Force strength for attractor/repulsor. Higher = stronger pull/push. Default: 100. */
   strength?: number;
 
-  /** Attractor/repulsor: radius (0 = infinite) */
+  /** Effect radius in pixels for attractor/repulsor. 0 = infinite range. Default: 0. */
   radius?: number;
 
-  /** Turbulence: strength */
+  /** Turbulence intensity. Higher = more random jitter. Default: 10. */
   turbulence?: number;
 }
 
 /**
- * Particle emitter
+ * A particle emitter instance returned by {@link createEmitter}.
+ *
+ * Manages a pool of particles and spawns them according to its config.
+ * Updated each frame by {@link updateParticles}.
  */
 export interface Emitter {
-  /** Unique ID */
+  /** Unique identifier, auto-generated as "emitter_0", "emitter_1", etc. */
   id: string;
 
-  /** Configuration */
+  /** The emitter's configuration (shape, mode, ranges, colors, etc.). */
   config: EmitterConfig;
 
-  /** Particles managed by this emitter */
+  /** All particles (alive and dead) managed by this emitter. */
   particles: Particle[];
 
-  /** Particle pool for reuse */
+  /** Object pool for particle reuse to reduce GC pressure. */
   pool: Particle[];
 
-  /** Affectors affecting this emitter's particles */
+  /** Affectors that modify this emitter's particles each frame. */
   affectors: Affector[];
 
-  /** Time accumulator for emission rate */
+  /** Internal accumulator for continuous emission rate timing. */
   emissionAccumulator: number;
 
-  /** Whether emitter is active */
+  /** Whether the emitter is actively spawning particles. Set to false to pause spawning. */
   active: boolean;
 
-  /** Whether emitter has been used (for one-shot mode) */
+  /** Whether the emitter has fired (used by "burst" and "one-shot" modes to prevent re-firing). */
   used: boolean;
 }

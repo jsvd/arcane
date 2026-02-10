@@ -7,7 +7,29 @@ const hasRenderOps =
 
 /**
  * Queue a sprite to be drawn this frame.
- * No-op in headless mode (Node or V8 test runner).
+ * Must be called every frame -- sprites are not persisted between frames.
+ * No-op in headless mode (safe to import in game logic).
+ *
+ * @param opts - Sprite rendering options (position, size, texture, layer, UV, tint).
+ *
+ * @example
+ * drawSprite({
+ *   textureId: playerTex,
+ *   x: player.x, y: player.y,
+ *   w: 32, h: 32,
+ *   layer: 1,
+ * });
+ *
+ * @example
+ * // Draw a tinted, atlas-based sprite
+ * drawSprite({
+ *   textureId: atlas,
+ *   x: 100, y: 200,
+ *   w: 16, h: 16,
+ *   uv: { x: 0.25, y: 0, w: 0.25, h: 0.5 },
+ *   tint: { r: 1, g: 0.5, b: 0.5, a: 1 },
+ *   layer: 5,
+ * });
  */
 export function drawSprite(opts: SpriteOptions): void {
   if (!hasRenderOps) return;
@@ -52,6 +74,7 @@ export function drawSprite(opts: SpriteOptions): void {
 
 /**
  * Clear all queued sprites for this frame.
+ * Normally not needed -- the renderer clears automatically at frame start.
  * No-op in headless mode.
  */
 export function clearSprites(): void {

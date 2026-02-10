@@ -93,6 +93,9 @@ pub fn run() -> Result<()> {
     println!("  arcane dev              # Run with hot-reload (defaults to src/visual.ts)");
     println!("  arcane test             # Run tests");
     println!("  arcane add --list       # See available recipes");
+    println!();
+    println!("Read AGENTS.md for LLM development guide.");
+    println!("Full API reference in types/arcane.d.ts.");
 
     Ok(())
 }

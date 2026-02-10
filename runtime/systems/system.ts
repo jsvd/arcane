@@ -1,7 +1,26 @@
 import type { Condition, Action, Rule, SystemDef, RuleResult, ExtendOptions } from "./types.ts";
 import { createError } from "../state/error.ts";
 
-/** Create a system definition from a name and list of rules. */
+/**
+ * Create a system definition from a name and list of rules.
+ *
+ * A system is a named collection of rules that together define a game mechanic.
+ * Use {@link rule} to build rules, then combine them into a system.
+ *
+ * @typeParam S - The game state type.
+ * @param name - System name (e.g., "combat", "inventory").
+ * @param rules - Ordered array of rules belonging to this system.
+ * @returns An immutable {@link SystemDef}.
+ *
+ * @example
+ * ```ts
+ * const combat = system("combat", [
+ *   rule<GameState>("attack")
+ *     .when((s, args) => s.player.hp > 0)
+ *     .then((s, args) => ({ ...s, enemy: { ...s.enemy, hp: s.enemy.hp - 10 } })),
+ * ]);
+ * ```
+ */
 export function system<S>(name: string, rules: readonly Rule<S>[]): SystemDef<S> {
   return { name, rules };
 }
@@ -21,7 +40,24 @@ type RuleBuilderBase<S> = {
   };
 };
 
-/** Fluent builder for creating rules. */
+/**
+ * Fluent builder for creating named rules.
+ *
+ * Chain `.when()` to add conditions and `.then()` to add actions.
+ * Use `.replaces()` to mark this rule as a replacement for an existing rule
+ * when used with {@link extend}.
+ *
+ * @typeParam S - The game state type.
+ * @param name - Unique rule name within the system.
+ * @returns A fluent builder with `.when()`, `.then()`, and `.replaces()` methods.
+ *
+ * @example
+ * ```ts
+ * const attackRule = rule<GameState>("attack")
+ *   .when((s) => s.player.hp > 0, (s) => s.enemy.hp > 0)
+ *   .then((s, args) => ({ ...s, enemy: { ...s.enemy, hp: s.enemy.hp - 10 } }));
+ * ```
+ */
 export function rule<S>(name: string): RuleBuilderBase<S> {
   let replacesName: string | undefined;
 
@@ -59,7 +95,20 @@ export function rule<S>(name: string): RuleBuilderBase<S> {
   };
 }
 
-/** Find a rule by name, apply conditions, chain actions. */
+/**
+ * Find a rule by name in a system, check its conditions, and execute its actions.
+ *
+ * If the rule is not found, returns `{ ok: false }` with an UNKNOWN_RULE error.
+ * If any condition fails, returns `{ ok: false }` with a CONDITION_FAILED error.
+ * Otherwise, chains all actions and returns `{ ok: true }` with the new state.
+ *
+ * @typeParam S - The game state type.
+ * @param sys - The system to search for the rule.
+ * @param ruleName - Name of the rule to apply.
+ * @param state - Current game state.
+ * @param args - Optional arguments passed to conditions and actions.
+ * @returns A {@link RuleResult} with the outcome and resulting state.
+ */
 export function applyRule<S>(
   sys: SystemDef<S>,
   ruleName: string,
@@ -102,7 +151,16 @@ export function applyRule<S>(
   return { ok: true, state: current, ruleName };
 }
 
-/** Return names of rules whose conditions are all met. */
+/**
+ * Return names of rules whose conditions are all satisfied for the given state.
+ * Useful for presenting valid actions to a player or AI agent.
+ *
+ * @typeParam S - The game state type.
+ * @param sys - The system to query.
+ * @param state - Current game state to test conditions against.
+ * @param args - Optional arguments passed to condition functions.
+ * @returns Array of rule names that can currently be applied.
+ */
 export function getApplicableRules<S>(
   sys: SystemDef<S>,
   state: S,
@@ -113,7 +171,21 @@ export function getApplicableRules<S>(
     .map((r) => r.name);
 }
 
-/** Extend a system: replace rules by name, add new rules, remove rules by name. */
+/**
+ * Create a new system by extending an existing one.
+ *
+ * Supports three operations:
+ * 1. **Replace** — new rules with `replaces` set swap out existing rules by name.
+ * 2. **Add** — new rules without `replaces` are appended to the end.
+ * 3. **Remove** — rules named in `options.remove` are excluded.
+ *
+ * The base system is not modified; a new {@link SystemDef} is returned.
+ *
+ * @typeParam S - The game state type.
+ * @param base - The system to extend.
+ * @param options - Rules to add/replace and rule names to remove.
+ * @returns A new system with the modifications applied.
+ */
 export function extend<S>(base: SystemDef<S>, options: ExtendOptions<S>): SystemDef<S> {
   const removeSet = new Set(options.remove ?? []);
   const newRules = options.rules ?? [];

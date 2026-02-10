@@ -22,8 +22,10 @@ pub fn run(name: &str) -> Result<()> {
     println!();
     println!("Next steps:");
     println!("  cd {}", name);
-    println!("  npm install");
     println!("  arcane dev");
+    println!();
+    println!("Read AGENTS.md for LLM development guide.");
+    println!("Full API reference in types/arcane.d.ts.");
     println!();
     println!("Happy game building! 🎮");
 

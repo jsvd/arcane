@@ -1,5 +1,9 @@
 /**
- * Particle emitter implementation
+ * Particle emitter implementation.
+ *
+ * Manages a global list of emitters. Call {@link updateParticles} once per frame
+ * to spawn new particles and advance existing ones. Then read particles via
+ * {@link getAllParticles} for rendering.
  */
 
 import type {
@@ -9,14 +13,36 @@ import type {
   Affector,
 } from "./types.ts";
 
-/** Active emitters */
+/** Active emitters being updated each frame. */
 const emitters: Emitter[] = [];
 
-/** ID counter */
+/** Counter for generating unique emitter IDs. */
 let emitterIdCounter = 0;
 
 /**
- * Create a new particle emitter
+ * Create a new particle emitter and add it to the global update list.
+ *
+ * The emitter immediately begins spawning particles according to its
+ * configuration (mode, rate, shape, etc.).
+ *
+ * @param config - Emitter configuration describing shape, mode, particle properties, and colors.
+ * @returns The created {@link Emitter} instance.
+ *
+ * @example
+ * ```ts
+ * const sparks = createEmitter({
+ *   shape: "point",
+ *   x: 100, y: 100,
+ *   mode: "burst",
+ *   burstCount: 20,
+ *   lifetime: [0.3, 0.8],
+ *   velocityX: [-50, 50],
+ *   velocityY: [-100, -20],
+ *   startColor: { r: 1, g: 0.8, b: 0, a: 1 },
+ *   endColor: { r: 1, g: 0, b: 0, a: 0 },
+ *   textureId: sparkTexture,
+ * });
+ * ```
  */
 export function createEmitter(config: EmitterConfig): Emitter {
   const emitter: Emitter = {
@@ -35,7 +61,10 @@ export function createEmitter(config: EmitterConfig): Emitter {
 }
 
 /**
- * Remove an emitter
+ * Remove an emitter from the global update list.
+ * Its particles will no longer be updated or included in {@link getAllParticles}.
+ *
+ * @param emitter - The emitter to remove.
  */
 export function removeEmitter(emitter: Emitter): void {
   const index = emitters.indexOf(emitter);
@@ -307,7 +336,16 @@ function updateParticle(particle: Particle, dt: number, affectors: Affector[]): 
 }
 
 /**
- * Update all emitters and their particles
+ * Update all emitters and their particles by one frame.
+ *
+ * Spawns new particles based on each emitter's mode and rate, then
+ * advances all alive particles (velocity, position, rotation, scale,
+ * color interpolation, affectors, lifetime). Dead particles are marked
+ * `alive = false` and returned to the pool.
+ *
+ * Call this once per frame in your game loop.
+ *
+ * @param dt - Elapsed time since last frame in seconds. Must be >= 0.
  */
 export function updateParticles(dt: number): void {
   for (const emitter of emitters) {
@@ -324,7 +362,11 @@ export function updateParticles(dt: number): void {
 }
 
 /**
- * Get all active particles from all emitters
+ * Collect all alive particles from all active emitters.
+ *
+ * Use this each frame to get the particles to render (e.g., via drawSprite).
+ *
+ * @returns A new array of all alive {@link Particle} instances across all emitters.
  */
 export function getAllParticles(): Particle[] {
   const result: Particle[] = [];
@@ -339,21 +381,28 @@ export function getAllParticles(): Particle[] {
 }
 
 /**
- * Add an affector to an emitter
+ * Add a particle affector to an emitter.
+ * Affectors modify particle acceleration each frame (gravity, wind, attraction, etc.).
+ *
+ * @param emitter - The emitter to add the affector to.
+ * @param affector - The affector configuration. See {@link Affector} for field details.
  */
 export function addAffector(emitter: Emitter, affector: Affector): void {
   emitter.affectors.push(affector);
 }
 
 /**
- * Remove all emitters
+ * Remove all emitters and their particles from the global update list.
  */
 export function clearEmitters(): void {
   emitters.length = 0;
 }
 
 /**
- * Get count of active emitters (for testing)
+ * Get the number of emitters currently in the global update list.
+ * Useful for debugging and testing.
+ *
+ * @returns Count of registered emitters (active or inactive).
  */
 export function getEmitterCount(): number {
   return emitters.length;

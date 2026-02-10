@@ -1,20 +1,97 @@
-// Universal test harness — works in both Node.js and V8 (deno_core).
-//
-// Node mode: delegates to node:test and node:assert.
-// V8 mode: standalone implementations with result reporting via
-//   globalThis.__reportTest(suite, test, passed, error?)
+/**
+ * Universal test harness for Arcane — works in both Node.js and V8 (deno_core).
+ *
+ * In **Node mode**: delegates to `node:test` and `node:assert`.
+ * In **V8 mode**: standalone implementations with result reporting via
+ * `globalThis.__reportTest(suite, test, passed, error?)`.
+ *
+ * Test files import `{ describe, it, assert }` from this module and work
+ * identically in both environments.
+ *
+ * @example
+ * ```ts
+ * import { describe, it, assert } from "../testing/harness.ts";
+ *
+ * describe("math", () => {
+ *   it("adds numbers", () => {
+ *     assert.equal(1 + 1, 2);
+ *   });
+ *
+ *   it("supports deep equality", () => {
+ *     assert.deepEqual({ a: 1 }, { a: 1 });
+ *   });
+ * });
+ * ```
+ */
 
+/** A synchronous or async test function. */
 type TestFn = () => void | Promise<void>;
+
+/** Function signature for `describe()` — defines a test suite. */
 type DescribeFn = (name: string, fn: () => void) => void;
+
+/** Function signature for `it()` — defines a single test case. */
 type ItFn = (name: string, fn: TestFn) => void;
 
+/**
+ * Assertion interface providing common test assertions.
+ *
+ * All assertion methods throw on failure with a descriptive error message.
+ */
 interface Assert {
+  /**
+   * Assert strict equality (`===`).
+   * @param actual - The value to test.
+   * @param expected - The expected value.
+   * @param message - Optional custom failure message.
+   */
   equal(actual: unknown, expected: unknown, message?: string): void;
+
+  /**
+   * Assert deep structural equality (recursive comparison of objects/arrays).
+   * @param actual - The value to test.
+   * @param expected - The expected structure.
+   * @param message - Optional custom failure message.
+   */
   deepEqual(actual: unknown, expected: unknown, message?: string): void;
+
+  /**
+   * Assert strict inequality (`!==`).
+   * @param actual - The value to test.
+   * @param expected - The value that `actual` must not equal.
+   * @param message - Optional custom failure message.
+   */
   notEqual(actual: unknown, expected: unknown, message?: string): void;
+
+  /**
+   * Assert that two values are NOT deeply equal.
+   * @param actual - The value to test.
+   * @param expected - The value that `actual` must not deeply equal.
+   * @param message - Optional custom failure message.
+   */
   notDeepEqual(actual: unknown, expected: unknown, message?: string): void;
+
+  /**
+   * Assert that a value is truthy.
+   * @param value - The value to test.
+   * @param message - Optional custom failure message.
+   */
   ok(value: unknown, message?: string): void;
+
+  /**
+   * Assert that a string matches a regular expression.
+   * @param actual - The string to test.
+   * @param expected - The regex pattern to match against.
+   * @param message - Optional custom failure message.
+   */
   match(actual: string, expected: RegExp, message?: string): void;
+
+  /**
+   * Assert that a function throws an error.
+   * @param fn - The function expected to throw.
+   * @param expected - Optional regex to match against the error message.
+   * @param message - Optional custom failure message.
+   */
   throws(fn: () => unknown, expected?: RegExp, message?: string): void;
 }
 
@@ -244,8 +321,29 @@ declare const __reportTest: (
 // Node.js — delegate to built-in modules
 // ---------------------------------------------------------------------------
 
+/**
+ * Define a test suite. Can be nested with other describe() calls.
+ * In V8 mode, nested suites have their test names prefixed with the parent suite name.
+ *
+ * @param name - Suite name displayed in test output.
+ * @param fn - Function containing `it()` test cases and/or nested `describe()` calls.
+ */
 let describe: DescribeFn;
+
+/**
+ * Define a single test case within a describe() suite.
+ * Supports both synchronous and async test functions.
+ *
+ * @param name - Test name displayed in test output.
+ * @param fn - Test function. Throw (or reject) to indicate failure; return to pass.
+ */
 let it: ItFn;
+
+/**
+ * Assertion helpers for test cases. Methods throw on failure with descriptive messages.
+ *
+ * Available assertions: `equal`, `deepEqual`, `notEqual`, `notDeepEqual`, `ok`, `match`, `throws`.
+ */
 let assert: Assert;
 
 if (isNode) {

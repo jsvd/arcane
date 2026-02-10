@@ -63,6 +63,19 @@ function toWorld(
 /**
  * Draw a filled rectangle.
  * No-op in headless mode.
+ *
+ * @param x - X position (screen pixels if screenSpace, world units otherwise).
+ * @param y - Y position (screen pixels if screenSpace, world units otherwise).
+ * @param w - Width in pixels (screenSpace) or world units.
+ * @param h - Height in pixels (screenSpace) or world units.
+ * @param options - Color, layer, and screenSpace options.
+ *
+ * @example
+ * // Draw a red rectangle in screen space (HUD)
+ * drawRect(10, 10, 200, 30, {
+ *   color: { r: 1, g: 0, b: 0, a: 0.8 },
+ *   screenSpace: true,
+ * });
  */
 export function drawRect(
   x: number,
@@ -85,9 +98,23 @@ export function drawRect(
 }
 
 /**
- * Draw a panel with border and fill.
- * Uses 5 sprites: 4 border edges + 1 fill.
+ * Draw a panel with border and fill (5 sprites: 4 border edges + 1 fill).
  * No-op in headless mode.
+ *
+ * @param x - X position (screen pixels if screenSpace, world units otherwise).
+ * @param y - Y position (screen pixels if screenSpace, world units otherwise).
+ * @param w - Total width including border.
+ * @param h - Total height including border.
+ * @param options - Fill color, border color, border width, layer, and screenSpace options.
+ *
+ * @example
+ * // Draw a HUD panel
+ * drawPanel(10, 10, 200, 100, {
+ *   fillColor: { r: 0.1, g: 0.1, b: 0.2, a: 0.9 },
+ *   borderColor: { r: 0.5, g: 0.5, b: 0.5, a: 1 },
+ *   borderWidth: 2,
+ *   screenSpace: true,
+ * });
  */
 export function drawPanel(
   x: number,
@@ -148,9 +175,15 @@ export function drawPanel(
 }
 
 /**
- * Draw a progress/health bar.
- * fillRatio is 0.0 to 1.0 (clamped).
+ * Draw a progress/health bar with background, fill, and optional border.
  * No-op in headless mode.
+ *
+ * @param x - X position (screen pixels if screenSpace, world units otherwise).
+ * @param y - Y position (screen pixels if screenSpace, world units otherwise).
+ * @param w - Total width.
+ * @param h - Total height.
+ * @param fillRatio - Fill amount, 0.0 (empty) to 1.0 (full). Clamped to this range.
+ * @param options - Colors, border, layer, and screenSpace options.
  */
 export function drawBar(
   x: number,
@@ -222,8 +255,14 @@ export function drawBar(
 }
 
 /**
- * Draw a text label with optional background panel.
+ * Draw a text label with an automatic background panel.
+ * Panel size is computed from the text measurement + padding.
  * No-op in headless mode.
+ *
+ * @param text - The text string to display.
+ * @param x - X position (screen pixels if screenSpace, world units otherwise).
+ * @param y - Y position (screen pixels if screenSpace, world units otherwise).
+ * @param options - Text color, background, border, padding, scale, layer, and screenSpace.
  */
 export function drawLabel(
   text: string,

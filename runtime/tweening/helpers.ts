@@ -1,15 +1,18 @@
 /**
- * Tweening helper functions for common game effects
+ * Tweening helper functions for common game "juice" effects.
  *
- * Provides high-level utilities like camera shake and screen flash.
+ * Camera shake and screen flash are implemented as global singletons.
+ * Only one shake and one flash can be active at a time; starting a new one
+ * replaces the previous.
+ *
+ * Usage: call the effect function, then read the offset/flash state each frame
+ * when rendering.
  */
 
 import { tween } from "./tween.ts";
 import { easeOutQuad } from "./easing.ts";
 
-/**
- * Camera shake state (for tracking active shake)
- */
+/** Internal camera shake state (global singleton). */
 let shakeState = {
   offsetX: 0,
   offsetY: 0,
@@ -17,11 +20,14 @@ let shakeState = {
 };
 
 /**
- * Apply camera shake effect
- * @param intensity - Maximum offset in pixels
- * @param duration - Duration in seconds
- * @param frequency - Number of shakes per second (default: 20)
- * @returns Camera offset that should be added to camera position
+ * Start a camera shake effect that decays over time using easeOutQuad.
+ *
+ * Each frame, read the offset via {@link getCameraShakeOffset} and add it
+ * to your camera position. The offset oscillates randomly and decays to zero.
+ *
+ * @param intensity - Maximum shake offset in pixels. Higher = more violent. Must be > 0.
+ * @param duration - Duration of the shake in seconds. Must be > 0.
+ * @param frequency - Unused currently; reserved for future use. Default: 20.
  */
 export function shakeCamera(
   intensity: number,
@@ -56,8 +62,10 @@ export function shakeCamera(
 }
 
 /**
- * Get current camera shake offset
- * @returns {x, y} offset in pixels to add to camera position
+ * Get the current camera shake offset for this frame.
+ * Returns {0, 0} when no shake is active.
+ *
+ * @returns Object with `x` and `y` pixel offsets to add to camera position.
  */
 export function getCameraShakeOffset(): { x: number; y: number } {
   return {
@@ -67,14 +75,15 @@ export function getCameraShakeOffset(): { x: number; y: number } {
 }
 
 /**
- * Check if camera shake is active
+ * Check whether a camera shake effect is currently active.
+ * @returns True if shake is in progress, false otherwise.
  */
 export function isCameraShaking(): boolean {
   return shakeState.active;
 }
 
 /**
- * Stop camera shake immediately
+ * Stop the camera shake immediately, resetting the offset to zero.
  */
 export function stopCameraShake(): void {
   shakeState.active = false;
@@ -82,9 +91,7 @@ export function stopCameraShake(): void {
   shakeState.offsetY = 0;
 }
 
-/**
- * Screen flash state (for tracking active flash)
- */
+/** Internal screen flash state (global singleton). */
 let flashState = {
   opacity: 0,
   r: 1,
@@ -94,12 +101,16 @@ let flashState = {
 };
 
 /**
- * Flash the screen with a color
- * @param r - Red component (0-1)
- * @param g - Green component (0-1)
- * @param b - Blue component (0-1)
- * @param duration - Duration in seconds
- * @param startOpacity - Initial opacity (default: 0.8)
+ * Flash the screen with a colored overlay that fades out using easeOutQuad.
+ *
+ * Each frame, read the flash state via {@link getScreenFlash} and render
+ * a full-screen rectangle with the returned color and opacity.
+ *
+ * @param r - Red component, 0.0 (none) to 1.0 (full).
+ * @param g - Green component, 0.0 (none) to 1.0 (full).
+ * @param b - Blue component, 0.0 (none) to 1.0 (full).
+ * @param duration - Fade-out duration in seconds. Must be > 0.
+ * @param startOpacity - Initial opacity of the flash overlay. Default: 0.8. Range: 0.0..1.0.
  */
 export function flashScreen(
   r: number,
@@ -124,8 +135,9 @@ export function flashScreen(
 }
 
 /**
- * Get current screen flash state
- * @returns Flash color and opacity, or null if no flash active
+ * Get the current screen flash color and opacity for this frame.
+ *
+ * @returns Flash state with `r`, `g`, `b` (0..1) and `opacity` (0..1), or `null` if no flash is active.
  */
 export function getScreenFlash(): { r: number; g: number; b: number; opacity: number } | null {
   if (!flashState.active) return null;
@@ -138,14 +150,15 @@ export function getScreenFlash(): { r: number; g: number; b: number; opacity: nu
 }
 
 /**
- * Check if screen flash is active
+ * Check whether a screen flash effect is currently active.
+ * @returns True if flash is in progress, false otherwise.
  */
 export function isScreenFlashing(): boolean {
   return flashState.active;
 }
 
 /**
- * Stop screen flash immediately
+ * Stop the screen flash immediately, resetting opacity to zero.
  */
 export function stopScreenFlash(): void {
   flashState.active = false;
