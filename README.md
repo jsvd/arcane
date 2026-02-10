@@ -96,39 +96,59 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phase 7 complete (Open Source Launch)!** 🎉 Core engine complete with rendering, physics, audio, text, UI, animation, pathfinding, recipe framework, and agent protocol. 657 TS tests + 38 Rust tests passing.
+**Phase 7 complete (Open Source Launch)!** 🎉
 
-**Infrastructure ready for distribution:**
-- ✅ Package structure and scaffolding (`arcane new`, `arcane init`)
-- ✅ Import map support (games use `@arcane/runtime` imports)
-- ✅ Comprehensive documentation (getting-started, tutorials, API reference, recipe guide)
-- ✅ Standalone example projects (Sokoban, Tower Defense)
-- ✅ Publishing infrastructure (`@arcane/create` package, publishing guide)
-- ✅ Community setup (CODE_OF_CONDUCT, issue/PR templates)
+All packages published and ready to use:
+- **npm**: [@arcane-engine/runtime@0.1.0](https://www.npmjs.com/package/@arcane-engine/runtime), [@arcane-engine/create@0.1.0](https://www.npmjs.com/package/@arcane-engine/create)
+- **crates.io**: [arcane-engine@0.1.0](https://crates.io/crates/arcane-engine), [arcane-cli@0.1.0](https://crates.io/crates/arcane-cli)
 
-**Ready to publish to npm and crates.io** when credentials are available.
+**Current features:**
+- ✅ Core engine: rendering, physics, audio, text, UI, animation, pathfinding
+- ✅ Recipe framework with 4 recipes (turn-based combat, inventory, grid movement, fog of war)
+- ✅ Agent protocol (HTTP inspector, describe/inspect commands)
+- ✅ 895 TS tests + 38 Rust tests passing
+- ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
+- ✅ Example projects (Sokoban, Tower Defense, BFRPG dungeon crawler)
+
+**Next:** Phase 8 (Polish & Stability) — Fix hot-reload architecture, TypeScript type errors, add Rust tests, polish demos.
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 
 ## Quick Start
 
-**Note:** Arcane is currently in pre-release development. Installation via `cargo install` and `npm create` will be available once Phase 7 is complete.
-
-For now, you can create new projects from within the repository:
+### Using npm (recommended)
 
 ```bash
 # Create a new game project
-cargo run --release -- new my-game
-
-# Run with hot-reload (entry point defaults to src/visual.ts)
+npm create @arcane-engine/game my-game
 cd my-game
-cargo run --release -- dev
+
+# Install the Arcane CLI
+cargo install arcane-cli
+
+# Run with hot-reload
+arcane dev
 
 # Run tests
-cargo run --release -- test
+arcane test
 
 # Add a recipe (e.g., turn-based combat)
-cargo run --release -- add turn-based-combat
+arcane add turn-based-combat
+```
+
+### From source
+
+```bash
+# Clone the repository
+git clone https://github.com/anthropics/arcane.git
+cd arcane
+
+# Create a new game project
+cargo run --release -- new my-game
+cd my-game
+
+# Run with hot-reload
+cargo run --release -- dev
 ```
 
 ## Development
