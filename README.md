@@ -151,6 +151,37 @@ cd my-game
 cargo run --release -- dev
 ```
 
+## Features
+
+### Hot-Reload
+Edit TypeScript files while the game is running and see changes instantly (typically 50-200ms). The engine:
+- Detects `.ts` file changes via file watcher
+- Creates a fresh V8 isolate with your updated code
+- Preserves texture/sound IDs to prevent flickering
+- **Note**: Game state is reset on reload (intentional for rapid iteration)
+
+### Agent Protocol
+AI agents can interact with your game via:
+- `arcane describe` - Text description of game state (headless)
+- `arcane inspect <path>` - Query specific state paths (headless)
+- `--inspector <port>` - HTTP API for querying state, executing actions, time travel
+
+### Headless Testing
+All game logic runs headless - no GPU required for tests:
+```bash
+arcane test              # Run all *.test.ts files in V8
+./run-tests.sh           # Run tests in Node.js
+```
+
+### Recipe System
+Composable game systems with pure functions:
+```bash
+arcane add --list                  # List available recipes
+arcane add turn-based-combat       # Add recipe to project
+```
+
+Available recipes: turn-based-combat, inventory-equipment, grid-movement, fog-of-war
+
 ## Development
 
 ### Prerequisites
