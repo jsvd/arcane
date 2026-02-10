@@ -18,8 +18,8 @@ enum Commands {
     },
     /// Open a window and run a game with hot-reload
     Dev {
-        /// Path to the TypeScript entry file
-        entry: String,
+        /// Path to the TypeScript entry file (defaults to src/visual.ts)
+        entry: Option<String>,
         /// Enable HTTP inspector on the given port (e.g. --inspector 4321)
         #[arg(long)]
         inspector: Option<u16>,
@@ -52,6 +52,8 @@ enum Commands {
         /// Project name
         name: String,
     },
+    /// Initialize an Arcane project in the current directory
+    Init,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -59,10 +61,14 @@ fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Test { path } => commands::test::run(path),
-        Commands::Dev { entry, inspector } => commands::dev::run(entry, inspector),
+        Commands::Dev { entry, inspector } => {
+            let entry = entry.unwrap_or_else(|| "src/visual.ts".to_string());
+            commands::dev::run(entry, inspector)
+        },
         Commands::Describe { entry, verbosity } => commands::describe::run(entry, verbosity),
         Commands::Inspect { entry, path } => commands::inspect::run(entry, path),
         Commands::Add { name, list } => commands::add::run(name, list),
         Commands::New { name } => commands::new::run(&name),
+        Commands::Init => commands::init::run(),
     }
 }

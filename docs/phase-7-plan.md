@@ -66,20 +66,20 @@ Make Arcane installable and usable outside the monorepo. Transform it from a dev
 - `npm create @arcane/game my-game` creates working project
 - Generated project can run `arcane dev`
 
-### 7.4: CLI Improvements
+### 7.4: CLI Improvements ✅ COMPLETE
 
 **Goal:** Make `arcane` command work in any project directory
 
 **Tasks:**
-- [ ] `arcane dev` finds entry point (default: `src/visual.ts`)
-- [ ] `arcane test` finds test files in project
-- [ ] `arcane add <recipe>` works from any directory
-- [ ] Add `arcane init` (convert existing dir to arcane project)
-- [ ] Add `arcane new <name>` (create + scaffold)
+- [x] `arcane dev` finds entry point (default: `src/visual.ts`)
+- [x] `arcane test` finds test files in project
+- [x] `arcane add <recipe>` works from any directory
+- [x] Add `arcane init` (convert existing dir to arcane project)
+- [x] Add `arcane new <name>` (create + scaffold)
 
 **Deliverables:**
-- CLI works in any project, not just engine repo
-- Sensible defaults (find src/visual.ts, src/game.ts)
+- ✅ CLI works in any project, not just engine repo
+- ✅ Sensible defaults (find src/visual.ts, src/game.ts)
 
 ### 7.5: Documentation
 
@@ -159,5 +159,6 @@ Make Arcane installable and usable outside the monorepo. Transform it from a dev
 **Phase 7.1 ✅ COMPLETE** - Package structure and metadata
 **Phase 7.2 ✅ COMPLETE** - `arcane new` command implemented
 **Phase 7.3 ✅ COMPLETE** - Import map support (games use `@arcane/runtime` imports!)
+**Phase 7.4 ✅ COMPLETE** - CLI improvements (`arcane init`, optional entry points)
 
-**Next: Phase 7.4-7.8** - Documentation, examples, and publishing
+**Next: Phase 7.5-7.8** - Documentation, examples, and publishing

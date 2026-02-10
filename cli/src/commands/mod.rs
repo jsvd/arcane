@@ -5,3 +5,4 @@ pub mod inspect;
 pub mod add;
 pub mod type_check;
 pub mod new;
+pub mod init;

@@ -96,9 +96,30 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phase 6 complete.** BFRPG Dungeon Crawler showcase game fully implemented with character creation (4 classes, 4 races), BFRPG v4 combat mechanics (d20 to-hit, damage dice), BSP dungeon generation, monster AI with A* pathfinding, equipment system with loot tables, full rendering with lighting and UI, agent protocol, victory/death conditions, and comprehensive integration tests. 657 TS tests + 38 Rust tests passing.
+**Phase 7 in progress (Open Source Launch).** Core engine complete with rendering, physics, audio, text, UI, animation, pathfinding, recipe framework, and agent protocol. 657 TS tests + 38 Rust tests passing. Currently implementing distribution: project scaffolding, package structure, and import map support complete.
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
+
+## Quick Start
+
+**Note:** Arcane is currently in pre-release development. Installation via `cargo install` and `npm create` will be available once Phase 7 is complete.
+
+For now, you can create new projects from within the repository:
+
+```bash
+# Create a new game project
+cargo run --release -- new my-game
+
+# Run with hot-reload (entry point defaults to src/visual.ts)
+cd my-game
+cargo run --release -- dev
+
+# Run tests
+cargo run --release -- test
+
+# Add a recipe (e.g., turn-based combat)
+cargo run --release -- add turn-based-combat
+```
 
 ## Development
 
