@@ -167,11 +167,14 @@ If a change requires more than ~300 lines of new code, it should probably be bro
 Before starting any non-trivial work:
 
 1. **Write the acceptance criteria first** — what specific, testable behaviors must be true when this is done?
-2. **Write the tests first** (or at least the test signatures) — this forces clear thinking about inputs, outputs, and edge cases
-3. **Then implement** — with a clear target, implementation is straightforward
-4. **Verify against the original criteria** — not "does it work?" but "does it satisfy the specific criteria we defined?"
+2. **Verify feasibility** — if the feature relies on agent capabilities (vision, audio, etc.), verify those capabilities exist and work before proceeding
+3. **Write the tests first** (or at least the test signatures) — this forces clear thinking about inputs, outputs, and edge cases
+4. **Then implement** — with a clear target, implementation is straightforward
+5. **Verify against the original criteria** — not "does it work?" but "does it satisfy the specific criteria we defined?"
 
 This closes the loop between intent and outcome. If the acceptance criteria were wrong, that's a learning — update the criteria, not the tests.
+
+**For agent-dependent features**: If the feature is designed for AI agent use, include a feasibility check in step 2. Test with a realistic example before implementation. See [Agent Capabilities](agent-tooling.md#agent-capabilities-and-limitations).
 
 ### Mistakes Are Data
 
@@ -223,6 +226,7 @@ Arcane code has a consistent personality. When in doubt about how to write somet
 - Errors say what went wrong and what to do about it: `"Cannot attack: target 'goblin_3' is out of range (distance: 7, weapon range: 5)"` — not `"Invalid target"`
 - Functions that can fail return Result types, not exceptions
 - Limitations are documented, not hidden
+- **Agents are honest about their capabilities**: Never propose features based on unverified abilities. If you cannot meaningfully process screenshots, don't claim you can. If uncertain, ask first. See [Agent Capabilities](agent-tooling.md#agent-capabilities-and-limitations).
 
 ### Predictable
 - Same input → same output, always (deterministic simulation)

@@ -11,6 +11,71 @@ Arcane is built by AI agents. The tooling for building Arcane should itself be a
 3. **MCP tools** for engine-specific operations (inspect state, describe scene, run headless)
 4. **Self-evolution** — the tooling set is reviewed and updated as the project matures
 
+## Agent Capabilities and Limitations
+
+**CRITICAL: Agents must understand and respect their own limitations.**
+
+### Verify Before Proposing
+
+Before proposing any feature that relies on agent capabilities, the agent MUST verify those capabilities are real and functional:
+
+1. **Visual/perceptual features**: Agents have limited ability to process visual output (screenshots, rendered graphics). Do NOT propose features like:
+   - Screenshot analysis for visual regression testing
+   - "Giving Claude eyes" to verify rendering
+   - Image-based debugging or validation
+   - Any feature claiming the agent can meaningfully interpret rendered game output
+
+2. **Audio processing**: Agents cannot meaningfully process audio output
+
+3. **Real-time interaction**: Agents work asynchronously, not in real-time game loops
+
+### What Works: Structured Data, Not Perception
+
+Agents excel at processing **structured data**:
+- ✅ JSON state exports
+- ✅ Text descriptions of game state
+- ✅ Render command logs (what was drawn, where, with what parameters)
+- ✅ Test assertions about game logic
+- ✅ API call traces
+
+Agents fail at processing **perceptual output**:
+- ❌ Screenshots of rendered frames
+- ❌ Audio recordings
+- ❌ "Does this look right?" questions about visuals
+
+### Feasibility Check Required
+
+When planning features for agent use, include a feasibility check:
+
+1. **Can the agent actually use this?** Test with a realistic example
+2. **Does this rely on unverified capabilities?** If yes, verify or pivot
+3. **Is there a structured alternative?** Prefer structured data over perception
+4. **Has this pattern worked before?** Reference prior successful patterns
+
+### When Uncertain: Ask First
+
+If uncertain whether a capability exists or works:
+1. **Ask the user** before implementing
+2. **Prototype a minimal test** to verify the capability
+3. **Document the limitation** if the capability doesn't exist
+4. **Propose alternatives** that don't rely on unverified capabilities
+
+### Example: Screenshot API (Failed Approach)
+
+**Proposed**: Add `/screenshot` endpoint so Claude can "see" rendered game output and verify visual changes.
+
+**Why it failed**:
+- Agent claimed ability to process screenshots without verification
+- Implementation proceeded based on false premise
+- Feature was non-functional for its intended use case
+- Time wasted on a feature that couldn't achieve its goal
+
+**Better approach**:
+- Export render commands as JSON: `{ "type": "sprite", "x": 100, "y": 200, "color": [1.0, 0, 0], ... }`
+- Agent validates commands match expectations
+- Human verifies visual output looks correct
+- Structured data is testable, visual output is not (for agents)
+
 ## Agent Teams
 
 Agent teams coordinate multiple Claude Code sessions working on the same repository. The agent definitions below describe *roles* — when spawning teammates, use these roles to scope each teammate's domain, file access, and knowledge.
