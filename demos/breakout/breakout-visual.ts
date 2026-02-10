@@ -6,7 +6,9 @@ import type { BreakoutState } from "./breakout.ts";
 import {
   onFrame, drawSprite, clearSprites, setCamera,
   isKeyDown, isKeyPressed, getDeltaTime, createSolidTexture,
+  drawText,
 } from "../../runtime/rendering/index.ts";
+import { drawBar, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 
 // Textures
@@ -107,4 +109,71 @@ onFrame(() => {
     w: BALL_RADIUS * 2, h: BALL_RADIUS * 2,
     layer: 3,
   });
+
+  // --- HUD (screen space) ---
+
+  // Score
+  drawText(`Score: ${state.score}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y, {
+    scale: HUDLayout.TEXT_SCALE,
+    tint: Colors.WHITE,
+    layer: 100,
+    screenSpace: true,
+  });
+
+  // Lives bar
+  drawBar(
+    HUDLayout.TOP_LEFT.x,
+    HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT,
+    80,
+    12,
+    state.lives / 3,
+    {
+      fillColor: Colors.SUCCESS,
+      bgColor: Colors.HUD_BG,
+      borderColor: Colors.LIGHT_GRAY,
+      borderWidth: 1,
+      layer: 100,
+      screenSpace: true,
+    }
+  );
+
+  // Bricks remaining
+  const bricksLeft = state.bricks.filter((b) => b.hp > 0).length;
+  drawText(`Bricks: ${bricksLeft}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2, {
+    scale: HUDLayout.SMALL_TEXT_SCALE,
+    tint: Colors.INFO,
+    layer: 100,
+    screenSpace: true,
+  });
+
+  // Phase instructions
+  if (state.phase === "ready") {
+    drawText("Press SPACE to launch", HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2.5, {
+      scale: HUDLayout.SMALL_TEXT_SCALE,
+      tint: Colors.WARNING,
+      layer: 100,
+      screenSpace: true,
+    });
+  }
+
+  // Win/lose screens
+  if (state.phase === "won") {
+    drawLabel("VICTORY! Press SPACE to restart", HUDLayout.CENTER.x - 180, HUDLayout.CENTER.y - 20, {
+      textColor: Colors.WIN,
+      bgColor: Colors.HUD_BG,
+      padding: 12,
+      scale: HUDLayout.TEXT_SCALE,
+      layer: 110,
+      screenSpace: true,
+    });
+  } else if (state.phase === "lost") {
+    drawLabel("GAME OVER! Press SPACE to restart", HUDLayout.CENTER.x - 190, HUDLayout.CENTER.y - 20, {
+      textColor: Colors.LOSE,
+      bgColor: Colors.HUD_BG,
+      padding: 12,
+      scale: HUDLayout.TEXT_SCALE,
+      layer: 110,
+      screenSpace: true,
+    });
+  }
 });
