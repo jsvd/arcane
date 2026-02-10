@@ -105,7 +105,8 @@ export function updateTweens(dt: number): void {
     t.elapsed += dt;
 
     // Calculate progress (0 to 1)
-    let progress = Math.min(t.elapsed / t.duration, 1.0);
+    // Handle zero duration specially
+    let progress = t.duration === 0 ? 1.0 : Math.min(t.elapsed / t.duration, 1.0);
 
     // Apply easing
     const easedProgress = t.options.easing(progress);

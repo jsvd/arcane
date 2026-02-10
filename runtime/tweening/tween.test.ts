@@ -33,6 +33,7 @@ describe("Core Tweening", () => {
   });
 
   it("should tween multiple properties", () => {
+    stopAllTweens();
     const target = { x: 0, y: 0, scale: 1 };
     tween(target, { x: 100, y: 50, scale: 2 }, 1.0);
 
@@ -180,6 +181,7 @@ describe("Core Tweening", () => {
   });
 
   it("should handle yoyo mode", () => {
+    stopAllTweens();
     const target = { x: 0 };
     tween(target, { x: 100 }, 1.0, { repeat: 1, yoyo: true });
 
@@ -195,6 +197,7 @@ describe("Core Tweening", () => {
   });
 
   it("should stop a tween", () => {
+    stopAllTweens();
     const target = { x: 0 };
     const t = tween(target, { x: 100 }, 1.0);
 
@@ -233,6 +236,7 @@ describe("Core Tweening", () => {
   });
 
   it("should handle multiple simultaneous tweens", () => {
+    stopAllTweens();
     const target1 = { x: 0 };
     const target2 = { y: 0 };
     const target3 = { z: 0 };
@@ -260,6 +264,7 @@ describe("Core Tweening", () => {
   });
 
   it("should stop all tweens", () => {
+    stopAllTweens();
     tween({ x: 0 }, { x: 100 }, 1.0);
     tween({ y: 0 }, { y: 100 }, 1.0);
     tween({ z: 0 }, { z: 100 }, 1.0);
@@ -305,6 +310,7 @@ describe("Core Tweening", () => {
   });
 
   it("should handle zero duration", () => {
+    stopAllTweens();
     const target = { x: 0 };
     tween(target, { x: 100 }, 0);
 
