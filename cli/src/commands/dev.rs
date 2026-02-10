@@ -8,12 +8,61 @@ use anyhow::{Context, Result};
 use arcane_core::audio::{self, AudioCommand, AudioSender};
 use arcane_core::platform::window::{DevConfig, RenderState};
 use arcane_core::scripting::render_ops::{BridgeAudioCommand, RenderBridgeState};
-use arcane_core::scripting::ArcaneRuntime;
+use arcane_core::scripting::{ArcaneRuntime, ImportMap};
+
+use super::type_check;
+
+/// Create an import map for resolving @arcane/runtime imports to the actual runtime files
+fn create_import_map(base_dir: &Path) -> ImportMap {
+    let mut import_map = ImportMap::new();
+
+    // Try to find the arcane runtime directory
+    // Look for it relative to the entry file, walking up the directory tree
+    let mut search_dir = base_dir.to_path_buf();
+    let runtime_dir = loop {
+        let candidate = search_dir.join("runtime");
+        if candidate.exists() && candidate.join("state").exists() {
+            break Some(candidate);
+        }
+
+        // Try going up one level
+        if let Some(parent) = search_dir.parent() {
+            search_dir = parent.to_path_buf();
+        } else {
+            break None;
+        }
+    };
+
+    if let Some(runtime_path) = runtime_dir {
+        // Convert to absolute path and then to file URL
+        let runtime_abs = runtime_path.canonicalize().unwrap_or(runtime_path);
+        let runtime_url = format!("file://{}/", runtime_abs.display());
+
+        // Map @arcane/runtime/* to the runtime directory
+        import_map.add("@arcane/runtime/".to_string(), runtime_url.clone());
+        import_map.add("@arcane/runtime".to_string(), format!("{}index.ts", runtime_url));
+
+        // Add subpath mappings
+        for subpath in ["state", "rendering", "ui", "physics", "pathfinding", "systems", "agent", "testing"] {
+            import_map.add(
+                format!("@arcane/runtime/{}", subpath),
+                format!("{}{}/index.ts", runtime_url, subpath),
+            );
+        }
+    }
+
+    import_map
+}
 
 /// Run the dev server: open a window, load TS entry file, run game loop.
 pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
     let entry_path = std::fs::canonicalize(&entry)
         .with_context(|| format!("Cannot find entry file: {entry}"))?;
+
+    // Type check before running (unless explicitly skipped)
+    if !type_check::should_skip_type_check() {
+        type_check::check_types(&entry_path)?;
+    }
 
     let base_dir = entry_path
         .parent()
@@ -35,8 +84,11 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
     // Create shared render bridge state
     let bridge_state = Rc::new(RefCell::new(RenderBridgeState::new(base_dir.clone())));
 
+    // Create import map for resolving @arcane/runtime imports
+    let import_map = create_import_map(&base_dir);
+
     // Create the JS runtime with both base and render extensions
-    let mut runtime = ArcaneRuntime::new_with_render_bridge(bridge_state.clone());
+    let mut runtime = ArcaneRuntime::new_with_render_bridge_and_import_map(bridge_state.clone(), import_map);
 
     // Load and execute the entry file
     let rt = tokio::runtime::Builder::new_current_thread()
@@ -378,6 +430,11 @@ fn reload_runtime(
     bridge: &Rc<RefCell<RenderBridgeState>>,
     runtime: &mut ArcaneRuntime,
 ) -> Result<()> {
+    // Type check before reloading (unless explicitly skipped)
+    if !type_check::should_skip_type_check() {
+        type_check::check_types(entry_path)?;
+    }
+
     // Reset bridge state (keep texture mappings for ID stability)
     {
         let mut b = bridge.borrow_mut();

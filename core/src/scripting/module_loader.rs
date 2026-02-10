@@ -6,11 +6,75 @@ use deno_core::ModuleLoader;
 use deno_core::ModuleSourceCode;
 use deno_core::ModuleSpecifier;
 use deno_error::JsErrorBox;
+use std::collections::HashMap;
 
-/// Loads `.ts` and `.js` files from the filesystem.
+/// Import map for resolving bare specifiers to file paths
+#[derive(Debug, Clone, Default)]
+pub struct ImportMap {
+    pub imports: HashMap<String, String>,
+}
+
+impl ImportMap {
+    /// Create a new empty import map
+    pub fn new() -> Self {
+        Self {
+            imports: HashMap::new(),
+        }
+    }
+
+    /// Add a mapping from a bare specifier to a file path
+    pub fn add(&mut self, specifier: String, path: String) {
+        self.imports.insert(specifier, path);
+    }
+
+    /// Resolve a specifier using the import map
+    /// Returns the mapped path if found, otherwise None
+    pub fn resolve(&self, specifier: &str) -> Option<&str> {
+        // Check for exact match first
+        if let Some(mapped) = self.imports.get(specifier) {
+            return Some(mapped.as_str());
+        }
+
+        // Check for prefix match (e.g., "@arcane/runtime/state" matches "@arcane/runtime/")
+        for (key, value) in &self.imports {
+            if key.ends_with('/') && specifier.starts_with(key) {
+                // Replace the prefix
+                let suffix = &specifier[key.len()..];
+                // For now, return the base path + suffix
+                // This requires string allocation, so we'll handle it differently
+                // in the actual resolve method
+                continue;
+            }
+        }
+
+        None
+    }
+}
+
+/// Loads `.ts` and `.js` files from the filesystem with import map support.
 /// TypeScript files are transpiled via `deno_ast` (type stripping).
 /// JavaScript files pass through unchanged.
-pub struct TsModuleLoader;
+pub struct TsModuleLoader {
+    import_map: ImportMap,
+}
+
+impl TsModuleLoader {
+    pub fn new() -> Self {
+        Self {
+            import_map: ImportMap::new(),
+        }
+    }
+
+    pub fn with_import_map(import_map: ImportMap) -> Self {
+        Self { import_map }
+    }
+}
+
+impl Default for TsModuleLoader {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl ModuleLoader for TsModuleLoader {
     fn resolve(
@@ -19,7 +83,10 @@ impl ModuleLoader for TsModuleLoader {
         referrer: &str,
         _kind: deno_core::ResolutionKind,
     ) -> Result<ModuleSpecifier, deno_core::error::ModuleLoaderError> {
-        deno_core::resolve_import(specifier, referrer).map_err(JsErrorBox::from_err)
+        // Try import map resolution first
+        let resolved_specifier = self.resolve_with_import_map(specifier, referrer)?;
+
+        deno_core::resolve_import(&resolved_specifier, referrer).map_err(JsErrorBox::from_err)
     }
 
     fn load(
@@ -31,6 +98,43 @@ impl ModuleLoader for TsModuleLoader {
         let module_specifier = module_specifier.clone();
 
         ModuleLoadResponse::Sync(load_module(&module_specifier))
+    }
+}
+
+impl TsModuleLoader {
+    /// Resolve specifier using import map, returning either mapped path or original specifier
+    fn resolve_with_import_map(
+        &self,
+        specifier: &str,
+        referrer: &str,
+    ) -> Result<String, deno_core::error::ModuleLoaderError> {
+        // If it's already a relative or absolute path, don't use import map
+        if specifier.starts_with("./")
+            || specifier.starts_with("../")
+            || specifier.starts_with('/')
+            || specifier.starts_with("file:")
+            || specifier.starts_with("http:")
+            || specifier.starts_with("https:")
+        {
+            return Ok(specifier.to_string());
+        }
+
+        // Check for exact match
+        if let Some(mapped) = self.import_map.imports.get(specifier) {
+            return Ok(mapped.clone());
+        }
+
+        // Check for prefix match (e.g., "@arcane/runtime/state" matches "@arcane/runtime/")
+        for (key, value) in &self.import_map.imports {
+            if key.ends_with('/') && specifier.starts_with(key) {
+                let suffix = &specifier[key.len()..];
+                let resolved = format!("{}{}", value, suffix);
+                return Ok(resolved);
+            }
+        }
+
+        // No mapping found, return original specifier
+        Ok(specifier.to_string())
     }
 }
 

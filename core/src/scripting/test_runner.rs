@@ -89,7 +89,7 @@ async fn run_test_file_async(path: &Path) -> anyhow::Result<TestSummary> {
     }));
 
     let mut runtime = JsRuntime::new(RuntimeOptions {
-        module_loader: Some(Rc::new(TsModuleLoader)),
+        module_loader: Some(Rc::new(TsModuleLoader::new())),
         extensions: vec![test_runner_ext::init()],
         ..Default::default()
     });

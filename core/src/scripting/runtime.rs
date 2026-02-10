@@ -9,7 +9,7 @@ use deno_core::ModuleSpecifier;
 use deno_core::OpState;
 use deno_core::RuntimeOptions;
 
-use super::TsModuleLoader;
+use super::{ImportMap, TsModuleLoader};
 
 /// Wraps a `deno_core::JsRuntime` configured with our TypeScript module loader.
 pub struct ArcaneRuntime {
@@ -87,8 +87,13 @@ if (typeof globalThis.crypto.randomUUID !== "function") {
 impl ArcaneRuntime {
     /// Create a new runtime with the TypeScript module loader and polyfills.
     pub fn new() -> Self {
+        Self::new_with_import_map(ImportMap::new())
+    }
+
+    /// Create a new runtime with a custom import map for module resolution.
+    pub fn new_with_import_map(import_map: ImportMap) -> Self {
         let runtime = JsRuntime::new(RuntimeOptions {
-            module_loader: Some(Rc::new(TsModuleLoader)),
+            module_loader: Some(Rc::new(TsModuleLoader::with_import_map(import_map))),
             extensions: vec![arcane_ext::init()],
             ..Default::default()
         });
@@ -150,8 +155,15 @@ impl ArcaneRuntime {
     pub fn new_with_render_bridge(
         bridge: Rc<RefCell<super::render_ops::RenderBridgeState>>,
     ) -> Self {
+        Self::new_with_render_bridge_and_import_map(bridge, ImportMap::new())
+    }
+
+    pub fn new_with_render_bridge_and_import_map(
+        bridge: Rc<RefCell<super::render_ops::RenderBridgeState>>,
+        import_map: ImportMap,
+    ) -> Self {
         let runtime = JsRuntime::new(RuntimeOptions {
-            module_loader: Some(Rc::new(TsModuleLoader)),
+            module_loader: Some(Rc::new(TsModuleLoader::with_import_map(import_map))),
             extensions: vec![
                 arcane_ext::init(),
                 super::render_ops::render_ext::init(),
