@@ -3,6 +3,13 @@ name = "arcane-cli"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
+description = "CLI for Arcane - agent-native 2D game engine (dev server, testing, project scaffolding)"
+repository = "https://github.com/anthropics/arcane"
+homepage = "https://github.com/anthropics/arcane"
+documentation = "https://docs.rs/arcane-cli"
+keywords = ["game-engine", "cli", "gamedev", "2d"]
+categories = ["command-line-utilities", "game-engines", "development-tools"]
+readme = "../README.md"
 
 [[bin]]
 name = "arcane"

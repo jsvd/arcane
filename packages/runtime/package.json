@@ -1,0 +1,84 @@
+{
+  "name": "@arcane/runtime",
+  "version": "0.1.0",
+  "description": "Agent-native 2D game engine runtime - TypeScript APIs for state management, rendering, and game logic",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./state": {
+      "types": "./dist/state/index.d.ts",
+      "import": "./dist/state/index.js"
+    },
+    "./rendering": {
+      "types": "./dist/rendering/index.d.ts",
+      "import": "./dist/rendering/index.js"
+    },
+    "./ui": {
+      "types": "./dist/ui/index.d.ts",
+      "import": "./dist/ui/index.js"
+    },
+    "./physics": {
+      "types": "./dist/physics/index.d.ts",
+      "import": "./dist/physics/index.js"
+    },
+    "./pathfinding": {
+      "types": "./dist/pathfinding/index.d.ts",
+      "import": "./dist/pathfinding/index.js"
+    },
+    "./systems": {
+      "types": "./dist/systems/index.d.ts",
+      "import": "./dist/systems/index.js"
+    },
+    "./agent": {
+      "types": "./dist/agent/index.d.ts",
+      "import": "./dist/agent/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "game-engine",
+    "2d",
+    "gamedev",
+    "typescript",
+    "ai-agent",
+    "agent-native",
+    "state-management",
+    "ecs",
+    "recipes"
+  ],
+  "author": "Arcane Contributors",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anthropics/arcane.git",
+    "directory": "packages/runtime"
+  },
+  "bugs": {
+    "url": "https://github.com/anthropics/arcane/issues"
+  },
+  "homepage": "https://github.com/anthropics/arcane#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  }
+}

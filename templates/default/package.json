@@ -1,0 +1,17 @@
+{
+  "name": "{{PROJECT_NAME}}",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "arcane dev",
+    "test": "arcane test"
+  },
+  "dependencies": {
+    "@arcane/runtime": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  }
+}
