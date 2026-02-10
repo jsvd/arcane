@@ -96,11 +96,17 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phase 7 in progress (Open Source Launch).** Core engine complete with rendering, physics, audio, text, UI, animation, pathfinding, recipe framework, and agent protocol. 657 TS tests + 38 Rust tests passing.
+**Phase 7 complete (Open Source Launch)!** 🎉 Core engine complete with rendering, physics, audio, text, UI, animation, pathfinding, recipe framework, and agent protocol. 657 TS tests + 38 Rust tests passing.
 
-**Completed:** Package structure, `arcane new/init` scaffolding, import map support, CLI improvements, comprehensive documentation (getting-started, tutorials, API reference, recipe guide), and standalone example projects.
+**Infrastructure ready for distribution:**
+- ✅ Package structure and scaffolding (`arcane new`, `arcane init`)
+- ✅ Import map support (games use `@arcane/runtime` imports)
+- ✅ Comprehensive documentation (getting-started, tutorials, API reference, recipe guide)
+- ✅ Standalone example projects (Sokoban, Tower Defense)
+- ✅ Publishing infrastructure (`@arcane/create` package, publishing guide)
+- ✅ Community setup (CODE_OF_CONDUCT, issue/PR templates)
 
-**Remaining:** Publishing to npm/crates.io (Phase 7.7) and community setup (Phase 7.8).
+**Ready to publish to npm and crates.io** when credentials are available.
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 
