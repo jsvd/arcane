@@ -158,5 +158,6 @@ Make Arcane installable and usable outside the monorepo. Transform it from a dev
 
 **Phase 7.1 ✅ COMPLETE** - Package structure and metadata
 **Phase 7.2 ✅ COMPLETE** - `arcane new` command implemented
+**Phase 7.3 ✅ COMPLETE** - Import map support (games use `@arcane/runtime` imports!)
 
-**Next: Phase 7.3** - Make CLI work in any project directory (not just engine repo)
+**Next: Phase 7.4-7.8** - Documentation, examples, and publishing
