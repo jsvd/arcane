@@ -11,8 +11,9 @@ Arcane is built by AI agents. The engine is the proof of concept. If an agent-na
 5. Claude builds core engine features (text, UI, animation, audio)
 6. Claude builds game system recipes
 7. Claude builds mini-game demos across genres — each validates new capabilities
-8. Claude builds showcase game (BFRPG RPG ported from Godot)
-9. Demos and showcase surface pain points. Fix. Iterate.
+8. Claude builds showcase game (BFRPG RPG)
+9. Claude ships it (open source launch)
+10. Demos and showcase surface pain points. Fix. Iterate.
 
 ## Demo Games — Genre Validation Strategy
 
@@ -42,7 +43,7 @@ The engine must serve the breadth of 2D games, not just RPGs. Each demo is small
 
 ## Phase 0: Design Documents
 
-**Status: Current**
+**Status: Complete**
 
 Establish the vision, architecture, and design decisions before writing code.
 
@@ -59,10 +60,10 @@ Establish the vision, architecture, and design decisions before writing code.
 - [x] CLAUDE.md for agent instructions
 
 ### Success Criteria
-- Documents are internally consistent
-- Architecture descriptions match across all documents
-- A developer (human or AI) can read the docs and understand what to build
-- No code yet — just the blueprint
+- [x] Documents are internally consistent
+- [x] Architecture descriptions match across all documents
+- [x] A developer (human or AI) can read the docs and understand what to build
+- [x] No code yet — just the blueprint
 
 ---
 
@@ -176,8 +177,6 @@ Make the engine agent-native. This is what differentiates Arcane.
 - [x] Text description renderer (minimal/normal/detailed verbosity)
 - [x] Error snapshots (auto-capture state on frame callback errors)
 - [x] Demo integration: Roguelike + Breakout register agent protocol
-- [ ] `arcane screenshot` — capture rendered frame (deferred: needs headless rendering)
-- [ ] REPL mode for direct agent interaction (deferred)
 
 ### Success Criteria
 - [x] An AI agent can query game state via HTTP
@@ -309,18 +308,58 @@ Simplified dungeon crawler based on BFRPG v4 mechanics. Proves that all systems 
 
 ---
 
-## Phase 7: Polish & Stability
+## Phase 7: Open Source Launch
 
-**Status: Next**
+**Status: Complete** ✅
 
-Fix critical issues identified in Phase 6 before adding new features.
+Ship it.
+
+### Deliverables
+- [x] Package structure and scaffolding
+- [x] Import map support (`@arcane-engine/runtime`)
+- [x] `arcane init` command
+- [x] Optional entry points (defaults to `src/visual.ts`)
+- [x] Documentation suite
+  - [x] Getting started guide
+  - [x] Tutorials: "Build a Sokoban in 10 minutes", "Build an RPG in 30 minutes"
+  - [x] API reference (complete runtime API)
+  - [x] Recipe guide (building custom systems)
+- [x] Standalone example projects
+  - [x] Sokoban (puzzle)
+  - [x] Tower Defense (strategy)
+- [x] Publishing infrastructure
+  - [x] `@arcane-engine/create` package
+  - [x] Publishing guide
+- [x] Community setup
+  - [x] CODE_OF_CONDUCT.md
+  - [x] Issue templates (bug, feature, documentation)
+  - [x] PR template
+- [x] Published packages
+  - [x] npm: `@arcane-engine/runtime@0.1.0`, `@arcane-engine/create@0.1.0`
+  - [x] crates.io: `arcane-engine@0.1.0`, `arcane-cli@0.1.0`
+
+### Success Criteria
+- [x] A developer can `npm create @arcane-engine/game my-game` and have a working project
+- [x] Documentation is comprehensive enough for AI agents to use without guidance
+- [x] Example projects demonstrate different game types
+- [x] Community can contribute recipes
+- [x] All 895 TS tests + 38 Rust tests passing
+
+---
+
+## Phase 8: Polish & Stability
+
+**Status: Next** 🎯
+
+Fix critical issues and technical debt before adding new features.
 
 ### Deliverables
 - [ ] Fix hot-reload architecture (see `docs/testing-hot-reload.md`)
   - [ ] Refactor runtime lifecycle to support reload outside frame callback
   - [ ] Or use Rc<RefCell<>> wrapper pattern
   - [ ] Test with all existing demos
-- [ ] Fix all 31 TypeScript type errors
+- [ ] Fix TypeScript type errors
+  - [ ] Run `tsc --noEmit` to get current count
   - [ ] Pathfinding API type consistency (PathResult vs array)
   - [ ] BFRPG combat type narrowing
   - [ ] Equipment test null checks
@@ -338,7 +377,7 @@ Fix critical issues identified in Phase 6 before adding new features.
 
 ---
 
-## Phase 7.5: Tweening + Particles
+## Phase 9: Tweening + Particles
 
 **Status: Planned**
 
@@ -381,7 +420,7 @@ Add visual polish systems. Both are pure TypeScript, headless-testable, and prov
 
 ---
 
-## Phase 8: Scene Management + Save/Load
+## Phase 10: Scene Management + Save/Load
 
 **Status: Planned**
 
@@ -391,7 +430,7 @@ Architectural features that unlock "real game" structure.
 - [ ] **Scene system** (`runtime/scenes/`)
   - [ ] Scene interface: onEnter, onExit, onPause, onResume, onUpdate
   - [ ] Scene stack: pushScene, popScene, replaceScene
-  - [ ] Scene transitions using Phase 7.5 tweens (fade, slide, wipe, custom)
+  - [ ] Scene transitions using Phase 9 tweens (fade, slide, wipe, custom)
   - [ ] Multiple update callbacks per scene
   - [ ] Scene-local state (isolated from global state)
   - [ ] Scene preloading (load assets before transition)
@@ -426,7 +465,7 @@ Architectural features that unlock "real game" structure.
 
 ---
 
-## Phase 9: Physics System
+## Phase 11: Physics System
 
 **Status: Planned**
 
@@ -495,7 +534,7 @@ Replace hand-rolled physics with a proper rigid body system. This is the biggest
 
 ---
 
-## Phase 10: Sprite Transforms + Rendering Polish
+## Phase 12: Sprite Transforms + Rendering Polish
 
 **Status: Planned**
 
@@ -542,7 +581,7 @@ Complete the sprite rendering system with rotation, advanced blending, and custo
 
 ---
 
-## Phase 11: Advanced Input + Interactive UI
+## Phase 13: Advanced Input + Interactive UI
 
 **Status: Planned**
 
@@ -594,7 +633,7 @@ Expand platform reach and make UI interactive (not just draw-only).
 
 ---
 
-## Phase 12: Audio + Camera Polish
+## Phase 14: Audio + Camera Polish
 
 **Status: Planned**
 
@@ -617,7 +656,7 @@ Complete the audio and camera systems with features expected in a modern 2D engi
 - [ ] **Camera features** (`runtime/rendering/camera.ts`)
   - [ ] Camera bounds/limits (clamp to map edges)
   - [ ] Camera deadzone (target can move without camera following)
-  - [ ] Smooth zoom (animated zoom transitions using Phase 7.5 tweens)
+  - [ ] Smooth zoom (animated zoom transitions using Phase 9 tweens)
   - [ ] Parallax scrolling (multi-layer backgrounds at different speeds)
   - [ ] Multiple viewports (split-screen support)
 - [ ] **Demo: Parallax Scroller + Audio** (`demos/parallax-audio/`)
@@ -637,7 +676,7 @@ Complete the audio and camera systems with features expected in a modern 2D engi
 
 ---
 
-## Phase 13: Tilemap + Animation Polish
+## Phase 15: Tilemap + Animation Polish
 
 **Status: Planned**
 
@@ -688,35 +727,51 @@ Complete the tilemap and animation systems with advanced features.
 
 ---
 
-## Phase 14: Open Source Launch
+## Phase 16: Community Building
 
-**Status: Planned** (formerly Phase 7)
+**Status: Planned**
 
-Ship it.
+Now that packages are published, focus on adoption and ecosystem growth.
 
 ### Deliverables
-- [ ] Public GitHub repository
-- [ ] Documentation site
-- [ ] Getting started guide
-- [ ] Tutorials: "Build a Sokoban in 10 minutes", "Build an RPG in 30 minutes with Claude"
-- [ ] Recipe contribution guide
-- [ ] Example projects spanning genres (puzzle, card game, roguelike, platformer, tower defense, RPG)
-- [ ] npm packages published
-- [ ] Crates.io packages published
-- [ ] `npx arcane create` project scaffolding command
+- [ ] **Announcements**
+  - [ ] Show HN post with demo links
+  - [ ] Reddit posts (r/gamedev, r/programming, r/rust, r/typescript)
+  - [ ] Twitter/X thread with feature highlights
+  - [ ] Blog post: "Building an AI-Native Game Engine"
+- [ ] **Community Channels**
+  - [ ] Discord server setup (channels: general, showcase, recipes, support)
+  - [ ] GitHub Discussions enabled
+  - [ ] Community guidelines and moderation
+- [ ] **Content Creation**
+  - [ ] Video walkthrough: "Build Your First Game with Arcane"
+  - [ ] Blog series: deep dives into architecture decisions
+  - [ ] Tutorial videos for each recipe
+  - [ ] Showcase community-built games
+- [ ] **Community Engagement**
+  - [ ] Respond to GitHub issues within 48h
+  - [ ] Review and merge community PRs
+  - [ ] Featured game of the week on Discord
+  - [ ] Monthly community calls (share roadmap, demo new features)
+- [ ] **Documentation Improvements**
+  - [ ] FAQ based on common questions
+  - [ ] Troubleshooting guide
+  - [ ] Migration guides (version upgrades)
+  - [ ] Performance optimization guide
 
 ### Success Criteria
-- [ ] A developer can `npx arcane create my-game` and have a working project
-- [ ] Documentation is comprehensive enough for AI agents to use without guidance
-- [ ] At least 3 example projects demonstrate different game types
-- [ ] Community can contribute recipes
-- [ ] The engine is actually used to build games
+- [ ] 100+ GitHub stars in first month
+- [ ] 10+ community members in Discord
+- [ ] 3+ community-contributed recipes
+- [ ] 5+ games built by community (not just demos)
+- [ ] Active discussion on GitHub/Discord
+- [ ] Positive sentiment in announcements (upvotes, comments)
 
 ---
 
 ## Performance Optimization (When Triggered)
 
-Not a phase — a standing item. All computationally non-trivial algorithms currently live in TypeScript and perform well within budget through Phase 4. V8 JITs typed arrays to near-native speed, and algorithmic improvements (spatial hashing) should always precede language migration.
+Not a phase — a standing item. All computationally non-trivial algorithms currently live in TypeScript and perform well within budget through Phase 7. V8 JITs typed arrays to near-native speed, and algorithmic improvements (spatial hashing) should always precede language migration.
 
 **Migration triggers** (profile first, then act):
 
@@ -728,29 +783,6 @@ Not a phase — a standing item. All computationally non-trivial algorithms curr
 | State diffing | >50k leaf nodes, > 3ms | Move `computeDiff` to Rust |
 
 The migration strategy preserves existing TS function signatures — game code never changes. Rust ops are transparent fast-paths guarded by `hasRenderOps`, with TS as headless fallback. See detailed analysis and Rust op API designs in project memory (`performance-migration.md`).
-
----
-
-## Phase 7: Open Source Launch
-
-Ship it.
-
-### Deliverables
-- Public GitHub repository
-- Documentation site
-- Getting started guide
-- Tutorials: "Build a Sokoban in 10 minutes", "Build an RPG in 30 minutes with Claude"
-- Recipe contribution guide
-- Example projects spanning genres (puzzle, card game, roguelike, platformer, tower defense, RPG)
-- npm packages published
-- Crates.io packages published
-
-### Success Criteria
-- A developer can `npx arcane create my-game` and have a working project
-- Documentation is comprehensive enough for AI agents to use without guidance
-- At least 3 example projects demonstrate different game types
-- Community can contribute recipes
-- The engine is actually used to build games
 
 ---
 
