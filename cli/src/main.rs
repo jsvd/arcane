@@ -47,6 +47,11 @@ enum Commands {
         #[arg(long)]
         list: bool,
     },
+    /// Create a new Arcane project from template
+    New {
+        /// Project name
+        name: String,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -58,5 +63,6 @@ fn main() -> anyhow::Result<()> {
         Commands::Describe { entry, verbosity } => commands::describe::run(entry, verbosity),
         Commands::Inspect { entry, path } => commands::inspect::run(entry, path),
         Commands::Add { name, list } => commands::add::run(name, list),
+        Commands::New { name } => commands::new::run(&name),
     }
 }
