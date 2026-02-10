@@ -134,6 +134,41 @@ impl ApplicationHandler for AppState {
                 state.input.mouse_move(position.x as f32, position.y as f32);
             }
 
+            WindowEvent::MouseInput { state: button_state, button, .. } => {
+                let mut state = self.render_state.borrow_mut();
+                let button_id = match button {
+                    winit::event::MouseButton::Left => 0,
+                    winit::event::MouseButton::Right => 1,
+                    winit::event::MouseButton::Middle => 2,
+                    winit::event::MouseButton::Back => 3,
+                    winit::event::MouseButton::Forward => 4,
+                    winit::event::MouseButton::Other(id) => id,
+                };
+                match button_state {
+                    ElementState::Pressed => {
+                        state.input.mouse_buttons.insert(button_id);
+                        // Also add to keys_pressed so isKeyPressed works
+                        let key_name = match button_id {
+                            0 => "MouseLeft",
+                            1 => "MouseRight",
+                            2 => "MouseMiddle",
+                            _ => return,
+                        };
+                        state.input.key_down(key_name);
+                    }
+                    ElementState::Released => {
+                        state.input.mouse_buttons.remove(&button_id);
+                        let key_name = match button_id {
+                            0 => "MouseLeft",
+                            1 => "MouseRight",
+                            2 => "MouseMiddle",
+                            _ => return,
+                        };
+                        state.input.key_up(key_name);
+                    }
+                }
+            }
+
             WindowEvent::RedrawRequested => {
                 let now = Instant::now();
                 let dt = now.duration_since(self.last_frame).as_secs_f64();
