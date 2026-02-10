@@ -96,7 +96,11 @@ fn walk_dir(dir: &PathBuf, files: &mut Vec<PathBuf>) -> anyhow::Result<()> {
         if path.is_dir() {
             let name = entry.file_name();
             let name = name.to_string_lossy();
-            if name == "target" || name == "node_modules" || name.starts_with('.') {
+            if name == "target"
+                || name == "node_modules"
+                || name == "templates"
+                || name.starts_with('.')
+            {
                 continue;
             }
             walk_dir(&path, files)?;

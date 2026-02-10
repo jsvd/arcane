@@ -1,4 +1,4 @@
-import { describe, it, assert } from "../../runtime/testing/harness.ts";
+import { describe, it, assert } from "../testing/harness.ts";
 import { loadSound, playSound, playMusic, stopSound, stopAll, setVolume } from "./audio.ts";
 
 describe("audio", () => {
