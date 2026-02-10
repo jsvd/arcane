@@ -63,3 +63,14 @@ export {
 
 export type { TweenConfig } from "./chain.ts";
 export { sequence, parallel, stagger } from "./chain.ts";
+
+export {
+  shakeCamera,
+  getCameraShakeOffset,
+  isCameraShaking,
+  stopCameraShake,
+  flashScreen,
+  getScreenFlash,
+  isScreenFlashing,
+  stopScreenFlash,
+} from "./helpers.ts";
