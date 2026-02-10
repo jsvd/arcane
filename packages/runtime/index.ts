@@ -11,25 +11,25 @@
  */
 
 // State management
-export * from "../../runtime/state/index.ts";
+export * from "./src/state/index.ts";
 
 // Rendering
-export * from "../../runtime/rendering/index.ts";
+export * from "./src/rendering/index.ts";
 
 // UI primitives
-export * from "../../runtime/ui/index.ts";
+export * from "./src/ui/index.ts";
 
 // Physics
-export * from "../../runtime/physics/index.ts";
+export * from "./src/physics/index.ts";
 
 // Pathfinding
-export * from "../../runtime/pathfinding/index.ts";
+export * from "./src/pathfinding/index.ts";
 
 // Systems and recipes
-export * from "../../runtime/systems/index.ts";
+export * from "./src/systems/index.ts";
 
 // Agent protocol
-export * from "../../runtime/agent/index.ts";
+export * from "./src/agent/index.ts";
 
 // Testing (for user tests)
-export * from "../../runtime/testing/harness.ts";
+export * from "./src/testing/harness.ts";

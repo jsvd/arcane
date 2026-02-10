@@ -7,6 +7,7 @@
 
 import {
   onFrame,
+  getDeltaTime,
   drawSprite,
   setCamera,
   createSolidTexture,
@@ -47,7 +48,9 @@ registerAgent({
 
 // --- Game Loop ---
 
-onFrame((dt) => {
+onFrame(() => {
+  const dt = getDeltaTime();
+
   // Set camera
   setCamera(0, 0, CAMERA_ZOOM);
 
@@ -62,9 +65,7 @@ onFrame((dt) => {
 
   // Render example text
   const font = getDefaultFont();
-  drawText("Hello, Arcane!", {
-    x: -100,
-    y: 50,
+  drawText("Hello, Arcane!", -100, 50, {
     font,
     scale: 2.0,
   });

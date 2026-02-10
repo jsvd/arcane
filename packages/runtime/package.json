@@ -3,45 +3,18 @@
   "version": "0.1.0",
   "description": "Agent-native 2D game engine runtime - TypeScript APIs for state management, rendering, and game logic",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./index.ts",
+  "types": "./index.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./state": {
-      "types": "./dist/state/index.d.ts",
-      "import": "./dist/state/index.js"
-    },
-    "./rendering": {
-      "types": "./dist/rendering/index.d.ts",
-      "import": "./dist/rendering/index.js"
-    },
-    "./ui": {
-      "types": "./dist/ui/index.d.ts",
-      "import": "./dist/ui/index.js"
-    },
-    "./physics": {
-      "types": "./dist/physics/index.d.ts",
-      "import": "./dist/physics/index.js"
-    },
-    "./pathfinding": {
-      "types": "./dist/pathfinding/index.d.ts",
-      "import": "./dist/pathfinding/index.js"
-    },
-    "./systems": {
-      "types": "./dist/systems/index.d.ts",
-      "import": "./dist/systems/index.js"
-    },
-    "./agent": {
-      "types": "./dist/agent/index.d.ts",
-      "import": "./dist/agent/index.js"
-    },
-    "./testing": {
-      "types": "./dist/testing/index.d.ts",
-      "import": "./dist/testing/index.js"
-    }
+    ".": "./index.ts",
+    "./state": "./src/state/index.ts",
+    "./rendering": "./src/rendering/index.ts",
+    "./ui": "./src/ui/index.ts",
+    "./physics": "./src/physics/index.ts",
+    "./pathfinding": "./src/pathfinding/index.ts",
+    "./systems": "./src/systems/index.ts",
+    "./agent": "./src/agent/index.ts",
+    "./testing": "./src/testing/harness.ts"
   },
   "files": [
     "dist",
