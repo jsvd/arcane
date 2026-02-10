@@ -21,6 +21,7 @@ import {
   isKeyPressed,
   getDeltaTime,
   createSolidTexture,
+  getMousePosition,
   getMouseWorldPosition,
   drawText,
 } from "../../runtime/rendering/index.ts";
@@ -57,6 +58,7 @@ const TEX_BG = createSolidTexture("bg", 40, 40, 50);
 // --- State ---
 interface DemoState {
   juiceEnabled: boolean;
+  selectedTool: "none" | "explosion" | "trail";
   boxes: Array<{
     x: number;
     y: number;
@@ -75,6 +77,7 @@ interface DemoState {
 
 const state: DemoState = {
   juiceEnabled: true,
+  selectedTool: "none",
   boxes: [
     { x: 200, y: 250, scale: 1, targetScale: 1 },
     { x: 400, y: 250, scale: 1, targetScale: 1 },
@@ -171,10 +174,7 @@ state.buttons = [
     label: "Explosion",
     action: () => {
       if (state.juiceEnabled) {
-        const mouse = getMouseWorldPosition();
-        spawnExplosion(mouse.x, mouse.y);
-        shakeCamera(15, 0.3);
-        flashScreen(1, 0.5, 0, 0.2, 0.4);
+        state.selectedTool = "explosion";
       }
     },
   },
@@ -186,8 +186,7 @@ state.buttons = [
     label: "Trail",
     action: () => {
       if (state.juiceEnabled) {
-        const mouse = getMouseWorldPosition();
-        spawnTrail(mouse.x, mouse.y);
+        state.selectedTool = "trail";
       }
     },
   },
@@ -292,9 +291,10 @@ onFrame(() => {
   updateTweens(dt);
   updateParticles(dt);
 
-  // Check button clicks
-  const mouse = getMouseWorldPosition();
+  // Check button clicks (screen space coordinates)
+  const mouse = getMousePosition();
   if (isKeyPressed("MouseLeft")) {
+    let clickedButton = false;
     for (const button of state.buttons) {
       if (
         mouse.x >= button.x &&
@@ -303,7 +303,22 @@ onFrame(() => {
         mouse.y <= button.y + button.h
       ) {
         button.action();
+        clickedButton = true;
+        break;
       }
+    }
+
+    // If clicked outside buttons and a tool is selected, spawn particles
+    if (!clickedButton && state.selectedTool !== "none") {
+      const worldMouse = getMouseWorldPosition();
+      if (state.selectedTool === "explosion") {
+        spawnExplosion(worldMouse.x, worldMouse.y);
+        shakeCamera(15, 0.3);
+        flashScreen(1, 0.5, 0, 0.2, 0.4);
+      } else if (state.selectedTool === "trail") {
+        spawnTrail(worldMouse.x, worldMouse.y);
+      }
+      state.selectedTool = "none"; // Reset tool after use
     }
   }
 
@@ -335,27 +350,39 @@ onFrame(() => {
     });
   }
 
-  // Buttons
+  // Buttons (screen space UI)
+  const screenMouse = getMousePosition();
   for (const button of state.buttons) {
     const isHovered =
-      mouse.x >= button.x &&
-      mouse.x <= button.x + button.w &&
-      mouse.y >= button.y &&
-      mouse.y <= button.y + button.h;
+      screenMouse.x >= button.x &&
+      screenMouse.x <= button.x + button.w &&
+      screenMouse.y >= button.y &&
+      screenMouse.y <= button.y + button.h;
+
+    // Highlight selected tool
+    const isSelected =
+      (state.selectedTool === "explosion" && button.label === "Explosion") ||
+      (state.selectedTool === "trail" && button.label === "Trail");
+
+    const fillColor = isSelected
+      ? Colors.SUCCESS
+      : isHovered
+      ? Colors.PRIMARY
+      : Colors.HUD_BG;
 
     drawPanel(button.x, button.y, button.w, button.h, {
-      fillColor: isHovered ? Colors.PRIMARY : Colors.HUD_BG,
+      fillColor,
       borderColor: Colors.HUD_BG_LIGHT,
       borderWidth: 2,
       layer: 2,
-      screenSpace: false,
+      screenSpace: true,
     });
 
     drawText(button.label, button.x + 10, button.y + 12, {
       scale: 1.5,
       tint: Colors.WHITE,
       layer: 3,
-      screenSpace: false,
+      screenSpace: true,
     });
   }
 
