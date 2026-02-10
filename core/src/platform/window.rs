@@ -136,13 +136,13 @@ impl ApplicationHandler for AppState {
 
             WindowEvent::MouseInput { state: button_state, button, .. } => {
                 let mut state = self.render_state.borrow_mut();
-                let button_id = match button {
+                let button_id: u8 = match button {
                     winit::event::MouseButton::Left => 0,
                     winit::event::MouseButton::Right => 1,
                     winit::event::MouseButton::Middle => 2,
                     winit::event::MouseButton::Back => 3,
                     winit::event::MouseButton::Forward => 4,
-                    winit::event::MouseButton::Other(id) => id,
+                    winit::event::MouseButton::Other(id) => id.min(255) as u8,
                 };
                 match button_state {
                     ElementState::Pressed => {
