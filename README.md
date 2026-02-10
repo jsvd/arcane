@@ -96,7 +96,11 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phase 7 in progress (Open Source Launch).** Core engine complete with rendering, physics, audio, text, UI, animation, pathfinding, recipe framework, and agent protocol. 657 TS tests + 38 Rust tests passing. Currently implementing distribution: project scaffolding, package structure, and import map support complete.
+**Phase 7 in progress (Open Source Launch).** Core engine complete with rendering, physics, audio, text, UI, animation, pathfinding, recipe framework, and agent protocol. 657 TS tests + 38 Rust tests passing.
+
+**Completed:** Package structure, `arcane new/init` scaffolding, import map support, CLI improvements, comprehensive documentation (getting-started, tutorials, API reference, recipe guide), and standalone example projects.
+
+**Remaining:** Publishing to npm/crates.io (Phase 7.7) and community setup (Phase 7.8).
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 
