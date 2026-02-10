@@ -76,9 +76,9 @@ interface DemoState {
 const state: DemoState = {
   juiceEnabled: true,
   boxes: [
-    { x: 200, y: 200, scale: 1, targetScale: 1 },
-    { x: 400, y: 200, scale: 1, targetScale: 1 },
-    { x: 600, y: 200, scale: 1, targetScale: 1 },
+    { x: 200, y: 250, scale: 1, targetScale: 1 },
+    { x: 400, y: 250, scale: 1, targetScale: 1 },
+    { x: 600, y: 250, scale: 1, targetScale: 1 },
   ],
   buttons: [],
 };
@@ -86,9 +86,9 @@ const state: DemoState = {
 // Initialize buttons
 state.buttons = [
   {
-    x: 50,
-    y: 400,
-    w: 120,
+    x: 40,
+    y: 420,
+    w: 110,
     h: 40,
     label: "Bounce",
     action: () => {
@@ -104,9 +104,9 @@ state.buttons = [
     },
   },
   {
-    x: 180,
-    y: 400,
-    w: 120,
+    x: 160,
+    y: 420,
+    w: 110,
     h: 40,
     label: "Elastic",
     action: () => {
@@ -122,9 +122,9 @@ state.buttons = [
     },
   },
   {
-    x: 310,
-    y: 400,
-    w: 120,
+    x: 280,
+    y: 420,
+    w: 110,
     h: 40,
     label: "Back",
     action: () => {
@@ -140,9 +140,9 @@ state.buttons = [
     },
   },
   {
-    x: 440,
-    y: 400,
-    w: 140,
+    x: 400,
+    y: 420,
+    w: 130,
     h: 40,
     label: "Camera Shake",
     action: () => {
@@ -152,9 +152,9 @@ state.buttons = [
     },
   },
   {
-    x: 590,
-    y: 400,
-    w: 140,
+    x: 540,
+    y: 420,
+    w: 130,
     h: 40,
     label: "Screen Flash",
     action: () => {
@@ -164,9 +164,9 @@ state.buttons = [
     },
   },
   {
-    x: 50,
-    y: 450,
-    w: 140,
+    x: 40,
+    y: 470,
+    w: 120,
     h: 40,
     label: "Explosion",
     action: () => {
@@ -179,9 +179,9 @@ state.buttons = [
     },
   },
   {
-    x: 200,
-    y: 450,
-    w: 140,
+    x: 170,
+    y: 470,
+    w: 120,
     h: 40,
     label: "Trail",
     action: () => {
@@ -423,9 +423,9 @@ onFrame(() => {
     screenSpace: true,
   });
 
-  drawText("Click anywhere after 'Explosion' or 'Trail' to spawn at mouse position", HUDLayout.BOTTOM_LEFT.x + 10, HUDLayout.BOTTOM_LEFT.y - 30, {
+  drawText("Tip: Click 'Explosion' or 'Trail', then click anywhere to spawn particles", HUDLayout.BOTTOM_LEFT.x + 10, HUDLayout.BOTTOM_LEFT.y - 30, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
-    tint: Colors.WARNING,
+    tint: Colors.LIGHT_GRAY,
     layer: 111,
     screenSpace: true,
   });
