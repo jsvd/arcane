@@ -10,7 +10,7 @@ import {
   loadSound, playSound,
   drawText, measureText,
 } from "../../runtime/rendering/index.ts";
-import { drawRect, drawBar, drawLabel } from "../../runtime/ui/index.ts";
+import { drawRect, drawBar, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 
 // --- Textures ---
@@ -126,37 +126,44 @@ onFrame(() => {
   // --- HUD (screen space) ---
 
   // Score text
-  drawText(`Score: ${state.score}`, 10, 10, {
-    scale: 2,
-    tint: { r: 1, g: 1, b: 1, a: 1 },
+  drawText(`Score: ${state.score}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y, {
+    scale: HUDLayout.TEXT_SCALE,
+    tint: Colors.WHITE,
     layer: 100,
     screenSpace: true,
   });
 
   // Lives bar
-  drawBar(10, 35, 80, 12, state.lives / 3, {
-    fillColor: { r: 0.2, g: 0.8, b: 0.2, a: 1 },
-    bgColor: { r: 0.3, g: 0.1, b: 0.1, a: 0.8 },
-    borderColor: { r: 0.6, g: 0.6, b: 0.6, a: 1 },
-    borderWidth: 1,
-    layer: 100,
-    screenSpace: true,
-  });
+  drawBar(
+    HUDLayout.TOP_LEFT.x,
+    HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT,
+    80,
+    12,
+    state.lives / 3,
+    {
+      fillColor: Colors.SUCCESS,
+      bgColor: Colors.HUD_BG,
+      borderColor: Colors.LIGHT_GRAY,
+      borderWidth: 1,
+      layer: 100,
+      screenSpace: true,
+    }
+  );
 
   // Phase indicator
   if (state.phase === "won") {
-    drawLabel("YOU WIN! Press R to restart", 250, 280, {
-      textColor: { r: 1, g: 1, b: 0, a: 1 },
-      bgColor: { r: 0, g: 0.2, b: 0, a: 0.9 },
-      padding: 8,
-      scale: 2,
+    drawLabel("YOU WIN! Press R to restart", HUDLayout.CENTER.x - 150, HUDLayout.CENTER.y - 20, {
+      textColor: Colors.WIN,
+      bgColor: Colors.HUD_BG,
+      padding: 12,
+      scale: HUDLayout.TEXT_SCALE,
       layer: 110,
       screenSpace: true,
     });
   } else if (state.phase === "dead") {
-    drawLabel("GAME OVER! Press R to restart", 240, 280, {
-      textColor: { r: 1, g: 0.2, b: 0.2, a: 1 },
-      bgColor: { r: 0.2, g: 0, b: 0, a: 0.9 },
+    drawLabel("GAME OVER! Press R to restart", HUDLayout.CENTER.x - 160, HUDLayout.CENTER.y - 20, {
+      textColor: Colors.LOSE,
+      bgColor: Colors.HUD_BG,
       padding: 8,
       scale: 2,
       layer: 110,
