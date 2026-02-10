@@ -6,8 +6,10 @@ import {
   isKeyPressed, createSolidTexture,
   createTilemap, setTile, drawTilemap,
   setAmbientLight, addPointLight, clearLights,
+  drawText,
 } from "../../runtime/rendering/index.ts";
 import type { TilemapId } from "../../runtime/rendering/index.ts";
+import { drawBar, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 
 const TILE_SIZE = 16;
@@ -147,4 +149,70 @@ onFrame(() => {
     h: TILE_SIZE - 4,
     layer: 3,
   });
+
+  // --- HUD (screen space) ---
+
+  // Turn counter
+  drawText(`Turn: ${state.turn}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y, {
+    scale: HUDLayout.TEXT_SCALE,
+    tint: Colors.WHITE,
+    layer: 100,
+    screenSpace: true,
+  });
+
+  // HP bar
+  const hpRatio = state.player.hp / state.player.maxHp;
+  const hpColor = hpRatio > 0.5 ? Colors.SUCCESS : hpRatio > 0.25 ? Colors.WARNING : Colors.DANGER;
+  drawBar(
+    HUDLayout.TOP_LEFT.x,
+    HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT,
+    100,
+    12,
+    hpRatio,
+    {
+      fillColor: hpColor,
+      bgColor: Colors.HUD_BG,
+      borderColor: Colors.LIGHT_GRAY,
+      borderWidth: 1,
+      layer: 100,
+      screenSpace: true,
+    }
+  );
+
+  // HP text
+  drawText(`HP: ${state.player.hp}/${state.player.maxHp}`, HUDLayout.TOP_LEFT.x + 105, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT, {
+    scale: HUDLayout.SMALL_TEXT_SCALE,
+    tint: Colors.WHITE,
+    layer: 100,
+    screenSpace: true,
+  });
+
+  // Enemies alive
+  const alive = state.entities.filter((e) => e.hp > 0).length;
+  drawText(`Enemies: ${alive}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2, {
+    scale: HUDLayout.SMALL_TEXT_SCALE,
+    tint: Colors.INFO,
+    layer: 100,
+    screenSpace: true,
+  });
+
+  // Controls hint
+  drawText("WASD/Arrows=Move  Space=Wait", HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2.5, {
+    scale: HUDLayout.SMALL_TEXT_SCALE,
+    tint: Colors.LIGHT_GRAY,
+    layer: 100,
+    screenSpace: true,
+  });
+
+  // Game over screen
+  if (state.phase === "lost") {
+    drawLabel("DEFEATED! Refresh to restart", HUDLayout.CENTER.x - 160, HUDLayout.CENTER.y - 20, {
+      textColor: Colors.LOSE,
+      bgColor: Colors.HUD_BG,
+      padding: 12,
+      scale: HUDLayout.TEXT_SCALE,
+      layer: 110,
+      screenSpace: true,
+    });
+  }
 });
