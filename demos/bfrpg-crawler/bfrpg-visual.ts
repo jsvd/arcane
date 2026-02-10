@@ -13,7 +13,7 @@ import {
   getDefaultFont,
 } from "../../runtime/rendering/index.ts";
 import { setAmbientLight, addPointLight, clearLights } from "../../runtime/rendering/lighting.ts";
-import { drawBar, drawPanel, drawLabel } from "../../runtime/ui/index.ts";
+import { drawBar, drawPanel, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 import type { AgentConfig } from "../../runtime/agent/index.ts";
 import { createGame } from "./game.ts";
@@ -29,7 +29,7 @@ import type { BFRPGState } from "./types.ts";
 
 const TILE_SIZE = 16.0;
 const SEED = 12345;
-const TEXT_SCALE = 2.0; // Scale factor for all UI text
+const TEXT_SCALE = HUDLayout.TEXT_SCALE;
 
 // Textures
 const TEX_WALL = createSolidTexture("wall", 60, 60, 80);
@@ -39,10 +39,6 @@ const TEX_STAIRS = createSolidTexture("stairs", 255, 255, 100);
 const TEX_PLAYER = createSolidTexture("player", 60, 180, 255);
 const TEX_MONSTER = createSolidTexture("monster", 255, 60, 60);
 const TEX_EXPLORED = createSolidTexture("explored", 40, 40, 55);
-
-// UI colors
-const COLOR_BG = { r: 20/255, g: 20/255, b: 30/255, a: 0.9 };
-const COLOR_PANEL = { r: 40/255, g: 40/255, b: 50/255, a: 1.0 };
 
 // Initialize game
 let state = createGame("Thrain", "Fighter", "Dwarf", SEED);
@@ -297,8 +293,8 @@ function renderHUD() {
   const panelH = 120.0;
 
   drawPanel(panelX, panelY, panelW, panelH, {
-    fillColor: COLOR_BG,
-    borderColor: COLOR_PANEL,
+    fillColor: Colors.HUD_BG,
+    borderColor: Colors.HUD_BG_LIGHT,
     borderWidth: 2.0,
     layer: 10,
     screenSpace: true,
@@ -322,16 +318,18 @@ function renderHUD() {
   // HP bar
   drawLabel("HP:", panelX + 10.0, panelY + 45.0, { scale: TEXT_SCALE, layer: 11, screenSpace: true });
 
+  const hpRatio = character.hp / character.maxHp;
+  const hpColor = hpRatio > 0.5 ? Colors.SUCCESS : hpRatio > 0.25 ? Colors.WARNING : Colors.DANGER;
   drawBar(
     panelX + 40.0,
     panelY + 45.0,
     150.0,
     12.0,
-    character.hp / character.maxHp,
+    hpRatio,
     {
-      fillColor: { r: 60/255, g: 180/255, b: 60/255, a: 1.0 },
-      bgColor: { r: 180/255, g: 60/255, b: 60/255, a: 1.0 },
-      borderColor: COLOR_PANEL,
+      fillColor: hpColor,
+      bgColor: Colors.DANGER,
+      borderColor: Colors.HUD_BG_LIGHT,
       borderWidth: 1.0,
       layer: 11,
       screenSpace: true,
@@ -376,8 +374,8 @@ function renderHUD() {
   const logPanelH = 40.0;
 
   drawPanel(logPanelX, logPanelY, logPanelW, logPanelH, {
-    fillColor: COLOR_BG,
-    borderColor: COLOR_PANEL,
+    fillColor: Colors.HUD_BG,
+    borderColor: Colors.HUD_BG_LIGHT,
     borderWidth: 2.0,
     layer: 10,
     screenSpace: true,
@@ -396,8 +394,8 @@ function renderCombatUI() {
   const font = getDefaultFont();
 
   drawPanel(600.0, 10.0, 190.0, 80.0, {
-    fillColor: COLOR_BG,
-    borderColor: { r: 1.0, g: 0.4, b: 0.4, a: 1.0 },
+    fillColor: Colors.HUD_BG,
+    borderColor: Colors.DANGER,
     borderWidth: 3.0,
     layer: 10,
     screenSpace: true,
@@ -423,7 +421,7 @@ function renderDeathScreen() {
   });
 
   // Death message
-  drawText("YOU DIED", 320.0, 250.0, { font, scale: TEXT_SCALE, layer: 21, screenSpace: true });
+  drawText("YOU DIED", 320.0, 250.0, { font, scale: TEXT_SCALE, tint: Colors.LOSE, layer: 21, screenSpace: true });
 
   drawText(
     `Floor reached: ${state.dungeon.floor}`,
@@ -453,7 +451,7 @@ function renderVictoryScreen() {
   });
 
   // Victory message
-  drawText("VICTORY!", 320.0, 250.0, { font, scale: TEXT_SCALE, layer: 21, screenSpace: true });
+  drawText("VICTORY!", 320.0, 250.0, { font, scale: TEXT_SCALE, tint: Colors.WIN, layer: 21, screenSpace: true });
 
   drawText(
     `You conquered ${state.dungeon.floor} floors!`,
