@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    // Type checking
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+
+    // Module resolution
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "es2022",
+    "lib": ["es2022"],
+
+    // Path mapping for @arcane/runtime (assumes project in demos/ directory)
+    "baseUrl": ".",
+    "paths": {
+      "@arcane/runtime": ["../../runtime/index.ts"],
+      "@arcane/runtime/*": ["../../runtime/*/index.ts"]
+    },
+
+    // Output (we don't emit, just check types)
+    "noEmit": true,
+
+    // Advanced
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+
+    // Types
+    "types": ["node"]
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

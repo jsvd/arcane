@@ -10,7 +10,7 @@ import type {
 import { defaultDescribe } from "./describe.ts";
 import { get } from "../state/query.ts";
 
-declare const globalThis: { __arcaneAgent?: AgentProtocol<unknown> } & typeof global;
+declare const globalThis: { __arcaneAgent?: AgentProtocol<unknown> };
 
 /** Deep clone a value via JSON round-trip */
 function deepClone<T>(value: T): T {

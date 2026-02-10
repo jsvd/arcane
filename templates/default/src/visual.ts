@@ -13,8 +13,8 @@ import {
   createSolidTexture,
   drawText,
   getDefaultFont,
-} from "@arcane/runtime/rendering";
-import { registerAgent } from "@arcane/runtime/agent";
+} from "@arcane-engine/runtime/rendering";
+import { registerAgent } from "@arcane-engine/runtime/agent";
 import { createGame } from "./game.ts";
 import type { GameState } from "./game.ts";
 

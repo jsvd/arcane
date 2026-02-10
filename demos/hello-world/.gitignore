@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Arcane
+.arcane/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+*.log

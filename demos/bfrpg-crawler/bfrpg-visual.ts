@@ -29,6 +29,7 @@ import type { BFRPGState } from "./types.ts";
 
 const TILE_SIZE = 16.0;
 const SEED = 12345;
+const TEXT_SCALE = 2.0; // Scale factor for all UI text
 
 // Textures
 const TEX_WALL = createSolidTexture("wall", 60, 60, 80);
@@ -141,7 +142,7 @@ onFrame(() => {
   setCamera(
     state.character.pos.x * TILE_SIZE + TILE_SIZE / 2.0,
     state.character.pos.y * TILE_SIZE + TILE_SIZE / 2.0,
-    2.0,
+    8.0, // Zoom level: higher = bigger on screen
   );
 
   // Lighting
@@ -308,18 +309,18 @@ function renderHUD() {
     `${character.name}`,
     panelX + 10.0,
     panelY + 10.0,
-    { font, layer: 11, screenSpace: true }
+    { font, scale: TEXT_SCALE, layer: 11, screenSpace: true }
   );
 
   drawText(
     `L${character.level} ${character.race} ${character.class}`,
     panelX + 10.0,
     panelY + 25.0,
-    { font, layer: 11, screenSpace: true }
+    { font, scale: TEXT_SCALE, layer: 11, screenSpace: true }
   );
 
   // HP bar
-  drawLabel("HP:", panelX + 10.0, panelY + 45.0, { layer: 11, screenSpace: true });
+  drawLabel("HP:", panelX + 10.0, panelY + 45.0, { scale: TEXT_SCALE, layer: 11, screenSpace: true });
 
   drawBar(
     panelX + 40.0,
@@ -341,7 +342,7 @@ function renderHUD() {
     `${character.hp}/${character.maxHp}`,
     panelX + 100.0,
     panelY + 46.0,
-    { font, layer: 12, screenSpace: true }
+    { font, scale: TEXT_SCALE, layer: 12, screenSpace: true }
   );
 
   // Stats
@@ -349,7 +350,7 @@ function renderHUD() {
     `AC: ${character.ac}  BAB: +${character.bab}`,
     panelX + 10.0,
     panelY + 65.0,
-    { font, layer: 11, screenSpace: true }
+    { font, scale: TEXT_SCALE, layer: 11, screenSpace: true }
   );
 
   // Floor and gold
@@ -357,7 +358,7 @@ function renderHUD() {
     `Floor: ${dungeon.floor}  Gold: ${character.gold}`,
     panelX + 10.0,
     panelY + 80.0,
-    { font, layer: 11, screenSpace: true }
+    { font, scale: TEXT_SCALE, layer: 11, screenSpace: true }
   );
 
   // Kills
@@ -365,7 +366,7 @@ function renderHUD() {
     `Kills: ${character.kills}`,
     panelX + 10.0,
     panelY + 95.0,
-    { font, layer: 11, screenSpace: true }
+    { font, scale: TEXT_SCALE, layer: 11, screenSpace: true }
   );
 
   // Message log (bottom panel, screen-space)
@@ -385,7 +386,7 @@ function renderHUD() {
   // Show last 2 log messages
   const recentLogs = log.slice(-2);
   for (let i = 0; i < recentLogs.length; i++) {
-    drawText(recentLogs[i].message, logPanelX + 10.0, logPanelY + 10.0 + i * 12.0, { font, layer: 11, screenSpace: true });
+    drawText(recentLogs[i].message, logPanelX + 10.0, logPanelY + 10.0 + i * 12.0, { font, scale: TEXT_SCALE, layer: 11, screenSpace: true });
   }
 }
 
@@ -402,11 +403,11 @@ function renderCombatUI() {
     screenSpace: true,
   });
 
-  drawText("COMBAT!", 620.0, 20.0, { font, layer: 11, screenSpace: true });
+  drawText("COMBAT!", 620.0, 20.0, { font, scale: TEXT_SCALE, layer: 11, screenSpace: true });
 
-  drawText("A - Attack", 620.0, 40.0, { font, layer: 11, screenSpace: true });
+  drawText("A - Attack", 620.0, 40.0, { font, scale: TEXT_SCALE, layer: 11, screenSpace: true });
 
-  drawText("D - Dodge", 620.0, 55.0, { font, layer: 11, screenSpace: true });
+  drawText("D - Dodge", 620.0, 55.0, { font, scale: TEXT_SCALE, layer: 11, screenSpace: true });
 }
 
 function renderDeathScreen() {
@@ -422,20 +423,20 @@ function renderDeathScreen() {
   });
 
   // Death message
-  drawText("YOU DIED", 320.0, 250.0, { font, layer: 21, screenSpace: true });
+  drawText("YOU DIED", 320.0, 250.0, { font, scale: TEXT_SCALE, layer: 21, screenSpace: true });
 
   drawText(
     `Floor reached: ${state.dungeon.floor}`,
     280.0,
     280.0,
-    { font, layer: 21, screenSpace: true }
+    { font, scale: TEXT_SCALE, layer: 21, screenSpace: true }
   );
 
   drawText(
     `Monsters slain: ${state.character.kills}`,
     270.0,
     300.0,
-    { font, layer: 21, screenSpace: true }
+    { font, scale: TEXT_SCALE, layer: 21, screenSpace: true }
   );
 }
 
@@ -452,26 +453,26 @@ function renderVictoryScreen() {
   });
 
   // Victory message
-  drawText("VICTORY!", 320.0, 250.0, { font, layer: 21, screenSpace: true });
+  drawText("VICTORY!", 320.0, 250.0, { font, scale: TEXT_SCALE, layer: 21, screenSpace: true });
 
   drawText(
     `You conquered ${state.dungeon.floor} floors!`,
     240.0,
     280.0,
-    { font, layer: 21, screenSpace: true }
+    { font, scale: TEXT_SCALE, layer: 21, screenSpace: true }
   );
 
   drawText(
     `Final level: ${state.character.level}`,
     280.0,
     300.0,
-    { font, layer: 21, screenSpace: true }
+    { font, scale: TEXT_SCALE, layer: 21, screenSpace: true }
   );
 
   drawText(
     `Total kills: ${state.character.kills}`,
     280.0,
     320.0,
-    { font, layer: 21, screenSpace: true }
+    { font, scale: TEXT_SCALE, layer: 21, screenSpace: true }
   );
 }

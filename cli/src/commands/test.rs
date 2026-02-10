@@ -2,6 +2,8 @@ use std::path::PathBuf;
 
 use arcane_core::scripting::{run_test_file, TestSummary};
 
+use super::type_check;
+
 pub fn run(path: Option<String>) -> anyhow::Result<()> {
     let root = path
         .map(PathBuf::from)
@@ -15,6 +17,13 @@ pub fn run(path: Option<String>) -> anyhow::Result<()> {
     }
 
     println!("Discovered {} test file(s)\n", test_files.len());
+
+    // Type check all test files before running them
+    if !type_check::should_skip_type_check() {
+        for file in &test_files {
+            type_check::check_types(file)?;
+        }
+    }
 
     let mut grand_total = TestSummary {
         total: 0,

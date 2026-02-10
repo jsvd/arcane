@@ -9,7 +9,7 @@
     "test": "arcane test"
   },
   "dependencies": {
-    "@arcane/runtime": "^0.1.0"
+    "@arcane-engine/runtime": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

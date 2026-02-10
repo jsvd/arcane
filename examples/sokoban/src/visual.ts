@@ -6,15 +6,15 @@
  */
 
 import { createGame, type SokobanState } from "./game.ts";
-import type { Vec2 } from "@arcane/runtime/state";
+import type { Vec2 } from "@arcane-engine/runtime/state";
 import {
   onFrame,
   drawSprite,
   setCamera,
   isKeyPressed,
   createSolidTexture,
-} from "@arcane/runtime/rendering";
-import { registerAgent } from "@arcane/runtime/agent";
+} from "@arcane-engine/runtime/rendering";
+import { registerAgent } from "@arcane-engine/runtime/agent";
 
 // --- Constants ---
 

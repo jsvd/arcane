@@ -16,8 +16,8 @@ const args = process.argv.slice(2);
 const projectName = args[0];
 
 if (!projectName) {
-  console.error('Usage: npm create @arcane/game <project-name>');
-  console.error('Example: npm create @arcane/game my-game');
+  console.error('Usage: npm create @arcane-engine/game <project-name>');
+  console.error('Example: npm create @arcane-engine/game my-game');
   process.exit(1);
 }
 

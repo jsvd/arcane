@@ -5,8 +5,8 @@
  * Pure game logic — runs headless for testing.
  */
 
-import type { Vec2 } from "@arcane/runtime/state";
-import { findPath, type PathGrid } from "@arcane/runtime/pathfinding";
+import type { Vec2 } from "@arcane-engine/runtime/state";
+import { findPath, type PathGrid } from "@arcane-engine/runtime/pathfinding";
 
 // --- Types ---
 

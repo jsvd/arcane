@@ -5,8 +5,8 @@
  * Pure game logic — runs headless for testing.
  */
 
-import type { Vec2 } from "@arcane/runtime/state";
-import { createStore, type GameStore } from "@arcane/runtime/state";
+import type { Vec2 } from "@arcane-engine/runtime/state";
+import { createStore, type GameStore } from "@arcane-engine/runtime/state";
 
 // --- Types ---
 

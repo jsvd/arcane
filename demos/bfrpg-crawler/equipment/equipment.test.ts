@@ -230,30 +230,30 @@ describe("Equipment - Item Factory", () => {
     const item = createItem("dagger");
 
     assert.ok(item);
-    assert.equal(item.id, "dagger");
-    assert.equal(item.name, "Dagger");
-    assert.equal(item.type, "weapon");
-    assert.equal(item.damage, "1d4");
+    assert.equal(item!.id, "dagger");
+    assert.equal(item!.name, "Dagger");
+    assert.equal(item!.type, "weapon");
+    assert.equal(item!.damage, "1d4");
   });
 
   it("creates item by ID from equipment data - armor", () => {
     const item = createItem("leather");
 
     assert.ok(item);
-    assert.equal(item.id, "leather");
-    assert.equal(item.name, "Leather Armor");
-    assert.equal(item.type, "armor");
-    assert.equal(item.acBonus, 1); // AC 11 - 10
+    assert.equal(item!.id, "leather");
+    assert.equal(item!.name, "Leather Armor");
+    assert.equal(item!.type, "armor");
+    assert.equal(item!.acBonus, 1); // AC 11 - 10
   });
 
   it("creates item by ID from equipment data - shield", () => {
     const item = createItem("large_shield");
 
     assert.ok(item);
-    assert.equal(item.id, "large_shield");
-    assert.equal(item.name, "Large Shield");
-    assert.equal(item.type, "armor");
-    assert.equal(item.acBonus, 2);
+    assert.equal(item!.id, "large_shield");
+    assert.equal(item!.name, "Large Shield");
+    assert.equal(item!.type, "armor");
+    assert.equal(item!.acBonus, 2);
   });
 
   it("returns null for unknown item ID", () => {

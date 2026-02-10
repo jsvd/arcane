@@ -19,9 +19,9 @@ import {
   getDeltaTime,
   getMousePosition,
   isKeyPressed,
-} from "@arcane/runtime/rendering";
-import { drawLabel, drawBar, rgb } from "@arcane/runtime/ui";
-import { registerAgent } from "@arcane/runtime/agent";
+} from "@arcane-engine/runtime/rendering";
+import { drawLabel, drawBar, rgb } from "@arcane-engine/runtime/ui";
+import { registerAgent } from "@arcane-engine/runtime/agent";
 
 // --- Constants ---
 
