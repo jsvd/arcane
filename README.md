@@ -96,21 +96,21 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phase 7 complete (Open Source Launch)!** 🎉
+**Phase 9 complete (Tweening + Particles)!** 🎉
 
 All packages published and ready to use:
 - **npm**: [@arcane-engine/runtime@0.1.0](https://www.npmjs.com/package/@arcane-engine/runtime), [@arcane-engine/create@0.1.0](https://www.npmjs.com/package/@arcane-engine/create)
 - **crates.io**: [arcane-engine@0.1.0](https://crates.io/crates/arcane-engine), [arcane-cli@0.1.0](https://crates.io/crates/arcane-cli)
 
 **Current features:**
-- ✅ Core engine: rendering, physics, audio, text, UI, animation, pathfinding
+- ✅ Core engine: rendering, physics, audio, text, UI, animation, pathfinding, tweening, particles
 - ✅ Recipe framework with 4 recipes (turn-based combat, inventory, grid movement, fog of war)
 - ✅ Agent protocol (HTTP inspector, describe/inspect commands)
-- ✅ 895 TS tests + 38 Rust tests passing
+- ✅ 1025 TS tests + 38 Rust tests passing
 - ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
-- ✅ Example projects (Sokoban, Tower Defense, BFRPG dungeon crawler)
+- ✅ Example projects (Sokoban, Tower Defense, BFRPG dungeon crawler, Juice Showcase)
 
-**Next:** Phase 8 (Polish & Stability) — Fix hot-reload architecture, TypeScript type errors, add Rust tests, polish demos.
+**Next:** Phase 10 (Scene Management + Save/Load) — Scene system with transitions, save/load with schema migration, menu flow demo.
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 
