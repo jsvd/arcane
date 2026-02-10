@@ -81,22 +81,22 @@ Make Arcane installable and usable outside the monorepo. Transform it from a dev
 - ✅ CLI works in any project, not just engine repo
 - ✅ Sensible defaults (find src/visual.ts, src/game.ts)
 
-### 7.5: Documentation
+### 7.5: Documentation ✅ COMPLETE
 
 **Goal:** Enable users to get started without help
 
 **Tasks:**
-- [ ] Write `docs/getting-started.md`
-- [ ] Write `docs/tutorial-sokoban.md` (10 min guide)
-- [ ] Write `docs/tutorial-rpg.md` (30 min guide with recipes)
-- [ ] Write `docs/api-reference.md` (generated from types)
-- [ ] Write `docs/recipe-guide.md` (how to create recipes)
-- [ ] Update README with installation instructions
+- [x] Write `docs/getting-started.md`
+- [x] Write `docs/tutorial-sokoban.md` (10 min guide)
+- [x] Write `docs/tutorial-rpg.md` (30 min guide with recipes)
+- [x] Write `docs/api-reference.md` (generated from types)
+- [x] Write `docs/recipe-guide.md` (how to create recipes)
+- [x] Update README with installation instructions
 
 **Deliverables:**
-- Complete getting started guide
-- Two full tutorials
-- API reference
+- ✅ Complete getting started guide
+- ✅ Two full tutorials
+- ✅ API reference
 
 ### 7.6: Example Projects
 
@@ -160,5 +160,6 @@ Make Arcane installable and usable outside the monorepo. Transform it from a dev
 **Phase 7.2 ✅ COMPLETE** - `arcane new` command implemented
 **Phase 7.3 ✅ COMPLETE** - Import map support (games use `@arcane/runtime` imports!)
 **Phase 7.4 ✅ COMPLETE** - CLI improvements (`arcane init`, optional entry points)
+**Phase 7.5 ✅ COMPLETE** - Documentation (getting-started, tutorials, API reference, recipe guide)
 
-**Next: Phase 7.5-7.8** - Documentation, examples, and publishing
+**Next: Phase 7.6-7.8** - Example projects and publishing
