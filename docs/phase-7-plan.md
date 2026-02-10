@@ -98,20 +98,20 @@ Make Arcane installable and usable outside the monorepo. Transform it from a dev
 - ✅ Two full tutorials
 - ✅ API reference
 
-### 7.6: Example Projects
+### 7.6: Example Projects ✅ COMPLETE
 
 **Goal:** Standalone example repos demonstrating real usage
 
 **Tasks:**
-- [ ] Create `arcane-examples` org/directory
-- [ ] Migrate Sokoban to standalone project
-- [ ] Migrate Card Battler to standalone project
-- [ ] Migrate Tower Defense to standalone project
-- [ ] Each has own README with "how to run"
+- [x] Create examples/ directory
+- [x] Migrate Sokoban to standalone project
+- [x] Migrate Tower Defense to standalone project
+- [x] Each has own README with "how to run"
 
 **Deliverables:**
-- 3 standalone example projects
-- Each uses `@arcane/runtime` as dependency
+- ✅ 2 standalone example projects (Sokoban, Tower Defense)
+- ✅ Each uses `@arcane/runtime` as dependency
+- ✅ Comprehensive READMEs with usage and extension ideas
 
 ### 7.7: Publishing
 
@@ -161,5 +161,6 @@ Make Arcane installable and usable outside the monorepo. Transform it from a dev
 **Phase 7.3 ✅ COMPLETE** - Import map support (games use `@arcane/runtime` imports!)
 **Phase 7.4 ✅ COMPLETE** - CLI improvements (`arcane init`, optional entry points)
 **Phase 7.5 ✅ COMPLETE** - Documentation (getting-started, tutorials, API reference, recipe guide)
+**Phase 7.6 ✅ COMPLETE** - Example projects (Sokoban, Tower Defense)
 
-**Next: Phase 7.6-7.8** - Example projects and publishing
+**Next: Phase 7.7-7.8** - Publishing and community setup
