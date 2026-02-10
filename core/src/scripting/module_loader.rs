@@ -51,6 +51,73 @@ impl ImportMap {
     }
 }
 
+#[cfg(test)]
+mod import_map_tests {
+    use super::*;
+
+    #[test]
+    fn empty_import_map_resolves_nothing() {
+        let map = ImportMap::new();
+        assert_eq!(map.resolve("foo"), None);
+        assert_eq!(map.resolve("@arcane/runtime"), None);
+    }
+
+    #[test]
+    fn exact_match_resolves() {
+        let mut map = ImportMap::new();
+        map.add("@arcane/runtime".to_string(), "file:///path/to/runtime/index.ts".to_string());
+
+        assert_eq!(map.resolve("@arcane/runtime"), Some("file:///path/to/runtime/index.ts"));
+    }
+
+    #[test]
+    fn prefix_match_is_not_implemented_yet() {
+        let mut map = ImportMap::new();
+        map.add("@arcane/runtime/".to_string(), "file:///path/to/runtime/".to_string());
+
+        // The current implementation doesn't return prefix matches
+        // (it has TODO code that continues)
+        assert_eq!(map.resolve("@arcane/runtime/state"), None);
+    }
+
+    #[test]
+    fn multiple_mappings_work() {
+        let mut map = ImportMap::new();
+        map.add("foo".to_string(), "file:///foo.ts".to_string());
+        map.add("bar".to_string(), "file:///bar.ts".to_string());
+        map.add("baz".to_string(), "file:///baz.ts".to_string());
+
+        assert_eq!(map.resolve("foo"), Some("file:///foo.ts"));
+        assert_eq!(map.resolve("bar"), Some("file:///bar.ts"));
+        assert_eq!(map.resolve("baz"), Some("file:///baz.ts"));
+        assert_eq!(map.resolve("qux"), None);
+    }
+
+    #[test]
+    fn last_add_wins_for_same_specifier() {
+        let mut map = ImportMap::new();
+        map.add("foo".to_string(), "file:///first.ts".to_string());
+        map.add("foo".to_string(), "file:///second.ts".to_string());
+
+        assert_eq!(map.resolve("foo"), Some("file:///second.ts"));
+    }
+
+    #[test]
+    fn clone_preserves_mappings() {
+        let mut map = ImportMap::new();
+        map.add("foo".to_string(), "file:///foo.ts".to_string());
+
+        let cloned = map.clone();
+        assert_eq!(cloned.resolve("foo"), Some("file:///foo.ts"));
+    }
+
+    #[test]
+    fn default_is_empty() {
+        let map = ImportMap::default();
+        assert_eq!(map.imports.len(), 0);
+    }
+}
+
 /// Loads `.ts` and `.js` files from the filesystem with import map support.
 /// TypeScript files are transpiled via `deno_ast` (type stripping).
 /// JavaScript files pass through unchanged.

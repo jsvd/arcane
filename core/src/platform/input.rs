@@ -123,4 +123,71 @@ mod tests {
         input.begin_frame();
         assert!(!input.keys_released.contains("Space"));
     }
+
+    #[test]
+    fn mouse_position_is_tracked() {
+        let mut input = InputState::default();
+        assert_eq!(input.mouse_x, 0.0);
+        assert_eq!(input.mouse_y, 0.0);
+
+        input.mouse_x = 100.5;
+        input.mouse_y = 200.75;
+
+        assert_eq!(input.mouse_x, 100.5);
+        assert_eq!(input.mouse_y, 200.75);
+    }
+
+    #[test]
+    fn multiple_keys_can_be_down_simultaneously() {
+        let mut input = InputState::default();
+
+        input.key_down("w");
+        input.key_down("a");
+        input.key_down("d");
+
+        assert!(input.is_key_down("w"));
+        assert!(input.is_key_down("a"));
+        assert!(input.is_key_down("d"));
+        assert!(input.is_key_pressed("w"));
+        assert!(input.is_key_pressed("a"));
+        assert!(input.is_key_pressed("d"));
+    }
+
+    #[test]
+    fn releasing_one_key_does_not_affect_others() {
+        let mut input = InputState::default();
+
+        input.key_down("w");
+        input.key_down("a");
+        input.begin_frame();
+
+        input.key_up("w");
+
+        assert!(!input.is_key_down("w"));
+        assert!(input.is_key_down("a"));
+    }
+
+    #[test]
+    fn key_pressed_works_with_special_keys() {
+        let mut input = InputState::default();
+
+        input.key_down("Escape");
+        input.key_down("Return");
+        input.key_down("ArrowLeft");
+
+        assert!(input.is_key_pressed("Escape"));
+        assert!(input.is_key_pressed("Return"));
+        assert!(input.is_key_pressed("ArrowLeft"));
+    }
+
+    #[test]
+    fn default_input_state_has_no_keys_down() {
+        let input = InputState::default();
+
+        assert!(!input.is_key_down("a"));
+        assert!(!input.is_key_down("Space"));
+        assert!(!input.is_key_pressed("w"));
+        assert_eq!(input.keys_down.len(), 0);
+        assert_eq!(input.keys_pressed.len(), 0);
+    }
 }
