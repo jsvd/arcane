@@ -5,8 +5,8 @@
  * All functions are pure: state in, state out.
  */
 
-import { seed, rollDice } from "@arcane/runtime/state";
-import type { PRNGState } from "@arcane/runtime/state";
+import { seed, rollDice } from "@arcane-engine/runtime/state";
+import type { PRNGState } from "@arcane-engine/runtime/state";
 
 // --- Types ---
 

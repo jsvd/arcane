@@ -31,12 +31,12 @@
   },
   "include": [
     "runtime/**/*.ts",
-    "demos/**/*.ts",
     "recipes/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "target",
-    ".arcane"
+    ".arcane",
+    "demos"
   ]
 }

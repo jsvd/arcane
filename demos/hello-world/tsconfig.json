@@ -11,11 +11,11 @@
     "target": "es2022",
     "lib": ["es2022"],
 
-    // Path mapping for @arcane/runtime (assumes project in demos/ directory)
+    // Path mapping for @arcane-engine/runtime (assumes project in demos/ directory)
     "baseUrl": ".",
     "paths": {
-      "@arcane/runtime": ["../../runtime/index.ts"],
-      "@arcane/runtime/*": ["../../runtime/*/index.ts"]
+      "@arcane-engine/runtime": ["../../runtime/index.ts"],
+      "@arcane-engine/runtime/*": ["../../runtime/*/index.ts"]
     },
 
     // Output (we don't emit, just check types)

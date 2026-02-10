@@ -13,8 +13,8 @@ import {
   createSolidTexture,
   drawText,
   getDefaultFont,
-} from "@arcane/runtime/rendering";
-import { registerAgent } from "@arcane/runtime/agent";
+} from "@arcane-engine/runtime/rendering";
+import { registerAgent, type DescribeOptions } from "@arcane-engine/runtime/agent";
 import { createGame } from "./game.ts";
 import type { GameState } from "./game.ts";
 
@@ -38,7 +38,7 @@ registerAgent({
   setState: (s: GameState) => {
     state = s;
   },
-  describe: (s, opts) => {
+  describe: (s: GameState, opts: DescribeOptions) => {
     if (opts.verbosity === "minimal") {
       return "demos/hello-world is running";
     }
