@@ -17,9 +17,19 @@ fn create_import_map(base_dir: &Path) -> ImportMap {
     let mut import_map = ImportMap::new();
 
     // Try to find the arcane runtime directory
-    // Look for it relative to the entry file, walking up the directory tree
+    // Search order (walking up from entry file dir):
+    // 1. node_modules/@arcane-engine/runtime/src/ (standalone npm install)
+    // 2. runtime/ with state/ subdir (dev-from-repo)
     let mut search_dir = base_dir.to_path_buf();
     let runtime_dir = loop {
+        // Check node_modules first (standalone projects after npm install)
+        let nm_candidate =
+            search_dir.join("node_modules/@arcane-engine/runtime/src");
+        if nm_candidate.exists() && nm_candidate.join("state").exists() {
+            break Some(nm_candidate);
+        }
+
+        // Check repo runtime directory (dev-from-repo)
         let candidate = search_dir.join("runtime");
         if candidate.exists() && candidate.join("state").exists() {
             break Some(candidate);

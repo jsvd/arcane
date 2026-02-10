@@ -1,6 +1,10 @@
 use anyhow::{Context, Result};
+use include_dir::{include_dir, Dir};
 use std::fs;
 use std::path::{Path, PathBuf};
+
+pub(crate) static TEMPLATE_DIR: Dir<'static> =
+    include_dir!("$CARGO_MANIFEST_DIR/../templates/default");
 
 /// Create a new Arcane project from template
 pub fn run(name: &str) -> Result<()> {
@@ -11,17 +15,19 @@ pub fn run(name: &str) -> Result<()> {
         anyhow::bail!("Directory '{}' already exists", name);
     }
 
-    // Find template directory (relative to binary location or embedded)
-    let template_dir = find_template_dir()?;
-
-    // Copy template to new directory
     println!("Creating new Arcane project: {}", name);
-    copy_template(&template_dir, &project_dir, name)?;
+
+    // Try filesystem first (dev-from-repo), fall back to embedded templates
+    match find_template_dir() {
+        Some(template_dir) => copy_template_fs(&template_dir, &project_dir, name)?,
+        None => copy_template_embedded(&TEMPLATE_DIR, &project_dir, name)?,
+    }
 
     println!("✓ Created {}/", name);
     println!();
     println!("Next steps:");
     println!("  cd {}", name);
+    println!("  npm install");
     println!("  arcane dev");
     println!();
     println!("Read AGENTS.md for LLM development guide.");
@@ -32,36 +38,32 @@ pub fn run(name: &str) -> Result<()> {
     Ok(())
 }
 
-/// Find the template directory
-fn find_template_dir() -> Result<PathBuf> {
-    // Try to find templates directory relative to the binary
-    // This works when running from the repo or when templates are installed alongside the binary
-    let exe_path = std::env::current_exe()?;
-    let exe_dir = exe_path
-        .parent()
-        .context("Failed to get executable directory")?;
-
-    // Try several possible locations
-    let candidates = vec![
-        exe_dir.join("../templates/default"),           // Installed location
-        exe_dir.join("../../templates/default"),        // cargo run location
-        exe_dir.join("../../../templates/default"),     // cargo build target location
-        PathBuf::from("templates/default"),             // CWD (development)
-    ];
-
-    for candidate in candidates {
-        if candidate.exists() && candidate.join("package.json").exists() {
-            return Ok(candidate);
+/// Try to find the template directory on the filesystem (for dev-from-repo).
+/// Returns None when running from a standalone install.
+pub(crate) fn find_template_dir() -> Option<PathBuf> {
+    // Walk up from executable location
+    if let Ok(exe) = std::env::current_exe() {
+        let mut dir = exe.parent().map(|p| p.to_path_buf());
+        while let Some(d) = dir {
+            let candidate = d.join("templates").join("default");
+            if candidate.exists() && candidate.join("package.json").exists() {
+                return Some(candidate);
+            }
+            dir = d.parent().map(|p| p.to_path_buf());
         }
     }
 
-    anyhow::bail!(
-        "Could not find template directory. Please ensure Arcane is properly installed."
-    )
+    // Try CWD
+    let candidate = PathBuf::from("templates").join("default");
+    if candidate.exists() && candidate.join("package.json").exists() {
+        return Some(candidate);
+    }
+
+    None
 }
 
-/// Recursively copy template directory, replacing template variables
-fn copy_template(src: &Path, dst: &Path, project_name: &str) -> Result<()> {
+/// Copy template from filesystem (dev-from-repo path).
+fn copy_template_fs(src: &Path, dst: &Path, project_name: &str) -> Result<()> {
     fs::create_dir_all(dst)?;
 
     for entry in fs::read_dir(src)? {
@@ -71,38 +73,51 @@ fn copy_template(src: &Path, dst: &Path, project_name: &str) -> Result<()> {
         let dst_path = dst.join(&file_name);
 
         if src_path.is_dir() {
-            // Recursively copy directories
-            copy_template(&src_path, &dst_path, project_name)?;
+            copy_template_fs(&src_path, &dst_path, project_name)?;
         } else {
-            // Copy and process file
-            copy_file(&src_path, &dst_path, project_name)?;
+            let content = fs::read_to_string(&src_path).with_context(|| {
+                format!("Failed to read template file: {}", src_path.display())
+            })?;
+            let processed = content.replace("{{PROJECT_NAME}}", project_name);
+            fs::write(&dst_path, processed)?;
+
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let src_metadata = fs::metadata(&src_path)?;
+                let mut permissions = fs::metadata(&dst_path)?.permissions();
+                permissions.set_mode(src_metadata.permissions().mode());
+                fs::set_permissions(&dst_path, permissions)?;
+            }
         }
     }
 
     Ok(())
 }
 
-/// Copy a single file, replacing template variables
-fn copy_file(src: &Path, dst: &Path, project_name: &str) -> Result<()> {
-    let content = fs::read_to_string(src).with_context(|| {
-        format!("Failed to read template file: {}", src.display())
-    })?;
+/// Copy template from embedded data (standalone install path).
+/// Recursively writes all files from the embedded directory, replacing {{PROJECT_NAME}}.
+pub(crate) fn copy_template_embedded(
+    dir: &Dir<'_>,
+    dst: &Path,
+    project_name: &str,
+) -> Result<()> {
+    fs::create_dir_all(dst)?;
 
-    // Replace template variables
-    let processed = content.replace("{{PROJECT_NAME}}", project_name);
+    for file in dir.files() {
+        let dst_path = dst.join(file.path());
+        if let Some(parent) = dst_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        let content = file
+            .contents_utf8()
+            .with_context(|| format!("Template file not valid UTF-8: {:?}", file.path()))?;
+        let processed = content.replace("{{PROJECT_NAME}}", project_name);
+        fs::write(&dst_path, processed)?;
+    }
 
-    fs::write(dst, processed).with_context(|| {
-        format!("Failed to write file: {}", dst.display())
-    })?;
-
-    // Preserve executable permissions on Unix
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let src_metadata = fs::metadata(src)?;
-        let mut permissions = fs::metadata(dst)?.permissions();
-        permissions.set_mode(src_metadata.permissions().mode());
-        fs::set_permissions(dst, permissions)?;
+    for subdir in dir.dirs() {
+        copy_template_embedded(subdir, dst, project_name)?;
     }
 
     Ok(())

@@ -14,10 +14,10 @@
     // Path mapping for @arcane/runtime
     "baseUrl": ".",
     "paths": {
-      "@arcane/runtime": ["../../runtime/index.ts"],
-      "@arcane/runtime/*": ["../../runtime/*/index.ts"],
-      "@arcane-engine/runtime": ["../../runtime/index.ts"],
-      "@arcane-engine/runtime/*": ["../../runtime/*/index.ts"]
+      "@arcane/runtime": ["./node_modules/@arcane-engine/runtime/src/index.ts"],
+      "@arcane/runtime/*": ["./node_modules/@arcane-engine/runtime/src/*/index.ts"],
+      "@arcane-engine/runtime": ["./node_modules/@arcane-engine/runtime/src/index.ts"],
+      "@arcane-engine/runtime/*": ["./node_modules/@arcane-engine/runtime/src/*/index.ts"]
     },
 
     // Output (we don't emit, just check types)
