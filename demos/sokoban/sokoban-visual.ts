@@ -17,7 +17,9 @@ import {
   setCamera,
   isKeyPressed,
   createSolidTexture,
+  drawText,
 } from "../../runtime/rendering/index.ts";
+import { drawBar, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
 
 // --- Constants ---
 
@@ -160,4 +162,63 @@ onFrame(() => {
     h: TILE_SIZE - 8,
     layer: 3,
   });
+
+  // --- HUD (screen space) ---
+
+  // Move counter
+  drawText(`Moves: ${current.moves}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y, {
+    scale: HUDLayout.TEXT_SCALE,
+    tint: Colors.WHITE,
+    layer: 100,
+    screenSpace: true,
+  });
+
+  // Progress bar (boxes on goals)
+  const boxesOnGoals = current.boxes.filter((box: Vec2) =>
+    current.goals.some((g: Vec2) => g.x === box.x && g.y === box.y)
+  ).length;
+  const progress = current.goals.length > 0 ? boxesOnGoals / current.goals.length : 0;
+  drawBar(
+    HUDLayout.TOP_LEFT.x,
+    HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT,
+    100,
+    12,
+    progress,
+    {
+      fillColor: Colors.SUCCESS,
+      bgColor: Colors.HUD_BG,
+      borderColor: Colors.LIGHT_GRAY,
+      borderWidth: 1,
+      layer: 100,
+      screenSpace: true,
+    }
+  );
+
+  // Progress text
+  drawText(`${boxesOnGoals}/${current.goals.length} boxes`, HUDLayout.TOP_LEFT.x + 105, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT, {
+    scale: HUDLayout.SMALL_TEXT_SCALE,
+    tint: Colors.WHITE,
+    layer: 100,
+    screenSpace: true,
+  });
+
+  // Controls hint
+  drawText("WASD/Arrows=Move  Z=Undo  R=Reset", HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2, {
+    scale: HUDLayout.SMALL_TEXT_SCALE,
+    tint: Colors.LIGHT_GRAY,
+    layer: 100,
+    screenSpace: true,
+  });
+
+  // Victory screen
+  if (current.won) {
+    drawLabel(`VICTORY! ${current.moves} moves`, HUDLayout.CENTER.x - 120, HUDLayout.CENTER.y - 20, {
+      textColor: Colors.WIN,
+      bgColor: Colors.HUD_BG,
+      padding: 12,
+      scale: HUDLayout.TEXT_SCALE,
+      layer: 110,
+      screenSpace: true,
+    });
+  }
 });
