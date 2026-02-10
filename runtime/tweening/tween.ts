@@ -223,6 +223,27 @@ export function stopAllTweens(): void {
 }
 
 /**
+ * Reverse a tween's direction
+ */
+export function reverseTween(t: Tween): void {
+  // Capture current values as the new start
+  const currentValues: Record<string, number> = {};
+  for (const key in t.props) {
+    currentValues[key] = t.target[key];
+  }
+
+  // New target is the old start
+  const newTarget = { ...t.startValues };
+
+  // Update tween
+  t.startValues = currentValues;
+  t.props = newTarget;
+
+  // Reset elapsed to animate from current position
+  t.elapsed = 0;
+}
+
+/**
  * Get count of active tweens (for debugging/testing)
  */
 export function getActiveTweenCount(): number {

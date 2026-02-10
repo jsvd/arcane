@@ -20,6 +20,7 @@ export {
   stopTween,
   pauseTween,
   resumeTween,
+  reverseTween,
   stopAllTweens,
   getActiveTweenCount,
   linear,
@@ -59,3 +60,6 @@ export {
   easeInOutBounce,
   Easing,
 } from "./easing.ts";
+
+export type { TweenConfig } from "./chain.ts";
+export { sequence, parallel, stagger } from "./chain.ts";
