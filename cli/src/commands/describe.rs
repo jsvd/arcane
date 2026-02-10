@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use arcane_core::scripting::ArcaneRuntime;
+use arcane_engine::scripting::ArcaneRuntime;
 
 use super::type_check;
 

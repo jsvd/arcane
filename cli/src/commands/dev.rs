@@ -5,10 +5,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use arcane_core::audio::{self, AudioCommand, AudioSender};
-use arcane_core::platform::window::{DevConfig, RenderState};
-use arcane_core::scripting::render_ops::{BridgeAudioCommand, RenderBridgeState};
-use arcane_core::scripting::{ArcaneRuntime, ImportMap};
+use arcane_engine::audio::{self, AudioCommand, AudioSender};
+use arcane_engine::platform::window::{DevConfig, RenderState};
+use arcane_engine::scripting::render_ops::{BridgeAudioCommand, RenderBridgeState};
+use arcane_engine::scripting::{ArcaneRuntime, ImportMap};
 
 use super::type_check;
 
@@ -103,8 +103,8 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
 
     // Start HTTP inspector if requested
     let inspector_rx = inspector_port.map(|port| {
-        let (tx, rx) = arcane_core::agent::inspector_channel();
-        let _handle = arcane_core::agent::inspector::start_inspector(port, tx);
+        let (tx, rx) = arcane_engine::agent::inspector_channel();
+        let _handle = arcane_engine::agent::inspector::start_inspector(port, tx);
         // Leak the handle — inspector runs for the lifetime of the process
         std::mem::forget(_handle);
         rx
@@ -237,7 +237,7 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
 
         if let Some(ref mut renderer) = state.renderer {
             for font_tex_id in pending_fonts {
-                let (pixels, width, height) = arcane_core::renderer::font::generate_builtin_font();
+                let (pixels, width, height) = arcane_engine::renderer::font::generate_builtin_font();
                 renderer.textures.upload_raw(
                     &renderer.gpu,
                     &renderer.sprites.texture_bind_group_layout,
@@ -288,7 +288,7 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
     });
 
     // Run the winit event loop (blocks until window closes)
-    arcane_core::platform::run_event_loop(config, render_state, frame_callback)?;
+    arcane_engine::platform::run_event_loop(config, render_state, frame_callback)?;
 
     Ok(())
 }
@@ -296,9 +296,9 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
 /// Process a single inspector request by evaluating TS via the agent protocol.
 fn process_inspector_request(
     runtime: &mut ArcaneRuntime,
-    req: arcane_core::agent::InspectorRequest,
-) -> arcane_core::agent::InspectorResponse {
-    use arcane_core::agent::{InspectorRequest, InspectorResponse};
+    req: arcane_engine::agent::InspectorRequest,
+) -> arcane_engine::agent::InspectorResponse {
+    use arcane_engine::agent::{InspectorRequest, InspectorResponse};
 
     match req {
         InspectorRequest::Health => {
@@ -352,10 +352,10 @@ fn process_inspector_request(
 }
 
 /// Evaluate a script that returns JSON and wrap it as an InspectorResponse.
-fn eval_json(runtime: &mut ArcaneRuntime, script: &str) -> arcane_core::agent::InspectorResponse {
+fn eval_json(runtime: &mut ArcaneRuntime, script: &str) -> arcane_engine::agent::InspectorResponse {
     match runtime.eval_to_string(script) {
-        Ok(result) => arcane_core::agent::InspectorResponse::json(result),
-        Err(e) => arcane_core::agent::InspectorResponse::error(500, format!("{e}")),
+        Ok(result) => arcane_engine::agent::InspectorResponse::json(result),
+        Err(e) => arcane_engine::agent::InspectorResponse::error(500, format!("{e}")),
     }
 }
 

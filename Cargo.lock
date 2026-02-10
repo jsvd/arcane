@@ -180,7 +180,7 @@ name = "arcane-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "arcane-core",
+ "arcane-engine",
  "clap",
  "image",
  "notify",
@@ -190,7 +190,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "arcane-core"
+name = "arcane-engine"
 version = "0.1.0"
 dependencies = [
  "anyhow",

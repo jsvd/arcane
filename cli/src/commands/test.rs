@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use arcane_core::scripting::{run_test_file, TestSummary};
+use arcane_engine::scripting::{run_test_file, TestSummary};
 
 use super::type_check;
 
