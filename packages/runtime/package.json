@@ -17,14 +17,10 @@
     "./testing": "./src/testing/harness.ts"
   },
   "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
+    "src",
+    "index.ts",
+    "README.md"
   ],
-  "scripts": {
-    "build": "tsc",
-    "prepublishOnly": "npm run build"
-  },
   "keywords": [
     "game-engine",
     "2d",
