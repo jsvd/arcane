@@ -16,7 +16,7 @@ name = "arcane"
 path = "src/main.rs"
 
 [dependencies]
-arcane-core = { path = "../core", features = ["renderer"] }
+arcane-engine = { path = "../core", features = ["renderer"] }
 clap = { version = "4", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 anyhow = "1"

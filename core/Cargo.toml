@@ -1,12 +1,12 @@
 [package]
-name = "arcane-core"
+name = "arcane-engine"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 description = "Core library for Arcane - agent-native 2D game engine (TypeScript runtime, renderer, platform layer)"
 repository = "https://github.com/anthropics/arcane"
 homepage = "https://github.com/anthropics/arcane"
-documentation = "https://docs.rs/arcane-core"
+documentation = "https://docs.rs/arcane-engine"
 keywords = ["game-engine", "2d", "gamedev", "typescript", "v8"]
 categories = ["game-engines", "graphics", "game-development"]
 readme = "../README.md"
