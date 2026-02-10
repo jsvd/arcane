@@ -40,10 +40,24 @@ fn create_import_map(base_dir: &Path) -> ImportMap {
 
         // Map @arcane/runtime/* to the runtime directory
         import_map.add("@arcane/runtime/".to_string(), runtime_url.clone());
-        import_map.add("@arcane/runtime".to_string(), format!("{}index.ts", runtime_url));
+        import_map.add(
+            "@arcane/runtime".to_string(),
+            format!("{}index.ts", runtime_url),
+        );
 
         // Add subpath mappings for all runtime modules
-        for subpath in ["state", "rendering", "ui", "physics", "pathfinding", "systems", "agent", "testing", "tweening", "particles"] {
+        for subpath in [
+            "state",
+            "rendering",
+            "ui",
+            "physics",
+            "pathfinding",
+            "systems",
+            "agent",
+            "testing",
+            "tweening",
+            "particles",
+        ] {
             import_map.add(
                 format!("@arcane/runtime/{}", subpath),
                 format!("{}{}/index.ts", runtime_url, subpath),
@@ -51,9 +65,26 @@ fn create_import_map(base_dir: &Path) -> ImportMap {
         }
 
         // Also support @arcane-engine/runtime imports (used by scaffolded projects)
-        import_map.add("@arcane-engine/runtime/".to_string(), runtime_url.clone());
-        import_map.add("@arcane-engine/runtime".to_string(), format!("{}index.ts", runtime_url));
-        for subpath in ["state", "rendering", "ui", "physics", "pathfinding", "systems", "agent", "testing", "tweening", "particles"] {
+        import_map.add(
+            "@arcane-engine/runtime/".to_string(),
+            runtime_url.clone(),
+        );
+        import_map.add(
+            "@arcane-engine/runtime".to_string(),
+            format!("{}index.ts", runtime_url),
+        );
+        for subpath in [
+            "state",
+            "rendering",
+            "ui",
+            "physics",
+            "pathfinding",
+            "systems",
+            "agent",
+            "testing",
+            "tweening",
+            "particles",
+        ] {
             import_map.add(
                 format!("@arcane-engine/runtime/{}", subpath),
                 format!("{}{}/index.ts", runtime_url, subpath),
@@ -98,16 +129,17 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
     let import_map = create_import_map(&base_dir);
 
     // Create the JS runtime with both base and render extensions
-    let mut runtime = ArcaneRuntime::new_with_render_bridge_and_import_map(bridge_state.clone(), import_map);
+    // Wrapped in Option so hot-reload can drop the old V8 isolate before creating a new one
+    let mut runtime: Option<ArcaneRuntime> = Some(
+        ArcaneRuntime::new_with_render_bridge_and_import_map(bridge_state.clone(), import_map),
+    );
 
     // Load and execute the entry file
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()?;
 
-    rt.block_on(async {
-        runtime.execute_file(&entry_path).await
-    })?;
+    rt.block_on(async { runtime.as_mut().unwrap().execute_file(&entry_path).await })?;
 
     println!("Entry file loaded. Opening window...");
 
@@ -143,6 +175,7 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
             bridge.viewport_width = renderer.camera.viewport_size[0];
             bridge.viewport_height = renderer.camera.viewport_size[1];
         }
+
         // Check for hot-reload
         if reload_flag.swap(false, Ordering::Relaxed) {
             eprintln!("[hot-reload] File change detected, reloading...");
@@ -157,6 +190,11 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
             }
         }
 
+        // Get runtime reference — skip frame if None (shouldn't happen in practice)
+        let Some(ref mut rt) = runtime else {
+            return Ok(());
+        };
+
         // Sync input state to the bridge so TS ops can read it
         {
             let mut bridge = bridge_for_loop.borrow_mut();
@@ -168,7 +206,7 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
         }
 
         // Call the TS frame callback
-        let frame_result = runtime.inner().execute_script(
+        let frame_result = rt.inner().execute_script(
             "<frame>",
             "if (globalThis.__frameCallback) { globalThis.__frameCallback(); }",
         );
@@ -176,10 +214,9 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
         // Handle frame callback errors with error snapshots
         if let Err(ref e) = frame_result {
             let error_msg = escape_js(&format!("{e}"));
-            let snapshot_script = format!(
-                "JSON.stringify(globalThis.__arcaneAgent?.captureSnapshot())"
-            );
-            if let Ok(snapshot_json) = runtime.eval_to_string(&snapshot_script) {
+            let snapshot_script =
+                "JSON.stringify(globalThis.__arcaneAgent?.captureSnapshot())".to_string();
+            if let Ok(snapshot_json) = rt.eval_to_string(&snapshot_script) {
                 if snapshot_json != "undefined" && snapshot_json != "null" {
                     write_error_snapshot(&snapshot_json, &error_msg);
                 }
@@ -216,23 +253,21 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
                 } else {
                     // For file textures, also use upload_raw with pre-assigned ID
                     match std::fs::read(&path) {
-                        Ok(img_data) => {
-                            match image::load_from_memory(&img_data) {
-                                Ok(img) => {
-                                    let rgba = img.to_rgba8();
-                                    let (w, h) = rgba.dimensions();
-                                    renderer.textures.upload_raw(
-                                        &renderer.gpu,
-                                        &renderer.sprites.texture_bind_group_layout,
-                                        id,
-                                        &rgba,
-                                        w,
-                                        h,
-                                    );
-                                }
-                                Err(e) => eprintln!("Failed to decode texture {path}: {e}"),
+                        Ok(img_data) => match image::load_from_memory(&img_data) {
+                            Ok(img) => {
+                                let rgba = img.to_rgba8();
+                                let (w, h) = rgba.dimensions();
+                                renderer.textures.upload_raw(
+                                    &renderer.gpu,
+                                    &renderer.sprites.texture_bind_group_layout,
+                                    id,
+                                    &rgba,
+                                    w,
+                                    h,
+                                );
                             }
-                        }
+                            Err(e) => eprintln!("Failed to decode texture {path}: {e}"),
+                        },
                         Err(e) => eprintln!("Failed to read texture {path}: {e}"),
                     }
                 }
@@ -247,7 +282,8 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
 
         if let Some(ref mut renderer) = state.renderer {
             for font_tex_id in pending_fonts {
-                let (pixels, width, height) = arcane_engine::renderer::font::generate_builtin_font();
+                let (pixels, width, height) =
+                    arcane_engine::renderer::font::generate_builtin_font();
                 renderer.textures.upload_raw(
                     &renderer.gpu,
                     &renderer.sprites.texture_bind_group_layout,
@@ -289,7 +325,7 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
         // Poll inspector requests (if inspector is active)
         if let Some(ref rx) = inspector_rx {
             while let Ok((req, resp_tx)) = rx.try_recv() {
-                let response = process_inspector_request(&mut runtime, req);
+                let response = process_inspector_request(rt, req);
                 let _ = resp_tx.send(response);
             }
         }
@@ -311,58 +347,75 @@ fn process_inspector_request(
     use arcane_engine::agent::{InspectorRequest, InspectorResponse};
 
     match req {
-        InspectorRequest::Health => {
-            InspectorResponse::json(r#"{"status":"ok"}"#.into())
-        }
-        InspectorRequest::GetState { path: None } => {
-            eval_json(runtime, "JSON.stringify(globalThis.__arcaneAgent?.getState(), null, 2)")
-        }
+        InspectorRequest::Health => InspectorResponse::json(r#"{"status":"ok"}"#.into()),
+        InspectorRequest::GetState { path: None } => eval_json(
+            runtime,
+            "JSON.stringify(globalThis.__arcaneAgent?.getState(), null, 2)",
+        ),
         InspectorRequest::GetState { path: Some(p) } => {
             let escaped = escape_js(&p);
-            eval_json(runtime, &format!(
-                "JSON.stringify(globalThis.__arcaneAgent?.inspect('{}'), null, 2)", escaped
-            ))
+            eval_json(
+                runtime,
+                &format!(
+                    "JSON.stringify(globalThis.__arcaneAgent?.inspect('{}'), null, 2)",
+                    escaped
+                ),
+            )
         }
         InspectorRequest::Describe { verbosity } => {
             let v = verbosity
                 .map(|v| format!("'{}'", escape_js(&v)))
                 .unwrap_or_else(|| "undefined".to_string());
             let script = format!(
-                "globalThis.__arcaneAgent?.describe({{ verbosity: {} }}) ?? 'No agent registered.'", v
+                "globalThis.__arcaneAgent?.describe({{ verbosity: {} }}) ?? 'No agent registered.'",
+                v
             );
             match runtime.eval_to_string(&script) {
                 Ok(result) => InspectorResponse::text(result),
                 Err(e) => InspectorResponse::error(500, format!("{e}")),
             }
         }
-        InspectorRequest::ListActions => {
-            eval_json(runtime, "JSON.stringify(globalThis.__arcaneAgent?.listActions())")
-        }
+        InspectorRequest::ListActions => eval_json(
+            runtime,
+            "JSON.stringify(globalThis.__arcaneAgent?.listActions())",
+        ),
         InspectorRequest::ExecuteAction { name, payload } => {
             let escaped_name = escape_js(&name);
             let escaped_payload = escape_js(&payload);
-            eval_json(runtime, &format!(
-                "JSON.stringify(globalThis.__arcaneAgent?.executeAction('{}', '{}'))",
-                escaped_name, escaped_payload
-            ))
+            eval_json(
+                runtime,
+                &format!(
+                    "JSON.stringify(globalThis.__arcaneAgent?.executeAction('{}', '{}'))",
+                    escaped_name, escaped_payload
+                ),
+            )
         }
         InspectorRequest::Simulate { action } => {
             let escaped = escape_js(&action);
-            eval_json(runtime, &format!(
-                "JSON.stringify(globalThis.__arcaneAgent?.simulate('{}'))", escaped
-            ))
+            eval_json(
+                runtime,
+                &format!(
+                    "JSON.stringify(globalThis.__arcaneAgent?.simulate('{}'))",
+                    escaped
+                ),
+            )
         }
-        InspectorRequest::Rewind { steps: _ } => {
-            eval_json(runtime, "JSON.stringify(globalThis.__arcaneAgent?.rewind())")
-        }
-        InspectorRequest::GetHistory => {
-            eval_json(runtime, "JSON.stringify(globalThis.__arcaneAgent?.captureSnapshot())")
-        }
+        InspectorRequest::Rewind { steps: _ } => eval_json(
+            runtime,
+            "JSON.stringify(globalThis.__arcaneAgent?.rewind())",
+        ),
+        InspectorRequest::GetHistory => eval_json(
+            runtime,
+            "JSON.stringify(globalThis.__arcaneAgent?.captureSnapshot())",
+        ),
     }
 }
 
 /// Evaluate a script that returns JSON and wrap it as an InspectorResponse.
-fn eval_json(runtime: &mut ArcaneRuntime, script: &str) -> arcane_engine::agent::InspectorResponse {
+fn eval_json(
+    runtime: &mut ArcaneRuntime,
+    script: &str,
+) -> arcane_engine::agent::InspectorResponse {
     match runtime.eval_to_string(script) {
         Ok(result) => arcane_engine::agent::InspectorResponse::json(result),
         Err(e) => arcane_engine::agent::InspectorResponse::error(500, format!("{e}")),
@@ -406,19 +459,25 @@ fn process_audio_command(
     bridge: &Rc<RefCell<RenderBridgeState>>,
 ) -> Result<()> {
     match cmd {
-        BridgeAudioCommand::LoadSound { id, path } => {
-            match std::fs::read(&path) {
-                Ok(data) => {
-                    let _ = audio_tx.send(AudioCommand::LoadSound { id, data });
-                }
-                Err(e) => {
-                    let _ = bridge;
-                    eprintln!("[audio] Failed to read sound file {path}: {e}");
-                }
+        BridgeAudioCommand::LoadSound { id, path } => match std::fs::read(&path) {
+            Ok(data) => {
+                let _ = audio_tx.send(AudioCommand::LoadSound { id, data });
             }
-        }
-        BridgeAudioCommand::PlaySound { id, volume, looping } => {
-            let _ = audio_tx.send(AudioCommand::PlaySound { id, volume, looping });
+            Err(e) => {
+                let _ = bridge;
+                eprintln!("[audio] Failed to read sound file {path}: {e}");
+            }
+        },
+        BridgeAudioCommand::PlaySound {
+            id,
+            volume,
+            looping,
+        } => {
+            let _ = audio_tx.send(AudioCommand::PlaySound {
+                id,
+                volume,
+                looping,
+            });
         }
         BridgeAudioCommand::StopSound { id } => {
             let _ = audio_tx.send(AudioCommand::StopSound { id });
@@ -433,57 +492,59 @@ fn process_audio_command(
     Ok(())
 }
 
-/// Reload the JS runtime: create a new one, re-execute the entry file.
+/// Reload the JS runtime: drop old V8 isolate first, then create a new one.
+///
+/// V8 uses an enter/exit stack per thread. Creating isolate B while A is still entered
+/// puts the stack at [A, B]. Dropping A while B is on top violates V8's LIFO ordering,
+/// causing an abort. By dropping A first, the stack goes [A] → [] → [B] — clean lifecycle.
 fn reload_runtime(
     entry_path: &Path,
     base_dir: &Path,
     bridge: &Rc<RefCell<RenderBridgeState>>,
-    runtime: &mut ArcaneRuntime,
+    runtime: &mut Option<ArcaneRuntime>,
 ) -> Result<()> {
-    // Type check before reloading (unless explicitly skipped)
+    // Type check BEFORE dropping the old runtime — if types fail, keep the old runtime alive
     if !type_check::should_skip_type_check() {
         type_check::check_types(entry_path)?;
     }
 
-    // Reset bridge state (keep texture mappings for ID stability)
+    // Drop the old V8 isolate BEFORE creating the new one.
+    // This is the key fix: ensures only one isolate exists on the thread at a time.
+    *runtime = None;
+
+    // Reset transient bridge state but preserve ID mappings and tilemaps.
+    // We reuse the same Rc so the new runtime's ops write to the same bridge
+    // that the frame callback reads from.
     {
         let mut b = bridge.borrow_mut();
         b.sprite_commands.clear();
+        b.point_lights.clear();
+        b.texture_load_queue.clear();
+        b.font_texture_queue.clear();
+        b.audio_commands.clear();
     }
 
-    // Create a fresh runtime
-    let new_bridge = Rc::new(RefCell::new(RenderBridgeState::new(base_dir.to_path_buf())));
-
-    // Copy ID mappings and tilemap state from old bridge for ID stability
-    {
-        let old = bridge.borrow();
-        let mut new_b = new_bridge.borrow_mut();
-        new_b.texture_path_to_id = old.texture_path_to_id.clone();
-        new_b.next_texture_id = old.next_texture_id;
-        new_b.tilemaps = old.tilemaps.clone();
-        new_b.sound_path_to_id = old.sound_path_to_id.clone();
-        new_b.next_sound_id = old.next_sound_id;
-    }
-
+    // Create new runtime with the SAME bridge Rc and import map
     let import_map = create_import_map(base_dir);
-    let mut new_runtime = ArcaneRuntime::new_with_render_bridge_and_import_map(new_bridge.clone(), import_map);
+    let mut new_runtime =
+        ArcaneRuntime::new_with_render_bridge_and_import_map(bridge.clone(), import_map);
 
     // Re-execute entry file
-    let rt = tokio::runtime::Builder::new_current_thread()
+    let tokio_rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()?;
 
-    rt.block_on(async {
-        new_runtime.execute_file(entry_path).await
-    })?;
+    let exec_result = tokio_rt.block_on(async { new_runtime.execute_file(entry_path).await });
 
-    // Swap in the new runtime and bridge
-    // IMPORTANT: Use mem::replace to get the old runtime, but let it drop naturally
-    // at the end of the function scope. Explicit drop() causes V8 to abort during cleanup
-    // because the isolate tries to access context embedder data while in an invalid state.
-    // Natural drop at scope end allows V8 to clean up properly.
-    let _old_runtime = std::mem::replace(runtime, new_runtime);
-    *bridge.borrow_mut() = new_bridge.borrow().clone();
+    // Always install the new runtime, even if execute_file failed.
+    // This ensures subsequent frames have a live V8 isolate.
+    // If __frameCallback wasn't registered (due to error), the frame callback's
+    // "if (globalThis.__frameCallback)" check handles it gracefully — game freezes
+    // until the user fixes and saves, triggering another reload.
+    *runtime = Some(new_runtime);
+
+    // Report execution error after installing runtime
+    exec_result?;
 
     Ok(())
 }
@@ -499,22 +560,25 @@ fn start_file_watcher(
     use std::time::Duration;
 
     let flag = reload_flag;
-    let mut debouncer = match new_debouncer(Duration::from_millis(200), move |res: Result<Vec<notify_debouncer_mini::DebouncedEvent>, notify::Error>| {
-        match res {
-            Ok(events) => {
-                let has_ts_change = events.iter().any(|e| {
-                    e.path
-                        .extension()
-                        .map(|ext| ext == "ts")
-                        .unwrap_or(false)
-                });
-                if has_ts_change {
-                    flag.store(true, Ordering::Relaxed);
+    let mut debouncer = match new_debouncer(
+        Duration::from_millis(200),
+        move |res: Result<Vec<notify_debouncer_mini::DebouncedEvent>, notify::Error>| {
+            match res {
+                Ok(events) => {
+                    let has_ts_change = events.iter().any(|e| {
+                        e.path
+                            .extension()
+                            .map(|ext| ext == "ts")
+                            .unwrap_or(false)
+                    });
+                    if has_ts_change {
+                        flag.store(true, Ordering::Relaxed);
+                    }
                 }
+                Err(e) => eprintln!("[watcher] Error: {e:?}"),
             }
-            Err(e) => eprintln!("[watcher] Error: {e:?}"),
-        }
-    }) {
+        },
+    ) {
         Ok(d) => d,
         Err(e) => {
             eprintln!("[watcher] Failed to start file watcher: {e}");
@@ -523,7 +587,9 @@ fn start_file_watcher(
     };
 
     // Watch the entry file's directory and the runtime directory
-    let _ = debouncer.watcher().watch(base_dir, RecursiveMode::Recursive);
+    let _ = debouncer
+        .watcher()
+        .watch(base_dir, RecursiveMode::Recursive);
 
     // Also watch the runtime/ directory if it's not under base_dir
     let runtime_dir = entry_path
