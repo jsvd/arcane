@@ -1,0 +1,432 @@
+/**
+ * Juice Showcase Demo - Phase 9
+ *
+ * Demonstrates all the "juice" features:
+ * - Tweening with various easing functions
+ * - Camera shake
+ * - Screen flash
+ * - Particle effects
+ *
+ * Controls:
+ * - Click different buttons to trigger effects
+ * - Space: Toggle juice on/off (compare before/after)
+ */
+
+import {
+  onFrame,
+  clearSprites,
+  drawSprite,
+  setCamera,
+  getCamera,
+  isKeyPressed,
+  getDeltaTime,
+  createSolidTexture,
+  getMouseWorldPosition,
+  drawText,
+} from "../../runtime/rendering/index.ts";
+import { Colors, HUDLayout, drawPanel, drawLabel } from "../../runtime/ui/index.ts";
+import { registerAgent } from "../../runtime/agent/index.ts";
+import {
+  tween,
+  updateTweens,
+  easeInBounce,
+  easeOutBounce,
+  easeInElastic,
+  easeOutElastic,
+  easeInBack,
+  easeOutBack,
+  shakeCamera,
+  getCameraShakeOffset,
+  flashScreen,
+  getScreenFlash,
+} from "../../runtime/tweening/index.ts";
+import {
+  createEmitter,
+  updateParticles,
+  getAllParticles,
+  addAffector,
+} from "../../runtime/particles/index.ts";
+import type { EmitterConfig } from "../../runtime/particles/index.ts";
+
+// --- Textures ---
+const TEX_BOX = createSolidTexture("box", 100, 150, 255);
+const TEX_BUTTON = createSolidTexture("button", 80, 120, 200);
+const TEX_PARTICLE = createSolidTexture("particle", 255, 255, 255);
+const TEX_BG = createSolidTexture("bg", 40, 40, 50);
+
+// --- State ---
+interface DemoState {
+  juiceEnabled: boolean;
+  boxes: Array<{
+    x: number;
+    y: number;
+    scale: number;
+    targetScale: number;
+  }>;
+  buttons: Array<{
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    label: string;
+    action: () => void;
+  }>;
+}
+
+const state: DemoState = {
+  juiceEnabled: true,
+  boxes: [
+    { x: 200, y: 200, scale: 1, targetScale: 1 },
+    { x: 400, y: 200, scale: 1, targetScale: 1 },
+    { x: 600, y: 200, scale: 1, targetScale: 1 },
+  ],
+  buttons: [],
+};
+
+// Initialize buttons
+state.buttons = [
+  {
+    x: 50,
+    y: 400,
+    w: 120,
+    h: 40,
+    label: "Bounce",
+    action: () => {
+      if (state.juiceEnabled) {
+        tween(state.boxes[0], { scale: 1.5 }, 0.5, {
+          easing: easeOutBounce,
+        });
+        tween(state.boxes[0], { scale: 1 }, 0.5, {
+          delay: 0.5,
+          easing: easeInBounce,
+        });
+      }
+    },
+  },
+  {
+    x: 180,
+    y: 400,
+    w: 120,
+    h: 40,
+    label: "Elastic",
+    action: () => {
+      if (state.juiceEnabled) {
+        tween(state.boxes[1], { scale: 1.5 }, 0.5, {
+          easing: easeOutElastic,
+        });
+        tween(state.boxes[1], { scale: 1 }, 0.5, {
+          delay: 0.5,
+          easing: easeInElastic,
+        });
+      }
+    },
+  },
+  {
+    x: 310,
+    y: 400,
+    w: 120,
+    h: 40,
+    label: "Back",
+    action: () => {
+      if (state.juiceEnabled) {
+        tween(state.boxes[2], { scale: 1.5 }, 0.5, {
+          easing: easeOutBack,
+        });
+        tween(state.boxes[2], { scale: 1 }, 0.5, {
+          delay: 0.5,
+          easing: easeInBack,
+        });
+      }
+    },
+  },
+  {
+    x: 440,
+    y: 400,
+    w: 140,
+    h: 40,
+    label: "Camera Shake",
+    action: () => {
+      if (state.juiceEnabled) {
+        shakeCamera(20, 0.5);
+      }
+    },
+  },
+  {
+    x: 590,
+    y: 400,
+    w: 140,
+    h: 40,
+    label: "Screen Flash",
+    action: () => {
+      if (state.juiceEnabled) {
+        flashScreen(1, 1, 1, 0.3, 0.5);
+      }
+    },
+  },
+  {
+    x: 50,
+    y: 450,
+    w: 140,
+    h: 40,
+    label: "Explosion",
+    action: () => {
+      if (state.juiceEnabled) {
+        const mouse = getMouseWorldPosition();
+        spawnExplosion(mouse.x, mouse.y);
+        shakeCamera(15, 0.3);
+        flashScreen(1, 0.5, 0, 0.2, 0.4);
+      }
+    },
+  },
+  {
+    x: 200,
+    y: 450,
+    w: 140,
+    h: 40,
+    label: "Trail",
+    action: () => {
+      if (state.juiceEnabled) {
+        const mouse = getMouseWorldPosition();
+        spawnTrail(mouse.x, mouse.y);
+      }
+    },
+  },
+];
+
+// --- Particle Effects ---
+
+function spawnExplosion(x: number, y: number) {
+  const config: EmitterConfig = {
+    shape: "point",
+    x,
+    y,
+    mode: "burst",
+    burstCount: 50,
+    lifetime: [0.5, 1.5],
+    velocityX: [-200, 200],
+    velocityY: [-200, 200],
+    rotation: [0, Math.PI * 2],
+    rotationSpeed: [-5, 5],
+    scale: [0.5, 1.5],
+    scaleSpeed: [-1, -0.5],
+    startColor: { r: 1, g: 0.8, b: 0.2, a: 1 },
+    endColor: { r: 1, g: 0.2, b: 0, a: 0 },
+    textureId: TEX_PARTICLE,
+  };
+
+  const emitter = createEmitter(config);
+  addAffector(emitter, {
+    type: "gravity",
+    forceX: 0,
+    forceY: 300,
+  });
+}
+
+function spawnTrail(x: number, y: number) {
+  const config: EmitterConfig = {
+    shape: "point",
+    x,
+    y,
+    mode: "continuous",
+    rate: 30,
+    lifetime: [0.3, 0.6],
+    velocityX: [-20, 20],
+    velocityY: [-20, 20],
+    scale: [0.3, 0.8],
+    scaleSpeed: [-0.5, -0.2],
+    startColor: { r: 0.5, g: 0.8, b: 1, a: 1 },
+    endColor: { r: 0.2, g: 0.4, b: 1, a: 0 },
+    textureId: TEX_PARTICLE,
+    maxParticles: 100,
+  };
+
+  createEmitter(config);
+}
+
+// --- Agent Protocol ---
+registerAgent<DemoState>({
+  name: "juice-showcase",
+  getState: () => state,
+  setState: (s) => {
+    state.juiceEnabled = s.juiceEnabled;
+  },
+  describe: (s) => {
+    return `Juice ${s.juiceEnabled ? "ENABLED" : "DISABLED"} | Click buttons to trigger effects`;
+  },
+  actions: {
+    toggleJuice: {
+      handler: (s) => {
+        s.juiceEnabled = !s.juiceEnabled;
+        return s;
+      },
+      description: "Toggle juice effects on/off",
+    },
+    triggerExplosion: {
+      handler: (s, args) => {
+        spawnExplosion(args.x as number, args.y as number);
+        shakeCamera(15, 0.3);
+        return s;
+      },
+      description: "Trigger explosion at position",
+      args: [
+        { name: "x", type: "number" },
+        { name: "y", type: "number" },
+      ],
+    },
+  },
+});
+
+// --- Camera Setup ---
+setCamera(400, 300, 1);
+
+// --- Game Loop ---
+onFrame(() => {
+  const dt = getDeltaTime();
+
+  // Toggle juice with space
+  if (isKeyPressed("Space")) {
+    state.juiceEnabled = !state.juiceEnabled;
+  }
+
+  // Update systems
+  updateTweens(dt);
+  updateParticles(dt);
+
+  // Check button clicks
+  const mouse = getMouseWorldPosition();
+  if (isKeyPressed("MouseLeft")) {
+    for (const button of state.buttons) {
+      if (
+        mouse.x >= button.x &&
+        mouse.x <= button.x + button.w &&
+        mouse.y >= button.y &&
+        mouse.y <= button.y + button.h
+      ) {
+        button.action();
+      }
+    }
+  }
+
+  // Apply camera shake
+  const camera = getCamera();
+  const shakeOffset = getCameraShakeOffset();
+  setCamera(
+    400 + shakeOffset.x,
+    300 + shakeOffset.y,
+    camera.zoom
+  );
+
+  // --- Render ---
+  clearSprites();
+
+  // Background
+  drawSprite({ textureId: TEX_BG, x: 0, y: 0, w: 800, h: 600, layer: 0 });
+
+  // Boxes (tween targets)
+  for (const box of state.boxes) {
+    const size = 64 * box.scale;
+    drawSprite({
+      textureId: TEX_BOX,
+      x: box.x - size / 2,
+      y: box.y - size / 2,
+      w: size,
+      h: size,
+      layer: 1,
+    });
+  }
+
+  // Buttons
+  for (const button of state.buttons) {
+    const isHovered =
+      mouse.x >= button.x &&
+      mouse.x <= button.x + button.w &&
+      mouse.y >= button.y &&
+      mouse.y <= button.y + button.h;
+
+    drawPanel(button.x, button.y, button.w, button.h, {
+      fillColor: isHovered ? Colors.PRIMARY : Colors.HUD_BG,
+      borderColor: Colors.HUD_BG_LIGHT,
+      borderWidth: 2,
+      layer: 2,
+      screenSpace: false,
+    });
+
+    drawText(button.label, button.x + 10, button.y + 12, {
+      scale: 1.5,
+      tint: Colors.WHITE,
+      layer: 3,
+      screenSpace: false,
+    });
+  }
+
+  // Particles
+  const particles = getAllParticles();
+  for (const particle of particles) {
+    const size = 8 * particle.scale;
+    drawSprite({
+      textureId: particle.textureId,
+      x: particle.x - size / 2,
+      y: particle.y - size / 2,
+      w: size,
+      h: size,
+      rotation: particle.rotation,
+      tint: particle.color,
+      layer: 4,
+    });
+  }
+
+  // Screen flash overlay
+  const flash = getScreenFlash();
+  if (flash) {
+    drawPanel(0, 0, 800, 600, {
+      fillColor: { ...flash, a: flash.opacity },
+      borderWidth: 0,
+      layer: 100,
+      screenSpace: true,
+    });
+  }
+
+  // --- HUD ---
+  const statusText = state.juiceEnabled ? "JUICE: ON" : "JUICE: OFF";
+  const statusColor = state.juiceEnabled ? Colors.SUCCESS : Colors.DANGER;
+
+  drawLabel(statusText, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y, {
+    textColor: statusColor,
+    bgColor: Colors.HUD_BG,
+    padding: 8,
+    scale: HUDLayout.TEXT_SCALE,
+    layer: 110,
+    screenSpace: true,
+  });
+
+  drawText("Space: Toggle Juice | Click buttons to trigger effects", HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + 40, {
+    scale: HUDLayout.SMALL_TEXT_SCALE,
+    tint: Colors.LIGHT_GRAY,
+    layer: 110,
+    screenSpace: true,
+  });
+
+  // Particle count
+  drawText(`Particles: ${particles.length}`, HUDLayout.TOP_RIGHT.x - 100, HUDLayout.TOP_LEFT.y, {
+    scale: HUDLayout.SMALL_TEXT_SCALE,
+    tint: Colors.INFO,
+    layer: 110,
+    screenSpace: true,
+  });
+
+  // Instructions at bottom
+  drawPanel(HUDLayout.BOTTOM_LEFT.x, HUDLayout.BOTTOM_LEFT.y - 40, 780, 30, {
+    fillColor: Colors.HUD_BG,
+    borderColor: Colors.HUD_BG_LIGHT,
+    borderWidth: 1,
+    layer: 110,
+    screenSpace: true,
+  });
+
+  drawText("Click anywhere after 'Explosion' or 'Trail' to spawn at mouse position", HUDLayout.BOTTOM_LEFT.x + 10, HUDLayout.BOTTOM_LEFT.y - 30, {
+    scale: HUDLayout.SMALL_TEXT_SCALE,
+    tint: Colors.WARNING,
+    layer: 111,
+    screenSpace: true,
+  });
+});

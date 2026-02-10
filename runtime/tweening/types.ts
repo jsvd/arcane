@@ -80,7 +80,16 @@ export interface Tween {
   /** Duration in seconds */
   duration: number;
   /** Options */
-  options: Required<TweenOptions>;
+  options: {
+    easing: EasingFunction;
+    delay: number;
+    repeat: number;
+    yoyo: boolean;
+    onStart?: TweenCallback;
+    onUpdate?: TweenUpdateCallback;
+    onComplete?: TweenCallback;
+    onRepeat?: TweenCallback;
+  };
   /** Elapsed time in seconds */
   elapsed: number;
   /** Time spent in delay phase */
