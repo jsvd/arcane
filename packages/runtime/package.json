@@ -1,6 +1,6 @@
 {
   "name": "@arcane-engine/runtime",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Agent-native 2D game engine runtime - TypeScript APIs for state management, rendering, and game logic",
   "type": "module",
   "main": "./index.ts",
@@ -14,7 +14,9 @@
     "./pathfinding": "./src/pathfinding/index.ts",
     "./systems": "./src/systems/index.ts",
     "./agent": "./src/agent/index.ts",
-    "./testing": "./src/testing/harness.ts"
+    "./testing": "./src/testing/harness.ts",
+    "./tweening": "./src/tweening/index.ts",
+    "./particles": "./src/particles/index.ts"
   },
   "files": [
     "src",

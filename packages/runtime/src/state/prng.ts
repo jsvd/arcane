@@ -1,4 +1,13 @@
-/** Opaque PRNG state — serializable, deterministic (xoshiro128**) */
+/**
+ * Opaque PRNG state using the xoshiro128** algorithm.
+ * Serializable and deterministic — the same seed always produces the same sequence.
+ * All PRNG functions are pure: they take a PRNGState and return a new PRNGState.
+ * Create via {@link seed}.
+ *
+ * - `__brand` - Type brand, always "PRNGState".
+ * - `seed` - The original seed value used to initialize this state.
+ * - `s0`, `s1`, `s2`, `s3` - Internal 32-bit state words. Do not modify directly.
+ */
 export type PRNGState = Readonly<{
   readonly __brand: "PRNGState";
   seed: number;
@@ -8,7 +17,18 @@ export type PRNGState = Readonly<{
   s3: number;
 }>;
 
-/** Create a seeded PRNG */
+/**
+ * Create a seeded PRNG state. The same seed always produces the same random sequence.
+ * Uses splitmix32 to initialize the xoshiro128** internal state.
+ *
+ * @param n - The seed value. Truncated to a 32-bit integer.
+ * @returns A new PRNGState ready for use with {@link rollDice}, {@link randomInt}, etc.
+ *
+ * @example
+ * const rng = seed(42);
+ * const [value, rng2] = randomInt(rng, 1, 6);
+ * // value is deterministic for seed 42
+ */
 export function seed(n: number): PRNGState {
   // Initialize state from seed using splitmix32
   let s = n | 0;
@@ -30,17 +50,33 @@ export function seed(n: number): PRNGState {
   };
 }
 
-/** Dice notation: "2d6+3" */
+/**
+ * Branded string type for dice notation (e.g., "2d6+3", "1d20", "3d8-1").
+ * Format: `NdS` or `NdS+M` / `NdS-M` where N=count, S=sides, M=modifier.
+ */
 export type DiceNotation = string & { readonly __dice: true };
 
-/** Parsed dice specification */
+/**
+ * Parsed dice specification. Created by {@link parseDice} or passed directly to {@link rollDice}.
+ *
+ * - `count` - Number of dice to roll (the N in NdS). Must be >= 1.
+ * - `sides` - Number of sides per die (the S in NdS). Must be >= 1.
+ * - `modifier` - Added to the total after all dice are summed. Can be negative.
+ */
 export type DiceSpec = Readonly<{
   count: number;
   sides: number;
   modifier: number;
 }>;
 
-/** Parse dice notation string into a spec */
+/**
+ * Parse a dice notation string into a DiceSpec.
+ * Pure function. Throws if the notation is invalid.
+ *
+ * @param notation - Dice notation string (e.g., "2d6+3", "1d20", "3d8-1").
+ * @returns Parsed DiceSpec with count, sides, and modifier.
+ * @throws Error if notation doesn't match the `NdS` or `NdS+M` / `NdS-M` format.
+ */
 export function parseDice(notation: string): DiceSpec {
   const match = notation.match(/^(\d+)d(\d+)([+-]\d+)?$/);
   if (!match) {
@@ -55,7 +91,22 @@ export function parseDice(notation: string): DiceSpec {
   };
 }
 
-/** Roll dice. Returns [result, newRngState] */
+/**
+ * Roll dice deterministically using the PRNG. Pure function — returns the result
+ * and a new PRNGState without modifying the original.
+ *
+ * Accepts either a DiceSpec object or a dice notation string (e.g., "2d6+3").
+ * Each die is rolled individually using {@link randomInt}, then summed with the modifier.
+ *
+ * @param rng - Current PRNG state.
+ * @param spec - A DiceSpec or dice notation string (e.g., "1d20", "2d6+3").
+ * @returns A tuple of [total roll result, new PRNGState].
+ *
+ * @example
+ * const rng = seed(42);
+ * const [damage, rng2] = rollDice(rng, "2d6+3");
+ * const [toHit, rng3] = rollDice(rng2, "1d20");
+ */
 export function rollDice(
   rng: PRNGState,
   spec: DiceSpec | string,
@@ -73,7 +124,15 @@ export function rollDice(
   return [total, current];
 }
 
-/** Random integer in [min, max] inclusive */
+/**
+ * Generate a random integer in the range [min, max] (inclusive on both ends).
+ * Pure function — returns the value and a new PRNGState.
+ *
+ * @param rng - Current PRNG state.
+ * @param min - Minimum value (inclusive).
+ * @param max - Maximum value (inclusive). Must be >= min.
+ * @returns A tuple of [random integer, new PRNGState].
+ */
 export function randomInt(
   rng: PRNGState,
   min: number,
@@ -85,14 +144,26 @@ export function randomInt(
   return [value, next];
 }
 
-/** Random float in [0, 1) */
+/**
+ * Generate a random float in the range [0, 1) (inclusive of 0, exclusive of 1).
+ * Pure function — returns the value and a new PRNGState.
+ *
+ * @param rng - Current PRNG state.
+ * @returns A tuple of [random float in [0,1), new PRNGState].
+ */
 export function randomFloat(rng: PRNGState): [number, PRNGState] {
   const next = advance(rng);
   const result = (xoshiro128ss(rng) >>> 0) / 4294967296;
   return [result, next];
 }
 
-/** Pick one random element */
+/**
+ * Pick one random element from an array. Pure function — does not modify the array.
+ *
+ * @param rng - Current PRNG state.
+ * @param items - Non-empty array to pick from.
+ * @returns A tuple of [randomly selected item, new PRNGState].
+ */
 export function randomPick<T>(
   rng: PRNGState,
   items: readonly T[],
@@ -101,7 +172,14 @@ export function randomPick<T>(
   return [items[index], next];
 }
 
-/** Shuffle array (Fisher-Yates). Returns new array. */
+/**
+ * Shuffle an array using Fisher-Yates algorithm. Pure function — returns a new
+ * shuffled array without modifying the original.
+ *
+ * @param rng - Current PRNG state.
+ * @param items - Array to shuffle.
+ * @returns A tuple of [new shuffled array, new PRNGState].
+ */
 export function shuffle<T>(
   rng: PRNGState,
   items: readonly T[],

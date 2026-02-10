@@ -377,3 +377,25 @@ This is a known issue when using all four properties (x, y, w, h) from the same 
 - The principle scales: accept what the source language provides, convert at the boundary
 - Performance: f64 → f32 conversion is negligible (~1 CPU cycle) vs. the alternatives (validation, runtime checks, scattered conversions)
 
+---
+
+## ADR-013: npm Package Uses Copied Source Files (Tech Debt)
+
+### Context
+The `@arcane-engine/runtime` npm package (`packages/runtime/`) ships a copy of the `runtime/` source tree. This was set up in Phase 7 to publish raw `.ts` files to npm without a build step.
+
+### Problem
+Every release requires manually syncing `packages/runtime/src/` from `runtime/`. New modules (like `tweening/`, `particles/`) must also be added to the `exports` map in `package.json`. This is error-prone and has already caused the 0.2.0 package to ship stale files.
+
+### Options
+1. **Symlink** `packages/runtime/src` → `../../runtime` — simple but npm doesn't follow symlinks in `files`
+2. **Publish directly from `runtime/`** — move `package.json` to `runtime/`, eliminate the copy entirely
+3. **Build script** — add a prepublish script that copies `runtime/` → `packages/runtime/src/`
+4. **Keep manual sync** — current approach, document the step
+
+### Decision
+**Keep manual sync for now.** Record as tech debt to fix before Phase 11.
+
+### Recommended Fix
+Option 2 (publish from `runtime/` directly) or Option 3 (prepublish script). Either eliminates the manual copy step.
+
