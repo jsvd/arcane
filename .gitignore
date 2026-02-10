@@ -38,3 +38,8 @@ coverage/
 *.dylib
 *.so
 *.dll
+
+# Arcane runtime
+.arcane/
+cli/log
+*.log
