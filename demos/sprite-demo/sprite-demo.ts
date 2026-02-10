@@ -26,6 +26,7 @@ import {
   drawAnimatedSprite,
   resetAnimation,
 } from "../../runtime/rendering/index.ts";
+import { Colors } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 
 // --- Types ---
@@ -237,16 +238,14 @@ onFrame(() => {
 
   drawText(assetStatus, 10, 10, {
     scale: 1,
-    tint: state.assetsLoaded
-      ? { r: 0.3, g: 1, b: 0.3, a: 1 }
-      : { r: 1, g: 0.8, b: 0.3, a: 1 },
+    tint: state.assetsLoaded ? Colors.SUCCESS : Colors.WARNING,
     layer: 100,
     screenSpace: true,
   });
 
   drawText("Arrow Keys: Move  |  Space: Sound  |  R: Reset", 10, 30, {
     scale: 1,
-    tint: { r: 0.8, g: 0.8, b: 0.8, a: 1 },
+    tint: Colors.LIGHT_GRAY,
     layer: 100,
     screenSpace: true,
   });
@@ -254,7 +253,7 @@ onFrame(() => {
   const statusText = state.isWalking ? "Walking" : "Idle";
   drawText(`Status: ${statusText}`, 10, 50, {
     scale: 1,
-    tint: { r: 0.8, g: 0.8, b: 1, a: 1 },
+    tint: Colors.INFO,
     layer: 100,
     screenSpace: true,
   });
