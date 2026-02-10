@@ -8,7 +8,7 @@ import {
   isKeyDown, isKeyPressed, getDeltaTime, createSolidTexture,
   getMouseWorldPosition, drawText,
 } from "../../runtime/rendering/index.ts";
-import { drawRect, drawBar, drawLabel } from "../../runtime/ui/index.ts";
+import { drawRect, drawBar, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 
 // --- Textures ---
@@ -210,37 +210,55 @@ onFrame(() => {
       ? "WAVE"
       : state.phase.toUpperCase();
 
-  drawText(`${phaseText}  Wave: ${state.currentWave + 1}/${state.waves.length}`, 10, 10, {
-    scale: 2, tint: { r: 1, g: 1, b: 1, a: 1 }, layer: 100, screenSpace: true,
+  drawText(`${phaseText}  Wave: ${state.currentWave + 1}/${state.waves.length}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y, {
+    scale: HUDLayout.TEXT_SCALE,
+    tint: Colors.WHITE,
+    layer: 100,
+    screenSpace: true,
   });
 
-  drawText(`Gold: ${state.gold}  Lives: ${state.lives}  Score: ${state.score}`, 10, 35, {
-    scale: 2, tint: { r: 1, g: 0.9, b: 0.3, a: 1 }, layer: 100, screenSpace: true,
+  drawText(`Gold: ${state.gold}  Lives: ${state.lives}  Score: ${state.score}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT, {
+    scale: HUDLayout.TEXT_SCALE,
+    tint: Colors.GOLD,
+    layer: 100,
+    screenSpace: true,
   });
 
   // Selected tower
   const costStr = `[${selectedTower.toUpperCase()}] Cost: ${TOWER_COSTS[selectedTower]}`;
-  drawText(`Tower: ${costStr}  (1=Arrow 2=Slow 3=Splash)`, 10, 60, {
-    scale: 1, tint: { r: 0.8, g: 0.8, b: 1, a: 1 }, layer: 100, screenSpace: true,
+  drawText(`Tower: ${costStr}  (1=Arrow 2=Slow 3=Splash)`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2, {
+    scale: HUDLayout.SMALL_TEXT_SCALE,
+    tint: Colors.INFO,
+    layer: 100,
+    screenSpace: true,
   });
 
   if (state.phase === "build" || state.phase === "between-waves") {
-    drawText("Space=Place  S=Sell  Enter=Start Wave", 10, 80, {
-      scale: 1, tint: { r: 0.6, g: 0.9, b: 0.6, a: 1 }, layer: 100, screenSpace: true,
+    drawText("Space=Place  S=Sell  Enter=Start Wave", HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2.5, {
+      scale: HUDLayout.SMALL_TEXT_SCALE,
+      tint: Colors.SUCCESS,
+      layer: 100,
+      screenSpace: true,
     });
   }
 
   if (state.phase === "won") {
-    drawLabel("VICTORY! Press R to restart", 200, 200, {
-      textColor: { r: 1, g: 1, b: 0, a: 1 },
-      bgColor: { r: 0, g: 0.3, b: 0, a: 0.9 },
-      padding: 12, scale: 3, layer: 110, screenSpace: true,
+    drawLabel("VICTORY! Press R to restart", HUDLayout.CENTER.x - 150, HUDLayout.CENTER.y - 20, {
+      textColor: Colors.WIN,
+      bgColor: Colors.HUD_BG,
+      padding: 12,
+      scale: HUDLayout.TEXT_SCALE + 1,
+      layer: 110,
+      screenSpace: true,
     });
   } else if (state.phase === "lost") {
-    drawLabel("DEFEATED! Press R to restart", 200, 200, {
-      textColor: { r: 1, g: 0.2, b: 0.2, a: 1 },
-      bgColor: { r: 0.3, g: 0, b: 0, a: 0.9 },
-      padding: 12, scale: 3, layer: 110, screenSpace: true,
+    drawLabel("DEFEATED! Press R to restart", HUDLayout.CENTER.x - 160, HUDLayout.CENTER.y - 20, {
+      textColor: Colors.LOSE,
+      bgColor: Colors.HUD_BG,
+      padding: 12,
+      scale: HUDLayout.TEXT_SCALE + 1,
+      layer: 110,
+      screenSpace: true,
     });
   }
 });
