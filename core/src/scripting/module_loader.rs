@@ -36,10 +36,10 @@ impl ImportMap {
         }
 
         // Check for prefix match (e.g., "@arcane/runtime/state" matches "@arcane/runtime/")
-        for (key, value) in &self.imports {
+        for (key, _value) in &self.imports {
             if key.ends_with('/') && specifier.starts_with(key) {
                 // Replace the prefix
-                let suffix = &specifier[key.len()..];
+                let _suffix = &specifier[key.len()..];
                 // For now, return the base path + suffix
                 // This requires string allocation, so we'll handle it differently
                 // in the actual resolve method
@@ -173,7 +173,7 @@ impl TsModuleLoader {
     fn resolve_with_import_map(
         &self,
         specifier: &str,
-        referrer: &str,
+        _referrer: &str,
     ) -> Result<String, deno_core::error::ModuleLoaderError> {
         // If it's already a relative or absolute path, don't use import map
         if specifier.starts_with("./")

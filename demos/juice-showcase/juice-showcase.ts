@@ -294,34 +294,23 @@ onFrame(() => {
   // Check button clicks (screen space coordinates)
   const mouse = getMousePosition();
   if (isKeyPressed("MouseLeft")) {
-    console.log(`[CLICK] Screen mouse: (${mouse.x.toFixed(0)}, ${mouse.y.toFixed(0)})`);
-
     let clickedButton = false;
     for (const button of state.buttons) {
-      const inBounds =
+      if (
         mouse.x >= button.x &&
         mouse.x <= button.x + button.w &&
         mouse.y >= button.y &&
-        mouse.y <= button.y + button.h;
-
-      if (inBounds) {
-        console.log(`[CLICK] Hit button: ${button.label} at (${button.x}, ${button.y}) size (${button.w}x${button.h})`);
+        mouse.y <= button.y + button.h
+      ) {
         button.action();
         clickedButton = true;
         break;
       }
     }
 
-    if (!clickedButton) {
-      console.log(`[CLICK] No button hit. Buttons:`, state.buttons.map(b =>
-        `${b.label}:(${b.x},${b.y},${b.w}x${b.h})`
-      ));
-    }
-
     // If clicked outside buttons and a tool is selected, spawn particles
     if (!clickedButton && state.selectedTool !== "none") {
       const worldMouse = getMouseWorldPosition();
-      console.log(`[TOOL] Spawning ${state.selectedTool} at world (${worldMouse.x.toFixed(0)}, ${worldMouse.y.toFixed(0)})`);
       if (state.selectedTool === "explosion") {
         spawnExplosion(worldMouse.x, worldMouse.y);
         shakeCamera(15, 0.3);
@@ -448,15 +437,6 @@ onFrame(() => {
   drawText(`Particles: ${particles.length}`, HUDLayout.TOP_RIGHT.x - 100, HUDLayout.TOP_LEFT.y, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
     tint: Colors.INFO,
-    layer: 110,
-    screenSpace: true,
-  });
-
-  // Debug: Mouse position
-  const debugMouse = getMousePosition();
-  drawText(`Mouse: (${Math.floor(debugMouse.x)}, ${Math.floor(debugMouse.y)})`, HUDLayout.TOP_RIGHT.x - 150, HUDLayout.TOP_LEFT.y + 20, {
-    scale: HUDLayout.SMALL_TEXT_SCALE,
-    tint: Colors.WARNING,
     layer: 110,
     screenSpace: true,
   });
