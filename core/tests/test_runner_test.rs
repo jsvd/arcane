@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use arcane_core::scripting::run_test_file;
+use arcane_engine::scripting::run_test_file;
 
 fn fixture_path(name: &str) -> PathBuf {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");

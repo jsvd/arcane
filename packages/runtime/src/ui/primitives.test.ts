@@ -1,4 +1,4 @@
-import { describe, it, assert } from "../../runtime/testing/harness.ts";
+import { describe, it, assert } from "../testing/harness.ts";
 import { drawRect, drawPanel, drawBar, drawLabel } from "./primitives.ts";
 import { rgb } from "./types.ts";
 
