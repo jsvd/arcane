@@ -2,10 +2,16 @@ import { describe, it, assert } from "../../runtime/testing/harness.ts";
 import { aabbOverlap, circleAABBOverlap, circleAABBResolve } from "../../runtime/physics/aabb.ts";
 import {
   createBreakoutGame, stepPhysics, movePaddle, launchBall, buildLevel,
-  FIELD_W, FIELD_H, PADDLE_W, PADDLE_Y, BALL_RADIUS, BALL_SPEED,
-  BRICK_ROWS, BRICK_COLS, BRICK_W, BRICK_H, BRICK_TOP, BRICK_LEFT, BRICK_GAP,
+  PADDLE_W, BALL_RADIUS, BALL_SPEED,
+  BRICK_ROWS, BRICK_COLS, BRICK_W, BRICK_H, BRICK_TOP, BRICK_GAP,
 } from "./breakout.ts";
 import type { BreakoutState } from "./breakout.ts";
+
+// Test constants (defaults for 800×600 viewport)
+const DEFAULT_FIELD_W = 800;
+const DEFAULT_FIELD_H = 600;
+const DEFAULT_PADDLE_Y = DEFAULT_FIELD_H - 40;
+const DEFAULT_BRICK_LEFT = (DEFAULT_FIELD_W - BRICK_COLS * (BRICK_W + BRICK_GAP) + BRICK_GAP) / 2;
 
 // ---------------------------------------------------------------------------
 // AABB overlap
@@ -111,14 +117,14 @@ describe("circleAABBResolve", () => {
 
 describe("buildLevel", () => {
   it("creates the right number of bricks", () => {
-    const bricks = buildLevel();
+    const bricks = buildLevel(DEFAULT_BRICK_LEFT);
     assert.equal(bricks.length, BRICK_ROWS * BRICK_COLS);
   });
 
   it("places first brick at expected position", () => {
-    const bricks = buildLevel();
+    const bricks = buildLevel(DEFAULT_BRICK_LEFT);
     const first = bricks[0];
-    assert.equal(first.x, BRICK_LEFT);
+    assert.equal(first.x, DEFAULT_BRICK_LEFT);
     assert.equal(first.y, BRICK_TOP);
     assert.equal(first.w, BRICK_W);
     assert.equal(first.h, BRICK_H);
@@ -127,7 +133,7 @@ describe("buildLevel", () => {
   });
 
   it("spaces bricks correctly", () => {
-    const bricks = buildLevel();
+    const bricks = buildLevel(DEFAULT_BRICK_LEFT);
     const row0col0 = bricks[0];
     const row0col1 = bricks[1];
     assert.equal(row0col1.x - row0col0.x, BRICK_W + BRICK_GAP);
@@ -153,13 +159,13 @@ describe("createBreakoutGame", () => {
 
   it("centers paddle horizontally", () => {
     const state = createBreakoutGame();
-    assert.equal(state.paddleX, FIELD_W / 2 - PADDLE_W / 2);
+    assert.equal(state.paddleX, DEFAULT_FIELD_W / 2 - PADDLE_W / 2);
   });
 
   it("places ball above paddle", () => {
     const state = createBreakoutGame();
-    assert.ok(state.ballY < PADDLE_Y);
-    assert.equal(state.ballY, PADDLE_Y - BALL_RADIUS - 1);
+    assert.ok(state.ballY < DEFAULT_PADDLE_Y);
+    assert.equal(state.ballY, DEFAULT_PADDLE_Y - BALL_RADIUS - 1);
   });
 });
 
@@ -183,7 +189,7 @@ describe("movePaddle", () => {
   it("clamps paddle to right edge", () => {
     const state = createBreakoutGame();
     const moved = movePaddle(state, 10000);
-    assert.equal(moved.paddleX, FIELD_W - PADDLE_W);
+    assert.equal(moved.paddleX, DEFAULT_FIELD_W - PADDLE_W);
   });
 
   it("ball follows paddle in ready phase", () => {
@@ -225,7 +231,7 @@ describe("stepPhysics wall bounce", () => {
     const state: BreakoutState = {
       ...createBreakoutGame(),
       phase: "playing",
-      ballX: FIELD_W - BALL_RADIUS - 1,
+      ballX: DEFAULT_FIELD_W - BALL_RADIUS - 1,
       ballY: 300,
       ballVX: 500,
       ballVY: 0,
@@ -278,7 +284,7 @@ describe("stepPhysics paddle collision", () => {
       phase: "playing",
       paddleX: 350,
       ballX: 400, // center of paddle
-      ballY: PADDLE_Y - BALL_RADIUS + 2, // just above paddle
+      ballY: DEFAULT_PADDLE_Y - BALL_RADIUS + 2, // just above paddle
       ballVX: 0,
       ballVY: 300,
       bricks: [],
@@ -294,7 +300,7 @@ describe("stepPhysics paddle collision", () => {
       phase: "playing",
       paddleX: 350,
       ballX: 355, // near left edge of paddle
-      ballY: PADDLE_Y - BALL_RADIUS + 2,
+      ballY: DEFAULT_PADDLE_Y - BALL_RADIUS + 2,
       ballVX: 0,
       ballVY: 300,
       bricks: [],
@@ -353,7 +359,7 @@ describe("stepPhysics bottom boundary", () => {
       ...createBreakoutGame(),
       phase: "playing",
       ballX: 400,
-      ballY: FIELD_H - BALL_RADIUS - 1,
+      ballY: DEFAULT_FIELD_H - BALL_RADIUS - 1,
       ballVX: 0,
       ballVY: 500,
       bricks: [{ x: 100, y: 100, w: BRICK_W, h: BRICK_H, hp: 1, row: 0 }],
@@ -371,7 +377,7 @@ describe("stepPhysics bottom boundary", () => {
       phase: "playing",
       lives: 1,
       ballX: 400,
-      ballY: FIELD_H - BALL_RADIUS - 1,
+      ballY: DEFAULT_FIELD_H - BALL_RADIUS - 1,
       ballVX: 0,
       ballVY: 500,
       bricks: [{ x: 100, y: 100, w: BRICK_W, h: BRICK_H, hp: 1, row: 0 }],

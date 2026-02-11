@@ -1,12 +1,9 @@
 import { circleAABBOverlap, circleAABBResolve } from "../../runtime/physics/index.ts";
 import type { AABB } from "../../runtime/physics/index.ts";
 
-// Constants
-export const FIELD_W = 800;
-export const FIELD_H = 600;
+// Game constants (not resolution-dependent)
 export const PADDLE_W = 100;
 export const PADDLE_H = 14;
-export const PADDLE_Y = FIELD_H - 40;
 export const PADDLE_SPEED = 500;
 export const BALL_RADIUS = 6;
 export const BALL_SPEED = 350;
@@ -16,12 +13,17 @@ export const BRICK_GAP = 4;
 export const BRICK_ROWS = 6;
 export const BRICK_COLS = 11;
 export const BRICK_TOP = 50;
-export const BRICK_LEFT = (FIELD_W - BRICK_COLS * (BRICK_W + BRICK_GAP) + BRICK_GAP) / 2;
 export const MAX_DT = 1 / 30;
 
 export type Brick = { x: number; y: number; w: number; h: number; hp: number; row: number };
 
 export type BreakoutState = {
+  // Viewport dimensions (resolution-adaptive)
+  fieldW: number;
+  fieldH: number;
+  paddleY: number;
+  brickLeft: number;
+  // Game state
   paddleX: number;
   ballX: number;
   ballY: number;
@@ -33,12 +35,12 @@ export type BreakoutState = {
   phase: "ready" | "playing" | "won" | "lost";
 };
 
-export function buildLevel(): Brick[] {
+export function buildLevel(brickLeft: number): Brick[] {
   const bricks: Brick[] = [];
   for (let row = 0; row < BRICK_ROWS; row++) {
     for (let col = 0; col < BRICK_COLS; col++) {
       bricks.push({
-        x: BRICK_LEFT + col * (BRICK_W + BRICK_GAP),
+        x: brickLeft + col * (BRICK_W + BRICK_GAP),
         y: BRICK_TOP + row * (BRICK_H + BRICK_GAP),
         w: BRICK_W,
         h: BRICK_H,
@@ -50,14 +52,21 @@ export function buildLevel(): Brick[] {
   return bricks;
 }
 
-export function createBreakoutGame(): BreakoutState {
+export function createBreakoutGame(fieldW = 800, fieldH = 600): BreakoutState {
+  const paddleY = fieldH - 40;
+  const brickLeft = (fieldW - BRICK_COLS * (BRICK_W + BRICK_GAP) + BRICK_GAP) / 2;
+
   return {
-    paddleX: FIELD_W / 2 - PADDLE_W / 2,
-    ballX: FIELD_W / 2,
-    ballY: PADDLE_Y - BALL_RADIUS - 1,
+    fieldW,
+    fieldH,
+    paddleY,
+    brickLeft,
+    paddleX: fieldW / 2 - PADDLE_W / 2,
+    ballX: fieldW / 2,
+    ballY: paddleY - BALL_RADIUS - 1,
     ballVX: 0,
     ballVY: 0,
-    bricks: buildLevel(),
+    bricks: buildLevel(brickLeft),
     score: 0,
     lives: 3,
     phase: "ready",
@@ -76,12 +85,12 @@ export function launchBall(state: BreakoutState): BreakoutState {
 }
 
 export function movePaddle(state: BreakoutState, dx: number): BreakoutState {
-  const newX = Math.max(0, Math.min(FIELD_W - PADDLE_W, state.paddleX + dx));
+  const newX = Math.max(0, Math.min(state.fieldW - PADDLE_W, state.paddleX + dx));
   const result = { ...state, paddleX: newX };
   // In ready phase, ball follows paddle
   if (state.phase === "ready") {
     result.ballX = newX + PADDLE_W / 2;
-    result.ballY = PADDLE_Y - BALL_RADIUS - 1;
+    result.ballY = state.paddleY - BALL_RADIUS - 1;
   }
   return result;
 }
@@ -103,8 +112,8 @@ export function stepPhysics(state: BreakoutState, rawDt: number): BreakoutState 
     ballX = BALL_RADIUS;
     ballVX = Math.abs(ballVX);
   }
-  if (ballX + BALL_RADIUS > FIELD_W) {
-    ballX = FIELD_W - BALL_RADIUS;
+  if (ballX + BALL_RADIUS > state.fieldW) {
+    ballX = state.fieldW - BALL_RADIUS;
     ballVX = -Math.abs(ballVX);
   }
   if (ballY - BALL_RADIUS < 0) {
@@ -113,9 +122,9 @@ export function stepPhysics(state: BreakoutState, rawDt: number): BreakoutState 
   }
 
   // Paddle collision
-  const paddleBox: AABB = { x: paddleX, y: PADDLE_Y, w: PADDLE_W, h: PADDLE_H };
+  const paddleBox: AABB = { x: paddleX, y: state.paddleY, w: PADDLE_W, h: PADDLE_H };
   if (ballVY > 0 && circleAABBOverlap(ballX, ballY, BALL_RADIUS, paddleBox)) {
-    ballY = PADDLE_Y - BALL_RADIUS;
+    ballY = state.paddleY - BALL_RADIUS;
     // Angle depends on where ball hits paddle (-60deg to +60deg)
     const hitPos = (ballX - paddleX) / PADDLE_W; // 0..1
     const angle = (hitPos - 0.5) * (Math.PI * 2 / 3); // -60deg to +60deg
@@ -149,7 +158,7 @@ export function stepPhysics(state: BreakoutState, rawDt: number): BreakoutState 
   bricks = newBricks;
 
   // Bottom boundary — lose life
-  if (ballY + BALL_RADIUS > FIELD_H) {
+  if (ballY + BALL_RADIUS > state.fieldH) {
     lives--;
     if (lives <= 0) {
       phase = "lost";
@@ -158,7 +167,7 @@ export function stepPhysics(state: BreakoutState, rawDt: number): BreakoutState 
       return {
         ...state,
         ballX: state.paddleX + PADDLE_W / 2,
-        ballY: PADDLE_Y - BALL_RADIUS - 1,
+        ballY: state.paddleY - BALL_RADIUS - 1,
         ballVX: 0,
         ballVY: 0,
         bricks,

@@ -1,12 +1,12 @@
 import {
   createBreakoutGame, stepPhysics, movePaddle, launchBall,
-  FIELD_W, FIELD_H, PADDLE_W, PADDLE_H, PADDLE_Y, PADDLE_SPEED, BALL_RADIUS,
+  PADDLE_W, PADDLE_H, PADDLE_SPEED, BALL_RADIUS,
 } from "./breakout.ts";
 import type { BreakoutState } from "./breakout.ts";
 import {
   onFrame, drawSprite, clearSprites, setCamera,
   isKeyDown, isKeyPressed, getDeltaTime, createSolidTexture,
-  drawText,
+  drawText, getViewportSize,
 } from "../../runtime/rendering/index.ts";
 import { drawBar, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
@@ -24,7 +24,8 @@ const BRICK_COLORS = [
   createSolidTexture("brick_blue", 80, 120, 255),
 ];
 
-let state = createBreakoutGame();
+const { width, height } = getViewportSize();
+let state = createBreakoutGame(width, height);
 
 // Agent protocol
 registerAgent<BreakoutState>({
@@ -54,10 +55,9 @@ registerAgent<BreakoutState>({
   },
 });
 
-// Center camera on field
-setCamera(FIELD_W / 2, FIELD_H / 2, 1);
-
 onFrame(() => {
+  // Center camera on field
+  setCamera(state.fieldW / 2, state.fieldH / 2, 1);
   const dt = getDeltaTime();
 
   // Input
@@ -82,7 +82,7 @@ onFrame(() => {
   clearSprites();
 
   // Background
-  drawSprite({ textureId: TEX_BG, x: 0, y: 0, w: FIELD_W, h: FIELD_H, layer: 0 });
+  drawSprite({ textureId: TEX_BG, x: 0, y: 0, w: state.fieldW, h: state.fieldH, layer: 0 });
 
   // Bricks
   for (const brick of state.bricks) {
@@ -98,7 +98,7 @@ onFrame(() => {
   // Paddle
   drawSprite({
     textureId: TEX_PADDLE,
-    x: state.paddleX, y: PADDLE_Y, w: PADDLE_W, h: PADDLE_H,
+    x: state.paddleX, y: state.paddleY, w: PADDLE_W, h: PADDLE_H,
     layer: 2,
   });
 

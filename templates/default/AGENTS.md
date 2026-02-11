@@ -20,14 +20,15 @@ Imports use `@arcane/runtime/{module}`:
 import {
   onFrame, getDeltaTime, clearSprites, drawSprite,
   setCamera, isKeyDown, isKeyPressed, createSolidTexture,
-  drawText,
+  drawText, getViewportSize,
 } from "@arcane/runtime/rendering";
 import { drawBar, Colors, HUDLayout } from "@arcane/runtime/ui";
 
 const TEX_PLAYER = createSolidTexture("player", 60, 180, 255);
 const TEX_GROUND = createSolidTexture("ground", 80, 80, 80);
 
-let state = createGame();
+const { width: VIEWPORT_W, height: VIEWPORT_H } = getViewportSize();
+let state = createGame(VIEWPORT_W, VIEWPORT_H);
 
 onFrame(() => {
   const dt = getDeltaTime();
@@ -44,7 +45,7 @@ onFrame(() => {
 
   // 3. Render
   clearSprites();
-  drawSprite({ textureId: TEX_GROUND, x: 0, y: 0, w: 800, h: 600, layer: 0 });
+  drawSprite({ textureId: TEX_GROUND, x: 0, y: 0, w: VIEWPORT_W, h: VIEWPORT_H, layer: 0 });
   drawSprite({ textureId: TEX_PLAYER, x: state.x, y: state.y, w: 32, h: 32, layer: 1 });
 
   // 4. HUD (screen-space)
@@ -138,6 +139,38 @@ for (const p of getAllParticles()) {
   drawSprite({ textureId: p.textureId, x: p.x, y: p.y, w: 4 * p.scale, h: 4 * p.scale, layer: 5, tint: p.color });
 }
 ```
+
+## Resolution-Adaptive Design
+
+Games should adapt to different viewport sizes rather than hardcoding dimensions. Use `getViewportSize()` to build resolution-independent games:
+
+**Pattern: Pass viewport to game initialization**
+```typescript
+// src/game.ts - pure logic, accepts viewport dimensions
+export function createGame(viewportW = 800, viewportH = 600) {
+  const groundY = viewportH - 50;  // derive from viewport
+  return {
+    viewportW,
+    viewportH,
+    playerX: viewportW / 2,
+    playerY: groundY - 32,
+    groundY,
+    // ...
+  };
+}
+
+// src/visual.ts - provides actual viewport
+const { width, height } = getViewportSize();
+let state = createGame(width, height);
+```
+
+**Common patterns:**
+- **World bounds:** Derive from `state.viewportW` / `state.viewportH` in game logic
+- **HUD positioning:** Use `screenSpace: true` with fixed offsets (10px from edge works at any resolution)
+- **Camera:** Center on player or field using viewport-derived coordinates
+- **Backgrounds:** Size to `viewportW × viewportH` to fill screen
+
+Default window is 800×600, but games should work at any resolution (1920×1080, 1600×1200, etc.). Store viewport dimensions in state and derive all layout from them.
 
 ## Workflow
 
