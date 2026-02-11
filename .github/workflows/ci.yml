@@ -59,7 +59,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-      - run: npm install -g typescript
+      - run: npm install
       - run: ./scripts/generate-declarations.sh
       - name: Check for stale declarations
         run: |
