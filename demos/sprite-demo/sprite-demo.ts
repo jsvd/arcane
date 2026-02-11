@@ -94,15 +94,17 @@ const COLS = 6;
 const ROWS = 4;
 const WALK_FPS = 10;
 
-// Use single-row animation (just row 0 for now)
-// Once grid-based UV coordinates are perfected, we can use cols/rows
+// Create animation using cols/rows to properly calculate UV coordinates
+// Even though we animate through row 0 only, specifying the grid ensures correct height
 const walkAnimDef = createAnimation(
   characterTexture,
   FRAME_SIZE,
   FRAME_SIZE,
   assetsExist ? 6 : 4,  // 6 frames from row 0 for real sprite, 4 for placeholder
   WALK_FPS,
-  { loop: true },  // no cols/rows - single row layout
+  assetsExist
+    ? { loop: true, cols: 6, rows: 4 }  // Specify grid so UV height = 1/4
+    : { loop: true },  // Placeholder doesn't need grid
 );
 
 // --- Initial State ---
