@@ -47,6 +47,11 @@ enum Commands {
         #[arg(long)]
         list: bool,
     },
+    /// Discover and download free game assets
+    Assets {
+        #[command(subcommand)]
+        action: AssetsAction,
+    },
     /// Create a new Arcane project from template
     New {
         /// Project name
@@ -54,6 +59,40 @@ enum Commands {
     },
     /// Initialize an Arcane project in the current directory
     Init,
+}
+
+#[derive(Subcommand)]
+enum AssetsAction {
+    /// List all available asset packs
+    List {
+        /// Filter by type (e.g. "audio", "2d-sprites", "ui", "tilesets", "fonts", "vfx")
+        #[arg(long = "type")]
+        type_filter: Option<String>,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Search asset packs by keyword
+    Search {
+        /// Search query (e.g. "dungeon", "platformer", "kitty")
+        query: String,
+        /// Filter by type (e.g. "audio", "2d-sprites", "ui", "tilesets", "fonts", "vfx")
+        #[arg(long = "type")]
+        type_filter: Option<String>,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Download an asset pack
+    Download {
+        /// Asset pack ID (e.g. "tiny-dungeon")
+        id: String,
+        /// Destination directory (defaults to "assets")
+        dest: Option<String>,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -68,6 +107,19 @@ fn main() -> anyhow::Result<()> {
         Commands::Describe { entry, verbosity } => commands::describe::run(entry, verbosity),
         Commands::Inspect { entry, path } => commands::inspect::run(entry, path),
         Commands::Add { name, list } => commands::add::run(name, list),
+        Commands::Assets { action } => match action {
+            AssetsAction::List { type_filter, json } => {
+                commands::assets::run_list(type_filter, json)
+            }
+            AssetsAction::Search {
+                query,
+                type_filter,
+                json,
+            } => commands::assets::run_search(query, type_filter, json),
+            AssetsAction::Download { id, dest, json } => {
+                commands::assets::run_download(id, dest, json)
+            }
+        },
         Commands::New { name } => commands::new::run(&name),
         Commands::Init => commands::init::run(),
     }
