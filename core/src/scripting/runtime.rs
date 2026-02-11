@@ -152,12 +152,14 @@ impl ArcaneRuntime {
     /// Create a runtime with the render bridge extension for `arcane dev`.
     /// Includes both crypto polyfill and render ops.
     #[cfg(feature = "renderer")]
+    #[cfg(feature = "renderer")]
     pub fn new_with_render_bridge(
         bridge: Rc<RefCell<super::render_ops::RenderBridgeState>>,
     ) -> Self {
         Self::new_with_render_bridge_and_import_map(bridge, ImportMap::new())
     }
 
+    #[cfg(feature = "renderer")]
     pub fn new_with_render_bridge_and_import_map(
         bridge: Rc<RefCell<super::render_ops::RenderBridgeState>>,
         import_map: ImportMap,

@@ -21,22 +21,30 @@ jobs:
       - run: ./run-tests.sh
 
   rust-tests:
-    name: Rust tests (headless)
+    name: Rust tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --workspace --no-default-features
+      - name: Install ALSA development libraries
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+      - run: cargo test --workspace
 
   ts-tests-v8:
-    name: TypeScript tests (V8 headless)
+    name: TypeScript tests (V8)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo run --no-default-features -- test
+      - name: Install ALSA development libraries
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+      - run: npm install
+      - run: cargo run -- test
 
   headless-check:
     name: Headless build (no GPU)
@@ -45,7 +53,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check -p arcane-core --no-default-features
+      - run: cargo check -p arcane-engine --no-default-features
 
   declarations-check:
     name: API declarations up-to-date
@@ -55,6 +63,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
+      - run: npm install
       - run: ./scripts/generate-declarations.sh
       - name: Check for stale declarations
         run: |
