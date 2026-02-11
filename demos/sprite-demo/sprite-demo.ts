@@ -77,18 +77,31 @@ try {
 
 // --- Animation Setup ---
 // Real sprite is 192×128 (6 frames × 4 rows = 32×32 per frame)
-// We'll use the first row (6 frames) for walking
-// Placeholder: 4 frames to show animation still works
+// This demonstrates multi-row spritesheet support detected by arcane assets inspect
+//
+// Spritesheet grid layout:
+//   Row 0: Idle animations (frames 0-5)
+//   Row 1: Walk animations (frames 6-11)
+//   Row 2: Jump animations (frames 12-17)
+//   Row 3: Fall/death animations (frames 18-23)
+//
+// Detected by: arcane assets inspect --json
+// Output: { "likely_grid": [6, 4], "likely_frame_count": 24 }
+//
 const FRAME_SIZE = 32;
-const WALK_FPS = 8;
+const COLS = 6;
+const ROWS = 4;
+const WALK_FPS = 10;
 
+// For real asset: use all 24 frames in a 6×4 grid
+// For placeholder: still works with single-row fallback
 const walkAnimDef = createAnimation(
   characterTexture,
   FRAME_SIZE,
   FRAME_SIZE,
-  assetsExist ? 6 : 4, // 6 walk frames for real sprite, 4 for placeholder
+  assetsExist ? COLS * ROWS : 4,
   WALK_FPS,
-  { loop: true },
+  assetsExist ? { loop: true, cols: COLS, rows: ROWS } : { loop: true },
 );
 
 // --- Initial State ---
@@ -233,7 +246,7 @@ onFrame(() => {
 
   // --- HUD ---
   const assetStatus = state.assetsLoaded
-    ? "✓ Real assets loaded"
+    ? "✓ Real assets loaded (192×128 spritesheet)"
     : "ℹ Using placeholders (see README.md)";
 
   drawText(assetStatus, 10, 10, {
@@ -243,18 +256,40 @@ onFrame(() => {
     screenSpace: true,
   });
 
-  drawText("Arrow Keys: Move  |  Space: Sound  |  R: Reset", 10, 30, {
+  // Show detected spritesheet grid info (what arcane assets inspect shows)
+  if (state.assetsLoaded) {
+    drawText(`Grid: ${COLS} cols × ${ROWS} rows = ${COLS * ROWS} frames @ ${FRAME_SIZE}×${FRAME_SIZE} px`, 10, 25, {
+      scale: 0.8,
+      tint: Colors.LIGHT_GRAY,
+      layer: 100,
+      screenSpace: true,
+    });
+  }
+
+  drawText("Arrow Keys: Move  |  Space: Sound  |  R: Reset", 10, 40, {
     scale: 1,
     tint: Colors.LIGHT_GRAY,
     layer: 100,
     screenSpace: true,
   });
 
-  const statusText = state.isWalking ? "Walking" : "Idle";
-  drawText(`Status: ${statusText}`, 10, 50, {
+  const statusText = state.isWalking ? "Walking (Row 1)" : "Idle (Row 0)";
+  drawText(`Status: ${statusText}`, 10, 55, {
     scale: 1,
     tint: Colors.INFO,
     layer: 100,
     screenSpace: true,
   });
+
+  if (state.assetsLoaded && state.isWalking) {
+    const frameNum = state.walkAnim.frame;
+    const row = Math.floor(frameNum / COLS);
+    const col = frameNum % COLS;
+    drawText(`Frame: ${frameNum + 1}/${COLS * ROWS} (col ${col}, row ${row})`, 10, 70, {
+      scale: 0.8,
+      tint: Colors.LIGHT_GRAY,
+      layer: 100,
+      screenSpace: true,
+    });
+  }
 });

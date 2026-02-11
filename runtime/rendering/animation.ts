@@ -21,6 +21,10 @@ export type AnimationDef = {
   fps: number;
   /** If true, animation loops. If false, stops on last frame. */
   loop: boolean;
+  /** Number of columns in the spritesheet (default: all frames in one row). */
+  cols?: number;
+  /** Number of rows in the spritesheet (default: 1). */
+  rows?: number;
 };
 
 /** State of a playing animation instance. Immutable -- update via {@link updateAnimation}. */
@@ -40,15 +44,25 @@ let nextId = 1;
 
 /**
  * Register a sprite-sheet animation definition.
- * Frames must be arranged in a single horizontal row in the texture.
+ * Frames can be arranged in a single row (default) or in a grid (cols × rows).
  *
  * @param textureId - Texture handle of the sprite sheet (from loadTexture()).
  * @param frameW - Width of each frame in pixels.
  * @param frameH - Height of each frame in pixels.
  * @param frameCount - Number of frames in the animation.
  * @param fps - Playback speed in frames per second. Higher = faster.
- * @param options - Optional settings. `loop`: whether to loop (default: true).
+ * @param options - Optional settings:
+ *   - `loop`: whether to loop (default: true)
+ *   - `cols`: number of columns in the grid (default: frameCount = single row)
+ *   - `rows`: number of rows in the grid (default: 1)
  * @returns AnimationId handle for use with playAnimation().
+ *
+ * @example
+ * // Single row: 6 frames in one row
+ * createAnimation(tex, 32, 32, 6, 10);
+ *
+ * // Grid: 6×4 spritesheet (24 frames total)
+ * createAnimation(tex, 32, 32, 24, 10, { cols: 6, rows: 4 });
  */
 export function createAnimation(
   textureId: TextureId,
@@ -56,7 +70,7 @@ export function createAnimation(
   frameH: number,
   frameCount: number,
   fps: number,
-  options?: { loop?: boolean },
+  options?: { loop?: boolean; cols?: number; rows?: number },
 ): AnimationId {
   const id = nextId++;
   registry.set(id, {
@@ -66,6 +80,8 @@ export function createAnimation(
     frameCount,
     fps,
     loop: options?.loop ?? true,
+    cols: options?.cols,
+    rows: options?.rows,
   });
   return id;
 }
@@ -127,6 +143,7 @@ export function updateAnimation(
 
 /**
  * Get the UV sub-rectangle for the current animation frame.
+ * Supports both single-row (default) and grid-based (cols × rows) layouts.
  * Used internally by drawAnimatedSprite; also useful for custom rendering.
  *
  * @param anim - Current animation state.
@@ -138,6 +155,19 @@ export function getAnimationUV(
   const def = registry.get(anim.defId);
   if (!def) return { x: 0, y: 0, w: 1, h: 1 };
 
+  // Grid-based layout (multi-row spritesheet)
+  if (def.cols && def.rows) {
+    const col = anim.frame % def.cols;
+    const row = Math.floor(anim.frame / def.cols);
+    return {
+      x: col / def.cols,
+      y: row / def.rows,
+      w: 1 / def.cols,
+      h: 1 / def.rows,
+    };
+  }
+
+  // Single-row layout (default)
   return {
     x: anim.frame / def.frameCount,
     y: 0,
