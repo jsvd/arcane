@@ -20,7 +20,7 @@ cd "$ROOT_DIR"
 
 # Step 1: Generate .d.ts files
 echo "Generating declarations..."
-npx tsc -p tsconfig.declarations.json
+npx -p typescript tsc -p tsconfig.declarations.json
 
 # Step 2: Bundle into a single file
 echo "Bundling into arcane.d.ts..."
