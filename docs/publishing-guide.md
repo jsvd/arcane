@@ -72,13 +72,23 @@ cargo publish
 
 ## 3. Publish arcane-cli
 
+**Pre-publish: populate `cli/data/`** — the CLI embeds templates, recipes, and asset catalog. These are gitignored and must be copied before publishing:
+
+```bash
+# Populate cli/data/ for cargo publish (gitignored, needed for crate packaging)
+mkdir -p cli/data/templates
+cp -r templates/default cli/data/templates/default
+cp -r recipes cli/data/recipes
+cp -r assets cli/data/assets   # may already exist
+```
+
 ```bash
 cd cli
 
 # Ensure arcane-engine dependency version is correct in Cargo.toml
 # dependencies.arcane-engine version must match the just-published core version
 
-# Dry run
+# Dry run (will fail if cli/data/ is not populated)
 cargo publish --dry-run
 
 # Publish
