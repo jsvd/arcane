@@ -33,8 +33,9 @@ import { registerAgent } from "../../runtime/agent/index.ts";
 type State = {
   x: number;
   y: number;
-  facingRight: boolean;
-  walkAnim: any; // AnimationState
+  dirX: number;     // -1, 0, or 1 (left, idle, right)
+  dirY: number;     // -1, 0, or 1 (up, idle, down)
+  walkAnim: any;    // AnimationState
   isWalking: boolean;
   assetsLoaded: boolean;
 };
@@ -76,42 +77,39 @@ try {
 }
 
 // --- Animation Setup ---
-// Real sprite is 192×128 (6 frames × 4 rows = 32×32 per frame)
-// For now, we use just the first row (6 frames) as a single-row animation
+// Real sprite is 256×128 (8 frames per direction × 4 directions = 32×32 per frame)
 //
 // Spritesheet grid layout (detected by arcane assets inspect):
-//   Row 0: Idle animations (frames 0-5)        <- we use these
-//   Row 1: Walk animations (frames 6-11)       <- future: multi-row support
-//   Row 2: Jump animations (frames 12-17)
-//   Row 3: Fall/death animations (frames 18-23)
+//   Row 0: Up/North animations (frames 0-7)
+//   Row 1: Down/South animations (frames 8-15)
+//   Row 2: Left/West animations (frames 16-23)
+//   Row 3: Right/East animations (frames 24-31)
 //
 // Detected by: arcane assets inspect --json
-// Output: { "likely_grid": [6, 4], "likely_frame_count": 24 }
+// Output: { "likely_grid": [8, 4], "likely_frame_count": 32 }
 //
-const FRAME_SIZE = 32;        // Size in spritesheet
+const FRAME_SIZE = 32;        // Size in spritesheet (32×32)
 const DISPLAY_SIZE = 96;       // Size to draw (3x bigger)
-const COLS = 6;
-const ROWS = 4;
+const COLS = 8;               // 8 animation frames per direction
+const ROWS = 4;               // 4 directions (up, down, left, right)
 const WALK_FPS = 10;
 
-// Create animation using cols/rows to properly calculate UV coordinates
-// Even though we animate through row 0 only, specifying the grid ensures correct height
+// Create animation
 const walkAnimDef = createAnimation(
   characterTexture,
   FRAME_SIZE,
   FRAME_SIZE,
-  assetsExist ? 6 : 4,  // 6 frames from row 0 for real sprite, 4 for placeholder
+  assetsExist ? 8 : 4,   // 8 frames per direction for real sprite, 4 for placeholder
   WALK_FPS,
-  assetsExist
-    ? { loop: true, cols: 6, rows: 4 }  // Specify grid so UV height = 1/4
-    : { loop: true },  // Placeholder doesn't need grid
+  { loop: true }
 );
 
 // --- Initial State ---
 const state: State = {
   x: 400,
   y: 300,
-  facingRight: true,
+  dirX: 0,  // not moving horizontally
+  dirY: 0,  // not moving vertically (start facing down)
   walkAnim: playAnimation(walkAnimDef),
   isWalking: false,
   assetsLoaded: assetsExist,
@@ -127,12 +125,14 @@ registerAgent<State>({
   setState: (s) => {
     state.x = s.x;
     state.y = s.y;
-    state.facingRight = s.facingRight;
+    state.dirX = s.dirX;
+    state.dirY = s.dirY;
     state.isWalking = s.isWalking;
   },
   describe: (s) => {
     const assetStatus = s.assetsLoaded ? "real assets" : "placeholder";
-    return `Character at (${s.x.toFixed(0)}, ${s.y.toFixed(0)}), facing ${s.facingRight ? "right" : "left"}, ${s.isWalking ? "walking" : "idle"} [${assetStatus}]`;
+    const dir = s.dirY === -1 ? "up" : s.dirY === 1 ? "down" : s.dirX === -1 ? "left" : s.dirX === 1 ? "right" : "idle";
+    return `Character at (${s.x.toFixed(0)}, ${s.y.toFixed(0)}), facing ${dir}, ${s.isWalking ? "walking" : "idle"} [${assetStatus}]`;
   },
   actions: {
     move: {
@@ -185,9 +185,15 @@ onFrame(() => {
   state.x += dx * MOVE_SPEED * dt;
   state.y += dy * MOVE_SPEED * dt;
 
-  // Update facing direction
-  if (dx > 0) state.facingRight = true;
-  if (dx < 0) state.facingRight = false;
+  // Update facing direction (which row to show)
+  // Prioritize vertical over horizontal for direction
+  if (dy !== 0) {
+    state.dirY = dy > 0 ? 1 : -1;  // 1 = down, -1 = up
+    state.dirX = 0;
+  } else if (dx !== 0) {
+    state.dirX = dx > 0 ? 1 : -1;  // 1 = right, -1 = left
+    state.dirY = 0;
+  }
 
   // Update walk state
   const wasWalking = state.isWalking;
@@ -220,13 +226,22 @@ onFrame(() => {
   clearSprites();
 
   // Draw character (3x bigger than spritesheet size)
+  // Determine which row based on direction
+  let row = 1;  // Default: down/south (row 1)
+  if (state.dirY === -1) row = 1;      // Up/North (row 1) - swapped
+  else if (state.dirY === 1) row = 0;   // Down/South (row 0) - swapped
+  else if (state.dirX === -1) row = 2;  // Left/West (row 2)
+  else if (state.dirX === 1) row = 3;   // Right/East (row 3)
+
+  const uvY = row / ROWS;
+  const uvH = 1 / ROWS;
+
   if (state.isWalking) {
     // Animated sprite when walking - manually calculate UV for current frame
     if (assetsExist) {
       const frameNum = state.walkAnim.frame;
       const uvX = (frameNum % COLS) / COLS;
       const uvW = 1 / COLS;
-      const uvH = 1 / ROWS;
 
       drawSprite({
         textureId: characterTexture,
@@ -234,7 +249,7 @@ onFrame(() => {
         y: state.y - DISPLAY_SIZE / 2,
         w: DISPLAY_SIZE,
         h: DISPLAY_SIZE,
-        uv: { x: uvX, y: 0, w: uvW, h: uvH },
+        uv: { x: uvX, y: uvY, w: uvW, h: uvH },
         layer: 1,
       });
     } else {
@@ -251,21 +266,22 @@ onFrame(() => {
       );
     }
   } else {
-    // Static idle frame (frame 0)
+    // Static idle frame (frame 0) - show first frame of current direction
+    const idleUvX = 0;
     drawSprite({
       textureId: characterTexture,
       x: state.x - DISPLAY_SIZE / 2,
       y: state.y - DISPLAY_SIZE / 2,
       w: DISPLAY_SIZE,
       h: DISPLAY_SIZE,
-      uv: assetsExist ? { x: 0, y: 0, w: 1 / 6, h: 1 / 4 } : undefined, // First frame (top-left) of 6×4 grid
+      uv: assetsExist ? { x: idleUvX, y: uvY, w: 1 / COLS, h: uvH } : undefined,
       layer: 1,
     });
   }
 
   // --- HUD ---
   const assetStatus = state.assetsLoaded
-    ? "✓ Real assets loaded (192×128 spritesheet)"
+    ? "✓ Real assets loaded (256×128 spritesheet)"
     : "ℹ Using placeholders (see README.md)";
 
   drawText(assetStatus, 10, 10, {
@@ -292,7 +308,8 @@ onFrame(() => {
     screenSpace: true,
   });
 
-  const statusText = state.isWalking ? "Walking" : "Idle";
+  const dirText = state.dirY === -1 ? "Up" : state.dirY === 1 ? "Down" : state.dirX === -1 ? "Left" : state.dirX === 1 ? "Right" : "Idle";
+  const statusText = state.isWalking ? `Walking ${dirText}` : `Idle (${dirText})`;
   drawText(`Status: ${statusText}`, 10, 85, {
     scale: 2,
     tint: Colors.INFO,
@@ -302,7 +319,8 @@ onFrame(() => {
 
   if (state.assetsLoaded && state.isWalking) {
     const frameNum = state.walkAnim.frame;
-    drawText(`Frame: ${frameNum + 1}/6 from Row 0`, 10, 110, {
+    const dirRow = state.dirY === -1 ? 0 : state.dirY === 1 ? 1 : state.dirX === -1 ? 2 : 3;
+    drawText(`Frame: ${frameNum + 1}/${COLS} from Row ${dirRow}`, 10, 110, {
       scale: 1.5,
       tint: Colors.LIGHT_GRAY,
       layer: 100,
