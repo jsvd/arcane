@@ -16,6 +16,56 @@ Hot-reload: saving any file restarts the game loop (~200ms). State resets to ini
 Imports use `@arcane/runtime/{module}`:
 `state`, `rendering`, `ui`, `physics`, `pathfinding`, `tweening`, `particles`, `systems`, `agent`, `testing`
 
+## Coordinate System
+
+**This is not a web canvas.** The coordinate system is camera-based, not screen-based. The viewport size is **not fixed** — use `getViewportSize()` to get the actual dimensions.
+
+```
+  World space (where sprites live):
+  VPW = viewport width, VPH = viewport height
+
+  Default camera at (0, 0):
+  ┌───────────────────────────────────┐
+  │ (-VPW/2, -VPH/2)  (VPW/2, -VPH/2)│
+  │                                    │
+  │            (0, 0)                  │  ← center of screen, NOT top-left
+  │                                    │
+  │ (-VPW/2,  VPH/2)  (VPW/2,  VPH/2)│
+  └───────────────────────────────────┘
+
+  After setCamera(VPW/2, VPH/2):
+  ┌───────────────────────────────────┐
+  │ (0, 0)                  (VPW, 0)  │  ← now (0,0) is top-left!
+  │                                    │
+  │          (VPW/2, VPH/2)           │
+  │                                    │
+  │ (0, VPH)              (VPW, VPH)  │
+  └───────────────────────────────────┘
+```
+
+**Key facts:**
+- Camera defaults to **(0, 0)** — the **center** of the screen, not the top-left
+- `drawSprite({x, y, ...})` positions the sprite's **top-left corner** in world space
+- **`drawSprite` is always world-space** — it has no `screenSpace` option. The camera transform is applied automatically by the GPU.
+- `screenSpace: true` is only available on `drawText`, `drawRect`, `drawPanel`, `drawBar`, `drawLabel` — these bypass the camera and use screen pixels with (0, 0) at top-left.
+- Y increases **downward** (same as web)
+- Visible world area: `camera ± viewport / (2 * zoom)` in each axis
+- **Viewport size is not fixed** — always use `getViewportSize()`, never hardcode dimensions
+
+**Recommended pattern** — set camera so (0, 0) is top-left (web-like):
+```typescript
+const { width: VPW, height: VPH } = getViewportSize();
+setCamera(VPW / 2, VPH / 2);  // now (0,0) = top-left corner
+// drawSprite at (0, 0) appears at top-left, (VPW, VPH) at bottom-right
+```
+
+**Scrolling world** — for large worlds (dungeons, tilemaps), center the camera on the player instead. Only the area around the camera is visible; zoom controls how much. See `demos/bfrpg-crawler/` and `demos/roguelike/` for working examples.
+```typescript
+setCamera(player.x, player.y, 2.0);  // follow player, 2x zoom
+```
+
+If you skip `setCamera()`, the camera stays at (0, 0) = screen center, and you must offset all positions by `-viewport/2` to fill the screen. **Always call `setCamera()` early in your frame.**
+
 ## The Game Loop
 
 `onFrame()` registers a callback that runs every frame. Draw calls are **not persisted** — you must redraw everything each frame. `getDeltaTime()` returns seconds since last frame.
@@ -31,11 +81,14 @@ import { drawBar, Colors, HUDLayout } from "@arcane/runtime/ui";
 const TEX_PLAYER = createSolidTexture("player", 60, 180, 255);
 const TEX_GROUND = createSolidTexture("ground", 80, 80, 80);
 
-const { width: VIEWPORT_W, height: VIEWPORT_H } = getViewportSize();
-let state = createGame(VIEWPORT_W, VIEWPORT_H);
+const { width: VPW, height: VPH } = getViewportSize();
+let state = createGame(VPW, VPH);
 
 onFrame(() => {
   const dt = getDeltaTime();
+
+  // 0. Camera — set so (0, 0) = top-left corner
+  setCamera(VPW / 2, VPH / 2);
 
   // 1. Input
   let dx = 0;
@@ -47,12 +100,12 @@ onFrame(() => {
   state = movePlayer(state, dx * SPEED * dt);
   state = stepPhysics(state, dt);
 
-  // 3. Render
+  // 3. Render — (0, 0) is top-left because of setCamera above
   clearSprites();
-  drawSprite({ textureId: TEX_GROUND, x: 0, y: 0, w: VIEWPORT_W, h: VIEWPORT_H, layer: 0 });
+  drawSprite({ textureId: TEX_GROUND, x: 0, y: 0, w: VPW, h: VPH, layer: 0 });
   drawSprite({ textureId: TEX_PLAYER, x: state.x, y: state.y, w: 32, h: 32, layer: 1 });
 
-  // 4. HUD (screen-space)
+  // 4. HUD (screen-space — always top-left origin, ignores camera)
   drawText(`Score: ${state.score}`, 10, 10, { screenSpace: true, layer: 100 });
   drawBar(10, 30, 80, 12, state.hp / state.maxHp, {
     fillColor: Colors.SUCCESS, bgColor: Colors.HUD_BG,
@@ -146,35 +199,25 @@ for (const p of getAllParticles()) {
 
 ## Resolution-Adaptive Design
 
-Games should adapt to different viewport sizes rather than hardcoding dimensions. Use `getViewportSize()` to build resolution-independent games:
+**Never hardcode pixel dimensions.** The window is resizable, so always use `getViewportSize()`:
 
-**Pattern: Pass viewport to game initialization**
 ```typescript
-// src/game.ts - pure logic, accepts viewport dimensions
-export function createGame(viewportW = 800, viewportH = 600) {
+// src/game.ts — pure logic, accepts viewport dimensions
+export function createGame(viewportW: number, viewportH: number) {
   const groundY = viewportH - 50;  // derive from viewport
-  return {
-    viewportW,
-    viewportH,
-    playerX: viewportW / 2,
-    playerY: groundY - 32,
-    groundY,
-    // ...
-  };
+  return { viewportW, viewportH, playerX: viewportW / 2, playerY: groundY - 32, groundY };
 }
 
-// src/visual.ts - provides actual viewport
+// src/visual.ts — provides actual viewport
 const { width, height } = getViewportSize();
 let state = createGame(width, height);
 ```
 
 **Common patterns:**
 - **World bounds:** Derive from `state.viewportW` / `state.viewportH` in game logic
-- **HUD positioning:** Use `screenSpace: true` with fixed offsets (10px from edge works at any resolution)
-- **Camera:** Center on player or field using viewport-derived coordinates
+- **HUD positioning:** Use `screenSpace: true` with fixed pixel offsets (10px from edge works at any resolution)
 - **Backgrounds:** Size to `viewportW × viewportH` to fill screen
-
-Default window is 800×600, but games should work at any resolution (1920×1080, 1600×1200, etc.). Store viewport dimensions in state and derive all layout from them.
+- **Camera:** `setCamera(VPW / 2, VPH / 2)` for top-left origin, or `followTarget(player.x, player.y)` for scrolling
 
 ## Assets
 
@@ -188,6 +231,15 @@ arcane assets search "kitty"          # Finds animal-pack-redux via synonym expa
 arcane assets download tiny-dungeon   # Download and extract to ./assets/tiny-dungeon/
 arcane assets download tiny-dungeon assets/kenney  # Custom destination
 arcane assets list --json             # Structured JSON output for programmatic use
+```
+
+**OpenGameArt.org (CC0)** — search and download from the full OGA catalog:
+```bash
+arcane assets search-oga "dungeon"              # Search OGA for CC0 assets
+arcane assets search-oga "platformer" --type 2d  # Filter: 2d, 3d, music, sound, texture
+arcane assets info-oga dungeon-tileset           # Get details about a specific asset
+arcane assets download-oga dungeon-tileset       # Download to ./assets/oga/
+arcane assets download-oga dungeon-tileset assets/custom  # Custom destination
 ```
 
 After downloading, use assets in your game:

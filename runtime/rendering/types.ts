@@ -4,13 +4,21 @@
  */
 export type TextureId = number;
 
-/** Options for drawing a sprite via {@link drawSprite}. */
+/**
+ * Options for drawing a sprite via {@link drawSprite}.
+ *
+ * Positions are in **world space**. The camera determines what's visible:
+ * - Default camera (0, 0): screen center = world (0, 0). Top-left = (-vpW/2, -vpH/2).
+ * - After `setCamera(vpW/2, vpH/2)`: screen top-left = world (0, 0) — web-like coords.
+ *
+ * Y increases downward. The sprite's (x, y) is its top-left corner.
+ */
 export type SpriteOptions = {
   /** Texture handle from loadTexture() or createSolidTexture(). */
   textureId: TextureId;
-  /** World X position (top-left corner of sprite). */
+  /** World X position (top-left corner of sprite). See type docs for coordinate system. */
   x: number;
-  /** World Y position (top-left corner of sprite). */
+  /** World Y position (top-left corner of sprite). Y increases downward. */
   y: number;
   /** Width in world units (pixels at zoom 1). */
   w: number;

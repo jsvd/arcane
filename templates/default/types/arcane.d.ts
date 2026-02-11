@@ -15,13 +15,21 @@ declare module "@arcane/runtime/rendering" {
    * A value of 0 means "no texture" (headless mode fallback).
    */
   export type TextureId = number;
-  /** Options for drawing a sprite via {@link drawSprite}. */
+  /**
+   * Options for drawing a sprite via {@link drawSprite}.
+   *
+   * Positions are in **world space**. The camera determines what's visible:
+   * - Default camera (0, 0): screen center = world (0, 0). Top-left = (-vpW/2, -vpH/2).
+   * - After `setCamera(vpW/2, vpH/2)`: screen top-left = world (0, 0) — web-like coords.
+   *
+   * Y increases downward. The sprite's (x, y) is its top-left corner.
+   */
   export type SpriteOptions = {
       /** Texture handle from loadTexture() or createSolidTexture(). */
       textureId: TextureId;
-      /** World X position (top-left corner of sprite). */
+      /** World X position (top-left corner of sprite). See type docs for coordinate system. */
       x: number;
-      /** World Y position (top-left corner of sprite). */
+      /** World Y position (top-left corner of sprite). Y increases downward. */
       y: number;
       /** Width in world units (pixels at zoom 1). */
       w: number;
@@ -107,6 +115,10 @@ declare module "@arcane/runtime/rendering" {
       fps: number;
       /** If true, animation loops. If false, stops on last frame. */
       loop: boolean;
+      /** Number of columns in the spritesheet (default: all frames in one row). */
+      cols?: number;
+      /** Number of rows in the spritesheet (default: 1). */
+      rows?: number;
   };
   /** State of a playing animation instance. Immutable -- update via {@link updateAnimation}. */
   export type AnimationState = {
@@ -121,18 +133,30 @@ declare module "@arcane/runtime/rendering" {
   };
   /**
    * Register a sprite-sheet animation definition.
-   * Frames must be arranged in a single horizontal row in the texture.
+   * Frames can be arranged in a single row (default) or in a grid (cols × rows).
    *
    * @param textureId - Texture handle of the sprite sheet (from loadTexture()).
    * @param frameW - Width of each frame in pixels.
    * @param frameH - Height of each frame in pixels.
    * @param frameCount - Number of frames in the animation.
    * @param fps - Playback speed in frames per second. Higher = faster.
-   * @param options - Optional settings. `loop`: whether to loop (default: true).
+   * @param options - Optional settings:
+   *   - `loop`: whether to loop (default: true)
+   *   - `cols`: number of columns in the grid (default: frameCount = single row)
+   *   - `rows`: number of rows in the grid (default: 1)
    * @returns AnimationId handle for use with playAnimation().
+   *
+   * @example
+   * // Single row: 6 frames in one row
+   * createAnimation(tex, 32, 32, 6, 10);
+   *
+   * // Grid: 6×4 spritesheet (24 frames total)
+   * createAnimation(tex, 32, 32, 24, 10, { cols: 6, rows: 4 });
    */
   export declare function createAnimation(textureId: TextureId, frameW: number, frameH: number, frameCount: number, fps: number, options?: {
       loop?: boolean;
+      cols?: number;
+      rows?: number;
   }): AnimationId;
   /**
    * Create a new animation playback state starting from frame 0.
@@ -152,6 +176,7 @@ declare module "@arcane/runtime/rendering" {
   export declare function updateAnimation(anim: AnimationState, dt: number): AnimationState;
   /**
    * Get the UV sub-rectangle for the current animation frame.
+   * Supports both single-row (default) and grid-based (cols × rows) layouts.
    * Used internally by drawAnimatedSprite; also useful for custom rendering.
    *
    * @param anim - Current animation state.
@@ -261,14 +286,24 @@ declare module "@arcane/runtime/rendering" {
   /**
    * Set the camera position and zoom level.
    * The camera determines which part of the world is visible on screen.
+   * The camera center appears at the center of the viewport.
    * No-op in headless mode.
+   *
+   * **Default camera is (0, 0)** — world origin is at screen center, NOT top-left.
+   * For web-like coordinates where (0, 0) is top-left:
+   * `setCamera(vpW / 2, vpH / 2)` (use getViewportSize() for vpW/vpH).
    *
    * @param x - Camera center X in world units.
    * @param y - Camera center Y in world units.
    * @param zoom - Zoom level. 1.0 = default, >1.0 = zoomed in, <1.0 = zoomed out. Default: 1.
    *
    * @example
-   * // Center camera on the player
+   * // Web-like coords: (0, 0) at top-left
+   * const { width, height } = getViewportSize();
+   * setCamera(width / 2, height / 2);
+   *
+   * @example
+   * // Center camera on the player (scrolling game)
    * setCamera(player.x, player.y);
    *
    * @example
@@ -852,39 +887,40 @@ declare module "@arcane/runtime/ui" {
       };
   };
   /**
-   * Standard HUD layout positions and spacing for an 800x600 viewport.
-   * Provides consistent anchor points for common HUD element placement.
+   * Standard HUD layout constants. Spacing values (PADDING, LINE_HEIGHT, TEXT_SCALE) work at
+   * any resolution. **Position values assume 800×600** — for other viewports, compute positions
+   * from `getViewportSize()` instead (e.g. `{ x: vpW - 100, y: 10 }` for top-right).
    */
   export declare const HUDLayout: {
-      /** Standard padding from screen edges in pixels. */
+      /** Standard padding from screen edges in pixels. Works at any resolution. */
       readonly PADDING: 10;
-      /** Vertical spacing between HUD lines in pixels. */
+      /** Vertical spacing between HUD lines in pixels. Works at any resolution. */
       readonly LINE_HEIGHT: 25;
-      /** Default text scale for main HUD text. */
+      /** Default text scale for main HUD text. Works at any resolution. */
       readonly TEXT_SCALE: 2;
-      /** Smaller text scale for secondary HUD text. */
+      /** Smaller text scale for secondary HUD text. Works at any resolution. */
       readonly SMALL_TEXT_SCALE: 1.5;
-      /** Top-left corner position. */
+      /** Top-left corner position. Works at any resolution. */
       readonly TOP_LEFT: {
           readonly x: 10;
           readonly y: 10;
       };
-      /** Top-right corner position. */
+      /** Top-right corner position. **Assumes 800px width** — use `getViewportSize()` for other sizes. */
       readonly TOP_RIGHT: {
           readonly x: 700;
           readonly y: 10;
       };
-      /** Bottom-left corner position. */
+      /** Bottom-left corner position. **Assumes 600px height** — use `getViewportSize()` for other sizes. */
       readonly BOTTOM_LEFT: {
           readonly x: 10;
           readonly y: 560;
       };
-      /** Bottom-right corner position. */
+      /** Bottom-right corner position. **Assumes 800×600** — use `getViewportSize()` for other sizes. */
       readonly BOTTOM_RIGHT: {
           readonly x: 700;
           readonly y: 560;
       };
-      /** Screen center position. */
+      /** Screen center position. **Assumes 800×600** — use `getViewportSize()` for other sizes. */
       readonly CENTER: {
           readonly x: 400;
           readonly y: 300;

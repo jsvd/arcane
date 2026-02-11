@@ -57,29 +57,30 @@ export const Colors = {
 } as const;
 
 /**
- * Standard HUD layout positions and spacing for an 800x600 viewport.
- * Provides consistent anchor points for common HUD element placement.
+ * Standard HUD layout constants. Spacing values (PADDING, LINE_HEIGHT, TEXT_SCALE) work at
+ * any resolution. **Position values assume 800×600** — for other viewports, compute positions
+ * from `getViewportSize()` instead (e.g. `{ x: vpW - 100, y: 10 }` for top-right).
  */
 export const HUDLayout = {
-  /** Standard padding from screen edges in pixels. */
+  /** Standard padding from screen edges in pixels. Works at any resolution. */
   PADDING: 10,
-  /** Vertical spacing between HUD lines in pixels. */
+  /** Vertical spacing between HUD lines in pixels. Works at any resolution. */
   LINE_HEIGHT: 25,
-  /** Default text scale for main HUD text. */
+  /** Default text scale for main HUD text. Works at any resolution. */
   TEXT_SCALE: 2,
-  /** Smaller text scale for secondary HUD text. */
+  /** Smaller text scale for secondary HUD text. Works at any resolution. */
   SMALL_TEXT_SCALE: 1.5,
 
-  // Standard positions (screen-space pixel coordinates)
-  /** Top-left corner position. */
+  // Standard positions (screen-space pixel coordinates, assumes 800×600)
+  /** Top-left corner position. Works at any resolution. */
   TOP_LEFT: { x: 10, y: 10 },
-  /** Top-right corner position. */
+  /** Top-right corner position. **Assumes 800px width** — use `getViewportSize()` for other sizes. */
   TOP_RIGHT: { x: 700, y: 10 },
-  /** Bottom-left corner position. */
+  /** Bottom-left corner position. **Assumes 600px height** — use `getViewportSize()` for other sizes. */
   BOTTOM_LEFT: { x: 10, y: 560 },
-  /** Bottom-right corner position. */
+  /** Bottom-right corner position. **Assumes 800×600** — use `getViewportSize()` for other sizes. */
   BOTTOM_RIGHT: { x: 700, y: 560 },
-  /** Screen center position. */
+  /** Screen center position. **Assumes 800×600** — use `getViewportSize()` for other sizes. */
   CENTER: { x: 400, y: 300 },
 } as const;
 
