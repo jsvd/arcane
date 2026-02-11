@@ -107,7 +107,8 @@ All packages published and ready to use:
 - ✅ Recipe framework with 4 recipes (turn-based combat, inventory, grid movement, fog of war)
 - ✅ Agent protocol (HTTP inspector, describe/inspect commands)
 - ✅ Standalone install: `cargo install arcane-cli` just works
-- ✅ 1022 TS tests + 60 Rust tests passing
+- ✅ Built-in asset discovery: 25 free CC0 packs with search, download, and extraction
+- ✅ 1022 TS tests + 79 Rust tests passing
 - ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
 - ✅ Example projects (Sokoban, Tower Defense, BFRPG dungeon crawler, Juice Showcase)
 
@@ -138,6 +139,10 @@ arcane test
 
 # Add a recipe (e.g., turn-based combat)
 arcane add turn-based-combat
+
+# Find and download free game assets
+arcane assets search "dungeon"
+arcane assets download tiny-dungeon
 ```
 
 ### From source
@@ -186,6 +191,15 @@ arcane add turn-based-combat       # Add recipe to project
 ```
 
 Available recipes: turn-based-combat, inventory-equipment, grid-movement, fog-of-war
+
+### Game Assets
+Built-in catalog of 25 free CC0 asset packs from Kenney.nl:
+```bash
+arcane assets list                    # Browse all packs
+arcane assets search "dungeon"        # Search with synonym expansion
+arcane assets download tiny-dungeon   # Download and extract
+arcane assets list --type audio       # Filter by type
+```
 
 ## Development
 

@@ -191,9 +191,15 @@ Skills are repeatable workflows invoked with `/command`.
 | `/generate-tests <session>` | Generate regression tests from a recorded session |
 | `/publish-recipe <name>` | Package and publish a recipe to npm |
 
-## MCP Tools
+## CLI Tools
 
-MCP (Model Context Protocol) tools give Claude Code direct programmatic access to engine functionality.
+Some operations that were originally planned as MCP tools are now built-in CLI commands (see ADR-014):
+
+- **`arcane assets list/search/download`** — Asset discovery and download. Ships in the binary, no config needed. See [Asset Management](asset-management.md).
+
+## MCP Tools (Planned)
+
+MCP (Model Context Protocol) tools give Claude Code direct programmatic access to engine functionality. The tools below are planned — not yet implemented.
 
 ### Phase 1 MCP Tools
 
@@ -289,6 +295,7 @@ Track all tooling changes here:
 |---|---|---|
 | Phase 0 | Initial agent/skill/MCP tool definitions | Project bootstrap |
 | Phase 1.5 | Add agent teams guidance | Enable coordinated multi-session development |
+| Phase 9.5 | Replace asset MCP server with `arcane assets` CLI | Zero-config asset discovery (ADR-014) |
 
 ### Creating New Agents
 
