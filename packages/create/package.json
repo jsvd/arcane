@@ -1,6 +1,6 @@
 {
   "name": "@arcane-engine/create",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Create a new Arcane game project",
   "type": "module",
   "bin": {
@@ -33,6 +33,6 @@
     "node": ">=18.0.0"
   },
   "peerDependencies": {
-    "arcane-cli": "^0.2.0"
+    "arcane-cli": "^0.3.0"
   }
 }

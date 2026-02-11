@@ -99,8 +99,8 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 **Phase 9.5 complete (Standalone Install + LLM Dev Experience)!** 🎉
 
 All packages published and ready to use:
-- **npm**: [@arcane-engine/runtime@0.2.1](https://www.npmjs.com/package/@arcane-engine/runtime), [@arcane-engine/create@0.2.1](https://www.npmjs.com/package/@arcane-engine/create)
-- **crates.io**: [arcane-engine@0.2.1](https://crates.io/crates/arcane-engine), [arcane-cli@0.2.1](https://crates.io/crates/arcane-cli)
+- **npm**: [@arcane-engine/runtime@0.3.0](https://www.npmjs.com/package/@arcane-engine/runtime), [@arcane-engine/create@0.3.0](https://www.npmjs.com/package/@arcane-engine/create)
+- **crates.io**: [arcane-engine@0.3.0](https://crates.io/crates/arcane-engine), [arcane-cli@0.3.0](https://crates.io/crates/arcane-cli)
 
 **Current features:**
 - ✅ Core engine: rendering, physics, audio, text, UI, animation, pathfinding, tweening, particles
