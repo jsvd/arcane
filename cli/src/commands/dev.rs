@@ -532,6 +532,14 @@ fn reload_runtime(
         b.texture_load_queue.clear();
         b.font_texture_queue.clear();
         b.audio_commands.clear();
+
+        // Clear solid texture cache so they can be recreated with new colors.
+        // Keep file texture cache to avoid re-uploading large images.
+        b.texture_path_to_id.retain(|k, _| !k.starts_with("__solid__"));
+
+        // Clear sound cache for the same reason (allow sound changes on reload).
+        // Sound files are typically small, so reloading is cheap.
+        b.sound_path_to_id.clear();
     }
 
     // Create new runtime with the SAME bridge Rc and import map
