@@ -17,7 +17,6 @@ arcane test
 ```
 {{PROJECT_NAME}}/
 ├── AGENTS.md             # LLM development guide (start here if using AI)
-├── .mcp.json             # Asset discovery MCP server config
 ├── types/
 │   └── arcane.d.ts       # Full API reference with JSDoc
 ├── src/
@@ -47,16 +46,15 @@ arcane dev --inspector 4321          # HTTP inspector
 
 ## Game Assets
 
-This project includes an MCP server for discovering and downloading free game assets (sprites, sounds, tilesets). The `.mcp.json` file configures it automatically for Claude Code.
+Arcane includes built-in commands for discovering and downloading free game assets:
 
-To install the MCP server:
 ```bash
-npm install -g arcane-assets-mcp
+arcane assets list                    # Browse all 25 free asset packs
+arcane assets search "dungeon"        # Search by keyword
+arcane assets download tiny-dungeon   # Download and extract to ./assets/
 ```
 
-Once configured, ask your AI agent to find assets — e.g., "find me a fantasy tileset" or "I need jump sound effects."
-
-Available asset packs are from [Kenney.nl](https://kenney.nl) (CC0 public domain, no attribution required).
+All packs are from [Kenney.nl](https://kenney.nl) (CC0 public domain, no attribution required).
 
 ## For LLMs
 

@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "arcane-assets": {
-      "command": "npx",
-      "args": ["arcane-assets-mcp"]
-    }
-  }
-}

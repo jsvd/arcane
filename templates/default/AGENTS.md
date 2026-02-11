@@ -176,6 +176,26 @@ let state = createGame(width, height);
 
 Default window is 800×600, but games should work at any resolution (1920×1080, 1600×1200, etc.). Store viewport dimensions in state and derive all layout from them.
 
+## Assets
+
+Arcane includes a built-in asset catalog with 25 free CC0 packs from Kenney.nl (sprites, tilesets, UI, audio, fonts, VFX). No configuration needed.
+
+```bash
+arcane assets list                    # Show all available packs
+arcane assets list --type audio       # Filter by type (audio, 2d-sprites, ui, tilesets, fonts, vfx)
+arcane assets search "dungeon"        # Search by keyword (supports synonyms)
+arcane assets search "kitty"          # Finds animal-pack-redux via synonym expansion
+arcane assets download tiny-dungeon   # Download and extract to ./assets/tiny-dungeon/
+arcane assets download tiny-dungeon assets/kenney  # Custom destination
+arcane assets list --json             # Structured JSON output for programmatic use
+```
+
+After downloading, use assets in your game:
+```typescript
+const atlas = loadTexture("assets/tiny-dungeon/Tilemap/tilemap_packed.png");
+const sfx = loadSound("assets/digital-audio/powerUp1.ogg");
+```
+
 ## Workflow
 
 ```
@@ -186,6 +206,8 @@ arcane describe src/visual.ts     # Text description of current game state (agen
 arcane inspect src/visual.ts "player"  # Query a specific state path
 arcane add turn-based-combat      # Copy a pre-built recipe into your project
 arcane add --list                 # List available recipes
+arcane assets search "platformer" # Find game assets to download
+arcane assets download tiny-dungeon   # Download asset pack
 ```
 
 File organization: `src/game.ts` (logic), `src/visual.ts` (rendering), `src/*.test.ts` (tests).
