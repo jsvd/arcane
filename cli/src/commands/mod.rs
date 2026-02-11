@@ -4,6 +4,7 @@ pub mod describe;
 pub mod inspect;
 pub mod add;
 pub mod assets;
+pub mod assets_oga;
 pub mod type_check;
 pub mod new;
 pub mod init;

@@ -104,6 +104,38 @@ enum AssetsAction {
         #[arg(long)]
         json: bool,
     },
+    /// Search OpenGameArt for CC0 assets
+    SearchOga {
+        /// Search query (e.g. "dungeon", "platformer")
+        query: String,
+        /// Filter by type: 2d, 3d, music, sound, texture, concept, document
+        #[arg(long = "type")]
+        asset_type: Option<String>,
+        /// Page number (0-indexed)
+        #[arg(long, default_value = "0")]
+        page: usize,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Get details about a CC0 asset from OpenGameArt
+    InfoOga {
+        /// Asset ID (e.g. "dungeon-tileset")
+        id: String,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Download a CC0 asset from OpenGameArt
+    DownloadOga {
+        /// Asset ID (e.g. "dungeon-tileset")
+        id: String,
+        /// Destination directory (defaults to "assets/oga")
+        dest: Option<String>,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -132,6 +164,16 @@ fn main() -> anyhow::Result<()> {
             }
             AssetsAction::Inspect { id, cache, json } => {
                 commands::assets::run_inspect(id, cache, json)
+            }
+            AssetsAction::SearchOga {
+                query,
+                asset_type,
+                page,
+                json,
+            } => commands::assets_oga::run_search(query, asset_type, page, json),
+            AssetsAction::InfoOga { id, json } => commands::assets_oga::run_info(id, json),
+            AssetsAction::DownloadOga { id, dest, json } => {
+                commands::assets_oga::run_download(id, dest, json)
             }
         },
         Commands::New { name } => commands::new::run(&name),
