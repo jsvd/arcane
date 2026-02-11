@@ -29,3 +29,4 @@ include_dir = "0.7"
 serde = { version = "1", features = ["derive"] }
 ureq = "2"
 zip = { version = "2", default-features = false, features = ["deflate"] }
+walkdir = "2"

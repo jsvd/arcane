@@ -93,6 +93,17 @@ enum AssetsAction {
         #[arg(long)]
         json: bool,
     },
+    /// Inspect contents of an asset pack
+    Inspect {
+        /// Asset pack ID (e.g. "tiny-dungeon")
+        id: String,
+        /// Destination directory for cached downloads (defaults to system temp)
+        #[arg(long)]
+        cache: Option<String>,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -118,6 +129,9 @@ fn main() -> anyhow::Result<()> {
             } => commands::assets::run_search(query, type_filter, json),
             AssetsAction::Download { id, dest, json } => {
                 commands::assets::run_download(id, dest, json)
+            }
+            AssetsAction::Inspect { id, cache, json } => {
+                commands::assets::run_inspect(id, cache, json)
             }
         },
         Commands::New { name } => commands::new::run(&name),

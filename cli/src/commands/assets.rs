@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::Read as IoRead;
 use std::path::{Path, PathBuf};
+use walkdir;
 
 static ASSETS_DIR: Dir<'static> = include_dir!("$OUT_DIR/assets");
 
@@ -429,6 +430,172 @@ pub fn run_download(id: String, dest: Option<String>, json: bool) -> Result<()> 
 }
 
 // ---------------------------------------------------------------------------
+// Inspect
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Serialize)]
+pub struct FileCategory {
+    pub category: String,
+    pub count: usize,
+    pub files: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct InspectResult {
+    pub pack_id: String,
+    pub pack_name: String,
+    pub total_files: usize,
+    pub categories: Vec<FileCategory>,
+}
+
+fn categorize_file(path: &Path) -> Option<String> {
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    let category = match ext.as_str() {
+        "png" | "jpg" | "jpeg" | "gif" | "bmp" => "Sprites",
+        "wav" | "mp3" | "ogg" | "flac" => "Audio",
+        "ttf" | "otf" | "fnt" => "Fonts",
+        "txt" | "md" | "json" => "Data",
+        "aseprite" | "piskel" => "Sources",
+        _ => return None,
+    };
+
+    Some(category.to_string())
+}
+
+fn get_file_name(path: &Path) -> String {
+    path.file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("unknown")
+        .to_string()
+}
+
+pub fn run_inspect(id: String, cache: Option<String>, json: bool) -> Result<()> {
+    let catalog = load_catalog()?;
+    let pack = catalog
+        .packs
+        .iter()
+        .find(|p| p.id == id)
+        .with_context(|| {
+            format!(
+                "Asset pack \"{}\" not found. Run `arcane assets list` to see available packs.",
+                id
+            )
+        })?;
+
+    // Determine cache directory
+    let cache_path = if let Some(c) = cache {
+        PathBuf::from(c)
+    } else {
+        std::env::temp_dir().join("arcane-assets-cache")
+    };
+
+    // Download pack (will use existing if already there)
+    if !json {
+        println!("Inspecting {}...", pack.name);
+    }
+
+    let extract_dir = if let Ok(existing) = fs::read_dir(&cache_path) {
+        let existing_pack = existing
+            .filter_map(|e| e.ok())
+            .find(|e| {
+                e.file_name()
+                    .into_string()
+                    .ok()
+                    .map(|n| n == pack.id)
+                    .unwrap_or(false)
+            });
+
+        if let Some(existing) = existing_pack {
+            existing.path()
+        } else {
+            download(pack, &cache_path)?
+        }
+    } else {
+        download(pack, &cache_path)?
+    };
+
+    // Scan directory
+    let mut categories: HashMap<String, Vec<String>> = HashMap::new();
+    let mut total = 0;
+
+    for entry in walkdir::WalkDir::new(&extract_dir)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        if entry.file_type().is_file() {
+            if let Some(category) = categorize_file(entry.path()) {
+                let file_name = get_file_name(entry.path());
+                categories
+                    .entry(category)
+                    .or_insert_with(Vec::new)
+                    .push(file_name);
+                total += 1;
+            }
+        }
+    }
+
+    // Sort files in each category and convert to result
+    for files in categories.values_mut() {
+        files.sort();
+    }
+
+    let mut sorted_cats: Vec<_> = categories
+        .into_iter()
+        .map(|(cat, mut files)| {
+            files.sort();
+            FileCategory {
+                category: cat,
+                count: files.len(),
+                files: files.into_iter().take(20).collect(), // Limit to first 20
+            }
+        })
+        .collect();
+
+    sorted_cats.sort_by(|a, b| b.count.cmp(&a.count)); // Sort by count descending
+
+    let result = InspectResult {
+        pack_id: pack.id.clone(),
+        pack_name: pack.name.clone(),
+        total_files: total,
+        categories: sorted_cats,
+    };
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    } else {
+        println!("\n{} ({})", pack.name, pack.id);
+        println!("{}", "=".repeat(60));
+        println!("Total files: {}\n", total);
+
+        for cat in &result.categories {
+            println!("{}  ({})", cat.category, cat.count);
+            for file in &cat.files {
+                println!("  • {}", file);
+            }
+            if cat.files.len() < cat.count {
+                println!("  ... and {} more", cat.count - cat.files.len());
+            }
+            println!();
+        }
+
+        println!("Cached at: {}", extract_dir.display());
+        println!("\nUse in your game:");
+        println!(
+            "  const tex = loadTexture(\"{}/{}/...\");",
+            cache_path.display(),
+            pack.id
+        );
+    }
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -439,6 +606,80 @@ mod tests {
     fn test_catalog() -> AssetCatalog {
         let json = include_str!(concat!(env!("OUT_DIR"), "/assets/catalog.json"));
         serde_json::from_str(json).expect("catalog.json should parse")
+    }
+
+    #[test]
+    fn categorize_file_sprites() {
+        assert_eq!(
+            categorize_file(Path::new("sprite.png")),
+            Some("Sprites".to_string())
+        );
+        assert_eq!(
+            categorize_file(Path::new("tileset.jpg")),
+            Some("Sprites".to_string())
+        );
+        assert_eq!(
+            categorize_file(Path::new("background.gif")),
+            Some("Sprites".to_string())
+        );
+    }
+
+    #[test]
+    fn categorize_file_audio() {
+        assert_eq!(
+            categorize_file(Path::new("jump.wav")),
+            Some("Audio".to_string())
+        );
+        assert_eq!(
+            categorize_file(Path::new("music.ogg")),
+            Some("Audio".to_string())
+        );
+        assert_eq!(
+            categorize_file(Path::new("sound.mp3")),
+            Some("Audio".to_string())
+        );
+    }
+
+    #[test]
+    fn categorize_file_fonts() {
+        assert_eq!(
+            categorize_file(Path::new("font.ttf")),
+            Some("Fonts".to_string())
+        );
+        assert_eq!(
+            categorize_file(Path::new("ui.fnt")),
+            Some("Fonts".to_string())
+        );
+    }
+
+    #[test]
+    fn categorize_file_data() {
+        assert_eq!(
+            categorize_file(Path::new("metadata.json")),
+            Some("Data".to_string())
+        );
+        assert_eq!(
+            categorize_file(Path::new("readme.txt")),
+            Some("Data".to_string())
+        );
+    }
+
+    #[test]
+    fn categorize_file_sources() {
+        assert_eq!(
+            categorize_file(Path::new("sprite.aseprite")),
+            Some("Sources".to_string())
+        );
+        assert_eq!(
+            categorize_file(Path::new("art.piskel")),
+            Some("Sources".to_string())
+        );
+    }
+
+    #[test]
+    fn categorize_file_unknown() {
+        assert_eq!(categorize_file(Path::new("config.xml")), None);
+        assert_eq!(categorize_file(Path::new("README")), None);
     }
 
     #[test]

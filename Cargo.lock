@@ -199,6 +199,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "ureq",
+ "walkdir",
  "zip",
 ]
 
