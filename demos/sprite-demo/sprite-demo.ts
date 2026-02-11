@@ -221,18 +221,35 @@ onFrame(() => {
 
   // Draw character (3x bigger than spritesheet size)
   if (state.isWalking) {
-    // Animated sprite when walking
-    drawAnimatedSprite(
-      state.walkAnim,
-      state.x - DISPLAY_SIZE / 2,
-      state.y - DISPLAY_SIZE / 2,
-      DISPLAY_SIZE,
-      DISPLAY_SIZE,
-      {
+    // Animated sprite when walking - manually calculate UV for current frame
+    if (assetsExist) {
+      const frameNum = state.walkAnim.frame;
+      const uvX = (frameNum % COLS) / COLS;
+      const uvW = 1 / COLS;
+      const uvH = 1 / ROWS;
+
+      drawSprite({
+        textureId: characterTexture,
+        x: state.x - DISPLAY_SIZE / 2,
+        y: state.y - DISPLAY_SIZE / 2,
+        w: DISPLAY_SIZE,
+        h: DISPLAY_SIZE,
+        uv: { x: uvX, y: 0, w: uvW, h: uvH },
         layer: 1,
-        // TODO: Add flipX support to SpriteOptions
-      },
-    );
+      });
+    } else {
+      // Placeholder animation
+      drawAnimatedSprite(
+        state.walkAnim,
+        state.x - DISPLAY_SIZE / 2,
+        state.y - DISPLAY_SIZE / 2,
+        DISPLAY_SIZE,
+        DISPLAY_SIZE,
+        {
+          layer: 1,
+        },
+      );
+    }
   } else {
     // Static idle frame (frame 0)
     drawSprite({
@@ -243,7 +260,6 @@ onFrame(() => {
       h: DISPLAY_SIZE,
       uv: assetsExist ? { x: 0, y: 0, w: 1 / 6, h: 1 / 4 } : undefined, // First frame (top-left) of 6×4 grid
       layer: 1,
-      // TODO: Add flipX support to SpriteOptions
     });
   }
 
