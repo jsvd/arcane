@@ -77,31 +77,32 @@ try {
 
 // --- Animation Setup ---
 // Real sprite is 192×128 (6 frames × 4 rows = 32×32 per frame)
-// This demonstrates multi-row spritesheet support detected by arcane assets inspect
+// For now, we use just the first row (6 frames) as a single-row animation
 //
-// Spritesheet grid layout:
-//   Row 0: Idle animations (frames 0-5)
-//   Row 1: Walk animations (frames 6-11)
+// Spritesheet grid layout (detected by arcane assets inspect):
+//   Row 0: Idle animations (frames 0-5)        <- we use these
+//   Row 1: Walk animations (frames 6-11)       <- future: multi-row support
 //   Row 2: Jump animations (frames 12-17)
 //   Row 3: Fall/death animations (frames 18-23)
 //
 // Detected by: arcane assets inspect --json
 // Output: { "likely_grid": [6, 4], "likely_frame_count": 24 }
 //
-const FRAME_SIZE = 32;
+const FRAME_SIZE = 32;        // Size in spritesheet
+const DISPLAY_SIZE = 96;       // Size to draw (3x bigger)
 const COLS = 6;
 const ROWS = 4;
 const WALK_FPS = 10;
 
-// For real asset: use all 24 frames in a 6×4 grid
-// For placeholder: still works with single-row fallback
+// Use single-row animation (just row 0 for now)
+// Once grid-based UV coordinates are perfected, we can use cols/rows
 const walkAnimDef = createAnimation(
   characterTexture,
   FRAME_SIZE,
   FRAME_SIZE,
-  assetsExist ? COLS * ROWS : 4,
+  assetsExist ? 6 : 4,  // 6 frames from row 0 for real sprite, 4 for placeholder
   WALK_FPS,
-  assetsExist ? { loop: true, cols: COLS, rows: ROWS } : { loop: true },
+  { loop: true },  // no cols/rows - single row layout
 );
 
 // --- Initial State ---
@@ -216,15 +217,15 @@ onFrame(() => {
   // --- Render ---
   clearSprites();
 
-  // Draw character
+  // Draw character (3x bigger than spritesheet size)
   if (state.isWalking) {
     // Animated sprite when walking
     drawAnimatedSprite(
       state.walkAnim,
-      state.x - FRAME_SIZE / 2,
-      state.y - FRAME_SIZE / 2,
-      FRAME_SIZE,
-      FRAME_SIZE,
+      state.x - DISPLAY_SIZE / 2,
+      state.y - DISPLAY_SIZE / 2,
+      DISPLAY_SIZE,
+      DISPLAY_SIZE,
       {
         layer: 1,
         // TODO: Add flipX support to SpriteOptions
@@ -234,10 +235,10 @@ onFrame(() => {
     // Static idle frame (frame 0)
     drawSprite({
       textureId: characterTexture,
-      x: state.x - FRAME_SIZE / 2,
-      y: state.y - FRAME_SIZE / 2,
-      w: FRAME_SIZE,
-      h: FRAME_SIZE,
+      x: state.x - DISPLAY_SIZE / 2,
+      y: state.y - DISPLAY_SIZE / 2,
+      w: DISPLAY_SIZE,
+      h: DISPLAY_SIZE,
       uv: assetsExist ? { x: 0, y: 0, w: 1 / 6, h: 1 / 4 } : undefined, // First frame (top-left) of 6×4 grid
       layer: 1,
       // TODO: Add flipX support to SpriteOptions
@@ -250,7 +251,7 @@ onFrame(() => {
     : "ℹ Using placeholders (see README.md)";
 
   drawText(assetStatus, 10, 10, {
-    scale: 1,
+    scale: 2,
     tint: state.assetsLoaded ? Colors.SUCCESS : Colors.WARNING,
     layer: 100,
     screenSpace: true,
@@ -258,24 +259,24 @@ onFrame(() => {
 
   // Show detected spritesheet grid info (what arcane assets inspect shows)
   if (state.assetsLoaded) {
-    drawText(`Grid: ${COLS} cols × ${ROWS} rows = ${COLS * ROWS} frames @ ${FRAME_SIZE}×${FRAME_SIZE} px`, 10, 25, {
-      scale: 0.8,
+    drawText(`Grid: ${COLS} cols × ${ROWS} rows = ${COLS * ROWS} frames @ ${FRAME_SIZE}×${FRAME_SIZE} px`, 10, 35, {
+      scale: 1.5,
       tint: Colors.LIGHT_GRAY,
       layer: 100,
       screenSpace: true,
     });
   }
 
-  drawText("Arrow Keys: Move  |  Space: Sound  |  R: Reset", 10, 40, {
-    scale: 1,
+  drawText("Arrow Keys: Move  |  Space: Sound  |  R: Reset", 10, 60, {
+    scale: 1.5,
     tint: Colors.LIGHT_GRAY,
     layer: 100,
     screenSpace: true,
   });
 
-  const statusText = state.isWalking ? "Walking (Row 1)" : "Idle (Row 0)";
-  drawText(`Status: ${statusText}`, 10, 55, {
-    scale: 1,
+  const statusText = state.isWalking ? "Walking" : "Idle";
+  drawText(`Status: ${statusText}`, 10, 85, {
+    scale: 2,
     tint: Colors.INFO,
     layer: 100,
     screenSpace: true,
@@ -283,10 +284,8 @@ onFrame(() => {
 
   if (state.assetsLoaded && state.isWalking) {
     const frameNum = state.walkAnim.frame;
-    const row = Math.floor(frameNum / COLS);
-    const col = frameNum % COLS;
-    drawText(`Frame: ${frameNum + 1}/${COLS * ROWS} (col ${col}, row ${row})`, 10, 70, {
-      scale: 0.8,
+    drawText(`Frame: ${frameNum + 1}/6 from Row 0`, 10, 110, {
+      scale: 1.5,
       tint: Colors.LIGHT_GRAY,
       layer: 100,
       screenSpace: true,
