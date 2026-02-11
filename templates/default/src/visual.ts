@@ -13,6 +13,7 @@ import {
   createSolidTexture,
   drawText,
   getDefaultFont,
+  getViewportSize,
   isKeyDown,
 } from "@arcane/runtime/rendering";
 import { registerAgent } from "@arcane/runtime/agent";
@@ -31,7 +32,9 @@ const TEX_GROUND = createSolidTexture("ground", 80, 80, 80);
 
 // --- State ---
 
-let state: GameState = createGame(42);
+// Get actual viewport dimensions for resolution-independent game
+const { width, height } = getViewportSize();
+let state: GameState = createGame(42, width, height);
 
 // --- Agent Protocol ---
 
@@ -62,8 +65,16 @@ onFrame(() => {
   // Camera
   setCamera(state.player.x, state.player.y, CAMERA_ZOOM);
 
-  // Render ground
-  drawSprite({ textureId: TEX_GROUND, x: -200, y: -200, w: 400, h: 400, layer: 0 });
+  // Render ground (fills viewport at current zoom)
+  const groundSize = Math.max(state.viewportW, state.viewportH) / CAMERA_ZOOM;
+  drawSprite({
+    textureId: TEX_GROUND,
+    x: -groundSize / 2,
+    y: -groundSize / 2,
+    w: groundSize,
+    h: groundSize,
+    layer: 0,
+  });
 
   // Render player
   drawSprite({

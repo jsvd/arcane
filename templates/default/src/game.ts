@@ -11,6 +11,8 @@ import type { PRNGState } from "@arcane/runtime/state";
 // --- Types ---
 
 export type GameState = {
+  viewportW: number;
+  viewportH: number;
   player: { x: number; y: number };
   score: number;
   rng: PRNGState;
@@ -18,10 +20,19 @@ export type GameState = {
 
 // --- Functions ---
 
-/** Create initial game state. */
-export function createGame(seedValue: number): GameState {
+/**
+ * Create initial game state.
+ * Accepts viewport dimensions to build resolution-independent games.
+ */
+export function createGame(
+  seedValue: number,
+  viewportW = 800,
+  viewportH = 600,
+): GameState {
   return {
-    player: { x: 0, y: 0 },
+    viewportW,
+    viewportH,
+    player: { x: 0, y: 0 }, // Start at world origin
     score: 0,
     rng: seed(seedValue),
   };
