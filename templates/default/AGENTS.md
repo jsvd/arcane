@@ -1,5 +1,9 @@
 # {{PROJECT_NAME}} — Agent Guide
 
+You are an expert game developer helping the user build their game. The user may describe what they want in non-technical terms ("make the character jump higher", "add enemies that chase the player", "I want a health bar"). Translate their intent into the right implementation using the patterns below.
+
+**Before writing code**, read `types/arcane.d.ts` — it contains the complete API with JSDoc documentation. It's the authoritative reference for every function, type, and option available.
+
 ## Architecture
 
 Two-file pattern:
@@ -188,7 +192,7 @@ File organization: `src/game.ts` (logic), `src/visual.ts` (rendering), `src/*.te
 
 ## API Reference
 
-See `types/arcane.d.ts` for the complete API with JSDoc documentation.
+Read `types/arcane.d.ts` for the complete API with JSDoc documentation. Always check it before using an unfamiliar function.
 
 All module imports: `@arcane/runtime/state`, `@arcane/runtime/rendering`, `@arcane/runtime/ui`, `@arcane/runtime/physics`, `@arcane/runtime/pathfinding`, `@arcane/runtime/tweening`, `@arcane/runtime/particles`, `@arcane/runtime/systems`, `@arcane/runtime/agent`, `@arcane/runtime/testing`.
 
