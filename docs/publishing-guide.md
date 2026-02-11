@@ -6,7 +6,7 @@ Guide for publishing Arcane packages to npm and crates.io.
 
 ### npm
 - npm account with 2FA enabled
-- Access to `@arcane` organization (or create it)
+- Access to `@arcane-engine` organization (or create it)
 - Logged in: `npm login`
 
 ### crates.io
@@ -28,12 +28,12 @@ Guide for publishing Arcane packages to npm and crates.io.
 
 Publish in this order to respect dependencies:
 
-1. **@arcane/runtime** (npm) — Core TypeScript runtime
+1. **@arcane-engine/runtime** (npm) — Core TypeScript runtime
 2. **arcane-engine** (crates.io) — Rust core library
 3. **arcane-cli** (crates.io) — CLI binary
-4. **@arcane/create** (npm) — Project scaffolding tool
+4. **@arcane-engine/create** (npm) — Project scaffolding tool
 
-## 1. Publish @arcane/runtime
+## 1. Publish @arcane-engine/runtime
 
 ```bash
 cd packages/runtime
@@ -45,11 +45,11 @@ npm pack --dry-run
 npm publish --access public
 
 # Verify installation
-npm view @arcane/runtime
+npm view @arcane-engine/runtime
 ```
 
 **Post-publish:**
-- Test: `npm install @arcane/runtime`
+- Test: `npm install @arcane-engine/runtime`
 - Verify imports work in a test project
 
 ## 2. Publish arcane-engine
@@ -76,7 +76,7 @@ cargo publish
 cd cli
 
 # Ensure arcane-engine dependency version is correct in Cargo.toml
-# dependencies.arcane-engine = "0.1.0" (exact published version)
+# dependencies.arcane-engine version must match the just-published core version
 
 # Dry run
 cargo publish --dry-run
@@ -90,7 +90,7 @@ cargo publish
 - Test installation: `cargo install arcane-cli`
 - Test command: `arcane --version`
 
-## 4. Publish @arcane/create
+## 4. Publish @arcane-engine/create
 
 ```bash
 cd packages/create
@@ -102,11 +102,11 @@ npm pack --dry-run
 npm publish --access public
 
 # Verify
-npm view @arcane/create
+npm view @arcane-engine/create
 ```
 
 **Post-publish:**
-- Test: `npm create @arcane/game test-project`
+- Test: `npm create @arcane-engine/game test-project`
 - Verify created project structure
 
 ## End-to-End Test
@@ -117,11 +117,11 @@ After all packages are published, test the complete workflow:
 # 1. Install CLI
 cargo install arcane-cli
 
-# 2. Create a project (tests @arcane/create)
-npm create @arcane/game test-game
+# 2. Create a project (tests @arcane-engine/create)
+npm create @arcane-engine/game test-game
 cd test-game
 
-# 3. Install dependencies (tests @arcane/runtime)
+# 3. Install dependencies (tests @arcane-engine/runtime)
 npm install
 
 # 4. Run the game (tests CLI + runtime integration)
@@ -149,65 +149,131 @@ Before 1.0.0, breaking changes may occur in minor versions.
 
 ## Release Process
 
-### 1. Update Version Numbers
+### Step 1: Determine the new version
 
-Update version in all package files:
-- `packages/runtime/package.json`
-- `packages/create/package.json`
-- `core/Cargo.toml`
-- `cli/Cargo.toml`
+Follow semver. Before 1.0.0, minor bumps (0.2 → 0.3) may include breaking changes. Patch bumps (0.2.1 → 0.2.2) are bug fixes only.
 
-### 2. Update CHANGELOG.md
+### Step 2: Sync `packages/runtime/src/` from `runtime/`
 
-Add release notes under `## [0.x.0] - YYYY-MM-DD`:
-
-```markdown
-## [0.1.0] - 2026-02-10
-
-### Added
-- Initial public release
-- Core rendering, physics, audio, text, UI, animation
-- Pathfinding with A* implementation
-- Recipe framework with 4 built-in recipes
-- Agent protocol for AI interaction
-- Comprehensive documentation and tutorials
-- Example projects (Sokoban, Tower Defense)
-
-### Changed
-- None (initial release)
-
-### Fixed
-- None (initial release)
-```
-
-### 3. Commit and Tag
+The npm package at `packages/runtime/src/` is a copy of `runtime/`. Sync before every release:
 
 ```bash
-git add .
-git commit -m "Release v0.1.0"
-git tag v0.1.0
+# Check for content differences (import paths will differ — that's expected)
+diff -rq runtime/ packages/runtime/src/
+
+# If files differ, compare ignoring the harness import path:
+# runtime/ uses:   ../../runtime/testing/harness.ts
+# packages/ uses:  ../testing/harness.ts
+# Only sync if there are real content changes beyond this path difference.
+
+# If new modules were added to runtime/, also add them to packages/runtime/package.json exports map.
+```
+
+**Do NOT blindly copy files** — test imports use different relative paths in each location. If a test file has real content changes (not just the import path), manually update the packages copy preserving its import path.
+
+### Step 3: Bump version numbers
+
+Update **all 7 files** (miss one and publish will fail or be inconsistent):
+
+| File | What to change |
+|---|---|
+| `core/Cargo.toml` | `version = "X.Y.Z"` |
+| `cli/Cargo.toml` | `version = "X.Y.Z"` AND `arcane-engine = { version = "X.Y.Z"` |
+| `packages/runtime/package.json` | `"version": "X.Y.Z"` |
+| `packages/create/package.json` | `"version": "X.Y.Z"` AND `"arcane-cli": "^X.Y.0"` peerDep |
+| `templates/default/package.json` | `"@arcane-engine/runtime": "^X.Y.0"` |
+| `README.md` | Version references in the Status section (4 package links) |
+| `Cargo.lock` | Auto-updated by `cargo check` — just commit the result |
+
+Quick grep to verify no stale versions remain:
+```bash
+grep -rn '0\.OLD\.VERSION' --include='*.toml' --include='*.json' --include='*.md' | grep -v node_modules | grep -v mcp/
+```
+
+### Step 4: Update CHANGELOG.md
+
+Add a new section at the top under the `# Changelog` header:
+
+```markdown
+## [X.Y.Z] - YYYY-MM-DD
+
+### Added
+- ...
+
+### Changed
+- ...
+
+### Fixed
+- ...
+
+### Removed
+- ...
+```
+
+Use `git log --oneline PREV_TAG..HEAD` (or since last version bump commit) to find all changes. Group by Added/Changed/Fixed/Removed.
+
+### Step 5: Run full verification
+
+All of these must pass before committing:
+
+```bash
+# Rust tests (includes unit + integration)
+cargo test --workspace
+
+# TypeScript tests in Node
+./run-tests.sh
+
+# Headless build (no GPU deps)
+cargo check --no-default-features
+
+# Type checking
+cargo check
+```
+
+### Step 6: Commit and tag
+
+```bash
+git add core/Cargo.toml cli/Cargo.toml Cargo.lock \
+  packages/runtime/package.json packages/create/package.json \
+  templates/default/package.json README.md CHANGELOG.md
+
+git commit -m "Bump version to X.Y.Z"
+git tag vX.Y.Z
 git push origin main --tags
 ```
 
-### 4. Publish Packages
+### Step 7: Publish packages
 
-Follow the publishing order above.
+Follow the [Publishing Order](#publishing-order) section above.
 
-### 5. Create GitHub Release
+### Step 8: Create GitHub Release
 
-1. Go to https://github.com/anthropics/arcane/releases
-2. Click "Draft a new release"
-3. Select tag `v0.1.0`
-4. Title: "Arcane v0.1.0 — Initial Release"
-5. Copy CHANGELOG entry into description
-6. Attach binary builds (optional)
-7. Publish release
+```bash
+gh release create vX.Y.Z --title "Arcane vX.Y.Z" --notes-file - <<< "$(sed -n '/^## \[X.Y.Z\]/,/^## \[/{ /^## \[X.Y.Z\]/d; /^## \[/d; p; }' CHANGELOG.md)"
+```
+
+Or manually:
+1. Go to GitHub Releases → "Draft a new release"
+2. Select tag `vX.Y.Z`
+3. Title: `Arcane vX.Y.Z — <one-line summary>`
+4. Copy the CHANGELOG entry into the description
+
+### Step 9: Update project status docs
+
+After a release that completes a phase, update status in **all four places**:
+
+| File | What to update |
+|---|---|
+| `MEMORY.md` | Line 4: current phase status + test counts |
+| `CLAUDE.md` | Line 7: "Current status" sentence |
+| `README.md` | "## Status" section |
+| `docs/roadmap.md` | Phase checklists (mark items `[x]`) |
 
 ## Troubleshooting
 
 ### npm: Package name taken
 
-If `@arcane` org doesn't exist:
+If `@arcane-engine` org doesn't exist:
 1. Create org: https://www.npmjs.com/org/create
 2. Add collaborators with publish permissions
 3. Retry publish
@@ -247,7 +313,7 @@ If a release has critical bugs:
 
 1. **Yank the npm package:**
    ```bash
-   npm unpublish @arcane/runtime@0.1.0
+   npm unpublish @arcane-engine/runtime@0.1.0
    ```
 
 2. **Yank the crate:**
