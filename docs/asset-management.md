@@ -4,42 +4,39 @@ How to discover, download, and integrate game assets in Arcane.
 
 ## Overview
 
-Arcane provides agent-native tools for working with freely available game assets. Instead of manually browsing websites and downloading files, you can use MCP tools to search, discover, and integrate assets directly into your game.
+Arcane includes built-in CLI commands for discovering and downloading free game assets. No configuration, no MCP servers, no extra dependencies — asset discovery ships in the binary.
 
 ## Architecture
 
 ```
 ┌─────────────────────┐
-│   Claude Code       │
-│   (Agent)           │
+│   Developer / Agent  │
 └──────────┬──────────┘
            │
-           │ uses MCP tools
+           │ arcane assets list/search/download
            ▼
 ┌─────────────────────┐
-│ arcane-assets MCP   │
-│ Server              │
+│ arcane CLI           │
+│ (embedded catalog)   │
 └──────────┬──────────┘
            │
-           │ fetches from
+           │ downloads from
            ▼
 ┌─────────────────────┐
-│ Asset Sources:      │
-│ - Kenney.nl (CC0)   │
-│ - Freesound.org     │
-│ - itch.io           │
+│ Asset Sources:       │
+│ - Kenney.nl (CC0)    │
 └─────────────────────┘
 ```
 
 ## Asset Sources
 
-### Kenney.nl (Implemented) ✅
+### Kenney.nl (Built-in)
 
 - **License**: CC0 (public domain), no attribution required
 - **Quality**: Professionally made, consistent style
-- **Quantity**: 60,000+ assets across 24+ curated packs
+- **Quantity**: 25 curated packs across all game asset types
 - **Categories**: 2D sprites, tilesets, UI, audio, fonts, VFX
-- **Integration**: Direct download via MCP tools
+- **Integration**: Direct download via `arcane assets download`
 
 **Popular Packs:**
 - Platformer Pack Redux (360 assets)
@@ -48,101 +45,48 @@ Arcane provides agent-native tools for working with freely available game assets
 - UI Pack (322 assets)
 - Digital Audio (626 sounds)
 
-### Freesound.org (Planned)
+## CLI Commands
 
-- **License**: Creative Commons (various)
-- **API**: Full REST API with search and download
-- **Quantity**: Massive library of sound effects
-- **Integration**: MCP tools with user API key
+### `arcane assets list`
 
-### itch.io (Planned)
+List all available asset packs.
 
-- **License**: Various (check per-asset)
-- **API**: Download API available
-- **Quantity**: 60,000+ community-contributed assets
-- **Integration**: MCP tools with user API key
-
-## MCP Server Setup
-
-The `arcane-assets` MCP server provides tools for asset discovery and download.
-
-### Installation
-
-1. Navigate to the MCP server directory:
-   ```bash
-   cd mcp/arcane-assets
-   npm install
-   npm run build
-   ```
-
-2. Add to your MCP configuration (`~/.claude/mcp.json`):
-   ```json
-   {
-     "mcpServers": {
-       "arcane-assets": {
-         "command": "node",
-         "args": ["/absolute/path/to/arcane/mcp/arcane-assets/dist/index.js"],
-         "disabled": false
-       }
-     }
-   }
-   ```
-
-3. Restart Claude Code to load the MCP server.
-
-### Available Tools
-
-#### `list_kenney_assets`
-
-List all available Kenney.nl asset packs.
-
-**Returns:** Complete catalog with metadata (name, description, type, license, download URL, tags)
-
-#### `search_kenney_assets`
-
-Search Kenney.nl asset packs by keyword.
-
-**Parameters:**
-- `query` (string): Search term (e.g., "platformer", "dungeon", "ui")
-- `type` (optional): Filter by type (`2d-sprites`, `ui`, `audio`, `fonts`, `vfx`, `tilesets`)
-
-**Example:**
-```typescript
-search_kenney_assets({ query: "platformer", type: "2d-sprites" })
+```bash
+arcane assets list                    # Show all 25 packs
+arcane assets list --type audio       # Filter by type
+arcane assets list --type 2d-sprites  # Only sprite packs
+arcane assets list --json             # Structured JSON output
 ```
 
-#### `get_kenney_asset`
+**Available types:** `2d-sprites`, `audio`, `fonts`, `tilesets`, `ui`, `vfx`
 
-Get detailed information about a specific pack.
+### `arcane assets search`
 
-**Parameters:**
-- `id` (string): Asset pack ID (e.g., "tiny-dungeon")
+Search packs by keyword with synonym expansion.
 
-#### `download_kenney_asset`
-
-Download an asset pack to a local directory.
-
-**Parameters:**
-- `id` (string): Asset pack ID
-- `destination` (string): Destination directory path
-
-**Returns:** Download result with success status and file path
-
-**Example:**
-```typescript
-download_kenney_asset({
-  id: "platformer-pack-redux",
-  destination: "./assets"
-})
+```bash
+arcane assets search "dungeon"        # Finds tiny-dungeon, roguelike-rpg-pack, 1-bit-pack
+arcane assets search "kitty"          # Synonym expansion: kitty → cat → animal-pack-redux
+arcane assets search "platformer" --type tilesets  # Combined search + filter
+arcane assets search "mage"           # Expands to wizard, sorcerer, magician
+arcane assets search "dungeon" --json # JSON output for programmatic use
 ```
 
-#### `get_asset_types`
+Search checks pack names (highest priority), contents, tags, and descriptions. Synonyms expand automatically — searching for "kitty" also searches for "cat", "kitten", and "feline".
 
-Get all asset types available in the catalog.
+When no results are found, suggestions are provided (available types, related terms, popular packs).
 
-#### `get_tags`
+### `arcane assets download`
 
-Get all tags used in the catalog (useful for discovering keywords).
+Download and extract an asset pack.
+
+```bash
+arcane assets download tiny-dungeon              # Extract to ./assets/tiny-dungeon/
+arcane assets download tiny-dungeon assets/kenney # Custom destination
+arcane assets download tiny-dungeon --json        # JSON status output
+```
+
+Downloads the ZIP from kenney.nl and extracts it to the destination directory.
 
 ## Agent Workflow
 
@@ -153,45 +97,30 @@ Get all tags used in the catalog (useful for discovering keywords).
    - Determines art style preferences (pixel art, abstract, realistic)
 
 2. **Agent searches for assets**
-   ```typescript
-   // Search for dungeon tilesets
-   const results = search_kenney_assets({
-     query: "dungeon",
-     type: "tilesets"
-   });
-
-   // Review results: tiny-dungeon, roguelike-rpg-pack, 1-bit-pack
+   ```bash
+   arcane assets search "dungeon" --type tilesets
+   # Found 2 packs matching "dungeon":
+   #   tiny-dungeon       Micro roguelike dungeon tileset [2d-sprites, tilesets]
+   #   roguelike-rpg-pack Massive RPG pack [2d-sprites, tilesets, ui]
    ```
 
 3. **Agent evaluates options**
-   - Reviews pack metadata (asset count, description, tags)
-   - Gets detailed info with `get_kenney_asset()`
-   - Considers license, style, completeness
+   - Reviews pack metadata (asset count, description, contents, tags)
+   - Uses `--json` for structured comparison
 
-### Download
+### Download & Integration
 
 4. **Agent downloads selected pack**
-   ```typescript
-   const result = download_kenney_asset({
-     id: "tiny-dungeon",
-     destination: "./demos/roguelike/assets"
-   });
-   // Returns: { success: true, path: "./demos/roguelike/assets/tinydungeon.zip" }
+   ```bash
+   arcane assets download tiny-dungeon assets/kenney
+   # Extracted to assets/kenney/tiny-dungeon
    ```
 
-### Integration
-
-5. **Agent extracts and organizes**
-   - Unzips downloaded file
-   - Organizes into project structure
-   - Documents asset attribution (if required)
-
-6. **Agent writes integration code**
+5. **Agent writes integration code**
    ```typescript
-   import { loadTexture } from "../../runtime/rendering/texture.ts";
+   import { loadTexture } from "@arcane/runtime/rendering";
 
-   // Load dungeon tileset
-   const dungeonTiles = loadTexture("./assets/tinydungeon/Tilemap/tilemap_packed.png");
+   const dungeonTiles = loadTexture("assets/kenney/tiny-dungeon/Tilemap/tilemap_packed.png");
    ```
 
 ## Best Practices
@@ -237,24 +166,24 @@ Licensed under [License]
 
 Follow Arcane's asset resolution system:
 
-1. Load textures via `loadTexture(path)` - cached automatically
+1. Load textures via `loadTexture(path)` — cached automatically
 2. Use relative paths from game entry point
 3. Keep asset paths in constants:
    ```typescript
    const ASSETS = {
-     DUNGEON_TILES: "./assets/kenney/tiny-dungeon/Tilemap/tilemap_packed.png",
-     UI_BUTTON: "./assets/kenney/ui-pack/PNG/blue_button00.png",
+     DUNGEON_TILES: "assets/kenney/tiny-dungeon/Tilemap/tilemap_packed.png",
+     UI_BUTTON: "assets/kenney/ui-pack/PNG/blue_button00.png",
    };
    ```
 
 ### Prototyping Strategy
 
 1. **Start with placeholders**
-   - Use Kenney's abstract/simple packs for rapid prototyping
+   - Use `createSolidTexture()` for rapid prototyping
    - Focus on gameplay mechanics first
 
 2. **Iterate with real assets**
-   - Once mechanics work, upgrade to thematic assets
+   - Once mechanics work, download packs: `arcane assets download`
    - Test with different art styles
 
 3. **Optimize later**
@@ -263,33 +192,14 @@ Follow Arcane's asset resolution system:
 
 ## Future Enhancements
 
-### Phase 6+
-
-- **Freesound.org integration** - Search and download sound effects with API
-- **itch.io integration** - Access community asset marketplace
-- **Asset hot-reload** - Auto-reload on asset file changes
-- **Asset preprocessing** - Automatic sprite sheet packing, format conversion
-- **Asset preloading** - Background loading with progress reporting
-- **Multi-row animation support** - Enhanced sprite sheet parsing
-
-### CLI Skill: `/add-asset`
-
-Future skill for interactive asset management:
-
-```bash
-# Search and download interactively
-/add-asset platformer sprites
-
-# Agent presents options, downloads on selection, integrates into project
-```
-
-### Asset Catalog Browser
-
-Future MCP resource for browsing assets directly in Claude Code UI.
+- **Additional sources** — Freesound.org, itch.io integration
+- **Asset hot-reload** — Auto-reload on asset file changes
+- **Asset preprocessing** — Automatic sprite sheet packing, format conversion
+- **Asset preloading** — Background loading with progress reporting
+- **Multi-row animation support** — Enhanced sprite sheet parsing
 
 ## See Also
 
-- [MCP Server README](../mcp/arcane-assets/README.md) - Detailed MCP server documentation
-- [Agent Tooling](agent-tooling.md) - Agent workflow and tool usage
-- [World Authoring](world-authoring.md) - Scene and world creation
-- [API Design](api-design.md) - Asset loading API design principles
+- [Agent Tooling](agent-tooling.md) — Agent workflow and tool usage
+- [World Authoring](world-authoring.md) — Scene and world creation
+- [API Design](api-design.md) — Asset loading API design principles

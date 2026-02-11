@@ -438,11 +438,18 @@ Make the engine installable and usable without cloning the repo. Improve the LLM
   - [x] Auto-generates `arcane.d.ts` from runtime JSDoc annotations
   - [x] Ships with scaffolded projects as primary LLM API reference
 - [x] Published packages: v0.2.1 on crates.io and npm
+- [x] **`arcane assets` CLI** — built-in asset discovery and download
+  - [x] `arcane assets list` — browse 25 Kenney.nl packs with type filter
+  - [x] `arcane assets search` — keyword search with synonym expansion and relevance scoring
+  - [x] `arcane assets download` — download and extract ZIP packs
+  - [x] `--json` flag for structured output on all commands
+  - [x] Embedded catalog via `include_dir` with filesystem fallback
+  - [x] 19 Rust tests for catalog, search, synonyms, filtering
 
 ### Success Criteria
 - [x] `cargo install arcane-cli && arcane new my-game && cd my-game && npm install && arcane dev` works end-to-end
 - [x] Dev-from-repo workflow unchanged (`cargo run -- dev demos/...` still works)
-- [x] 1022 TS tests + 60 Rust tests passing
+- [x] 1022 TS tests + 79 Rust tests passing
 
 ---
 

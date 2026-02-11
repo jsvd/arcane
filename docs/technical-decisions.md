@@ -399,3 +399,26 @@ Every release requires manually syncing `packages/runtime/src/` from `runtime/`.
 ### Recommended Fix
 Option 2 (publish from `runtime/` directly) or Option 3 (prepublish script). Either eliminates the manual copy step.
 
+---
+
+## ADR-014: CLI-First Asset Management
+
+### Context
+Phase 9.5 shipped an MCP server (`arcane-assets-mcp`) for asset discovery. This required `npm install`, `.mcp.json` configuration, and a running Node.js process — friction that every new user encountered.
+
+### Options Considered
+1. **Keep MCP server** — Powerful for agents, but requires npm install + config + running process
+2. **CLI commands** — Built into binary, zero config, works for humans and agents alike
+3. **Both** — MCP for agents, CLI for humans (two codebases to maintain)
+
+### Decision
+**CLI-first.** Replace the MCP server with `arcane assets list/search/download` commands built into the binary.
+
+### Rationale
+- **Zero friction**: `cargo install arcane-cli` gives you asset discovery — no npm, no config, no background processes
+- **Universal**: Works identically for humans typing commands and agents calling shell
+- **Embedded catalog**: Asset metadata ships in the binary via `include_dir`, with filesystem fallback for development
+- **Same functionality**: Search with synonym expansion, type filtering, relevance scoring, download + extraction — all preserved from the MCP implementation
+- **Simpler architecture**: One binary, one catalog file, no inter-process communication
+- **Agent-friendly**: `--json` flag on all commands for structured output that agents can parse
+- **MCP can return later**: If MCP becomes valuable again (e.g., for richer tool descriptions), the catalog and search logic are reusable. The CLI is the right default.
