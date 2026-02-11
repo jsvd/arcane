@@ -6,6 +6,7 @@ use std::fs;
 use std::io::Read as IoRead;
 use std::path::{Path, PathBuf};
 use walkdir;
+use image::ImageReader;
 
 static ASSETS_DIR: Dir<'static> = include_dir!("$OUT_DIR/assets");
 
@@ -438,6 +439,8 @@ pub struct FileCategory {
     pub category: String,
     pub count: usize,
     pub files: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spritesheets: Option<Vec<SpritesheetInfo>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -472,6 +475,91 @@ fn get_file_name(path: &Path) -> String {
         .and_then(|n| n.to_str())
         .unwrap_or("unknown")
         .to_string()
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SpritesheetInfo {
+    pub filename: String,
+    pub dimensions: (u32, u32),
+    pub likely_frame_size: Option<(u32, u32)>,
+    pub likely_grid: Option<(u32, u32)>, // (cols, rows)
+    pub likely_frame_count: Option<u32>,
+    pub confidence: f32,
+}
+
+/// Detect likely spritesheet structure from image dimensions.
+/// Tests common frame sizes (16, 24, 32, 48, 64 pixels) and returns the most likely grid.
+fn detect_spritesheet(path: &Path) -> Option<SpritesheetInfo> {
+    // Only analyze PNG/JPG files
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    if !matches!(ext.as_str(), "png" | "jpg" | "jpeg") {
+        return None;
+    }
+
+    // Try to read image dimensions
+    let reader = ImageReader::open(path).ok()?;
+    let dimensions = reader.into_dimensions().ok()?;
+    let (w, h) = (dimensions.0, dimensions.1);
+
+    // Skip very small or very large images (likely not spritesheets)
+    if w < 64 || h < 64 || w > 2048 || h > 2048 {
+        return None;
+    }
+
+    // Common frame sizes to test: 16, 24, 32, 48, 64
+    let frame_sizes = vec![16, 24, 32, 48, 64];
+    let mut candidates: Vec<_> = Vec::new();
+
+    for frame_size in frame_sizes {
+        let cols = w / frame_size;
+        let rows = h / frame_size;
+
+        // Must have at least 2×2 grid, and frames must fit evenly
+        if cols >= 2 && rows >= 2 && w % frame_size == 0 && h % frame_size == 0 {
+            let frame_count = cols * rows;
+            let confidence = if rows > 1 { 0.9 } else { 0.5 }; // Multi-row is more confident
+            candidates.push((frame_size, cols, rows, frame_count, confidence));
+        }
+
+        // Also test single-row (one frame per row)
+        if rows >= 2 && h % frame_size == 0 && w % frame_size == 0 {
+            let cols = w / frame_size;
+            let rows = h / frame_size;
+            if cols > 1 {
+                let frame_count = cols * rows;
+                candidates.push((frame_size, cols, rows, frame_count, 0.85));
+            }
+        }
+    }
+
+    // Pick the candidate with highest confidence (and prefer larger grid)
+    if let Some((frame_size, cols, rows, frame_count, confidence)) =
+        candidates.into_iter().max_by(|a, b| {
+            // Primary: confidence; secondary: total frames
+            a.4.partial_cmp(&b.4)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| (a.2 * a.1).cmp(&(b.2 * b.1)))
+        })
+    {
+        // Only return if it looks like a real spritesheet (multi-row or large grid)
+        if rows > 1 || (cols > 3 && rows > 1) {
+            return Some(SpritesheetInfo {
+                filename: get_file_name(path),
+                dimensions: (w, h),
+                likely_frame_size: Some((frame_size, frame_size)),
+                likely_grid: Some((cols, rows)),
+                likely_frame_count: Some(frame_count),
+                confidence,
+            });
+        }
+    }
+
+    None
 }
 
 pub fn run_inspect(id: String, cache: Option<String>, json: bool) -> Result<()> {
@@ -521,6 +609,7 @@ pub fn run_inspect(id: String, cache: Option<String>, json: bool) -> Result<()> 
 
     // Scan directory
     let mut categories: HashMap<String, Vec<String>> = HashMap::new();
+    let mut spritesheets: HashMap<String, Vec<SpritesheetInfo>> = HashMap::new();
     let mut total = 0;
 
     for entry in walkdir::WalkDir::new(&extract_dir)
@@ -531,10 +620,20 @@ pub fn run_inspect(id: String, cache: Option<String>, json: bool) -> Result<()> 
             if let Some(category) = categorize_file(entry.path()) {
                 let file_name = get_file_name(entry.path());
                 categories
-                    .entry(category)
+                    .entry(category.clone())
                     .or_insert_with(Vec::new)
                     .push(file_name);
                 total += 1;
+
+                // Detect spritesheets for sprite category
+                if category == "Sprites" {
+                    if let Some(sheet_info) = detect_spritesheet(entry.path()) {
+                        spritesheets
+                            .entry(category)
+                            .or_insert_with(Vec::new)
+                            .push(sheet_info);
+                    }
+                }
             }
         }
     }
@@ -544,14 +643,25 @@ pub fn run_inspect(id: String, cache: Option<String>, json: bool) -> Result<()> 
         files.sort();
     }
 
+    // Sort spritesheets by grid size (larger grids first)
+    for sheets in spritesheets.values_mut() {
+        sheets.sort_by(|a, b| {
+            let a_frames = a.likely_frame_count.unwrap_or(0);
+            let b_frames = b.likely_frame_count.unwrap_or(0);
+            b_frames.cmp(&a_frames)
+        });
+    }
+
     let mut sorted_cats: Vec<_> = categories
         .into_iter()
         .map(|(cat, mut files)| {
             files.sort();
+            let cat_spritesheets = spritesheets.get(&cat).cloned();
             FileCategory {
-                category: cat,
+                category: cat.clone(),
                 count: files.len(),
                 files: files.into_iter().take(20).collect(), // Limit to first 20
+                spritesheets: cat_spritesheets,
             }
         })
         .collect();
@@ -574,11 +684,46 @@ pub fn run_inspect(id: String, cache: Option<String>, json: bool) -> Result<()> 
 
         for cat in &result.categories {
             println!("{}  ({})", cat.category, cat.count);
+
+            // Show detected spritesheets first
+            if let Some(sheets) = &cat.spritesheets {
+                if !sheets.is_empty() {
+                    println!("  📊 SPRITESHEETS:");
+                    for sheet in sheets {
+                        let (w, h) = sheet.dimensions;
+                        if let (Some((frame_w, frame_h)), Some((cols, rows)), Some(frames)) = (
+                            sheet.likely_frame_size,
+                            sheet.likely_grid,
+                            sheet.likely_frame_count,
+                        ) {
+                            println!(
+                                "    • {} ({}×{})",
+                                sheet.filename, w, h
+                            );
+                            println!(
+                                "      └─ {} cols × {} rows = {} frames @ {}×{} px",
+                                cols, rows, frames, frame_w, frame_h
+                            );
+                        }
+                    }
+                    println!();
+                }
+            }
+
+            // Show regular files (limit to 20)
             for file in &cat.files {
+                // Skip files we already showed in spritesheets section
+                if let Some(sheets) = &cat.spritesheets {
+                    if sheets.iter().any(|s| s.filename == *file) {
+                        continue;
+                    }
+                }
                 println!("  • {}", file);
             }
+
+            let shown = cat.files.len().min(20);
             if cat.files.len() < cat.count {
-                println!("  ... and {} more", cat.count - cat.files.len());
+                println!("  ... and {} more", cat.count - shown);
             }
             println!();
         }
@@ -680,6 +825,37 @@ mod tests {
     fn categorize_file_unknown() {
         assert_eq!(categorize_file(Path::new("config.xml")), None);
         assert_eq!(categorize_file(Path::new("README")), None);
+    }
+
+    #[test]
+    fn detect_spritesheet_ignores_non_images() {
+        // Should not try to detect spritesheets on non-image files
+        assert!(detect_spritesheet(Path::new("metadata.txt")).is_none());
+        assert!(detect_spritesheet(Path::new("audio.wav")).is_none());
+    }
+
+    #[test]
+    fn detect_spritesheet_ignores_missing_files() {
+        // Should gracefully handle non-existent files
+        assert!(detect_spritesheet(Path::new("/nonexistent/fake.png")).is_none());
+    }
+
+    #[test]
+    fn spritesheet_info_serialization() {
+        let info = SpritesheetInfo {
+            filename: "player.png".to_string(),
+            dimensions: (192, 128),
+            likely_frame_size: Some((32, 32)),
+            likely_grid: Some((6, 4)),
+            likely_frame_count: Some(24),
+            confidence: 0.9,
+        };
+
+        // Should serialize to JSON without errors
+        let json = serde_json::to_string(&info).expect("Should serialize");
+        assert!(json.contains("player.png"));
+        assert!(json.contains("192"));
+        assert!(json.contains("\"likely_grid\":[6,4]"));
     }
 
     #[test]
