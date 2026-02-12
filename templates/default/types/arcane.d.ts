@@ -3,7 +3,7 @@
 // Regenerate with: ./scripts/generate-declarations.sh
 //
 // Import from: @arcane/runtime/{module}
-// Modules: rendering, ui, state, physics, tweening, particles, pathfinding, systems, agent, testing
+// Modules: rendering, ui, state, physics, tweening, particles, pathfinding, systems, scenes, persistence, agent, testing
 
 // ============================================================================
 // Module: @arcane/runtime/rendering (Rendering)

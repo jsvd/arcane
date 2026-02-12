@@ -14,7 +14,7 @@ Two-file pattern:
 Hot-reload: saving any file restarts the game loop (~200ms). State resets to initial.
 
 Imports use `@arcane/runtime/{module}`:
-`state`, `rendering`, `ui`, `physics`, `pathfinding`, `tweening`, `particles`, `systems`, `agent`, `testing`
+`state`, `rendering`, `ui`, `physics`, `pathfinding`, `tweening`, `particles`, `systems`, `scenes`, `persistence`, `agent`, `testing`
 
 ## Coordinate System
 
@@ -114,7 +114,7 @@ onFrame(() => {
 });
 ```
 
-Key input: `isKeyDown(key)` for held keys, `isKeyPressed(key)` for single-frame press. Keys use DOM names: `"ArrowLeft"`, `"a"`, `"Space"`, etc.
+Key input: `isKeyDown(key)` for held keys, `isKeyPressed(key)` for single-frame press. Keys use DOM-like names: `"ArrowLeft"`, `"ArrowRight"`, `"ArrowUp"`, `"ArrowDown"`, `"Space"`, `"Enter"`, `"Escape"`, `"ShiftLeft"`, `"KeyA"` through `"KeyZ"`, `"Digit0"` through `"Digit9"`. **Important:** Space is `"Space"`, not `" "` (literal space character).
 
 ## Composition Patterns
 
@@ -214,6 +214,50 @@ let animState = playAnimation(walkAnim);
 // In onFrame:
 animState = updateAnimation(animState, dt);
 drawAnimatedSprite(animState, x, y, 32, 32, { layer: 1 });
+```
+
+**Sprite Transforms** — Rotation, flip, opacity, and blend modes are all `SpriteOptions` fields:
+```typescript
+// Rotation (radians, positive = clockwise, around center by default)
+drawSprite({ textureId: TEX, x, y, w: 32, h: 32, rotation: angle, layer: 1 });
+
+// Rotation around custom origin (0-1 relative to sprite size)
+drawSprite({ textureId: TEX, x, y, w: 32, h: 32, rotation: angle, originX: 0.5, originY: 1.0, layer: 1 }); // rotate around bottom-center
+
+// Flip + opacity
+drawSprite({ textureId: TEX, x, y, w: 32, h: 32, flipX: facingLeft, opacity: 0.5, layer: 1 });
+
+// Blend modes: "alpha" (default), "additive" (glow/fire), "multiply" (shadows), "screen" (highlights)
+drawSprite({ textureId: TEX, x, y, w: 8, h: 8, blendMode: "additive", layer: 5 }); // glowing particle
+```
+
+**Post-Processing** — Screen-wide effects applied after all sprites are drawn:
+```typescript
+import { addPostProcessEffect, setEffectParam, removeEffect, clearEffects } from "@arcane/runtime/rendering";
+
+const crt = addPostProcessEffect("crt");       // scanlines + barrel distortion
+const bloom = addPostProcessEffect("bloom");    // glow around bright areas
+const blur = addPostProcessEffect("blur");      // gaussian blur
+const vig = addPostProcessEffect("vignette");   // darkened edges
+
+setEffectParam(crt, "intensity", 0.3);          // customize effect parameters
+removeEffect(bloom);                            // remove a single effect
+clearEffects();                                 // remove all effects
+```
+
+**Custom Shaders** — User-defined WGSL fragment shaders with uniform parameters:
+```typescript
+import { createShaderFromSource, setShaderParam } from "@arcane/runtime/rendering";
+
+const shader = createShaderFromSource("dissolve", `
+  @fragment fn main(@location(0) uv: vec2<f32>, @location(1) color: vec4<f32>) -> @location(0) vec4<f32> {
+    let threshold = params[0].x;
+    // ... WGSL fragment shader code
+    return color;
+  }
+`);
+setShaderParam(shader, 0, 0.5, 0, 0, 0);  // set uniform slot 0 (16 vec4 slots available)
+drawSprite({ textureId: TEX, x, y, w: 32, h: 32, shaderId: shader, layer: 1 });
 ```
 
 **Audio** — Load once, play in response to events:
@@ -409,6 +453,66 @@ registerMigration({
 // Old v1 saves are automatically migrated to v2 on load
 ```
 
+## Common Game Patterns
+
+**Angular movement** (ships, top-down vehicles) — use `cos`/`sin` with a rotation angle:
+```typescript
+// Rotate the entity
+entity.angle += turnSpeed * dt * (isKeyDown("ArrowRight") ? 1 : isKeyDown("ArrowLeft") ? -1 : 0);
+
+// Thrust in facing direction
+if (isKeyDown("ArrowUp")) {
+  entity.vx += Math.cos(entity.angle - Math.PI / 2) * thrust * dt;
+  entity.vy += Math.sin(entity.angle - Math.PI / 2) * thrust * dt;
+}
+
+// Render with rotation
+drawSprite({ textureId: TEX, x: entity.x - 16, y: entity.y - 16, w: 32, h: 32, rotation: entity.angle, layer: 1 });
+```
+Note: `angle - Math.PI/2` because rotation 0 = pointing right, but "up" sprites typically face up.
+
+**Screen wrapping** (asteroids, pac-man):
+```typescript
+function wrapPosition(x: number, y: number, w: number, h: number, vpW: number, vpH: number) {
+  return {
+    x: x < -w ? vpW : x > vpW ? -w : x,
+    y: y < -h ? vpH : y > vpH ? -h : y,
+  };
+}
+```
+
+**Cooldown timers** — decrement by dt, allow action when <= 0:
+```typescript
+entity.shootCooldown -= dt;
+if (isKeyPressed("Space") && entity.shootCooldown <= 0) {
+  spawnBullet(entity);
+  entity.shootCooldown = 0.15; // seconds between shots
+}
+```
+
+**Entity lifecycle** — spawn, update, despawn with array filtering:
+```typescript
+// Spawn
+bullets.push({ x, y, vx, vy, lifetime: 1.5 });
+
+// Update + despawn in one pass
+bullets = bullets
+  .map(b => ({ ...b, x: b.x + b.vx * dt, y: b.y + b.vy * dt, lifetime: b.lifetime - dt }))
+  .filter(b => b.lifetime > 0);
+```
+
+**Particle effects for game feel** — use additive blending for fire/explosions:
+```typescript
+for (const p of particles) {
+  drawSprite({
+    textureId: TEX_PARTICLE, x: p.x - 2, y: p.y - 2, w: 4 * p.scale, h: 4 * p.scale,
+    opacity: p.lifetime / p.maxLifetime,  // fade out
+    blendMode: "additive",                // glow effect
+    layer: 5,
+  });
+}
+```
+
 ## Tips
 
 - Always multiply velocities/movement by `dt` for frame-rate independence.
@@ -420,3 +524,6 @@ registerMigration({
 - Test game logic in `*.test.ts` files using `describe`, `it`, `assert` from `@arcane/runtime/testing`.
 - Tests run in both Node.js and V8 — avoid Node-specific APIs in test files.
 - Call `clearSprites()` at the start of your `onFrame` to ensure a clean slate each frame.
+- Key names: `"Space"` not `" "`, `"Enter"` not `"\n"`, `"Escape"` not `"Esc"`. Check `types/arcane.d.ts` if unsure.
+- For rotation, `0` = no rotation, positive = clockwise. Ship sprites that face "up" need `angle - Math.PI/2` offset.
+- Use `blendMode: "additive"` for glowing effects (exhaust, fire, magic). It adds light instead of covering pixels.
