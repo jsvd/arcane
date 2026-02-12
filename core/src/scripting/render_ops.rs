@@ -7,6 +7,7 @@ use deno_core::OpState;
 use crate::renderer::SpriteCommand;
 use crate::renderer::TilemapStore;
 use crate::renderer::PointLight;
+use crate::renderer::camera::CameraBounds;
 
 /// Audio command queued from TS ops, drained by the frame callback.
 #[derive(Clone, Debug)]
@@ -79,6 +80,8 @@ pub struct RenderBridgeState {
     pub effect_clear: bool,
     /// Next effect ID to assign.
     pub next_effect_id: u32,
+    /// Camera bounds (world-space limits).
+    pub camera_bounds: Option<CameraBounds>,
 }
 
 impl RenderBridgeState {
@@ -118,6 +121,7 @@ impl RenderBridgeState {
             effect_remove_queue: Vec::new(),
             effect_clear: false,
             next_effect_id: 1,
+            camera_bounds: None,
         }
     }
 }
@@ -634,6 +638,44 @@ pub fn op_clear_effects(state: &mut OpState) {
     bridge.borrow_mut().effect_clear = true;
 }
 
+// --- Camera bounds ops ---
+
+/// Set camera bounds (world-space limits).
+#[deno_core::op2(fast)]
+pub fn op_set_camera_bounds(state: &mut OpState, min_x: f64, min_y: f64, max_x: f64, max_y: f64) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().camera_bounds = Some(CameraBounds {
+        min_x: min_x as f32,
+        min_y: min_y as f32,
+        max_x: max_x as f32,
+        max_y: max_y as f32,
+    });
+}
+
+/// Clear camera bounds (no limits).
+#[deno_core::op2(fast)]
+pub fn op_clear_camera_bounds(state: &mut OpState) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().camera_bounds = None;
+}
+
+/// Get camera bounds as [minX, minY, maxX, maxY] or empty if none.
+#[deno_core::op2]
+#[serde]
+pub fn op_get_camera_bounds(state: &mut OpState) -> Vec<f64> {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let b = bridge.borrow();
+    match b.camera_bounds {
+        Some(bounds) => vec![
+            bounds.min_x as f64,
+            bounds.min_y as f64,
+            bounds.max_x as f64,
+            bounds.max_y as f64,
+        ],
+        None => vec![],
+    }
+}
+
 deno_core::extension!(
     render_ext,
     ops = [
@@ -673,5 +715,8 @@ deno_core::extension!(
         op_set_effect_param,
         op_remove_effect,
         op_clear_effects,
+        op_set_camera_bounds,
+        op_clear_camera_bounds,
+        op_get_camera_bounds,
     ],
 );

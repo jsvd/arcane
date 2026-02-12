@@ -1,7 +1,7 @@
 mod gpu;
 mod sprite;
 mod texture;
-mod camera;
+pub mod camera;
 mod tilemap;
 mod lighting;
 pub mod font;

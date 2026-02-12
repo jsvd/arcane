@@ -10,7 +10,19 @@ export type {
 export { drawSprite, clearSprites } from "./sprites.ts";
 
 // Camera
-export { setCamera, getCamera, followTarget } from "./camera.ts";
+export type { CameraBounds, CameraDeadzone } from "./camera.ts";
+export {
+  setCamera,
+  getCamera,
+  followTarget,
+  setCameraBounds,
+  getCameraBounds,
+  setCameraDeadzone,
+  getCameraDeadzone,
+  followTargetSmooth,
+  zoomTo,
+  zoomToPoint,
+} from "./camera.ts";
 
 // Input
 export {
@@ -60,6 +72,10 @@ export { loadSound, playSound, playMusic, stopSound, stopAll, setVolume } from "
 // Custom Shaders
 export type { ShaderId } from "./shader.ts";
 export { createShaderFromSource, setShaderParam } from "./shader.ts";
+
+// Parallax
+export type { ParallaxSpriteOptions } from "./parallax.ts";
+export { drawParallaxSprite } from "./parallax.ts";
 
 // Post-Processing
 export type { EffectId } from "./postprocess.ts";

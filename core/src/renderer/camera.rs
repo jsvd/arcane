@@ -1,9 +1,19 @@
+/// Camera bounds: min/max world coordinates the camera can show.
+#[derive(Clone, Copy, Debug)]
+pub struct CameraBounds {
+    pub min_x: f32,
+    pub min_y: f32,
+    pub max_x: f32,
+    pub max_y: f32,
+}
+
 /// 2D camera with position, zoom, and viewport.
 pub struct Camera2D {
     pub x: f32,
     pub y: f32,
     pub zoom: f32,
     pub viewport_size: [f32; 2],
+    pub bounds: Option<CameraBounds>,
 }
 
 impl Default for Camera2D {
@@ -13,11 +23,37 @@ impl Default for Camera2D {
             y: 0.0,
             zoom: 1.0,
             viewport_size: [800.0, 600.0],
+            bounds: None,
         }
     }
 }
 
 impl Camera2D {
+    /// Clamp camera position so the visible area stays within bounds.
+    /// If the visible area is larger than the bounds, the camera centers on the bounds.
+    pub fn clamp_to_bounds(&mut self) {
+        let Some(bounds) = self.bounds else { return };
+
+        let half_w = self.viewport_size[0] / (2.0 * self.zoom);
+        let half_h = self.viewport_size[1] / (2.0 * self.zoom);
+
+        let bounds_w = bounds.max_x - bounds.min_x;
+        let bounds_h = bounds.max_y - bounds.min_y;
+
+        // If visible area wider than bounds, center on bounds
+        if half_w * 2.0 >= bounds_w {
+            self.x = bounds.min_x + bounds_w / 2.0;
+        } else {
+            self.x = self.x.clamp(bounds.min_x + half_w, bounds.max_x - half_w);
+        }
+
+        if half_h * 2.0 >= bounds_h {
+            self.y = bounds.min_y + bounds_h / 2.0;
+        } else {
+            self.y = self.y.clamp(bounds.min_y + half_h, bounds.max_y - half_h);
+        }
+    }
+
     /// Compute the view-projection matrix as a column-major 4x4 array.
     ///
     /// Maps world coordinates to clip space:
@@ -68,6 +104,7 @@ mod tests {
             y: 0.0,
             zoom: 1.0,
             viewport_size: [800.0, 600.0],
+            ..Default::default()
         };
         let mat = cam.view_proj();
 
@@ -90,6 +127,7 @@ mod tests {
             y: 50.0,
             zoom: 1.0,
             viewport_size: [800.0, 600.0],
+            ..Default::default()
         };
         let mat = cam.view_proj();
 
@@ -111,6 +149,7 @@ mod tests {
             y: 0.0,
             zoom: 2.0,
             viewport_size: [800.0, 600.0],
+            ..Default::default()
         };
         let mat = cam.view_proj();
 
@@ -132,6 +171,7 @@ mod tests {
             y: 0.0,
             zoom: 1.0,
             viewport_size: [1920.0, 1080.0],
+            ..Default::default()
         };
         let mat = cam.view_proj();
 
@@ -167,6 +207,7 @@ mod tests {
             y: 0.0,
             zoom: 10.0,
             viewport_size: [800.0, 600.0],
+            ..Default::default()
         };
         let mat = cam.view_proj();
 
@@ -187,6 +228,7 @@ mod tests {
             y: 0.0,
             zoom: 0.1,
             viewport_size: [800.0, 600.0],
+            ..Default::default()
         };
         let mat = cam.view_proj();
 
@@ -207,6 +249,7 @@ mod tests {
             y: -50.0,
             zoom: 1.0,
             viewport_size: [800.0, 600.0],
+            ..Default::default()
         };
         let mat = cam.view_proj();
 
@@ -217,12 +260,86 @@ mod tests {
     }
 
     #[test]
+    fn clamp_to_bounds_keeps_camera_in_range() {
+        let mut cam = Camera2D {
+            x: -100.0,
+            y: -100.0,
+            zoom: 1.0,
+            viewport_size: [800.0, 600.0],
+            bounds: Some(CameraBounds { min_x: 0.0, min_y: 0.0, max_x: 1600.0, max_y: 1200.0 }),
+        };
+        cam.clamp_to_bounds();
+        // half_w=400, half_h=300 → x clamped to 400, y clamped to 300
+        assert_eq!(cam.x, 400.0);
+        assert_eq!(cam.y, 300.0);
+    }
+
+    #[test]
+    fn clamp_to_bounds_right_edge() {
+        let mut cam = Camera2D {
+            x: 1500.0,
+            y: 1100.0,
+            zoom: 1.0,
+            viewport_size: [800.0, 600.0],
+            bounds: Some(CameraBounds { min_x: 0.0, min_y: 0.0, max_x: 1600.0, max_y: 1200.0 }),
+        };
+        cam.clamp_to_bounds();
+        // half_w=400, half_h=300 → x clamped to 1200, y clamped to 900
+        assert_eq!(cam.x, 1200.0);
+        assert_eq!(cam.y, 900.0);
+    }
+
+    #[test]
+    fn clamp_to_bounds_centers_when_view_larger_than_bounds() {
+        let mut cam = Camera2D {
+            x: 0.0,
+            y: 0.0,
+            zoom: 0.5, // zoomed out: half_w = 800, half_h = 600
+            viewport_size: [800.0, 600.0],
+            bounds: Some(CameraBounds { min_x: 0.0, min_y: 0.0, max_x: 400.0, max_y: 300.0 }),
+        };
+        cam.clamp_to_bounds();
+        // bounds is 400×300, visible is 1600×1200 → centers
+        assert_eq!(cam.x, 200.0);
+        assert_eq!(cam.y, 150.0);
+    }
+
+    #[test]
+    fn clamp_no_bounds_is_noop() {
+        let mut cam = Camera2D {
+            x: -999.0,
+            y: 999.0,
+            zoom: 1.0,
+            viewport_size: [800.0, 600.0],
+            bounds: None,
+        };
+        cam.clamp_to_bounds();
+        assert_eq!(cam.x, -999.0);
+        assert_eq!(cam.y, 999.0);
+    }
+
+    #[test]
+    fn clamp_with_zoom() {
+        let mut cam = Camera2D {
+            x: 10.0,
+            y: 10.0,
+            zoom: 2.0, // half_w = 200, half_h = 150
+            viewport_size: [800.0, 600.0],
+            bounds: Some(CameraBounds { min_x: 0.0, min_y: 0.0, max_x: 1000.0, max_y: 800.0 }),
+        };
+        cam.clamp_to_bounds();
+        assert_eq!(cam.x, 200.0);
+        assert_eq!(cam.y, 150.0);
+    }
+
+    #[test]
     fn square_viewport() {
         let cam = Camera2D {
             x: 0.0,
             y: 0.0,
             zoom: 1.0,
             viewport_size: [600.0, 600.0],
+            ..Default::default()
         };
         let mat = cam.view_proj();
 

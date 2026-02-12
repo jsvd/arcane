@@ -12,6 +12,7 @@ use winit::keyboard::{Key, NamedKey};
 use winit::window::{Window, WindowId};
 
 use crate::renderer::Renderer;
+use crate::renderer::camera::CameraBounds;
 
 use super::input::InputState;
 
@@ -23,6 +24,7 @@ pub struct RenderState {
     pub camera_x: f32,
     pub camera_y: f32,
     pub camera_zoom: f32,
+    pub camera_bounds: Option<CameraBounds>,
     pub delta_time: f64,
 }
 
@@ -35,6 +37,7 @@ impl RenderState {
             camera_x: 0.0,
             camera_y: 0.0,
             camera_zoom: 1.0,
+            camera_bounds: None,
             delta_time: 0.0,
         }
     }
@@ -211,12 +214,15 @@ impl ApplicationHandler for AppState {
                     let cam_x = state.camera_x;
                     let cam_y = state.camera_y;
                     let cam_zoom = state.camera_zoom;
+                    let cam_bounds = state.camera_bounds;
                     let commands = std::mem::take(&mut state.sprite_commands);
 
                     if let Some(ref mut renderer) = state.renderer {
                         renderer.camera.x = cam_x;
                         renderer.camera.y = cam_y;
                         renderer.camera.zoom = cam_zoom;
+                        renderer.camera.bounds = cam_bounds;
+                        renderer.camera.clamp_to_bounds();
                         renderer.frame_commands = commands;
 
                         if let Err(e) = renderer.render_frame() {

@@ -301,6 +301,7 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
             state.camera_x = bridge.camera_x;
             state.camera_y = bridge.camera_y;
             state.camera_zoom = bridge.camera_zoom;
+            state.camera_bounds = bridge.camera_bounds;
 
             // Sync lighting state to renderer
             if let Some(ref mut renderer) = state.renderer {
