@@ -56,6 +56,9 @@ export function drawSprite(opts: SpriteOptions): void {
   const rotation = opts.rotation ?? 0;
   const originX = opts.originX ?? 0.5;
   const originY = opts.originY ?? 0.5;
+  const flipX = opts.flipX ? 1 : 0;
+  const flipY = opts.flipY ? 1 : 0;
+  const opacity = opts.opacity ?? 1;
 
   (globalThis as any).Deno.core.ops.op_draw_sprite(
     texId,
@@ -75,6 +78,9 @@ export function drawSprite(opts: SpriteOptions): void {
     rotation,
     originX,
     originY,
+    flipX,
+    flipY,
+    opacity,
   );
 }
 

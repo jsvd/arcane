@@ -43,6 +43,12 @@ export type SpriteOptions = {
   originX?: number;
   /** Y origin for rotation, 0-1 relative to sprite height. Default: 0.5 (center). */
   originY?: number;
+  /** Mirror the sprite horizontally. Default: false. */
+  flipX?: boolean;
+  /** Mirror the sprite vertically. Default: false. */
+  flipY?: boolean;
+  /** Opacity 0-1, multiplied with tint alpha. Default: 1 (fully opaque). */
+  opacity?: number;
 };
 
 /** Camera state returned by {@link getCamera}. */

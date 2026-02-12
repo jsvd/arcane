@@ -115,6 +115,9 @@ impl Tilemap {
                     rotation: 0.0,
                     origin_x: 0.5,
                     origin_y: 0.5,
+                    flip_x: false,
+                    flip_y: false,
+                    opacity: 1.0,
                 });
             }
         }

@@ -26,6 +26,9 @@ pub struct SpriteCommand {
     pub rotation: f32,
     pub origin_x: f32,
     pub origin_y: f32,
+    pub flip_x: bool,
+    pub flip_y: bool,
+    pub opacity: f32,
 }
 
 /// Per-vertex data for the unit quad.
@@ -383,13 +386,28 @@ impl SpritePipeline {
             // Build instance buffer for this batch
             let instances: Vec<SpriteInstance> = batch
                 .iter()
-                .map(|cmd| SpriteInstance {
-                    world_pos: [cmd.x, cmd.y],
-                    size: [cmd.w, cmd.h],
-                    uv_offset: [cmd.uv_x, cmd.uv_y],
-                    uv_size: [cmd.uv_w, cmd.uv_h],
-                    tint: [cmd.tint_r, cmd.tint_g, cmd.tint_b, cmd.tint_a],
-                    rotation_origin: [cmd.rotation, cmd.origin_x, cmd.origin_y, 0.0],
+                .map(|cmd| {
+                    // Apply flip by negating UV and shifting offset
+                    let mut uv_x = cmd.uv_x;
+                    let mut uv_y = cmd.uv_y;
+                    let mut uv_w = cmd.uv_w;
+                    let mut uv_h = cmd.uv_h;
+                    if cmd.flip_x {
+                        uv_x += uv_w;
+                        uv_w = -uv_w;
+                    }
+                    if cmd.flip_y {
+                        uv_y += uv_h;
+                        uv_h = -uv_h;
+                    }
+                    SpriteInstance {
+                        world_pos: [cmd.x, cmd.y],
+                        size: [cmd.w, cmd.h],
+                        uv_offset: [uv_x, uv_y],
+                        uv_size: [uv_w, uv_h],
+                        tint: [cmd.tint_r, cmd.tint_g, cmd.tint_b, cmd.tint_a * cmd.opacity],
+                        rotation_origin: [cmd.rotation, cmd.origin_x, cmd.origin_y, 0.0],
+                    }
                 })
                 .collect();
 
