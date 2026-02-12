@@ -8,4 +8,4 @@ pub mod render_ops;
 
 pub use module_loader::{ImportMap, TsModuleLoader};
 pub use runtime::ArcaneRuntime;
-pub use test_runner::{TestResult, TestSummary, run_test_file};
+pub use test_runner::{TestResult, TestSummary, run_test_file, run_test_file_with_import_map};

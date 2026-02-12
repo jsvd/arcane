@@ -1,7 +1,9 @@
+use std::path::Path;
+
 use anyhow::{Context, Result};
 use arcane_engine::scripting::ArcaneRuntime;
 
-use super::type_check;
+use super::{create_import_map, type_check};
 
 /// Run the `arcane describe` command: load a game entry file headless and
 /// call its agent describe function.
@@ -14,7 +16,9 @@ pub fn run(entry: String, verbosity: Option<String>) -> Result<()> {
         type_check::check_types(&entry_path)?;
     }
 
-    let mut runtime = ArcaneRuntime::new();
+    let base_dir = entry_path.parent().unwrap_or_else(|| Path::new("."));
+    let import_map = create_import_map(base_dir);
+    let mut runtime = ArcaneRuntime::new_with_import_map(import_map);
 
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()

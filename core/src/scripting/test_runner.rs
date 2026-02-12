@@ -7,7 +7,7 @@ use deno_core::JsRuntime;
 use deno_core::OpState;
 use deno_core::RuntimeOptions;
 
-use super::TsModuleLoader;
+use super::{ImportMap, TsModuleLoader};
 
 /// Result of a single test case.
 #[derive(Debug, Clone)]
@@ -34,11 +34,16 @@ struct TestRunnerState {
 
 /// Run a single `.test.ts` file in V8 and collect results.
 pub fn run_test_file(path: &Path) -> anyhow::Result<TestSummary> {
+    run_test_file_with_import_map(path, ImportMap::new())
+}
+
+/// Run a single `.test.ts` file in V8 with import map support.
+pub fn run_test_file_with_import_map(path: &Path, import_map: ImportMap) -> anyhow::Result<TestSummary> {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()?;
 
-    rt.block_on(run_test_file_async(path))
+    rt.block_on(run_test_file_async(path, import_map))
 }
 
 #[deno_core::op2(fast)]
@@ -82,14 +87,14 @@ deno_core::extension!(
     ops = [op_report_test, op_crypto_random_uuid_test],
 );
 
-async fn run_test_file_async(path: &Path) -> anyhow::Result<TestSummary> {
+async fn run_test_file_async(path: &Path, import_map: ImportMap) -> anyhow::Result<TestSummary> {
     let state = Rc::new(RefCell::new(TestRunnerState {
         summary: TestSummary::default(),
         results: Vec::new(),
     }));
 
     let mut runtime = JsRuntime::new(RuntimeOptions {
-        module_loader: Some(Rc::new(TsModuleLoader::new())),
+        module_loader: Some(Rc::new(TsModuleLoader::with_import_map(import_map))),
         extensions: vec![test_runner_ext::init()],
         ..Default::default()
     });

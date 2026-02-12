@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use arcane_engine::scripting::{run_test_file, TestSummary};
+use arcane_engine::scripting::{run_test_file_with_import_map, TestSummary};
 
-use super::type_check;
+use super::{create_import_map, type_check};
 
 pub fn run(path: Option<String>) -> anyhow::Result<()> {
     let root = path
@@ -25,6 +25,9 @@ pub fn run(path: Option<String>) -> anyhow::Result<()> {
         }
     }
 
+    // Create import map once for resolving @arcane/runtime imports
+    let import_map = create_import_map(&root);
+
     let mut grand_total = TestSummary {
         total: 0,
         passed: 0,
@@ -40,7 +43,7 @@ pub fn run(path: Option<String>) -> anyhow::Result<()> {
             .display();
         print!("{display} ... ");
 
-        match run_test_file(file) {
+        match run_test_file_with_import_map(file, import_map.clone()) {
             Ok(summary) => {
                 grand_total.total += summary.total;
                 grand_total.passed += summary.passed;

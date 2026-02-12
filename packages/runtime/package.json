@@ -3,6 +3,10 @@
   "version": "0.6.0",
   "description": "Agent-native 2D game engine runtime - TypeScript APIs for state management, rendering, and game logic",
   "type": "module",
+  "scripts": {
+    "prepack": "rm -f src recipes && cp -r ../../runtime src && cp -r ../../recipes recipes",
+    "postpack": "rm -rf src recipes && ln -s ../../runtime src && ln -s ../../recipes recipes"
+  },
   "main": "./index.ts",
   "types": "./index.ts",
   "exports": {
