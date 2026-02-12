@@ -4,7 +4,7 @@
 
 Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for performance, TypeScript scripting for game logic.
 
-**Current status: Phase 12 (Sprite Transforms + Rendering Polish) COMPLETE ✅ — Rotation, flip, opacity, blend modes, custom WGSL shaders, post-processing pipeline (bloom, blur, vignette, CRT). 944 TS (Node) + 1557 (V8) + 198 Rust tests passing. Next: Phase 13 (Advanced Input + Interactive UI).**
+**Current status: Phase 13 (Camera Polish) COMPLETE ✅ — Camera bounds/limits, deadzone, smooth follow, smooth zoom (tween-based), parallax scrolling. 961 TS (Node) + 1591 (V8) + 203 Rust tests passing. Next: Phase 14 (Tilemap Polish).**
 
 ## Repository Structure
 
@@ -108,7 +108,8 @@ arcane/
 │   ├── rendering/
 │   │   ├── types.ts               — TextureId, SpriteOptions, CameraState, TilemapId
 │   │   ├── sprites.ts             — drawSprite(), clearSprites()
-│   │   ├── camera.ts              — setCamera(), getCamera(), followTarget()
+│   │   ├── camera.ts              — setCamera(), getCamera(), followTarget(), followTargetSmooth(), setCameraBounds(), setCameraDeadzone(), zoomTo(), zoomToPoint()
+│   │   ├── parallax.ts            — drawParallaxSprite() multi-layer depth scrolling
 │   │   ├── input.ts               — isKeyDown(), isKeyPressed(), getMousePosition()
 │   │   ├── tilemap.ts             — createTilemap(), setTile(), getTile(), drawTilemap()
 │   │   ├── lighting.ts            — setAmbientLight(), addPointLight(), clearLights()
@@ -156,7 +157,8 @@ arcane/
 │   ├── sprite-demo/               — Phase 5.5 demo: asset loading validation with sprite sheet + sound
 │   ├── bfrpg-crawler/             — Phase 6 demo: BFRPG dungeon crawler with character creation, combat, AI
 │   ├── menu-flow/                 — Phase 10 demo: scene management, save/load, menu flow
-│   └── physics-playground/        — Phase 11 demo: rigid body physics sandbox
+│   ├── physics-playground/        — Phase 11 demo: rigid body physics sandbox
+│   └── parallax-scroller/        — Phase 13 demo: parallax scrolling + camera features
 ├── recipes/
 │   ├── turn-based-combat/         — Initiative, attack/defend, victory detection
 │   ├── inventory-equipment/       — Items, stacking, weight, equipment slots, stat bonuses

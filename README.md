@@ -96,7 +96,7 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phase 12 complete (Sprite Transforms + Rendering Polish)!** 🎉
+**Phase 13 complete (Camera Polish)!** 🎉
 
 All packages published and ready to use:
 - **npm**: [@arcane-engine/runtime@0.6.1](https://www.npmjs.com/package/@arcane-engine/runtime), [@arcane-engine/create@0.6.1](https://www.npmjs.com/package/@arcane-engine/create)
@@ -107,6 +107,7 @@ All packages published and ready to use:
 - ✅ Sprite transforms: rotation, origin point, flip, opacity, blend modes (additive, multiply, screen)
 - ✅ Custom WGSL shaders: user-defined fragment shaders with 16 vec4 uniform slots
 - ✅ Post-processing pipeline: offscreen render targets, effect chaining, built-in bloom/blur/vignette/CRT
+- ✅ Camera polish: bounds/limits, deadzone, smooth follow, smooth zoom, parallax scrolling
 - ✅ Rust physics engine: rigid bodies, circle/AABB shapes, spatial hash broadphase, SAT narrowphase, sequential impulse solver, distance + revolute joints, sleep system, raycast, AABB queries
 - ✅ Scene management: scene stack, transitions, lifecycle hooks
 - ✅ Save/load: serialization, schema migrations, auto-save, file I/O ops
@@ -114,11 +115,11 @@ All packages published and ready to use:
 - ✅ Agent protocol (HTTP inspector, describe/inspect commands)
 - ✅ Standalone install: `cargo install arcane-cli` just works
 - ✅ Built-in asset discovery: 25 free CC0 packs with search, download, and extraction
-- ✅ 944 TS tests + 198 Rust tests passing
+- ✅ 961 TS tests + 203 Rust tests passing
 - ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
-- ✅ Example projects (Sokoban, Breakout, Tower Defense, BFRPG dungeon crawler, Physics Playground, Menu Flow, Asteroids)
+- ✅ Example projects (Sokoban, Breakout, Tower Defense, BFRPG dungeon crawler, Physics Playground, Menu Flow, Asteroids, Parallax Scroller)
 
-**Next:** Phase 13 (Camera Polish).
+**Next:** Phase 14 (Tilemap Polish).
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 

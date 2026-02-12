@@ -3,7 +3,7 @@
 // Regenerate with: ./scripts/generate-declarations.sh
 //
 // Import from: @arcane/runtime/{module}
-// Modules: rendering, ui, state, physics, tweening, particles, pathfinding, systems, scenes, persistence, agent, testing
+// Modules: rendering, ui, state, physics, tweening, particles, pathfinding, systems, agent, testing
 
 // ============================================================================
 // Module: @arcane/runtime/rendering (Rendering)
@@ -305,6 +305,20 @@ declare module "@arcane/runtime/rendering" {
    */
   export declare function setVolume(volume: number): void;
 
+  /** Camera bounds: world-space limits the camera cannot exceed. */
+  export type CameraBounds = {
+      minX: number;
+      minY: number;
+      maxX: number;
+      maxY: number;
+  };
+  /** Camera deadzone: target can move within this region without camera following. */
+  export type CameraDeadzone = {
+      /** Deadzone width in world units, centered on camera. */
+      width: number;
+      /** Deadzone height in world units, centered on camera. */
+      height: number;
+  };
   /**
    * Set the camera position and zoom level.
    * The camera determines which part of the world is visible on screen.
@@ -353,6 +367,96 @@ declare module "@arcane/runtime/rendering" {
    * followTarget(player.x, player.y);
    */
   export declare function followTarget(targetX: number, targetY: number, zoom?: number): void;
+  /**
+   * Set world-space bounds that the camera cannot exceed.
+   * The camera is clamped so the visible area stays within these bounds.
+   * If the visible area is larger than the bounds, the camera centers on the bounds.
+   * Bounds are enforced on the Rust/GPU side every frame.
+   *
+   * @param bounds - World-space limits, or `null` to clear bounds.
+   *
+   * @example
+   * // Restrict camera to a 1600×1200 map starting at origin
+   * setCameraBounds({ minX: 0, minY: 0, maxX: 1600, maxY: 1200 });
+   *
+   * @example
+   * // Remove bounds
+   * setCameraBounds(null);
+   */
+  export declare function setCameraBounds(bounds: CameraBounds | null): void;
+  /**
+   * Get the current camera bounds, or `null` if no bounds are set.
+   *
+   * @returns Current bounds or null.
+   */
+  export declare function getCameraBounds(): CameraBounds | null;
+  /**
+   * Set a deadzone: an area centered on the camera where the target can move
+   * without the camera following. The camera only moves when the target exits
+   * the deadzone rectangle.
+   *
+   * @param deadzone - Deadzone dimensions in world units, or `null` to disable.
+   *
+   * @example
+   * // Player can move 200×150 world units before camera follows
+   * setCameraDeadzone({ width: 200, height: 150 });
+   */
+  export declare function setCameraDeadzone(deadzone: CameraDeadzone | null): void;
+  /**
+   * Get the current camera deadzone, or `null` if no deadzone is set.
+   */
+  export declare function getCameraDeadzone(): CameraDeadzone | null;
+  /**
+   * Smoothly follow a target position using exponential interpolation.
+   * Call every frame. The camera lerps toward the target position at a rate
+   * controlled by `smoothness`. Respects deadzone if set.
+   *
+   * Uses frame-rate independent smoothing: `lerp = 1 - smoothness^dt`.
+   * At smoothness=0.1 the camera reaches ~90% of the target in 1 second.
+   *
+   * @param targetX - Target X position in world units.
+   * @param targetY - Target Y position in world units.
+   * @param zoom - Zoom level. Default: 1.
+   * @param smoothness - Smoothing factor (0..1). Lower = faster follow. Default: 0.1.
+   *   - 0.001: very fast (nearly instant)
+   *   - 0.1: smooth (default)
+   *   - 0.5: slow/cinematic
+   *
+   * @example
+   * onFrame(() => {
+   *   followTargetSmooth(player.x, player.y, 1, 0.1);
+   * });
+   */
+  export declare function followTargetSmooth(targetX: number, targetY: number, zoom?: number, smoothness?: number): void;
+  /**
+   * Smoothly animate the camera zoom to a target level over a duration.
+   * Uses the tweening system for frame-rate independent animation.
+   *
+   * @param targetZoom - Target zoom level.
+   * @param duration - Animation duration in seconds.
+   * @param easing - Optional easing function. Default: linear.
+   *
+   * @example
+   * // Zoom in to 2x over 0.5 seconds
+   * zoomTo(2.0, 0.5, easeOutQuad);
+   */
+  export declare function zoomTo(targetZoom: number, duration: number, easing?: (t: number) => number): void;
+  /**
+   * Smoothly animate the camera zoom while keeping a world point stationary on screen.
+   * Useful for zooming into/out of a specific location (e.g., mouse cursor position).
+   *
+   * @param targetZoom - Target zoom level.
+   * @param worldX - World X coordinate to keep fixed on screen.
+   * @param worldY - World Y coordinate to keep fixed on screen.
+   * @param duration - Animation duration in seconds.
+   * @param easing - Optional easing function. Default: linear.
+   *
+   * @example
+   * // Zoom into the point under the mouse
+   * const mouse = getMouseWorldPosition();
+   * zoomToPoint(3.0, mouse.x, mouse.y, 0.3, easeOutCubic);
+   */
+  export declare function zoomToPoint(targetZoom: number, worldX: number, worldY: number, duration: number, easing?: (t: number) => number): void;
 
   /**
    * Check if a key is currently held down (returns true every frame while held).
@@ -500,6 +604,44 @@ declare module "@arcane/runtime/rendering" {
    * @returns Delta time in seconds (fractional).
    */
   export declare function getDeltaTime(): number;
+
+  /**
+   * Parallax scrolling support.
+   *
+   * Draw sprites at different scroll speeds to create a depth illusion.
+   * Parallax transforms are applied on the CPU side before calling drawSprite(),
+   * so no Rust/GPU changes are needed.
+   */
+  /** Options for parallax sprites. Extends SpriteOptions with a parallax factor. */
+  export type ParallaxSpriteOptions = SpriteOptions & {
+      /**
+       * Parallax scroll factor relative to the camera.
+       * - 0: fixed to screen (e.g., HUD, distant stars)
+       * - 0.2: slow scroll (far background)
+       * - 0.5: half speed (midground)
+       * - 1.0: normal speed (same as drawSprite)
+       *
+       * Values > 1.0 create a foreground parallax effect (scrolls faster than camera).
+       */
+      parallaxFactor: number;
+  };
+  /**
+   * Draw a sprite with parallax scrolling. The sprite's position is offset
+   * based on the camera position and the parallax factor, creating a depth
+   * illusion where background layers scroll slower than foreground layers.
+   *
+   * @param options - Sprite options with a parallaxFactor field.
+   *
+   * @example
+   * // Far background (slow scroll)
+   * drawParallaxSprite({ textureId: bgFar, x: 0, y: 0, w: 1600, h: 600, parallaxFactor: 0.2, layer: 0 });
+   *
+   * // Midground (medium scroll)
+   * drawParallaxSprite({ textureId: bgMid, x: 0, y: 0, w: 1600, h: 600, parallaxFactor: 0.5, layer: 1 });
+   *
+   * // Foreground sprites use normal drawSprite (parallaxFactor = 1.0 implicitly)
+   */
+  export declare function drawParallaxSprite(options: ParallaxSpriteOptions): void;
 
   /**
    * Post-processing pipeline: fullscreen effects applied after sprite rendering.
