@@ -58,6 +58,28 @@ declare module "@arcane/runtime/rendering" {
           b: number;
           a: number;
       };
+      /** Rotation angle in radians. Default: 0 (no rotation). Positive = clockwise. */
+      rotation?: number;
+      /** X origin for rotation, 0-1 relative to sprite width. Default: 0.5 (center). */
+      originX?: number;
+      /** Y origin for rotation, 0-1 relative to sprite height. Default: 0.5 (center). */
+      originY?: number;
+      /** Mirror the sprite horizontally. Default: false. */
+      flipX?: boolean;
+      /** Mirror the sprite vertically. Default: false. */
+      flipY?: boolean;
+      /** Opacity 0-1, multiplied with tint alpha. Default: 1 (fully opaque). */
+      opacity?: number;
+      /**
+       * Blend mode for compositing. Default: "alpha".
+       * - "alpha": standard transparency (src * srcA + dst * (1 - srcA))
+       * - "additive": glow/fire/particles (src * srcA + dst)
+       * - "multiply": shadows/darkening (src * dst)
+       * - "screen": highlights/lightening (src + dst * (1 - src))
+       */
+      blendMode?: "alpha" | "additive" | "multiply" | "screen";
+      /** Custom shader handle from createShaderFromSource(). Default: 0 (built-in shader). */
+      shaderId?: number;
   };
   /** Camera state returned by {@link getCamera}. */
   export type CameraState = {
@@ -478,6 +500,126 @@ declare module "@arcane/runtime/rendering" {
    * @returns Delta time in seconds (fractional).
    */
   export declare function getDeltaTime(): number;
+
+  /**
+   * Post-processing pipeline: fullscreen effects applied after sprite rendering.
+   *
+   * When effects are active, sprites render to an offscreen texture, then each
+   * effect is applied in order (ping-pong between two offscreen textures),
+   * with the final result output to the screen.
+   *
+   * Built-in effects and their param slots (set via setEffectParam index 0):
+   *
+   * **bloom** — Bright-pass glow.
+   *   - x: threshold (0-1, default 0.7) — luminance cutoff for "bright"
+   *   - y: intensity (0-1, default 0.5) — bloom strength
+   *   - z: radius (pixels, default 3.0) — blur spread
+   *
+   * **blur** — Gaussian blur.
+   *   - x: strength (default 1.0) — texel offset multiplier
+   *
+   * **vignette** — Darken screen edges.
+   *   - x: intensity (0-1, default 0.5) — edge darkness
+   *   - y: radius (0-1, default 0.8) — vignette size
+   *
+   * **crt** — CRT monitor simulation.
+   *   - x: scanlineFrequency (default 800) — scanline count
+   *   - y: distortion (default 0.1) — barrel distortion amount
+   *   - z: brightness (default 1.1) — overall brightness boost
+   *
+   * @example
+   * const crt = addPostProcessEffect("crt");
+   * setEffectParam(crt, 0, 600, 0.15, 1.2); // fewer scanlines, more distortion
+   *
+   * @example
+   * const bloom = addPostProcessEffect("bloom");
+   * const vignette = addPostProcessEffect("vignette");
+   * // Effects applied in order: bloom first, then vignette
+   */
+  /** Opaque handle to a post-process effect. */
+  export type EffectId = number;
+  /**
+   * Add a post-process effect. Effects are applied in the order they are added.
+   *
+   * @param effect - Built-in effect type.
+   * @returns EffectId for use with setEffectParam and removeEffect.
+   */
+  export declare function addPostProcessEffect(effect: "bloom" | "blur" | "vignette" | "crt"): EffectId;
+  /**
+   * Set a vec4 parameter slot on a post-process effect.
+   * See module docs for what each index/component means per effect type.
+   *
+   * @param effectId - Effect handle from addPostProcessEffect.
+   * @param index - Param slot (0-3). Most effects use only slot 0.
+   * @param x - First component.
+   * @param y - Second component. Default: 0.
+   * @param z - Third component. Default: 0.
+   * @param w - Fourth component. Default: 0.
+   */
+  export declare function setEffectParam(effectId: EffectId, index: number, x: number, y?: number, z?: number, w?: number): void;
+  /**
+   * Remove a single post-process effect.
+   *
+   * @param effectId - Effect handle to remove.
+   */
+  export declare function removeEffect(effectId: EffectId): void;
+  /**
+   * Remove all post-process effects, restoring direct-to-screen rendering.
+   */
+  export declare function clearEffects(): void;
+
+  /**
+   * Custom shader support for user-defined WGSL fragment shaders.
+   *
+   * Custom shaders replace the fragment stage while keeping the standard
+   * vertex shader (rotation, transforms, camera projection). The standard
+   * declarations (camera, texture, lighting, VertexOutput) are prepended
+   * automatically — you only write the @fragment function.
+   *
+   * Custom uniforms are available via `shader_params.values[0..15]` (16 vec4 slots).
+   *
+   * @example
+   * const crt = createShaderFromSource("crt", `
+   *   @fragment
+   *   fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+   *     let tex = textureSample(t_diffuse, s_diffuse, in.tex_coords);
+   *     let scanline = sin(in.tex_coords.y * shader_params.values[0].x) * 0.5 + 0.5;
+   *     return vec4<f32>(tex.rgb * in.tint.rgb * scanline, tex.a * in.tint.a);
+   *   }
+   * `);
+   * setShaderParam(crt, 0, 800.0); // scanline frequency
+   * drawSprite({ textureId: tex, x: 0, y: 0, w: 800, h: 600, shaderId: crt });
+   */
+  /** Opaque handle to a custom shader. Returned by {@link createShaderFromSource}. */
+  export type ShaderId = number;
+  /**
+   * Create a custom fragment shader from WGSL source.
+   * The source must contain a `@fragment fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>`.
+   *
+   * Standard declarations are prepended automatically:
+   * - `camera` (group 0), `t_diffuse`/`s_diffuse` (group 1), `lighting` (group 2)
+   * - `VertexOutput` struct with `tex_coords`, `tint`, `world_position`
+   * - Standard vertex shader (`vs_main`)
+   *
+   * Custom uniforms: `shader_params.values[0..15]` (group 3, 16 vec4 slots).
+   *
+   * @param name - Shader name (for debugging).
+   * @param wgslSource - WGSL fragment shader source.
+   * @returns ShaderId for use in {@link drawSprite}'s `shaderId` option.
+   */
+  export declare function createShaderFromSource(name: string, wgslSource: string): ShaderId;
+  /**
+   * Set a vec4 parameter slot on a custom shader.
+   * Values are accessible in the shader as `shader_params.values[index]`.
+   *
+   * @param shaderId - Shader handle from {@link createShaderFromSource}.
+   * @param index - Slot index (0-15).
+   * @param x - First component (or the only value for scalar params).
+   * @param y - Second component. Default: 0.
+   * @param z - Third component. Default: 0.
+   * @param w - Fourth component. Default: 0.
+   */
+  export declare function setShaderParam(shaderId: ShaderId, index: number, x: number, y?: number, z?: number, w?: number): void;
 
   /**
    * Queue a sprite to be drawn this frame.
