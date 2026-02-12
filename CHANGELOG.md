@@ -2,6 +2,66 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.6.0] - 2026-02-12
+
+### Added
+- **Phase 12: Sprite Transforms + Rendering Polish**
+  - Sprite rotation with configurable origin point (`rotation`, `originX`, `originY`)
+  - Sprite flip (`flipX`, `flipY`) and per-sprite opacity
+  - Blend modes: `"alpha"`, `"additive"`, `"multiply"`, `"screen"` — 4 cached wgpu pipelines
+  - Custom WGSL fragment shaders: `createShaderFromSource()`, `setShaderParam()` with 16 vec4 uniforms
+  - Post-processing pipeline: offscreen render targets, ping-pong chaining, fullscreen triangle
+  - Built-in post-process effects: bloom, blur, vignette, CRT (scanlines + barrel distortion)
+  - Asteroids demo exercising all new features (rotation, additive blending, CRT effect)
+
+### Changed
+- `bump-version.sh` now syncs `cli/data/` via `prepublish.sh` and verifies the copy
+
+### Fixed
+- Space key input in Asteroids demo (`"Space"` not `" "`)
+
+## [0.5.0] - 2026-02-11
+
+### Added
+- **Phase 11: Homebrew Rust Physics Engine**
+  - Rigid body types: dynamic, static, kinematic
+  - Shapes: circle, AABB
+  - Spatial hash broadphase, SAT narrowphase
+  - Sequential impulse solver with warm starting and accumulated impulses
+  - Constraints: distance joints, revolute joints
+  - Island-based sleep system (velocity threshold + timer)
+  - Queries: AABB region query, raycast
+  - 18 `#[op2]` physics ops (not feature-gated — available in headless)
+  - TypeScript API: `createPhysicsWorld()`, `createBody()`, `stepPhysics()`, `raycast()`, etc.
+  - Physics playground demo (spawn modes, joints, gravity toggle)
+  - Breakout demo retrofitted to use Rust physics
+
+### Fixed
+- HiDPI rendering: use logical pixels for camera and mouse coordinates
+- CI: bust stale rust-cache causing rusty_v8 link failure
+- Sleep cascade: only fast-moving bodies wake sleeping neighbors
+
+## [0.4.0] - 2026-02-11
+
+### Added
+- **Phase 10: Scene Management + Save/Load**
+  - Scene stack: `createScene()`, `pushScene()`, `popScene()`, `replaceScene()`
+  - Scene transitions with lifecycle hooks (enter, exit, pause, resume)
+  - Save/load: `saveGame()`, `loadGame()` with schema migrations
+  - Auto-save: `enableAutoSave()`, `updateAutoSave()`, `triggerAutoSave()`
+  - File I/O ops for persistent storage
+  - Menu flow demo (title, menu, gameplay, pause, game over scenes)
+- **Asset tooling improvements**
+  - `arcane assets inspect` — view pack contents with file categorization
+  - Spritesheet detection: auto-detect grid structures from image dimensions
+  - Multi-row spritesheet support in animation system
+  - OpenGameArt CC0 asset integration
+
+### Fixed
+- Animation UV height for multi-row spritesheets
+- Animation frame bleed (manual UV calculation)
+- Coordinate system docs and JSDoc for LLM clarity
+
 ## [0.3.0] - 2026-02-11
 
 ### Added
