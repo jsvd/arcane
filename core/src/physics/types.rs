@@ -62,6 +62,14 @@ pub struct Contact {
     pub normal: (f32, f32),
     pub penetration: f32,
     pub contact_point: (f32, f32),
+    /// Accumulated normal impulse (used by warm starting)
+    pub accumulated_jn: f32,
+    /// Accumulated friction impulse (used by warm starting)
+    pub accumulated_jt: f32,
+    /// Restitution velocity bias (computed once before solver iterations)
+    pub velocity_bias: f32,
+    /// Friction tangent direction (computed once before solver iterations)
+    pub tangent: (f32, f32),
 }
 
 #[derive(Debug, Clone)]
@@ -100,10 +108,12 @@ pub fn compute_mass_and_inertia(shape: &Shape, mass: f32, body_type: BodyType) -
     let inv_mass = 1.0 / mass;
     let inertia = match shape {
         Shape::Circle { radius } => 0.5 * mass * radius * radius,
-        Shape::AABB { half_w, half_h } => {
-            let w = half_w * 2.0;
-            let h = half_h * 2.0;
-            mass * (w * w + h * h) / 12.0
+        Shape::AABB { .. } => {
+            // AABBs don't rotate — collision detection treats them as axis-aligned
+            // regardless of body angle. Angular dynamics would create phantom forces
+            // (angular velocity leaks into linear velocity via friction at contacts).
+            // Use Polygon shapes for rotatable boxes.
+            0.0
         }
         Shape::Polygon { vertices } => {
             // Approximate inertia using polygon area moment

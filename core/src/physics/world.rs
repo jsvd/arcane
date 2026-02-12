@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+
 use super::broadphase::SpatialHash;
 use super::constraints::solve_constraints;
 use super::integrate::integrate;
 use super::narrowphase::test_collision;
-use super::resolve::resolve_contacts;
+use super::resolve::{initialize_contacts, resolve_contacts_position, resolve_contacts_velocity_iteration, warm_start_contacts};
 use super::sleep::update_sleep;
 use super::types::*;
 
@@ -18,6 +20,8 @@ pub struct PhysicsWorld {
     contacts: Vec<Contact>,
     broadphase: SpatialHash,
     solver_iterations: usize,
+    /// Warm-start cache: maps (body_a, body_b) → (normal_impulse, friction_impulse)
+    warm_cache: HashMap<(BodyId, BodyId), (f32, f32)>,
 }
 
 impl PhysicsWorld {
@@ -33,7 +37,8 @@ impl PhysicsWorld {
             accumulator: 0.0,
             contacts: Vec::new(),
             broadphase: SpatialHash::new(64.0),
-            solver_iterations: 6,
+            solver_iterations: 10,
+            warm_cache: HashMap::new(),
         }
     }
 
@@ -96,11 +101,75 @@ impl PhysicsWorld {
             }
         }
 
-        // 4. Resolve contacts
-        resolve_contacts(&mut self.bodies, &self.contacts, self.solver_iterations);
+        // 3b. Sort contacts bottom-up for stack stability.
+        self.contacts.sort_by(|a, b| {
+            let ay = self.bodies[a.body_a as usize]
+                .as_ref()
+                .map_or(0.0f32, |body| body.y)
+                .max(
+                    self.bodies[a.body_b as usize]
+                        .as_ref()
+                        .map_or(0.0f32, |body| body.y),
+                );
+            let by = self.bodies[b.body_a as usize]
+                .as_ref()
+                .map_or(0.0f32, |body| body.y)
+                .max(
+                    self.bodies[b.body_b as usize]
+                        .as_ref()
+                        .map_or(0.0f32, |body| body.y),
+                );
+            by.partial_cmp(&ay).unwrap_or(std::cmp::Ordering::Equal)
+        });
 
-        // 5. Solve constraints
-        solve_constraints(&mut self.bodies, &self.constraints, dt);
+        // 3c. Pre-compute velocity bias (restitution) and tangent direction for each contact.
+        // Must happen BEFORE warm start so bias reflects post-integration velocities.
+        let gravity_mag = (self.gravity.0 * self.gravity.0 + self.gravity.1 * self.gravity.1).sqrt();
+        let restitution_threshold = gravity_mag * dt * 1.5;
+        initialize_contacts(&self.bodies, &mut self.contacts, restitution_threshold);
+
+        // 3d. Warm start: initialize accumulated impulses from previous frame's cache
+        for contact in &mut self.contacts {
+            let key = (contact.body_a.min(contact.body_b), contact.body_a.max(contact.body_b));
+            if let Some(&(jn, jt)) = self.warm_cache.get(&key) {
+                // Scale by 0.95 to avoid over-shooting when contacts shift slightly
+                contact.accumulated_jn = jn * 0.95;
+                contact.accumulated_jt = jt * 0.95;
+            }
+        }
+        warm_start_contacts(&mut self.bodies, &self.contacts);
+
+        // 4. Velocity solve (contacts + constraints)
+        for i in 0..self.solver_iterations {
+            let reverse = i % 2 == 1;
+            resolve_contacts_velocity_iteration(&mut self.bodies, &mut self.contacts, reverse);
+            solve_constraints(&mut self.bodies, &self.constraints, dt);
+        }
+
+        // 4b. Save accumulated impulses to warm cache for next frame
+        self.warm_cache.clear();
+        for contact in &self.contacts {
+            let key = (contact.body_a.min(contact.body_b), contact.body_a.max(contact.body_b));
+            self.warm_cache.insert(key, (contact.accumulated_jn, contact.accumulated_jt));
+        }
+
+        // 5. Position correction (multiple iterations with fresh collision re-check)
+        for i in 0..4 {
+            for contact in &mut self.contacts {
+                let a = &self.bodies[contact.body_a as usize];
+                let b = &self.bodies[contact.body_b as usize];
+                if let (Some(a), Some(b)) = (a, b) {
+                    if let Some(fresh) = test_collision(a, b) {
+                        contact.penetration = fresh.penetration;
+                        contact.normal = fresh.normal;
+                        contact.contact_point = fresh.contact_point;
+                    } else {
+                        contact.penetration = 0.0;
+                    }
+                }
+            }
+            resolve_contacts_position(&mut self.bodies, &self.contacts, i % 2 == 1);
+        }
 
         // 6. Update sleep
         update_sleep(&mut self.bodies, &self.contacts, dt);

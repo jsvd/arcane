@@ -64,14 +64,13 @@ fn test_dynamic_aabb_mass_inertia() {
     let mass = 12.0;
     let hw = 3.0;
     let hh = 2.0;
-    let (inv_mass, inertia, _inv_inertia) =
+    let (inv_mass, inertia, inv_inertia) =
         compute_mass_and_inertia(&Shape::AABB { half_w: hw, half_h: hh }, mass, BodyType::Dynamic);
     assert!((inv_mass - 1.0 / 12.0).abs() < 1e-6);
-    // I = m * (w^2 + h^2) / 12 = 12 * (36 + 16) / 12 = 52
-    let w = hw * 2.0;
-    let h = hh * 2.0;
-    let expected = mass * (w * w + h * h) / 12.0;
-    assert!((inertia - expected).abs() < 1e-4);
+    // AABBs get zero inertia — collision detection treats them as axis-aligned
+    // regardless of body angle, so angular dynamics would create phantom forces.
+    assert_eq!(inertia, 0.0);
+    assert_eq!(inv_inertia, 0.0);
 }
 
 #[test]
@@ -372,15 +371,19 @@ fn test_ball_bounces_off_static_ground() {
     bodies[0].as_mut().unwrap().vy = 5.0;
 
     // Create a contact manually (ball touching ground)
-    let contacts = vec![Contact {
+    let mut contacts = vec![Contact {
         body_a: 0,
         body_b: 1,
         normal: (0.0, 1.0),
         penetration: 0.5,
         contact_point: (0.0, 0.0),
+        accumulated_jn: 0.0,
+        accumulated_jt: 0.0,
+        velocity_bias: 0.0,
+        tangent: (0.0, 0.0),
     }];
 
-    resolve_contacts(&mut bodies, &contacts, 6);
+    resolve_contacts(&mut bodies, &mut contacts, 6);
 
     let ball = bodies[0].as_ref().unwrap();
     // Ball should have bounced (velocity reversed or reduced)
@@ -393,14 +396,18 @@ fn test_solver_does_not_move_two_static_bodies() {
         Some(make_body(0, BodyType::Static, Shape::AABB { half_w: 5.0, half_h: 5.0 }, 0.0, 0.0, 0.0)),
         Some(make_body(1, BodyType::Static, Shape::AABB { half_w: 5.0, half_h: 5.0 }, 3.0, 0.0, 0.0)),
     ];
-    let contacts = vec![Contact {
+    let mut contacts = vec![Contact {
         body_a: 0,
         body_b: 1,
         normal: (1.0, 0.0),
         penetration: 7.0,
         contact_point: (1.5, 0.0),
+        accumulated_jn: 0.0,
+        accumulated_jt: 0.0,
+        velocity_bias: 0.0,
+        tangent: (0.0, 0.0),
     }];
-    resolve_contacts(&mut bodies, &contacts, 6);
+    resolve_contacts(&mut bodies, &mut contacts, 6);
     assert_eq!(bodies[0].as_ref().unwrap().x, 0.0);
     assert_eq!(bodies[1].as_ref().unwrap().x, 3.0);
 }
@@ -460,6 +467,10 @@ fn test_sleeping_body_wakes_on_contact_with_awake_body() {
         normal: (1.0, 0.0),
         penetration: 0.1,
         contact_point: (1.0, 0.0),
+        accumulated_jn: 0.0,
+        accumulated_jt: 0.0,
+        velocity_bias: 0.0,
+        tangent: (0.0, 0.0),
     }];
 
     update_sleep(&mut bodies, &contacts, 0.016);
@@ -1427,4 +1438,664 @@ fn test_physics_ops_static_body() {
         "#,
     )
     .unwrap();
+}
+
+// =========================================================================
+// Resting contact regression tests
+// =========================================================================
+
+#[test]
+fn test_aabb_settles_on_ground() {
+    // Regression: boxes would sink through floor due to bad contact point
+    let mut world = PhysicsWorld::new(0.0, 400.0);
+    // Wide ground (top at y=560)
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 400.0, half_h: 20.0 },
+        400.0, 580.0, 0.0,
+        Material { restitution: 0.2, friction: 0.8 },
+        0xFFFF, 0xFFFF,
+    );
+    // Box dropped from nearby, offset from ground center (short fall = fast settle)
+    let box_id = world.add_body(
+        BodyType::Dynamic,
+        Shape::AABB { half_w: 15.0, half_h: 15.0 },
+        250.0, 500.0, 2.0,
+        Material { restitution: 0.3, friction: 0.6 },
+        0xFFFF, 0xFFFF,
+    );
+    // Step for 5 seconds
+    for _ in 0..300 {
+        world.step(1.0 / 60.0);
+    }
+    let body = world.get_body(box_id).unwrap();
+    assert!(body.sleeping, "Box should be asleep after 5 seconds, vy={:.4} vx={:.4} timer={:.3}",
+        body.vy, body.vx, body.sleep_timer);
+}
+
+#[test]
+fn test_circle_settles_on_ground() {
+    let mut world = PhysicsWorld::new(0.0, 400.0);
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 400.0, half_h: 20.0 },
+        400.0, 580.0, 0.0,
+        Material { restitution: 0.2, friction: 0.8 },
+        0xFFFF, 0xFFFF,
+    );
+    // Ball with moderate restitution, short fall
+    let ball_id = world.add_body(
+        BodyType::Dynamic,
+        Shape::Circle { radius: 10.0 },
+        300.0, 500.0, 0.5,
+        Material { restitution: 0.3, friction: 0.3 },
+        0xFFFF, 0xFFFF,
+    );
+    // Step for 5 seconds
+    for _ in 0..300 {
+        world.step(1.0 / 60.0);
+    }
+    let body = world.get_body(ball_id).unwrap();
+    assert!(body.sleeping, "Ball should be asleep after 5 seconds");
+    assert!(body.vy.abs() < 0.5, "Ball should have near-zero vy, got {}", body.vy);
+}
+
+#[test]
+fn test_stacked_boxes_no_lateral_drift() {
+    // Regression: AABB angular leakage caused lateral oscillation
+    let mut world = PhysicsWorld::new(0.0, 400.0);
+    // Ground
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 400.0, half_h: 20.0 },
+        400.0, 580.0, 0.0,
+        Material { restitution: 0.2, friction: 0.8 },
+        0xFFFF, 0xFFFF,
+    );
+    // Bottom box
+    world.add_body(
+        BodyType::Dynamic,
+        Shape::AABB { half_w: 20.0, half_h: 20.0 },
+        400.0, 520.0, 4.0,
+        Material { restitution: 0.2, friction: 0.6 },
+        0xFFFF, 0xFFFF,
+    );
+    // Top box — slightly offset horizontally, placed just above bottom box
+    let top_id = world.add_body(
+        BodyType::Dynamic,
+        Shape::AABB { half_w: 15.0, half_h: 15.0 },
+        405.0, 490.0, 2.0,
+        Material { restitution: 0.2, friction: 0.6 },
+        0xFFFF, 0xFFFF,
+    );
+    let initial_x = 405.0;
+    // Step for 8 seconds
+    for _ in 0..480 {
+        world.step(1.0 / 60.0);
+    }
+    let body = world.get_body(top_id).unwrap();
+    let drift = (body.x - initial_x).abs();
+    assert!(
+        drift < 5.0,
+        "Top box should not drift far laterally, drifted {} pixels",
+        drift,
+    );
+    assert!(body.sleeping, "Stacked boxes should eventually sleep");
+}
+
+#[test]
+fn test_aabb_no_angular_velocity_from_contacts() {
+    // Regression: AABBs should not gain angular velocity since collision ignores rotation
+    let mut world = PhysicsWorld::new(0.0, 400.0);
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 400.0, half_h: 20.0 },
+        400.0, 580.0, 0.0, Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+    let box_id = world.add_body(
+        BodyType::Dynamic,
+        Shape::AABB { half_w: 15.0, half_h: 15.0 },
+        350.0, 200.0, 2.0, Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+    // Step to let box fall and collide
+    for _ in 0..60 {
+        world.step(1.0 / 60.0);
+    }
+    let body = world.get_body(box_id).unwrap();
+    assert_eq!(
+        body.angular_velocity, 0.0,
+        "AABB should have zero angular velocity (inv_inertia=0)"
+    );
+    assert_eq!(body.angle, 0.0, "AABB angle should remain 0");
+}
+
+#[test]
+fn test_aabb_contact_point_on_collision_surface() {
+    // Regression: contact point was midpoint of centers, should be on collision edge
+    // Box A overlapping box B by 2 pixels on Y axis
+    let a = make_body(
+        0, BodyType::Dynamic,
+        Shape::AABB { half_w: 10.0, half_h: 10.0 },
+        100.0, 82.0, 1.0,
+    );
+    let b = make_body(
+        1, BodyType::Static,
+        Shape::AABB { half_w: 200.0, half_h: 20.0 },
+        200.0, 110.0, 0.0,
+    );
+    // A bottom = 92, B top = 90 → 2px overlap on Y
+    let contact = test_collision(&a, &b).unwrap();
+    // Contact should be on A's bottom edge (y = 82 + 10 = 92), not midpoint of centers (96)
+    assert!(
+        (contact.contact_point.1 - 92.0).abs() < 1e-4,
+        "Contact y should be at A's bottom edge (92), got {}",
+        contact.contact_point.1,
+    );
+    // Contact x should be centered in the overlap region
+    // A extends x: 90..110, B extends x: 0..400, overlap: 90..110, center: 100
+    assert!(
+        (contact.contact_point.0 - 100.0).abs() < 1e-4,
+        "Contact x should be centered in overlap (100), got {}",
+        contact.contact_point.0,
+    );
+}
+
+#[test]
+fn test_restitution_killed_for_slow_contacts() {
+    // A ball with high restitution starting very close to ground should settle.
+    // Fall distance < 0.125 px → approach speed < threshold → restitution killed.
+    let mut world = PhysicsWorld::new(0.0, 400.0);
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 400.0, half_h: 20.0 },
+        400.0, 580.0, 0.0,
+        Material { restitution: 1.0, friction: 0.5 },
+        0xFFFF, 0xFFFF,
+    );
+    // Ball resting just above ground surface (ground top=560, ball bottom=560-0.1)
+    // Falls 0.1 px → v=sqrt(2*400*0.1)=8.9 < threshold(10) → e=0
+    let ball_id = world.add_body(
+        BodyType::Dynamic,
+        Shape::Circle { radius: 5.0 },
+        400.0, 554.9, 1.0,
+        Material { restitution: 1.0, friction: 0.5 },
+        0xFFFF, 0xFFFF,
+    );
+    for _ in 0..300 {
+        world.step(1.0 / 60.0);
+    }
+    let body = world.get_body(ball_id).unwrap();
+    assert!(
+        body.sleeping,
+        "Ball with restitution=1.0 should settle when approach speed < threshold"
+    );
+}
+
+#[test]
+fn test_tall_stack_does_not_fuse() {
+    // Regression: stacking 7+ boxes would cause them to fuse together (penetration
+    // accumulates faster than position correction removes it).
+    let mut world = PhysicsWorld::new(0.0, 400.0);
+    // Ground
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 400.0, half_h: 20.0 },
+        400.0, 580.0, 0.0,
+        Material { restitution: 0.0, friction: 0.8 },
+        0xFFFF, 0xFFFF,
+    );
+    // Stack 7 boxes, each 30px tall, placed at rest positions
+    let half_h = 15.0;
+    let box_size = half_h * 2.0;
+    let ground_top = 560.0;
+    let mut box_ids = Vec::new();
+    for i in 0..7 {
+        let y = ground_top - half_h - (i as f32 * box_size);
+        let id = world.add_body(
+            BodyType::Dynamic,
+            Shape::AABB { half_w: 15.0, half_h },
+            400.0, y, 2.0,
+            Material { restitution: 0.0, friction: 0.8 },
+            0xFFFF, 0xFFFF,
+        );
+        box_ids.push(id);
+    }
+    // Step for 3 seconds to let stack settle
+    for _ in 0..180 {
+        world.step(1.0 / 60.0);
+    }
+    // Check that boxes maintain separation — no fusing
+    // Each box should be roughly box_size apart from its neighbors
+    for i in 0..6 {
+        let a = world.get_body(box_ids[i]).unwrap();
+        let b = world.get_body(box_ids[i + 1]).unwrap();
+        let gap = a.y - b.y; // a is lower (higher y), b is above (lower y)
+        assert!(
+            gap > box_size * 0.8,
+            "Box {} and {} should be ~{} apart, got {:.1} (fusing!)",
+            i, i + 1, box_size, gap,
+        );
+    }
+}
+
+#[test]
+fn test_tall_tower_lateral_stability() {
+    // A tower of 10 boxes placed at perfect rest positions must not wobble or compress.
+    // Tracks max lateral drift and stack height over the first 10 seconds.
+    let mut world = PhysicsWorld::new(0.0, 400.0);
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 400.0, half_h: 20.0 },
+        400.0, 580.0, 0.0,
+        Material { restitution: 0.0, friction: 0.8 },
+        0xFFFF, 0xFFFF,
+    );
+    let half_w = 15.0;
+    let half_h = 15.0;
+    let box_size = half_h * 2.0;
+    let ground_top = 560.0;
+    let center_x = 400.0;
+    let mut box_ids = Vec::new();
+    for i in 0..10 {
+        let y = ground_top - half_h - (i as f32 * box_size);
+        let id = world.add_body(
+            BodyType::Dynamic, Shape::AABB { half_w, half_h },
+            center_x, y, 2.0,
+            Material { restitution: 0.0, friction: 0.8 },
+            0xFFFF, 0xFFFF,
+        );
+        box_ids.push(id);
+    }
+    let expected_height = 9.0 * box_size; // 270px
+
+    let mut max_drift = 0.0f32;
+    let mut min_height = f32::MAX;
+    for frame in 0..600 {
+        world.step(1.0 / 60.0);
+        // Measure max lateral drift of any box
+        for &id in &box_ids {
+            let body = world.get_body(id).unwrap();
+            let drift = (body.x - center_x).abs();
+            if drift > max_drift {
+                max_drift = drift;
+            }
+        }
+        // Measure stack height
+        let top = world.get_body(box_ids[9]).unwrap();
+        let bot = world.get_body(box_ids[0]).unwrap();
+        let height = bot.y - top.y;
+        if height < min_height {
+            min_height = height;
+        }
+        // Print every second for diagnostics
+        if frame % 60 == 59 {
+            eprintln!(
+                "t={:.0}s: height={:.1}/{:.0} ({:.1}%) max_drift={:.2}px",
+                (frame + 1) as f32 / 60.0, height, expected_height,
+                height / expected_height * 100.0, max_drift,
+            );
+        }
+    }
+    // Strict criteria: boxes placed at rest should stay at rest
+    assert!(
+        max_drift < 2.0,
+        "Max lateral drift was {:.2}px (should be <2px)",
+        max_drift,
+    );
+    assert!(
+        min_height > expected_height * 0.97,
+        "Stack compressed to {:.1}/{:.0} ({:.1}%) — should retain >97% height",
+        min_height, expected_height, min_height / expected_height * 100.0,
+    );
+}
+
+// =========================================================================
+// First-principles physics tests
+// =========================================================================
+
+#[test]
+fn test_integration_f_equals_ma() {
+    // F = ma ⟹ a = F * inv_mass, v_new = v + a*dt, x_new = x + v_new*dt
+    let mut body = make_body(0, BodyType::Dynamic, Shape::Circle { radius: 5.0 }, 0.0, 0.0, 2.0);
+    // Apply force of 100 N rightward (no gravity)
+    body.fx = 100.0;
+    integrate(&mut body, 0.0, 0.0, 1.0 / 60.0);
+    // a = F * inv_mass = 100 * 0.5 = 50
+    // v_new = 0 + 50 * (1/60) = 0.8333...
+    let expected_v = 100.0 * body.inv_mass * (1.0 / 60.0);
+    assert!((body.vx - expected_v).abs() < 1e-6, "vx={} expected {}", body.vx, expected_v);
+    // x_new = 0 + v_new * dt
+    let expected_x = expected_v * (1.0 / 60.0);
+    assert!((body.x - expected_x).abs() < 1e-6, "x={} expected {}", body.x, expected_x);
+    // Force must be cleared after integration
+    assert_eq!(body.fx, 0.0, "Force should be cleared after integration");
+    assert_eq!(body.fy, 0.0);
+}
+
+#[test]
+fn test_integration_gravity_is_acceleration_not_force() {
+    // Gravity parameters are accelerations (m/s²), not forces.
+    // All dynamic bodies fall at the same rate regardless of mass.
+    let dt = 1.0 / 60.0;
+    let gravity_y = 400.0;
+    let mut light = make_body(0, BodyType::Dynamic, Shape::Circle { radius: 5.0 }, 0.0, 0.0, 0.5);
+    let mut heavy = make_body(1, BodyType::Dynamic, Shape::Circle { radius: 5.0 }, 0.0, 0.0, 10.0);
+    integrate(&mut light, 0.0, gravity_y, dt);
+    integrate(&mut heavy, 0.0, gravity_y, dt);
+    assert!(
+        (light.vy - heavy.vy).abs() < 1e-6,
+        "All bodies should fall at same rate: light vy={}, heavy vy={}",
+        light.vy, heavy.vy
+    );
+    assert!(
+        (light.y - heavy.y).abs() < 1e-6,
+        "All bodies should fall same distance: light y={}, heavy y={}",
+        light.y, heavy.y
+    );
+}
+
+#[test]
+fn test_contact_normal_points_a_to_b() {
+    // Contact normal must consistently point from body_a toward body_b.
+    // This is critical for impulse direction: positive impulse pushes A and B apart.
+
+    // Circle-Circle: A left of B
+    let a = make_body(0, BodyType::Dynamic, Shape::Circle { radius: 10.0 }, 0.0, 0.0, 1.0);
+    let b = make_body(1, BodyType::Dynamic, Shape::Circle { radius: 10.0 }, 15.0, 0.0, 1.0);
+    let c = test_collision(&a, &b).unwrap();
+    assert!(c.normal.0 > 0.0, "Circle-circle: normal x should point from A to B (right), got {:?}", c.normal);
+    assert_eq!(c.body_a, 0);
+    assert_eq!(c.body_b, 1);
+
+    // AABB-AABB: A above B (y increases downward)
+    let a = make_body(0, BodyType::Dynamic, Shape::AABB { half_w: 10.0, half_h: 10.0 }, 0.0, 0.0, 1.0);
+    let b = make_body(1, BodyType::Dynamic, Shape::AABB { half_w: 10.0, half_h: 10.0 }, 0.0, 18.0, 1.0);
+    let c = test_collision(&a, &b).unwrap();
+    assert!(c.normal.1 > 0.0, "AABB-AABB: normal y should point from A to B (down), got {:?}", c.normal);
+
+    // Circle-AABB: circle left of AABB
+    let circ = make_body(0, BodyType::Dynamic, Shape::Circle { radius: 10.0 }, 0.0, 0.0, 1.0);
+    let aabb = make_body(1, BodyType::Dynamic, Shape::AABB { half_w: 10.0, half_h: 10.0 }, 15.0, 0.0, 1.0);
+    let c = test_collision(&circ, &aabb).unwrap();
+    assert!(c.normal.0 > 0.0, "Circle-AABB: normal x should point from circle to AABB (right), got {:?}", c.normal);
+}
+
+#[test]
+fn test_impulse_conserves_momentum() {
+    // In a collision between two equal-mass bodies with e=1 (perfectly elastic),
+    // total momentum must be conserved: m_a*v_a + m_b*v_b = constant.
+    let mut world = PhysicsWorld::new(0.0, 0.0); // No gravity
+    let a_id = world.add_body(
+        BodyType::Dynamic, Shape::Circle { radius: 10.0 },
+        0.0, 0.0, 1.0,
+        Material { restitution: 1.0, friction: 0.0 },
+        0xFFFF, 0xFFFF,
+    );
+    let b_id = world.add_body(
+        BodyType::Dynamic, Shape::Circle { radius: 10.0 },
+        15.0, 0.0, 1.0, // 5px overlap
+        Material { restitution: 1.0, friction: 0.0 },
+        0xFFFF, 0xFFFF,
+    );
+    // A moves right at 100, B is stationary
+    world.set_velocity(a_id, 100.0, 0.0);
+    let mass_a = world.get_body(a_id).unwrap().mass;
+    let mass_b = world.get_body(b_id).unwrap().mass;
+    let p_before = mass_a * 100.0 + mass_b * 0.0;
+    // Step once (will detect collision and resolve)
+    world.step(1.0 / 60.0);
+    let va = world.get_body(a_id).unwrap().vx;
+    let vb = world.get_body(b_id).unwrap().vx;
+    let p_after = mass_a * va + mass_b * vb;
+    assert!(
+        (p_before - p_after).abs() < 1.0,
+        "Momentum should be conserved: before={} after={} (va={}, vb={})",
+        p_before, p_after, va, vb
+    );
+}
+
+#[test]
+fn test_elastic_collision_velocity_exchange() {
+    // Two equal-mass balls in perfectly elastic 1D collision:
+    // Ball A (moving) hits Ball B (stationary) → A stops, B gets A's velocity.
+    let mut world = PhysicsWorld::new(0.0, 0.0);
+    let a_id = world.add_body(
+        BodyType::Dynamic, Shape::Circle { radius: 10.0 },
+        0.0, 0.0, 2.0,
+        Material { restitution: 1.0, friction: 0.0 },
+        0xFFFF, 0xFFFF,
+    );
+    let b_id = world.add_body(
+        BodyType::Dynamic, Shape::Circle { radius: 10.0 },
+        18.0, 0.0, 2.0, // 2px overlap
+        Material { restitution: 1.0, friction: 0.0 },
+        0xFFFF, 0xFFFF,
+    );
+    world.set_velocity(a_id, 50.0, 0.0);
+    // Multiple steps to let the solver fully resolve
+    for _ in 0..5 {
+        world.step(1.0 / 60.0);
+    }
+    let va = world.get_body(a_id).unwrap().vx;
+    let vb = world.get_body(b_id).unwrap().vx;
+    // After elastic collision: A should be near 0, B should be near 50
+    assert!(va.abs() < 5.0, "After elastic collision, A should be ~stopped, got vx={}", va);
+    assert!((vb - 50.0).abs() < 10.0, "After elastic collision, B should have A's velocity ~50, got vx={}", vb);
+}
+
+#[test]
+fn test_static_body_absorbs_all_momentum() {
+    // A dynamic body hitting a static body should bounce (with restitution).
+    // Static body must not move.
+    let mut world = PhysicsWorld::new(0.0, 0.0);
+    world.add_body(
+        BodyType::Static, Shape::AABB { half_w: 100.0, half_h: 10.0 },
+        0.0, 20.0, 0.0,
+        Material { restitution: 0.5, friction: 0.0 },
+        0xFFFF, 0xFFFF,
+    );
+    let ball_id = world.add_body(
+        BodyType::Dynamic, Shape::Circle { radius: 5.0 },
+        0.0, 8.0, 1.0, // 3px overlap
+        Material { restitution: 0.5, friction: 0.0 },
+        0xFFFF, 0xFFFF,
+    );
+    world.set_velocity(ball_id, 0.0, 100.0); // Moving down toward static body
+    world.step(1.0 / 60.0);
+    let ball = world.get_body(ball_id).unwrap();
+    // Ball should bounce upward (negative vy after hitting surface below)
+    assert!(ball.vy < 0.0, "Ball should bounce upward after hitting static body, vy={}", ball.vy);
+    // Static body must not move
+    let static_body = world.get_body(0).unwrap();
+    assert_eq!(static_body.x, 0.0);
+    assert_eq!(static_body.y, 20.0);
+}
+
+#[test]
+fn test_friction_slows_sliding_body() {
+    // A body sliding on a surface with friction should decelerate.
+    let mut world = PhysicsWorld::new(0.0, 400.0); // Gravity pushes down
+    world.add_body(
+        BodyType::Static, Shape::AABB { half_w: 400.0, half_h: 20.0 },
+        0.0, 30.0, 0.0,
+        Material { restitution: 0.0, friction: 0.8 },
+        0xFFFF, 0xFFFF,
+    );
+    let box_id = world.add_body(
+        BodyType::Dynamic, Shape::AABB { half_w: 5.0, half_h: 5.0 },
+        0.0, 4.0, 1.0, // Resting on surface (1px overlap)
+        Material { restitution: 0.0, friction: 0.8 },
+        0xFFFF, 0xFFFF,
+    );
+    world.set_velocity(box_id, 200.0, 0.0); // Sliding right
+    let v0 = 200.0f32;
+    // Step for 1 second
+    for _ in 0..60 {
+        world.step(1.0 / 60.0);
+    }
+    let body = world.get_body(box_id).unwrap();
+    assert!(
+        body.vx.abs() < v0 * 0.5,
+        "Friction should slow the body significantly, vx={} (started at {})",
+        body.vx, v0,
+    );
+}
+
+#[test]
+fn test_zero_restitution_no_bounce() {
+    // With restitution=0, a dropped ball should not bounce.
+    let mut world = PhysicsWorld::new(0.0, 400.0);
+    world.add_body(
+        BodyType::Static, Shape::AABB { half_w: 400.0, half_h: 20.0 },
+        0.0, 100.0, 0.0,
+        Material { restitution: 0.0, friction: 0.5 },
+        0xFFFF, 0xFFFF,
+    );
+    let ball_id = world.add_body(
+        BodyType::Dynamic, Shape::Circle { radius: 5.0 },
+        0.0, 50.0, 1.0,
+        Material { restitution: 0.0, friction: 0.5 },
+        0xFFFF, 0xFFFF,
+    );
+    // Let ball fall and hit surface
+    for _ in 0..60 {
+        world.step(1.0 / 60.0);
+    }
+    let body = world.get_body(ball_id).unwrap();
+    // With zero restitution, after settling the ball should be near the surface, not bouncing
+    let surface_y = 100.0 - 20.0 - 5.0; // ground top - ball radius = 75
+    assert!(
+        (body.y - surface_y).abs() < 2.0,
+        "Zero-restitution ball should rest on surface at y~{}, got y={}",
+        surface_y, body.y,
+    );
+}
+
+#[test]
+fn test_collision_layer_filtering() {
+    // Bodies on non-matching layers should pass through each other.
+    let mut world = PhysicsWorld::new(0.0, 0.0);
+    let a_id = world.add_body(
+        BodyType::Dynamic, Shape::Circle { radius: 10.0 },
+        0.0, 0.0, 1.0, Material::default(),
+        0x0001, 0x0002, // Layer 1, mask 2
+    );
+    let b_id = world.add_body(
+        BodyType::Dynamic, Shape::Circle { radius: 10.0 },
+        15.0, 0.0, 1.0, Material::default(),
+        0x0004, 0x0008, // Layer 4, mask 8 — doesn't match A's mask (2)
+    );
+    world.set_velocity(a_id, 50.0, 0.0);
+    world.set_velocity(b_id, -50.0, 0.0);
+    // Step — bodies should pass through each other
+    for _ in 0..30 {
+        world.step(1.0 / 60.0);
+    }
+    let a = world.get_body(a_id).unwrap();
+    let b = world.get_body(b_id).unwrap();
+    // A should have passed right through B (still moving right)
+    assert!(a.vx > 40.0, "Body A should pass through B (non-matching layers), vx={}", a.vx);
+    assert!(b.vx < -40.0, "Body B should pass through A, vx={}", b.vx);
+}
+
+#[test]
+fn test_penetration_depth_correctness() {
+    // Verify penetration depth matches geometric expectation.
+    // Two circles: centers 15 apart, radii 10 each → penetration = 10+10-15 = 5
+    let a = make_body(0, BodyType::Dynamic, Shape::Circle { radius: 10.0 }, 0.0, 0.0, 1.0);
+    let b = make_body(1, BodyType::Dynamic, Shape::Circle { radius: 10.0 }, 15.0, 0.0, 1.0);
+    let c = test_collision(&a, &b).unwrap();
+    assert!(
+        (c.penetration - 5.0).abs() < 1e-4,
+        "Circle penetration should be 5.0, got {}",
+        c.penetration,
+    );
+
+    // Two AABBs: overlap 4px on X, 20px on Y → penetration = min(4, 20) = 4
+    let a = make_body(0, BodyType::Dynamic, Shape::AABB { half_w: 10.0, half_h: 10.0 }, 0.0, 0.0, 1.0);
+    let b = make_body(1, BodyType::Dynamic, Shape::AABB { half_w: 10.0, half_h: 10.0 }, 16.0, 0.0, 1.0);
+    let c = test_collision(&a, &b).unwrap();
+    assert!(
+        (c.penetration - 4.0).abs() < 1e-4,
+        "AABB penetration should be 4.0, got {}",
+        c.penetration,
+    );
+}
+
+#[test]
+fn test_no_collision_when_separated() {
+    // Bodies that don't overlap should not produce contacts.
+    let a = make_body(0, BodyType::Dynamic, Shape::Circle { radius: 10.0 }, 0.0, 0.0, 1.0);
+    let b = make_body(1, BodyType::Dynamic, Shape::Circle { radius: 10.0 }, 25.0, 0.0, 1.0);
+    assert!(test_collision(&a, &b).is_none(), "Separated circles should not collide");
+
+    let a = make_body(0, BodyType::Dynamic, Shape::AABB { half_w: 10.0, half_h: 10.0 }, 0.0, 0.0, 1.0);
+    let b = make_body(1, BodyType::Dynamic, Shape::AABB { half_w: 10.0, half_h: 10.0 }, 25.0, 0.0, 1.0);
+    assert!(test_collision(&a, &b).is_none(), "Separated AABBs should not collide");
+}
+
+#[test]
+fn test_distance_constraint_spring_behavior() {
+    // Two bodies connected by distance constraint should oscillate around rest distance
+    // and not drift apart over time.
+    let mut world = PhysicsWorld::new(0.0, 0.0); // No gravity
+    let a_id = world.add_body(
+        BodyType::Dynamic, Shape::Circle { radius: 5.0 },
+        0.0, 0.0, 1.0, Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+    let b_id = world.add_body(
+        BodyType::Dynamic, Shape::Circle { radius: 5.0 },
+        100.0, 0.0, 1.0, Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+    world.add_constraint(Constraint::Distance {
+        id: 0,
+        body_a: a_id,
+        body_b: b_id,
+        distance: 100.0,
+        anchor_a: (0.0, 0.0),
+        anchor_b: (0.0, 0.0),
+    });
+    // Pull bodies apart
+    world.set_velocity(a_id, -50.0, 0.0);
+    world.set_velocity(b_id, 50.0, 0.0);
+    // Step for 5 seconds
+    for _ in 0..300 {
+        world.step(1.0 / 60.0);
+    }
+    let a = world.get_body(a_id).unwrap();
+    let b = world.get_body(b_id).unwrap();
+    let dist = ((b.x - a.x).powi(2) + (b.y - a.y).powi(2)).sqrt();
+    assert!(
+        (dist - 100.0).abs() < 5.0,
+        "Distance constraint should maintain ~100px distance, got {}",
+        dist,
+    );
+}
+
+#[test]
+fn test_raycast_returns_closest_hit() {
+    // Raycast should return the closest body, not any arbitrary one.
+    let mut world = PhysicsWorld::new(0.0, 0.0);
+    // Body at x=50 (closer)
+    world.add_body(
+        BodyType::Static, Shape::Circle { radius: 5.0 },
+        50.0, 0.0, 0.0, Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+    // Body at x=100 (farther)
+    world.add_body(
+        BodyType::Static, Shape::Circle { radius: 5.0 },
+        100.0, 0.0, 0.0, Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+    // Ray from origin going right
+    let hit = world.raycast(0.0, 0.0, 1.0, 0.0, 200.0);
+    assert!(hit.is_some(), "Raycast should hit something");
+    let (id, _, _, t) = hit.unwrap();
+    assert_eq!(id, 0, "Should hit closer body (id=0), got id={}", id);
+    assert!((t - 45.0).abs() < 1.0, "Hit distance should be ~45 (50-radius), got {}", t);
 }

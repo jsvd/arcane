@@ -51,6 +51,10 @@ fn circle_vs_circle(a: &RigidBody, b: &RigidBody) -> Option<Contact> {
             a.x + nx * (ra - (sum_r - dist) * 0.5),
             a.y + ny * (ra - (sum_r - dist) * 0.5),
         ),
+        accumulated_jn: 0.0,
+        accumulated_jt: 0.0,
+        velocity_bias: 0.0,
+        tangent: (0.0, 0.0),
     })
 }
 
@@ -113,6 +117,10 @@ fn circle_vs_aabb(circle: &RigidBody, aabb: &RigidBody, swapped: bool) -> Option
             normal: (nx, ny),
             penetration,
             contact_point: (contact_x, contact_y),
+            accumulated_jn: 0.0,
+            accumulated_jt: 0.0,
+            velocity_bias: 0.0,
+            tangent: (0.0, 0.0),
         })
     } else {
         // Original: Circle=a, AABB=b. Normal should point from a to b (opposite).
@@ -122,6 +130,10 @@ fn circle_vs_aabb(circle: &RigidBody, aabb: &RigidBody, swapped: bool) -> Option
             normal: (-nx, -ny),
             penetration,
             contact_point: (contact_x, contact_y),
+            accumulated_jn: 0.0,
+            accumulated_jt: 0.0,
+            velocity_bias: 0.0,
+            tangent: (0.0, 0.0),
         })
     }
 }
@@ -153,15 +165,31 @@ fn aabb_vs_aabb(a: &RigidBody, b: &RigidBody) -> Option<Contact> {
         (0.0, ny, overlap_y)
     };
 
+    // Contact point on the actual collision surface
+    let (cpx, cpy) = if overlap_x < overlap_y {
+        // Minimum separation on X axis — contact at A's X edge
+        let cx = if dx >= 0.0 { a.x + ahw } else { a.x - ahw };
+        let y_min = (a.y - ahh).max(b.y - bhh);
+        let y_max = (a.y + ahh).min(b.y + bhh);
+        (cx, (y_min + y_max) * 0.5)
+    } else {
+        // Minimum separation on Y axis — contact at A's Y edge
+        let cy = if dy >= 0.0 { a.y + ahh } else { a.y - ahh };
+        let x_min = (a.x - ahw).max(b.x - bhw);
+        let x_max = (a.x + ahw).min(b.x + bhw);
+        ((x_min + x_max) * 0.5, cy)
+    };
+
     Some(Contact {
         body_a: a.id,
         body_b: b.id,
         normal: (nx, ny),
         penetration,
-        contact_point: (
-            (a.x + b.x) * 0.5,
-            (a.y + b.y) * 0.5,
-        ),
+        contact_point: (cpx, cpy),
+        accumulated_jn: 0.0,
+        accumulated_jt: 0.0,
+        velocity_bias: 0.0,
+        tangent: (0.0, 0.0),
     })
 }
 
@@ -247,15 +275,27 @@ fn polygon_vs_polygon(a: &RigidBody, b: &RigidBody) -> Option<Contact> {
         min_axis = (-min_axis.0, -min_axis.1);
     }
 
+    // Contact point: deepest penetrating vertex of B along -normal
+    let mut best_dot = f32::MAX;
+    let mut best_point = ((a.x + b.x) * 0.5, (a.y + b.y) * 0.5);
+    for &(vx, vy) in &verts_b {
+        let d = vx * min_axis.0 + vy * min_axis.1;
+        if d < best_dot {
+            best_dot = d;
+            best_point = (vx, vy);
+        }
+    }
+
     Some(Contact {
         body_a: a.id,
         body_b: b.id,
         normal: min_axis,
         penetration: min_overlap,
-        contact_point: (
-            (a.x + b.x) * 0.5,
-            (a.y + b.y) * 0.5,
-        ),
+        contact_point: best_point,
+        accumulated_jn: 0.0,
+        accumulated_jt: 0.0,
+        velocity_bias: 0.0,
+        tangent: (0.0, 0.0),
     })
 }
 
@@ -319,9 +359,6 @@ fn circle_vs_polygon(circle: &RigidBody, poly: &RigidBody, swapped: bool) -> Opt
     };
 
     // Ensure normal points from body_a to body_b
-    let dx = bb as f32 - ba as f32; // Just use actual body positions
-    let _ = dx;
-    // Normal should point from a to b
     let dir_x = if swapped { circle.x - poly.x } else { poly.x - circle.x };
     let dir_y = if swapped { circle.y - poly.y } else { poly.y - circle.y };
     let dot = fnx * dir_x + fny * dir_y;
@@ -333,6 +370,10 @@ fn circle_vs_polygon(circle: &RigidBody, poly: &RigidBody, swapped: bool) -> Opt
         normal: (fnx, fny),
         penetration,
         contact_point: closest_point,
+        accumulated_jn: 0.0,
+        accumulated_jt: 0.0,
+        velocity_bias: 0.0,
+        tangent: (0.0, 0.0),
     })
 }
 
@@ -359,6 +400,10 @@ fn aabb_vs_polygon(aabb: &RigidBody, poly: &RigidBody, swapped: bool) -> Option<
             normal: (-result.normal.0, -result.normal.1),
             penetration: result.penetration,
             contact_point: result.contact_point,
+            accumulated_jn: 0.0,
+            accumulated_jt: 0.0,
+            velocity_bias: 0.0,
+            tangent: (0.0, 0.0),
         })
     } else {
         Some(Contact {
