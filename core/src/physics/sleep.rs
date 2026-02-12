@@ -41,9 +41,12 @@ pub fn update_sleep(
         }
     }
 
-    // Second pass: wake sleeping dynamic bodies that contact awake dynamic bodies.
-    // Static/kinematic bodies are never wake sources (they don't move, so contact
-    // with them doesn't indicate new motion).
+    // Second pass: wake sleeping dynamic bodies that contact fast-moving dynamic bodies.
+    // A body is only a wake source if it's actually moving above the sleep threshold.
+    // Without this velocity check, stacks suffer cascading wake: the bottom box sleeps
+    // first, but the nearly-still box above (awake, timer < threshold) immediately wakes
+    // it, creating an endless blink cycle.
+    let threshold_sq = SLEEP_VELOCITY_THRESHOLD * SLEEP_VELOCITY_THRESHOLD;
     for contact in contacts {
         let a_id = contact.body_a as usize;
         let b_id = contact.body_b as usize;
@@ -51,16 +54,20 @@ pub fn update_sleep(
             continue;
         }
 
-        let (a_sleeping, a_dynamic) = bodies[a_id]
+        let (a_sleeping, a_dynamic, a_speed_sq) = bodies[a_id]
             .as_ref()
-            .map_or((true, false), |b| (b.sleeping, b.body_type == BodyType::Dynamic));
-        let (b_sleeping, b_dynamic) = bodies[b_id]
+            .map_or((true, false, 0.0), |b| {
+                (b.sleeping, b.body_type == BodyType::Dynamic, b.vx * b.vx + b.vy * b.vy)
+            });
+        let (b_sleeping, b_dynamic, b_speed_sq) = bodies[b_id]
             .as_ref()
-            .map_or((true, false), |b| (b.sleeping, b.body_type == BodyType::Dynamic));
+            .map_or((true, false, 0.0), |b| {
+                (b.sleeping, b.body_type == BodyType::Dynamic, b.vx * b.vx + b.vy * b.vy)
+            });
 
-        // Only awake dynamic bodies can wake sleeping bodies
-        let a_awake_source = !a_sleeping && a_dynamic;
-        let b_awake_source = !b_sleeping && b_dynamic;
+        // Only fast-moving awake dynamic bodies can wake sleeping bodies
+        let a_awake_source = !a_sleeping && a_dynamic && a_speed_sq > threshold_sq;
+        let b_awake_source = !b_sleeping && b_dynamic && b_speed_sq > threshold_sq;
 
         if a_sleeping && a_dynamic && b_awake_source {
             if let Some(a) = &mut bodies[a_id] {
