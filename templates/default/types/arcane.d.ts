@@ -904,8 +904,9 @@ declare module "@arcane/runtime/ui" {
       };
   };
   /**
-   * Standard HUD layout constants. Spacing values (PADDING, LINE_HEIGHT, TEXT_SCALE) work at
-   * any resolution. **Position values assume 800×600** — for other viewports, compute positions
+   * Standard HUD layout constants. All values use **logical pixels** (DPI-independent).
+   * Spacing values (PADDING, LINE_HEIGHT, TEXT_SCALE) work at any resolution.
+   * **Position values assume 800×600** — for other viewports, compute positions
    * from `getViewportSize()` instead (e.g. `{ x: vpW - 100, y: 10 }` for top-right).
    */
   export declare const HUDLayout: {
@@ -1673,6 +1674,7 @@ declare module "@arcane/runtime/physics" {
       readonly vx: number;
       readonly vy: number;
       readonly angularVelocity: number;
+      readonly sleeping: boolean;
   };
   /** Contact information from collision detection. */
   export type Contact = {
