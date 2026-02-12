@@ -69,6 +69,16 @@ pub struct RenderBridgeState {
     pub shader_param_queue: Vec<(u32, u32, [f32; 4])>,
     /// Next shader ID to assign.
     pub next_shader_id: u32,
+    /// Post-process effect creation queue: (id, effect_type_name).
+    pub effect_create_queue: Vec<(u32, String)>,
+    /// Post-process effect param updates: (effect_id, index, [x, y, z, w]).
+    pub effect_param_queue: Vec<(u32, u32, [f32; 4])>,
+    /// Post-process effect removal queue.
+    pub effect_remove_queue: Vec<u32>,
+    /// Flag to clear all post-process effects.
+    pub effect_clear: bool,
+    /// Next effect ID to assign.
+    pub next_effect_id: u32,
 }
 
 impl RenderBridgeState {
@@ -103,6 +113,11 @@ impl RenderBridgeState {
             shader_create_queue: Vec::new(),
             shader_param_queue: Vec::new(),
             next_shader_id: 1,
+            effect_create_queue: Vec::new(),
+            effect_param_queue: Vec::new(),
+            effect_remove_queue: Vec::new(),
+            effect_clear: false,
+            next_effect_id: 1,
         }
     }
 }
@@ -572,6 +587,53 @@ pub fn op_set_shader_param(
     ));
 }
 
+// --- Post-process effect ops ---
+
+/// Add a post-process effect. Returns an effect ID.
+#[deno_core::op2(fast)]
+pub fn op_add_effect(state: &mut OpState, #[string] effect_type: &str) -> u32 {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let mut b = bridge.borrow_mut();
+    let id = b.next_effect_id;
+    b.next_effect_id += 1;
+    b.effect_create_queue
+        .push((id, effect_type.to_string()));
+    id
+}
+
+/// Set a vec4 parameter slot on a post-process effect. Index 0-3.
+#[deno_core::op2(fast)]
+pub fn op_set_effect_param(
+    state: &mut OpState,
+    effect_id: u32,
+    index: u32,
+    x: f64,
+    y: f64,
+    z: f64,
+    w: f64,
+) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().effect_param_queue.push((
+        effect_id,
+        index,
+        [x as f32, y as f32, z as f32, w as f32],
+    ));
+}
+
+/// Remove a single post-process effect by ID.
+#[deno_core::op2(fast)]
+pub fn op_remove_effect(state: &mut OpState, effect_id: u32) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().effect_remove_queue.push(effect_id);
+}
+
+/// Remove all post-process effects.
+#[deno_core::op2(fast)]
+pub fn op_clear_effects(state: &mut OpState) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().effect_clear = true;
+}
+
 deno_core::extension!(
     render_ext,
     ops = [
@@ -607,5 +669,9 @@ deno_core::extension!(
         op_list_save_files,
         op_create_shader,
         op_set_shader_param,
+        op_add_effect,
+        op_set_effect_param,
+        op_remove_effect,
+        op_clear_effects,
     ],
 );

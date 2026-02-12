@@ -331,6 +331,52 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
             }
         }
 
+        // Process post-process effect queue
+        let pending_effects: Vec<(u32, String)> = {
+            let mut bridge = bridge_for_loop.borrow_mut();
+            std::mem::take(&mut bridge.effect_create_queue)
+        };
+        let effect_params: Vec<(u32, u32, [f32; 4])> = {
+            let mut bridge = bridge_for_loop.borrow_mut();
+            std::mem::take(&mut bridge.effect_param_queue)
+        };
+        let effect_removes: Vec<u32> = {
+            let mut bridge = bridge_for_loop.borrow_mut();
+            std::mem::take(&mut bridge.effect_remove_queue)
+        };
+        let effect_clear = {
+            let mut bridge = bridge_for_loop.borrow_mut();
+            std::mem::replace(&mut bridge.effect_clear, false)
+        };
+
+        if let Some(ref mut renderer) = state.renderer {
+            if effect_clear {
+                renderer.postprocess.clear();
+            }
+            for id in effect_removes {
+                renderer.postprocess.remove(id);
+            }
+            for (id, type_name) in pending_effects {
+                if let Some(effect_type) =
+                    arcane_engine::renderer::postprocess::EffectType::from_str(&type_name)
+                {
+                    renderer
+                        .postprocess
+                        .add(&renderer.gpu, id, effect_type);
+                }
+            }
+            for (effect_id, index, values) in effect_params {
+                renderer.postprocess.set_param(
+                    effect_id,
+                    index,
+                    values[0],
+                    values[1],
+                    values[2],
+                    values[3],
+                );
+            }
+        }
+
         // Drain audio commands from bridge and send to audio thread
         let audio_cmds: Vec<BridgeAudioCommand> = {
             let mut bridge = bridge_for_loop.borrow_mut();
@@ -558,6 +604,12 @@ fn reload_runtime(
         b.texture_load_queue.clear();
         b.font_texture_queue.clear();
         b.audio_commands.clear();
+        b.shader_create_queue.clear();
+        b.shader_param_queue.clear();
+        b.effect_create_queue.clear();
+        b.effect_param_queue.clear();
+        b.effect_remove_queue.clear();
+        b.effect_clear = true;
 
         // Clear solid texture cache so they can be recreated with new colors.
         // Keep file texture cache to avoid re-uploading large images.

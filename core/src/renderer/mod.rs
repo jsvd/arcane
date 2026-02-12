@@ -6,6 +6,7 @@ mod tilemap;
 mod lighting;
 pub mod font;
 pub mod shader;
+pub mod postprocess;
 
 pub use gpu::GpuContext;
 pub use sprite::{SpriteCommand, SpritePipeline};
@@ -14,6 +15,7 @@ pub use camera::Camera2D;
 pub use tilemap::{Tilemap, TilemapStore};
 pub use lighting::{LightingState, LightingUniform, PointLight, LightData, MAX_LIGHTS};
 pub use shader::ShaderStore;
+pub use postprocess::PostProcessPipeline;
 
 use anyhow::Result;
 
@@ -22,6 +24,7 @@ pub struct Renderer {
     pub gpu: GpuContext,
     pub sprites: SpritePipeline,
     pub shaders: ShaderStore,
+    pub postprocess: PostProcessPipeline,
     pub textures: TextureStore,
     pub camera: Camera2D,
     pub lighting: LightingState,
@@ -40,6 +43,7 @@ impl Renderer {
         let gpu = GpuContext::new(window)?;
         let sprites = SpritePipeline::new(&gpu);
         let shaders = ShaderStore::new(&gpu);
+        let postprocess = PostProcessPipeline::new(&gpu);
         let textures = TextureStore::new();
         // Set camera viewport to logical pixels so world units are DPI-independent
         let logical_w = gpu.config.width as f32 / scale_factor;
@@ -52,6 +56,7 @@ impl Renderer {
             gpu,
             sprites,
             shaders,
+            postprocess,
             textures,
             camera,
             lighting: LightingState::default(),
@@ -90,17 +95,35 @@ impl Renderer {
             a: self.clear_color[3] as f64,
         };
 
-        self.sprites.render(
-            &self.gpu,
-            &self.textures,
-            &self.shaders,
-            &self.camera,
-            &lighting_uniform,
-            &self.frame_commands,
-            &view,
-            &mut encoder,
-            clear_color,
-        );
+        if self.postprocess.has_effects() {
+            // Render sprites to offscreen target, then apply effects to surface
+            let sprite_target = self.postprocess.sprite_target(&self.gpu);
+            self.sprites.render(
+                &self.gpu,
+                &self.textures,
+                &self.shaders,
+                &self.camera,
+                &lighting_uniform,
+                &self.frame_commands,
+                sprite_target,
+                &mut encoder,
+                clear_color,
+            );
+            self.postprocess.apply(&self.gpu, &mut encoder, &view);
+        } else {
+            // No effects — render directly to surface
+            self.sprites.render(
+                &self.gpu,
+                &self.textures,
+                &self.shaders,
+                &self.camera,
+                &lighting_uniform,
+                &self.frame_commands,
+                &view,
+                &mut encoder,
+                clear_color,
+            );
+        }
 
         self.gpu.queue.submit(std::iter::once(encoder.finish()));
         output.present();

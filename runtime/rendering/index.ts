@@ -60,3 +60,12 @@ export { loadSound, playSound, playMusic, stopSound, stopAll, setVolume } from "
 // Custom Shaders
 export type { ShaderId } from "./shader.ts";
 export { createShaderFromSource, setShaderParam } from "./shader.ts";
+
+// Post-Processing
+export type { EffectId } from "./postprocess.ts";
+export {
+  addPostProcessEffect,
+  setEffectParam,
+  removeEffect,
+  clearEffects,
+} from "./postprocess.ts";
