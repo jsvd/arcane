@@ -2,6 +2,18 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.6.1] - 2026-02-12
+
+### Fixed
+- npm package missing `src/` directory (symlink not followed by `npm pack`). Added prepack/postpack scripts.
+- `arcane test`, `arcane describe`, `arcane inspect` failed on standalone projects — import map for `@arcane/runtime/*` was only created in `arcane dev`.
+- Import map missing `scenes` and `persistence` subpaths.
+- Import map mapped `testing` to nonexistent `index.ts` (should be `harness.ts`).
+- Space key not working for shooting in Asteroids demo (`"Space"` not `" "`).
+
+### Added
+- `scripts/smoke-test.sh` — E2E test simulating `arcane new` + `npm install` + `arcane test` + `arcane describe`.
+
 ## [0.6.0] - 2026-02-12
 
 ### Added
