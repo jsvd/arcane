@@ -4,7 +4,7 @@
   "description": "Create a new Arcane game project",
   "type": "module",
   "bin": {
-    "create-arcane": "./bin/create-arcane.js"
+    "create-arcane": "bin/create-arcane.js"
   },
   "files": [
     "bin",
@@ -23,7 +23,7 @@
   "homepage": "https://github.com/anthropics/arcane",
   "repository": {
     "type": "git",
-    "url": "https://github.com/anthropics/arcane.git",
+    "url": "git+https://github.com/anthropics/arcane.git",
     "directory": "packages/create"
   },
   "bugs": {

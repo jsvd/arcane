@@ -41,7 +41,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/anthropics/arcane.git",
+    "url": "git+https://github.com/anthropics/arcane.git",
     "directory": "packages/runtime"
   },
   "bugs": {
