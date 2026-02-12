@@ -1,28 +1,26 @@
 use anyhow::{bail, Context, Result};
-use include_dir::{include_dir, Dir};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-static RECIPES_DIR: Dir<'static> = include_dir!("$OUT_DIR/recipes");
-
-/// Find the `recipes/` directory on the filesystem (for dev-from-repo).
-/// Returns None when running from a standalone install.
+/// Find the `recipes/` directory, trying multiple sources in order:
+/// 1. node_modules/@arcane-engine/runtime/recipes/ (npm install)
+/// 2. Repo layout: walk up from CWD looking for recipes/ with recipe.json subdirs
+/// 3. Relative to binary (dev builds)
 fn find_recipes_dir() -> Option<PathBuf> {
-    // Try CWD first, walking up
     let cwd = std::env::current_dir().ok()?;
+
+    // 1. node_modules (preferred — always up to date via npm)
+    let nm_path = cwd.join("node_modules/@arcane-engine/runtime/recipes");
+    if is_recipes_dir(&nm_path) {
+        return Some(nm_path);
+    }
+
+    // 2. Walk up from CWD looking for a repo-level recipes/ dir
     let mut dir = cwd.as_path();
     loop {
         let candidate = dir.join("recipes");
-        if candidate.is_dir() {
-            // Verify it's an engine recipes dir (has subdirs with recipe.json)
-            if fs::read_dir(&candidate).ok().map_or(false, |mut entries| {
-                entries.any(|e| {
-                    e.ok()
-                        .map_or(false, |e| e.path().join("recipe.json").exists())
-                })
-            }) {
-                return Some(candidate);
-            }
+        if is_recipes_dir(&candidate) {
+            return Some(candidate);
         }
         match dir.parent() {
             Some(parent) => dir = parent,
@@ -30,12 +28,12 @@ fn find_recipes_dir() -> Option<PathBuf> {
         }
     }
 
-    // Try relative to the binary
+    // 3. Relative to binary
     if let Ok(exe) = std::env::current_exe() {
         let mut dir_opt = exe.parent();
         while let Some(d) = dir_opt {
             let candidate = d.join("recipes");
-            if candidate.is_dir() {
+            if is_recipes_dir(&candidate) {
                 return Some(candidate);
             }
             dir_opt = d.parent();
@@ -43,6 +41,17 @@ fn find_recipes_dir() -> Option<PathBuf> {
     }
 
     None
+}
+
+/// Check if a directory looks like a recipes directory (has subdirs with recipe.json).
+fn is_recipes_dir(path: &Path) -> bool {
+    path.is_dir()
+        && fs::read_dir(path).ok().map_or(false, |mut entries| {
+            entries.any(|e| {
+                e.ok()
+                    .map_or(false, |e| e.path().join("recipe.json").exists())
+            })
+        })
 }
 
 /// Parse recipe.json metadata from content string.
@@ -69,9 +78,20 @@ fn read_recipe_meta(dir: &Path) -> Result<(String, String, Vec<String>)> {
     parse_recipe_meta(&content)
 }
 
-/// List all available recipes from filesystem.
-fn list_recipes_fs(recipes_dir: &Path) -> Result<()> {
-    let mut entries: Vec<_> = fs::read_dir(recipes_dir)?
+/// List all available recipes.
+pub fn list_recipes() -> Result<()> {
+    let recipes_dir = match find_recipes_dir() {
+        Some(dir) => dir,
+        None => {
+            println!("No recipes found.");
+            println!(
+                "\nMake sure @arcane-engine/runtime is installed: npm install @arcane-engine/runtime"
+            );
+            return Ok(());
+        }
+    };
+
+    let mut entries: Vec<_> = fs::read_dir(&recipes_dir)?
         .filter_map(|e| e.ok())
         .filter(|e| e.path().is_dir())
         .filter(|e| e.path().join("recipe.json").exists())
@@ -94,46 +114,14 @@ fn list_recipes_fs(recipes_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-/// List all available recipes from embedded data.
-fn list_recipes_embedded() -> Result<()> {
-    let mut recipes: Vec<(String, String)> = Vec::new();
+/// Copy a recipe into the current project.
+pub fn add_recipe(name: &str) -> Result<()> {
+    let recipes_dir = find_recipes_dir().with_context(|| {
+        format!(
+            "Cannot find recipes directory. Make sure @arcane-engine/runtime is installed:\n  npm install @arcane-engine/runtime"
+        )
+    })?;
 
-    for subdir in RECIPES_DIR.dirs() {
-        let recipe_json_path = subdir.path().join("recipe.json");
-        if let Some(file) = RECIPES_DIR.get_file(&recipe_json_path) {
-            if let Some(content) = file.contents_utf8() {
-                if let Ok((name, desc, _)) = parse_recipe_meta(content) {
-                    recipes.push((name, desc));
-                }
-            }
-        }
-    }
-
-    if recipes.is_empty() {
-        println!("No recipes found.");
-        return Ok(());
-    }
-
-    recipes.sort_by(|a, b| a.0.cmp(&b.0));
-
-    println!("Available recipes:\n");
-    for (name, desc) in &recipes {
-        println!("  {:<24} {}", name, desc);
-    }
-    println!("\nUsage: arcane add <recipe-name>");
-    Ok(())
-}
-
-/// List all available recipes.
-pub fn list_recipes() -> Result<()> {
-    match find_recipes_dir() {
-        Some(dir) => list_recipes_fs(&dir),
-        None => list_recipes_embedded(),
-    }
-}
-
-/// Copy a recipe from filesystem into the current project.
-fn add_recipe_fs(name: &str, recipes_dir: &Path) -> Result<()> {
     let source_dir = recipes_dir.join(name);
 
     if !source_dir.exists() || !source_dir.join("recipe.json").exists() {
@@ -173,63 +161,6 @@ fn add_recipe_fs(name: &str, recipes_dir: &Path) -> Result<()> {
         recipe_name
     );
     Ok(())
-}
-
-/// Copy a recipe from embedded data into the current project.
-fn add_recipe_embedded(name: &str) -> Result<()> {
-    let _recipe_dir = RECIPES_DIR.get_dir(name).with_context(|| {
-        format!(
-            "Recipe \"{}\" not found. Run `arcane add --list` to see available recipes.",
-            name
-        )
-    })?;
-
-    let recipe_json_path = Path::new(name).join("recipe.json");
-    let recipe_json = RECIPES_DIR
-        .get_file(&recipe_json_path)
-        .context("Recipe missing recipe.json")?;
-    let content = recipe_json
-        .contents_utf8()
-        .context("recipe.json not valid UTF-8")?;
-    let (recipe_name, _desc, files) = parse_recipe_meta(content)?;
-
-    let dest_dir = std::env::current_dir()?.join("recipes").join(&recipe_name);
-
-    if dest_dir.exists() {
-        bail!(
-            "Directory {} already exists. Remove it first to re-add the recipe.",
-            dest_dir.display()
-        );
-    }
-
-    fs::create_dir_all(&dest_dir)?;
-
-    // Copy recipe.json
-    fs::write(dest_dir.join("recipe.json"), recipe_json.contents())?;
-
-    // Copy listed files
-    for file_name in &files {
-        let file_path = Path::new(name).join(file_name);
-        if let Some(file) = RECIPES_DIR.get_file(&file_path) {
-            fs::write(dest_dir.join(file_name), file.contents())?;
-        }
-    }
-
-    println!("Added recipe \"{}\" to {}", recipe_name, dest_dir.display());
-    println!("\nImport it in your TypeScript code:");
-    println!(
-        "  import {{ ... }} from \"./recipes/{}/index.ts\";",
-        recipe_name
-    );
-    Ok(())
-}
-
-/// Copy a recipe into the current project.
-pub fn add_recipe(name: &str) -> Result<()> {
-    match find_recipes_dir() {
-        Some(dir) => add_recipe_fs(name, &dir),
-        None => add_recipe_embedded(name),
-    }
 }
 
 /// Entry point for the `arcane add` command.

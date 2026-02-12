@@ -44,14 +44,10 @@ fn main() {
     let templates_src = find_dir("templates/default");
     copy_dir_recursive(&templates_src, &out_dir.join("templates").join("default"));
 
-    let recipes_src = find_dir("recipes");
-    copy_dir_recursive(&recipes_src, &out_dir.join("recipes"));
-
     let assets_src = find_dir("assets");
     copy_dir_recursive(&assets_src, &out_dir.join("assets"));
 
     println!("cargo:rerun-if-changed=../templates/default");
-    println!("cargo:rerun-if-changed=../recipes");
     println!("cargo:rerun-if-changed=../assets");
     println!("cargo:rerun-if-changed=data");
 }

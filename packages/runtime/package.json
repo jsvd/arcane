@@ -22,6 +22,7 @@
   },
   "files": [
     "src",
+    "recipes",
     "index.ts",
     "README.md"
   ],

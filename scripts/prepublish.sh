@@ -1,6 +1,7 @@
 #!/bin/bash
 # Sync embedded data into cli/data/ for crate publishing.
-# Source of truth: templates/, recipes/, assets/ at repo root.
+# Source of truth: templates/, assets/ at repo root.
+# Recipes are distributed via npm, not embedded in the crate.
 # Run this before: cargo publish -p arcane-cli --allow-dirty
 
 set -euo pipefail
@@ -14,7 +15,6 @@ rm -rf "$DATA_DIR"
 mkdir -p "$DATA_DIR/templates"
 
 cp -r "$REPO_ROOT/templates/default" "$DATA_DIR/templates/default"
-cp -r "$REPO_ROOT/recipes" "$DATA_DIR/recipes"
 cp -r "$REPO_ROOT/assets" "$DATA_DIR/assets"
 
 echo "Done. cli/data/ is up to date."
