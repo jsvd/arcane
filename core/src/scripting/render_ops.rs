@@ -57,10 +57,13 @@ pub struct RenderBridgeState {
     /// Current viewport dimensions (synced from renderer each frame).
     pub viewport_width: f32,
     pub viewport_height: f32,
+    /// Directory for save files (.arcane/saves/ relative to game entry file).
+    pub save_dir: PathBuf,
 }
 
 impl RenderBridgeState {
     pub fn new(base_dir: PathBuf) -> Self {
+        let save_dir = base_dir.join(".arcane").join("saves");
         Self {
             sprite_commands: Vec::new(),
             camera_x: 0.0,
@@ -84,6 +87,7 @@ impl RenderBridgeState {
             font_texture_queue: Vec::new(),
             viewport_width: 800.0,
             viewport_height: 600.0,
+            save_dir,
         }
     }
 }
@@ -424,6 +428,71 @@ pub fn op_get_viewport_size(state: &mut OpState) -> Vec<f64> {
     vec![b.viewport_width as f64, b.viewport_height as f64]
 }
 
+// --- File I/O ops (save/load) ---
+
+/// Write a save file. Returns true on success.
+#[deno_core::op2(fast)]
+pub fn op_save_file(state: &mut OpState, #[string] key: &str, #[string] value: &str) -> bool {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let save_dir = bridge.borrow().save_dir.clone();
+
+    // Sanitize key: only allow alphanumeric, underscore, dash
+    if !key.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+        return false;
+    }
+
+    // Ensure save directory exists
+    if std::fs::create_dir_all(&save_dir).is_err() {
+        return false;
+    }
+
+    let path = save_dir.join(format!("{key}.json"));
+    std::fs::write(path, value).is_ok()
+}
+
+/// Load a save file. Returns the contents or empty string if not found.
+#[deno_core::op2]
+#[string]
+pub fn op_load_file(state: &mut OpState, #[string] key: &str) -> String {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let save_dir = bridge.borrow().save_dir.clone();
+
+    let path = save_dir.join(format!("{key}.json"));
+    std::fs::read_to_string(path).unwrap_or_default()
+}
+
+/// Delete a save file. Returns true on success.
+#[deno_core::op2(fast)]
+pub fn op_delete_file(state: &mut OpState, #[string] key: &str) -> bool {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let save_dir = bridge.borrow().save_dir.clone();
+
+    let path = save_dir.join(format!("{key}.json"));
+    std::fs::remove_file(path).is_ok()
+}
+
+/// List all save file keys (filenames without .json extension).
+#[deno_core::op2]
+#[serde]
+pub fn op_list_save_files(state: &mut OpState) -> Vec<String> {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let save_dir = bridge.borrow().save_dir.clone();
+
+    let mut keys = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(&save_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().map_or(false, |ext| ext == "json") {
+                if let Some(stem) = path.file_stem() {
+                    keys.push(stem.to_string_lossy().to_string());
+                }
+            }
+        }
+    }
+    keys.sort();
+    keys
+}
+
 deno_core::extension!(
     render_ext,
     ops = [
@@ -451,5 +520,9 @@ deno_core::extension!(
         op_set_master_volume,
         op_create_font_texture,
         op_get_viewport_size,
+        op_save_file,
+        op_load_file,
+        op_delete_file,
+        op_list_save_files,
     ],
 );

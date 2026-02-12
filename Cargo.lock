@@ -221,6 +221,7 @@ dependencies = [
  "notify-debouncer-mini",
  "pollster",
  "rodio",
+ "tempfile",
  "tiny_http",
  "tokio",
  "wgpu",
