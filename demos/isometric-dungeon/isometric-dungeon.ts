@@ -218,8 +218,19 @@ function handleInput(): void {
   if (isKeyPressed("x")) {
     currentZoom = Math.max(currentZoom / 1.3, 0.5);
   }
+  // Reset game
   if (isKeyPressed("r")) {
     currentZoom = 1.0;
+    player.gx = 1;
+    player.gy = 1;
+    const resetWorld = isoToWorld(1, 1);
+    player.x = resetWorld.x;
+    player.y = resetWorld.y;
+    player.path = [];
+    for (const coin of coins) {
+      coin.collected = false;
+    }
+    score = 0;
   }
 }
 
