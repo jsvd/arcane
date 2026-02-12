@@ -1,6 +1,7 @@
 mod module_loader;
 mod runtime;
 mod test_runner;
+pub mod physics_ops;
 
 #[cfg(feature = "renderer")]
 pub mod render_ops;

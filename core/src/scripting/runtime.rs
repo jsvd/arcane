@@ -1,4 +1,3 @@
-#[cfg(feature = "renderer")]
 use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
@@ -94,11 +93,20 @@ impl ArcaneRuntime {
     pub fn new_with_import_map(import_map: ImportMap) -> Self {
         let runtime = JsRuntime::new(RuntimeOptions {
             module_loader: Some(Rc::new(TsModuleLoader::with_import_map(import_map))),
-            extensions: vec![arcane_ext::init()],
+            extensions: vec![arcane_ext::init(), super::physics_ops::physics_ext::init()],
             ..Default::default()
         });
 
         let mut rt = Self { runtime };
+
+        // Store physics state in op_state
+        {
+            let op_state = rt.runtime.op_state();
+            op_state
+                .borrow_mut()
+                .put(Rc::new(RefCell::new(super::physics_ops::PhysicsState(None))));
+        }
+
         rt.runtime
             .execute_script("<crypto_polyfill>", CRYPTO_POLYFILL)
             .expect("Failed to install crypto polyfill");
@@ -169,16 +177,19 @@ impl ArcaneRuntime {
             extensions: vec![
                 arcane_ext::init(),
                 super::render_ops::render_ext::init(),
+                super::physics_ops::physics_ext::init(),
             ],
             ..Default::default()
         });
 
         let mut rt = Self { runtime };
 
-        // Store bridge state in op_state
+        // Store bridge state and physics state in op_state
         {
             let op_state = rt.runtime.op_state();
-            op_state.borrow_mut().put(bridge);
+            let mut state = op_state.borrow_mut();
+            state.put(bridge);
+            state.put(Rc::new(RefCell::new(super::physics_ops::PhysicsState(None))));
         }
 
         rt.runtime
