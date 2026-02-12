@@ -627,101 +627,124 @@ Multiple viewports (split-screen) deferred to future phase — high complexity, 
 
 ## Phase 14: Tilemap Polish
 
-**Status: Planned**
+**Status: Complete ✅**
 
-Extend the tilemap system with layers, auto-tiling, and non-orthogonal grids.
+Tilemap system extended with layers, auto-tiling, animated tiles, and tile properties.
 
 ### Deliverables
-- [ ] **Multiple tilemap layers** (`runtime/rendering/tilemap.ts`)
-  - [ ] Background, midground, foreground layers
-  - [ ] Per-layer parallax scrolling (uses Phase 13 parallax infrastructure)
-  - [ ] Collision layer (separate from visual layers)
-  - [ ] Layer visibility toggle
-- [ ] **Auto-tiling** (`runtime/rendering/autotile.ts`)
-  - [ ] Bitmask auto-tiling (Wang tiles, blob tiles)
-  - [ ] Automatic tile selection based on neighbors
-  - [ ] Support for 47-tile and 16-tile sets
-- [ ] **Animated tiles** (`runtime/rendering/tilemap.ts`)
-  - [ ] Per-tile animation (water, lava, torches)
-  - [ ] Frame cycling independent of sprite animations
-- [ ] **Isometric/Hexagonal grids** (`runtime/rendering/tilemap-iso.ts`)
-  - [ ] Isometric grid (diamond layout, 2:1 ratio)
-  - [ ] Hexagonal grid (pointy-top, flat-top)
-  - [ ] Screen-to-tile coordinate conversion
-- [ ] **Tile properties** (`runtime/rendering/tilemap.ts`)
-  - [ ] Custom metadata per tile (walkable, damage, friction, etc.)
-  - [ ] Query tile properties by position
-- [ ] **Demo: Isometric RPG Town** (`demos/iso-town/`)
-  - [ ] Isometric tilemap (buildings, roads, trees)
-  - [ ] Multiple layers (ground, buildings, roofs)
-  - [ ] Animated water tiles
-  - [ ] Auto-tiling for roads
+- [x] **Multiple tilemap layers** (`runtime/rendering/tilemap.ts`)
+  - [x] createLayeredTilemap() with named layers and per-layer z-order
+  - [x] Per-layer visibility toggle and opacity
+  - [x] Per-layer parallax factor (integrates with Phase 13 parallax)
+  - [x] Fill helpers: fillTiles(), fillLayerTiles()
+- [x] **Auto-tiling** (`runtime/rendering/autotile.ts`)
+  - [x] 4-bit cardinal bitmask (16 tiles)
+  - [x] 8-bit blob bitmask (47+ tiles)
+  - [x] Two-pass grid application (no feedback artifacts)
+  - [x] Mapping creation helpers
+- [x] **Animated tiles** (`runtime/rendering/tilemap.ts`)
+  - [x] registerAnimatedTile() with frame cycling
+  - [x] Global timer, automatic resolution during draw
+  - [x] Per-tile animation definitions
+- [x] **Tile properties** (`runtime/rendering/tilemap.ts`)
+  - [x] defineTileProperties() with per-tile-ID metadata
+  - [x] Positional queries: getTilePropertyAt(), getTilePropertiesAt()
+- [x] **Demo: Tilemap Showcase** (`demos/tilemap-showcase/`)
+  - [x] 4-layer tilemap with animated water
+  - [x] Auto-tiled walls, property queries at cursor
+  - [x] Layer toggles, agent protocol
+
+Isometric/hexagonal grids deferred to future phase.
 
 ### Success Criteria
-- [ ] Multiple layers render correctly (z-ordering)
-- [ ] Auto-tiling works (place one tile, neighbors update automatically)
-- [ ] Animated tiles cycle correctly (water ripples)
-- [ ] Isometric rendering looks correct (depth sorting)
-- [ ] 40+ tests for tilemap features
+- [x] Multiple layers render correctly (z-ordering)
+- [x] Auto-tiling works (place one tile, neighbors update automatically)
+- [x] Animated tiles cycle correctly
+- [x] 59 new tests (27 tilemap + 32 auto-tiling)
 
 ---
 
 ## Phase 15: Animation Polish
 
-**Status: Planned**
+**Status: Complete ✅**
 
-Complete the animation system with state machines, blending, and events.
+Animation system extended with state machines, crossfade blending, and frame events.
 
 ### Deliverables
-- [ ] **Animation state machine** (`runtime/rendering/animation-fsm.ts`)
-  - [ ] States: idle, walk, run, jump, attack
-  - [ ] Transitions with conditions
-  - [ ] Animation blending (smooth transitions)
-  - [ ] Animation events (trigger callbacks on specific frames)
-- [x] **Multi-row sprite sheets** — already implemented in Phase 9.5 (`createAnimation()` accepts `cols` and `rows`)
-- [ ] **Demo: Character Controller** (`demos/character-controller/`)
-  - [ ] Character with animation state machine (idle, walk, jump, attack)
-  - [ ] Smooth transitions between animation states
-  - [ ] Frame events (attack hitbox on specific frame)
+- [x] **Animation events** (`runtime/rendering/animation.ts`)
+  - [x] addFrameEvent() — register callbacks on specific animation frames
+  - [x] updateAnimationWithEvents() — advance animation and fire crossed frame events
+  - [x] getAnimationDef() — query animation definition
+- [x] **Animation state machine** (`runtime/rendering/animation-fsm.ts`)
+  - [x] Declarative state definitions with associated animations
+  - [x] 4 condition types: boolean, threshold, trigger, animationFinished
+  - [x] Transition priority ordering
+  - [x] Enter/exit callbacks per state
+  - [x] Speed multiplier per state
+  - [x] updateFSM() — evaluate transitions + advance animations
+  - [x] setFSMState() — force state change with optional blend
+- [x] **Animation blending**
+  - [x] Crossfade between states with configurable duration
+  - [x] isBlending(), getBlendProgress() — query blend state
+  - [x] drawFSMSprite() — renders with opacity-based crossfade
+- [x] **Multi-row sprite sheets** — already implemented in Phase 9.5
+- [x] **Demo: Character Controller** (`demos/character-controller/`)
+  - [x] 5 states: idle, walk, jump, fall, attack
+  - [x] Smooth crossfade blending on all transitions
+  - [x] Frame event: attack hitbox on specific frame
+  - [x] Platformer physics, enemy targets, scoring
 
 ### Success Criteria
-- [ ] Animation state machine handles transitions smoothly
-- [ ] Frame events fire at correct times
-- [ ] 30+ tests for animation features
+- [x] Animation state machine handles transitions smoothly
+- [x] Frame events fire at correct times
+- [x] 61 new tests (48 FSM + 13 demo)
 
 ---
 
 ## Phase 16: Interactive UI
 
-**Status: Planned**
+**Status: Complete ✅**
 
-Make UI interactive (not just draw-only). Buttons, text input, layout system.
+Interactive UI widgets with immediate-mode pattern, layout helpers, and focus management.
 
 ### Deliverables
-- [ ] **Interactive widgets** (`runtime/ui/interactive.ts`)
-  - [ ] Button: hover, pressed, released states
-  - [ ] Text input field (capture keyboard, cursor blink)
-  - [ ] Checkbox, radio button, slider
-  - [ ] Scroll container (overflow with scrollbar)
-  - [ ] Drag-and-drop (for inventory management)
-  - [ ] Focus system (tab navigation)
-  - [ ] Modal dialogs (confirm, cancel, text input)
-- [ ] **Layout system** (`runtime/ui/layout.ts`)
-  - [ ] Flexbox-style auto-layout (horizontal, vertical, grid)
-  - [ ] Anchoring (attach to screen edges/corners with margins)
-  - [ ] Responsive sizing (fill, fit-content, fixed)
-- [ ] **Demo: Settings + Inventory UI** (`demos/ui-showcase/`)
-  - [ ] Menu with button hover states
-  - [ ] Settings screen (volume sliders)
-  - [ ] Inventory grid with drag-and-drop
-  - [ ] Modal confirm dialog
+- [x] **Button widget** (`runtime/ui/button.ts`)
+  - [x] States: normal, hover, pressed, disabled
+  - [x] Hit testing, onClick callback
+  - [x] Visual feedback (color changes on hover/press)
+- [x] **Toggle widgets** (`runtime/ui/toggle.ts`)
+  - [x] Checkbox: on/off toggle with visual indicator
+  - [x] Radio group: one-of-N selection, mutual exclusion
+- [x] **Slider widget** (`runtime/ui/slider.ts`)
+  - [x] Horizontal slider with min/max/value
+  - [x] Drag handle or click to set value
+  - [x] onChange callback, step snapping
+- [x] **Text input** (`runtime/ui/text-input.ts`)
+  - [x] Single-line text input with keyboard capture
+  - [x] Cursor positioning, cursor blink animation
+  - [x] Selection, backspace/delete, character filtering
+- [x] **Layout helpers** (`runtime/ui/layout.ts`)
+  - [x] verticalStack() — items placed top-to-bottom with spacing
+  - [x] horizontalRow() — items placed left-to-right with spacing
+  - [x] anchorTo() — position relative to screen edges
+- [x] **Focus system** (`runtime/ui/focus.ts`)
+  - [x] Tab/Shift-Tab navigation between widgets
+  - [x] Focus ring visual indicator
+  - [x] Enter key activates focused widget
+- [x] **Demo: UI Showcase** (`demos/ui-showcase/`)
+  - [x] Buttons with hover states
+  - [x] Volume sliders
+  - [x] Checkboxes and radio groups
+  - [x] Text input field
+
+Scroll containers, drag-and-drop, and modal dialogs deferred to future phase.
 
 ### Success Criteria
-- [ ] UI buttons respond to mouse clicks with visual feedback
-- [ ] Text input captures keyboard correctly
-- [ ] Drag-and-drop feels natural (inventory management)
-- [ ] Layout system handles screen resize gracefully
-- [ ] 50+ tests for UI widgets and layout
+- [x] UI buttons respond to mouse clicks with visual feedback
+- [x] Text input captures keyboard correctly
+- [x] Layout helpers position widgets correctly
+- [x] Focus system enables keyboard navigation
+- [x] 162 new tests across all widget types
 
 ---
 

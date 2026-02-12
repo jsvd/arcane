@@ -119,10 +119,213 @@ declare module "@arcane/runtime/rendering" {
   };
 
   /**
+   * Animation state machine for sprite-based character animation.
+   *
+   * Provides a declarative way to define animation states (idle, walk, run, jump, attack)
+   * with transitions between them based on conditions. Supports blending (crossfade)
+   * between animations during transitions.
+   *
+   * @example
+   * ```ts
+   * const fsm = createAnimationFSM({
+   *   states: {
+   *     idle: { animationId: idleAnim },
+   *     walk: { animationId: walkAnim },
+   *     jump: { animationId: jumpAnim, loop: false },
+   *   },
+   *   transitions: [
+   *     { from: "idle", to: "walk", condition: { type: "boolean", param: "isMoving" } },
+   *     { from: "walk", to: "idle", condition: { type: "boolean", param: "isMoving", negate: true } },
+   *     { from: "any", to: "jump", condition: { type: "trigger", param: "jump" }, priority: 10 },
+   *     { from: "jump", to: "idle", condition: { type: "animationFinished" } },
+   *   ],
+   *   initialState: "idle",
+   *   defaultBlendDuration: 0.1,
+   * });
+   *
+   * // Each frame:
+   * fsm = updateFSM(fsm, dt, { isMoving: speed > 0 });
+   * drawFSMSprite(fsm, x, y, w, h);
+   * ```
+   */
+  /** A named state in the animation state machine. */
+  export type FSMStateDef = {
+      /** AnimationId to play when this state is active. */
+      animationId: AnimationId;
+      /** Override the animation's loop setting for this state. */
+      loop?: boolean;
+      /** Playback speed multiplier. 1 = normal, 2 = double speed. Default: 1. */
+      speed?: number;
+      /** Called when entering this state. */
+      onEnter?: () => void;
+      /** Called when exiting this state. */
+      onExit?: () => void;
+  };
+  /** Boolean condition: true when a named parameter is truthy (or falsy if negated). */
+  export type BooleanCondition = {
+      type: "boolean";
+      /** Parameter name to check in the params object. */
+      param: string;
+      /** If true, condition is met when the param is falsy. Default: false. */
+      negate?: boolean;
+  };
+  /** Threshold condition: true when a named parameter crosses a threshold. */
+  export type ThresholdCondition = {
+      type: "threshold";
+      /** Parameter name to check. */
+      param: string;
+      /** Threshold value to compare against. */
+      value: number;
+      /** Comparison operator. Default: "greaterThan". */
+      compare?: "greaterThan" | "lessThan" | "greaterOrEqual" | "lessOrEqual";
+  };
+  /** Trigger condition: true once when a named trigger param is set, then auto-clears. */
+  export type TriggerCondition = {
+      type: "trigger";
+      /** Trigger parameter name. Must be set to true in params to fire. */
+      param: string;
+  };
+  /** Animation finished condition: true when the current state's animation has finished (non-looping). */
+  export type AnimationFinishedCondition = {
+      type: "animationFinished";
+  };
+  /** Union of all transition condition types. */
+  export type TransitionCondition = BooleanCondition | ThresholdCondition | TriggerCondition | AnimationFinishedCondition;
+  /** A transition between states in the animation FSM. */
+  export type FSMTransition = {
+      /** Source state name, or "any" to match all states. */
+      from: string;
+      /** Destination state name. */
+      to: string;
+      /** Condition that must be met for the transition to fire. */
+      condition: TransitionCondition;
+      /** Higher priority transitions are evaluated first. Default: 0. */
+      priority?: number;
+      /** Duration of crossfade blend in seconds. Overrides defaultBlendDuration. */
+      blendDuration?: number;
+  };
+  /** Configuration for creating an animation FSM. */
+  export type FSMConfig = {
+      /** Map of state names to state definitions. */
+      states: Record<string, FSMStateDef>;
+      /** List of transitions between states. */
+      transitions: FSMTransition[];
+      /** Name of the initial state. Must be a key in `states`. */
+      initialState: string;
+      /** Default crossfade blend duration in seconds. 0 = instant. Default: 0. */
+      defaultBlendDuration?: number;
+  };
+  /** Parameters passed to updateFSM each frame. Keys are param names, values are booleans or numbers. */
+  export type FSMParams = Record<string, boolean | number>;
+  /** Active blend state during a crossfade transition. */
+  export type BlendState = {
+      /** Animation state of the outgoing (previous) animation. */
+      fromAnim: AnimationState;
+      /** AnimationId of the outgoing animation (for UV/texture lookup). */
+      fromAnimId: AnimationId;
+      /** Elapsed blend time in seconds. */
+      elapsed: number;
+      /** Total blend duration in seconds. */
+      duration: number;
+  };
+  /** The runtime state of an animation FSM instance. */
+  export type FSMState = {
+      /** The FSM configuration (immutable reference). */
+      config: FSMConfig;
+      /** Name of the current active state. */
+      currentState: string;
+      /** Animation playback state for the current animation. */
+      animation: AnimationState;
+      /** Active blend/crossfade, or null if not blending. */
+      blend: BlendState | null;
+      /** Sorted transitions (by priority descending) for efficient evaluation. */
+      sortedTransitions: FSMTransition[];
+  };
+  /**
+   * Create an animation state machine instance.
+   *
+   * @param config - FSM configuration with states, transitions, and initial state.
+   * @returns A new FSMState ready for updates.
+   */
+  export declare function createAnimationFSM(config: FSMConfig): FSMState;
+  /**
+   * Get the name of the current active state.
+   *
+   * @param fsm - The FSM state.
+   * @returns Current state name.
+   */
+  export declare function getCurrentState(fsm: FSMState): string;
+  /**
+   * Check if the FSM is currently blending between two animations.
+   *
+   * @param fsm - The FSM state.
+   * @returns True if a crossfade blend is in progress.
+   */
+  export declare function isBlending(fsm: FSMState): boolean;
+  /**
+   * Get the blend progress (0 = fully old animation, 1 = fully new animation).
+   *
+   * @param fsm - The FSM state.
+   * @returns Blend progress 0-1, or 1 if not blending.
+   */
+  export declare function getBlendProgress(fsm: FSMState): number;
+  /**
+   * Force the FSM into a specific state immediately, bypassing transitions.
+   * Fires onExit for the old state and onEnter for the new state.
+   *
+   * @param fsm - Current FSM state.
+   * @param stateName - Name of the state to switch to.
+   * @param blendDuration - Optional crossfade duration. 0 = instant.
+   * @returns Updated FSM state.
+   */
+  export declare function setFSMState(fsm: FSMState, stateName: string, blendDuration?: number): FSMState;
+  /**
+   * Update the animation FSM. Evaluates transitions, advances animations, and
+   * progresses any active blend. Trigger params are consumed after evaluation.
+   *
+   * @param fsm - Current FSM state.
+   * @param dt - Time delta in seconds.
+   * @param params - Named parameters for transition conditions.
+   * @returns Updated FSM state.
+   */
+  export declare function updateFSM(fsm: FSMState, dt: number, params?: FSMParams): FSMState;
+  /**
+   * Draw the FSM's current animation sprite, with crossfade blending if active.
+   * During a blend, draws both old and new animations with interpolated opacity.
+   *
+   * @param fsm - Current FSM state.
+   * @param x - World X position.
+   * @param y - World Y position.
+   * @param w - Width in world units.
+   * @param h - Height in world units.
+   * @param options - Optional layer, tint, flipX, flipY.
+   */
+  export declare function drawFSMSprite(fsm: FSMState, x: number, y: number, w: number, h: number, options?: {
+      layer?: number;
+      tint?: {
+          r: number;
+          g: number;
+          b: number;
+          a: number;
+      };
+      flipX?: boolean;
+      flipY?: boolean;
+  }): void;
+
+  /**
    * Opaque handle to a registered animation definition.
    * Returned by {@link createAnimation}.
    */
   export type AnimationId = number;
+  /** Callback invoked when a specific animation frame is reached. */
+  export type FrameEventCallback = (frame: number) => void;
+  /** A frame event binding: fires callback when the animation reaches a specific frame. */
+  export type FrameEvent = {
+      /** The frame index (0-based) that triggers this event. */
+      frame: number;
+      /** Callback invoked when the frame is reached. */
+      callback: FrameEventCallback;
+  };
   /** Internal definition of a sprite-sheet animation. */
   export type AnimationDef = {
       /** Texture handle containing the sprite sheet. */
@@ -141,6 +344,8 @@ declare module "@arcane/runtime/rendering" {
       cols?: number;
       /** Number of rows in the spritesheet (default: 1). */
       rows?: number;
+      /** Frame events: callbacks triggered when specific frames are reached. */
+      events?: FrameEvent[];
   };
   /** State of a playing animation instance. Immutable -- update via {@link updateAnimation}. */
   export type AnimationState = {
@@ -179,7 +384,35 @@ declare module "@arcane/runtime/rendering" {
       loop?: boolean;
       cols?: number;
       rows?: number;
+      events?: FrameEvent[];
   }): AnimationId;
+  /**
+   * Add a frame event to an existing animation definition.
+   * The callback fires each time updateAnimationWithEvents() crosses the given frame.
+   *
+   * @param defId - AnimationId to add the event to.
+   * @param frame - Frame index (0-based) that triggers the event.
+   * @param callback - Function called when the frame is reached.
+   */
+  export declare function addFrameEvent(defId: AnimationId, frame: number, callback: FrameEventCallback): void;
+  /**
+   * Advance an animation and fire any frame events that were crossed.
+   * Events fire for every frame crossed between the old and new frame index,
+   * including on loop wraps. Each event fires at most once per update call.
+   *
+   * @param anim - Current animation state.
+   * @param dt - Time delta in seconds.
+   * @returns Updated animation state (same as updateAnimation).
+   */
+  export declare function updateAnimationWithEvents(anim: AnimationState, dt: number): AnimationState;
+  /**
+   * Get the animation definition for a given ID.
+   * Useful for querying frame count, fps, texture, and events.
+   *
+   * @param defId - AnimationId to look up.
+   * @returns The animation definition, or undefined if not found.
+   */
+  export declare function getAnimationDef(defId: AnimationId): AnimationDef | undefined;
   /**
    * Create a new animation playback state starting from frame 0.
    *
@@ -304,6 +537,154 @@ declare module "@arcane/runtime/rendering" {
    * @param volume - Master volume level, 0.0 (mute) to 1.0 (full). Values outside this range are not clamped.
    */
   export declare function setVolume(volume: number): void;
+
+  /**
+   * Auto-tiling: bitmask-based automatic tile selection.
+   *
+   * Supports two tile set sizes:
+   * - **4-bit (16 tiles)**: Checks cardinal neighbors (N, E, S, W).
+   * - **8-bit (47 tiles)**: Checks all 8 neighbors (N, NE, E, SE, S, SW, W, NW).
+   *   Corner bits are only set when both adjacent cardinal neighbors are present
+   *   (Wang blob tile convention).
+   *
+   * Usage:
+   * 1. Define an auto-tile rule with computeAutotileBitmask4 or computeAutotileBitmask8.
+   * 2. Map bitmask values to atlas tile IDs with an AutotileMapping.
+   * 3. Call applyAutotile() on a tilemap to resolve all auto-tiles.
+   */
+  /** Cardinal direction bits for 4-bit auto-tiling. */
+  export declare const NORTH = 1;
+  export declare const EAST = 2;
+  export declare const SOUTH = 4;
+  export declare const WEST = 8;
+  /** All 8 direction bits for 8-bit auto-tiling. */
+  export declare const NORTHEAST = 16;
+  export declare const SOUTHEAST = 32;
+  export declare const SOUTHWEST = 64;
+  export declare const NORTHWEST = 128;
+  /**
+   * Callback to check if a tile at (gx, gy) is considered "same" as the
+   * auto-tiled group. Return true if the neighbor should be considered connected.
+   */
+  export type NeighborCheck = (gx: number, gy: number) => boolean;
+  /**
+   * Compute a 4-bit bitmask from cardinal neighbors.
+   * Bit layout: N=1, E=2, S=4, W=8.
+   * Results in values 0-15 (16 possible tiles).
+   *
+   * @param gx - Grid X position of the tile being computed.
+   * @param gy - Grid Y position of the tile being computed.
+   * @param check - Function that returns true if a neighbor is "same".
+   * @returns Bitmask value 0-15.
+   */
+  export declare function computeAutotileBitmask4(gx: number, gy: number, check: NeighborCheck): number;
+  /**
+   * Compute an 8-bit bitmask from all 8 neighbors.
+   * Cardinal bits: N=1, E=2, S=4, W=8.
+   * Diagonal bits (Wang blob convention): NE=16, SE=32, SW=64, NW=128.
+   *
+   * Diagonal bits are only set when BOTH adjacent cardinal neighbors are present.
+   * Example: NE is only set if both N and E are present.
+   * This reduces 256 combinations to 47 unique tiles (standard blob tileset).
+   *
+   * @param gx - Grid X position of the tile being computed.
+   * @param gy - Grid Y position of the tile being computed.
+   * @param check - Function that returns true if a neighbor is "same".
+   * @returns Bitmask value 0-255 (but only 47 unique meaningful values).
+   */
+  export declare function computeAutotileBitmask8(gx: number, gy: number, check: NeighborCheck): number;
+  /**
+   * Maps bitmask values to atlas tile IDs.
+   * Key = bitmask, value = tile ID in the atlas (1-based).
+   */
+  export type AutotileMapping = Map<number, number>;
+  /**
+   * Create a simple 4-bit autotile mapping from an array of 16 tile IDs.
+   * Index in the array corresponds to the bitmask value (0-15).
+   *
+   * @param tileIds - Array of exactly 16 tile IDs, indexed by bitmask.
+   * @returns AutotileMapping for use with applyAutotile().
+   */
+  export declare function createAutotileMapping4(tileIds: number[]): AutotileMapping;
+  /**
+   * Create an 8-bit autotile mapping from a lookup object.
+   * Keys are bitmask values, values are tile IDs.
+   *
+   * @param lookup - Object mapping bitmask values to tile IDs.
+   * @returns AutotileMapping for use with applyAutotile().
+   */
+  export declare function createAutotileMapping8(lookup: Record<number, number>): AutotileMapping;
+  /** An auto-tile rule: which tiles trigger auto-tiling and how to map them. */
+  export type AutotileRule = {
+      /** Tile IDs that belong to this auto-tile group. */
+      memberTileIds: Set<number>;
+      /** Bitmask mode: 4 (cardinal only) or 8 (with diagonals). */
+      mode: 4 | 8;
+      /** Mapping from bitmask to atlas tile ID. */
+      mapping: AutotileMapping;
+      /** Fallback tile ID if the bitmask has no mapping entry. */
+      fallbackTileId: number;
+  };
+  /**
+   * Create an auto-tile rule.
+   *
+   * @param memberTileIds - Array of tile IDs that belong to this group.
+   * @param mode - 4 for cardinal-only, 8 for full 8-directional.
+   * @param mapping - Bitmask-to-tile-ID mapping.
+   * @param fallbackTileId - Tile ID to use when bitmask has no mapping entry.
+   */
+  export declare function createAutotileRule(memberTileIds: number[], mode: 4 | 8, mapping: AutotileMapping, fallbackTileId: number): AutotileRule;
+  /**
+   * Resolve a single position's auto-tile. Returns the tile ID that should
+   * be placed based on the bitmask of neighbors.
+   *
+   * @param gx - Grid X position.
+   * @param gy - Grid Y position.
+   * @param rule - The auto-tile rule to apply.
+   * @param check - Function that returns true if the tile at (gx, gy) is in the same group.
+   * @returns The resolved tile ID from the mapping.
+   */
+  export declare function resolveAutotile(gx: number, gy: number, rule: AutotileRule, check: NeighborCheck): number;
+  /**
+   * Apply auto-tiling to a grid region. For each position, if the tile is a
+   * member of the rule's group, compute its bitmask and replace with the
+   * mapped tile ID.
+   *
+   * @param width - Grid width.
+   * @param height - Grid height.
+   * @param getTileFn - Function to get tile ID at (gx, gy).
+   * @param setTileFn - Function to set tile ID at (gx, gy).
+   * @param rule - The auto-tile rule to apply.
+   * @param startX - Region start X (default 0).
+   * @param startY - Region start Y (default 0).
+   * @param endX - Region end X exclusive (default width).
+   * @param endY - Region end Y exclusive (default height).
+   */
+  export declare function applyAutotile(width: number, height: number, getTileFn: (gx: number, gy: number) => number, setTileFn: (gx: number, gy: number, tileId: number) => void, rule: AutotileRule, startX?: number, startY?: number, endX?: number, endY?: number): void;
+  /**
+   * Standard 4-bit autotile bitmask layout (for reference).
+   * Each value describes which cardinal neighbors are present.
+   *
+   * ```
+   *  0 = isolated       (no neighbors)
+   *  1 = N only
+   *  2 = E only
+   *  3 = N+E  (inner corner)
+   *  4 = S only
+   *  5 = N+S  (vertical)
+   *  6 = E+S  (inner corner)
+   *  7 = N+E+S
+   *  8 = W only
+   *  9 = N+W  (inner corner)
+   * 10 = E+W  (horizontal)
+   * 11 = N+E+W
+   * 12 = S+W  (inner corner)
+   * 13 = N+S+W
+   * 14 = E+S+W
+   * 15 = all  (center)
+   * ```
+   */
+  export declare const BITMASK4_LABELS: ReadonlyArray<string>;
 
   /** Camera bounds: world-space limits the camera cannot exceed. */
   export type CameraBounds = {
@@ -919,6 +1300,183 @@ declare module "@arcane/runtime/rendering" {
    */
   export declare function createSolidTexture(name: string, r: number, g: number, b: number, a?: number): TextureId;
 
+  /** Definition for an animated tile: cycles through a sequence of tile IDs. */
+  export type AnimatedTileDef = {
+      /** Ordered list of tile IDs to cycle through. Must have at least 2 entries. */
+      frames: number[];
+      /** Duration of each frame in seconds. */
+      frameDuration: number;
+  };
+  /**
+   * Register a tile ID as animated. When this tile ID appears in any tilemap,
+   * it will cycle through the given frames at the given speed.
+   *
+   * @param baseTileId - The tile ID that triggers animation (the one you place).
+   * @param frames - Array of tile IDs to cycle through (atlas indices, 1-based).
+   * @param frameDuration - Duration of each frame in seconds.
+   */
+  export declare function registerAnimatedTile(baseTileId: number, frames: number[], frameDuration: number): void;
+  /**
+   * Remove an animated tile registration.
+   */
+  export declare function unregisterAnimatedTile(baseTileId: number): void;
+  /**
+   * Clear all animated tile registrations.
+   */
+  export declare function clearAnimatedTiles(): void;
+  /**
+   * Update animated tile timer. Call once per frame with delta time.
+   * This advances all animated tiles globally.
+   *
+   * @param dt - Delta time in seconds since last frame.
+   */
+  export declare function updateAnimatedTiles(dt: number): void;
+  /**
+   * Resolve a tile ID to its current animation frame.
+   * If the tile is not animated, returns the original ID.
+   */
+  export declare function resolveAnimatedTile(tileId: number): number;
+  /**
+   * Get all registered animated tile definitions.
+   * Returns a read-only copy.
+   */
+  export declare function getAnimatedTileDefs(): ReadonlyMap<number, AnimatedTileDef>;
+  /** Custom properties for a tile type (indexed by tile ID). */
+  export type TileProperties = Record<string, unknown>;
+  /**
+   * Define custom properties for a tile ID. Properties are metadata like
+   * "walkable", "damage", "friction", etc. Queryable at runtime.
+   *
+   * @param tileId - The tile ID (atlas index, 1-based).
+   * @param properties - Key-value pairs of custom metadata.
+   */
+  export declare function defineTileProperties(tileId: number, properties: TileProperties): void;
+  /**
+   * Get the custom properties for a tile ID.
+   * Returns undefined if no properties are defined for this tile.
+   */
+  export declare function getTileProperties(tileId: number): TileProperties | undefined;
+  /**
+   * Get a specific property value for a tile ID.
+   * Returns undefined if the tile has no properties or lacks the given key.
+   */
+  export declare function getTileProperty(tileId: number, key: string): unknown;
+  /**
+   * Query tile properties at a specific grid position in a layered tilemap.
+   * Returns properties of the tile at (gx, gy) on the given layer,
+   * or undefined if the tile has no properties or position is empty.
+   */
+  export declare function getTilePropertiesAt(tilemap: LayeredTilemap, layerName: string, gx: number, gy: number): TileProperties | undefined;
+  /**
+   * Query a specific property at a grid position.
+   */
+  export declare function getTilePropertyAt(tilemap: LayeredTilemap, layerName: string, gx: number, gy: number, key: string): unknown;
+  /**
+   * Clear all tile property definitions.
+   */
+  export declare function clearTileProperties(): void;
+  /** A single layer in a layered tilemap. */
+  export type TilemapLayer = {
+      /** Layer name (unique within the tilemap). */
+      name: string;
+      /** Underlying Rust tilemap handle. */
+      tilemapId: TilemapId;
+      /** Draw order (lower = drawn first / behind). */
+      zOrder: number;
+      /** Whether this layer is visible. Default: true. */
+      visible: boolean;
+      /** Opacity for this layer (0-1). Default: 1. */
+      opacity: number;
+      /** Parallax depth factor (0 = fixed/HUD, 0.5 = half speed, 1 = normal). Default: 1. */
+      parallaxFactor: number;
+  };
+  /** Options for creating a layer. */
+  export type LayerOptions = {
+      /** Draw order. Lower = behind. Default: 0. */
+      zOrder?: number;
+      /** Whether the layer is visible. Default: true. */
+      visible?: boolean;
+      /** Layer opacity (0-1). Default: 1. */
+      opacity?: number;
+      /** Parallax depth factor. Default: 1. */
+      parallaxFactor?: number;
+  };
+  /** A multi-layer tilemap that manages multiple Rust tilemap instances. */
+  export type LayeredTilemap = {
+      /** Base configuration shared across all layers. */
+      config: TilemapOptions;
+      /** Map of layer name to layer data. */
+      layers: Map<string, TilemapLayer>;
+      /** Grid width in tiles. */
+      width: number;
+      /** Grid height in tiles. */
+      height: number;
+      /** Size of each tile in world units. */
+      tileSize: number;
+  };
+  /**
+   * Create a multi-layer tilemap. All layers share the same grid dimensions
+   * and texture atlas. Each layer is a separate Rust tilemap handle.
+   *
+   * @param opts - Base tilemap configuration (atlas, grid size, tile size).
+   * @param layerDefs - Array of [name, options?] pairs defining the layers.
+   * @returns A LayeredTilemap that manages all layers.
+   *
+   * @example
+   * ```ts
+   * const map = createLayeredTilemap(
+   *   { textureId: atlas, width: 40, height: 30, tileSize: 16, atlasColumns: 8, atlasRows: 8 },
+   *   [
+   *     ["ground", { zOrder: 0 }],
+   *     ["walls", { zOrder: 10 }],
+   *     ["decoration", { zOrder: 20 }],
+   *     ["collision", { zOrder: -1, visible: false }],
+   *   ],
+   * );
+   * ```
+   */
+  export declare function createLayeredTilemap(opts: TilemapOptions, layerDefs: Array<[string, LayerOptions?]>): LayeredTilemap;
+  /**
+   * Set a tile on a specific layer.
+   *
+   * @param tilemap - The layered tilemap.
+   * @param layerName - Which layer to modify.
+   * @param gx - Grid X position.
+   * @param gy - Grid Y position.
+   * @param tileId - Tile index in the atlas (1-based). 0 = empty.
+   */
+  export declare function setLayerTile(tilemap: LayeredTilemap, layerName: string, gx: number, gy: number, tileId: number): void;
+  /**
+   * Get a tile from a specific layer.
+   *
+   * @returns Tile ID at the given position, or 0 if empty/out of bounds/layer not found.
+   */
+  export declare function getLayerTile(tilemap: LayeredTilemap, layerName: string, gx: number, gy: number): number;
+  /**
+   * Set the visibility of a layer.
+   */
+  export declare function setLayerVisible(tilemap: LayeredTilemap, layerName: string, visible: boolean): void;
+  /**
+   * Set the opacity of a layer (0-1).
+   */
+  export declare function setLayerOpacity(tilemap: LayeredTilemap, layerName: string, opacity: number): void;
+  /**
+   * Get layer names in z-order (front to back).
+   */
+  export declare function getLayerNames(tilemap: LayeredTilemap): string[];
+  /**
+   * Draw all visible layers of a layered tilemap, sorted by z-order.
+   * Supports animated tiles (call updateAnimatedTiles(dt) before this each frame).
+   * Supports per-layer parallax scrolling relative to a camera position.
+   *
+   * @param tilemap - The layered tilemap to draw.
+   * @param x - World X offset for the tilemap origin.
+   * @param y - World Y offset for the tilemap origin.
+   * @param baseLayer - Base draw order layer. Each tilemap layer adds its zOrder.
+   * @param cameraX - Camera X for parallax calculation. Default: 0.
+   * @param cameraY - Camera Y for parallax calculation. Default: 0.
+   */
+  export declare function drawLayeredTilemap(tilemap: LayeredTilemap, x?: number, y?: number, baseLayer?: number, cameraX?: number, cameraY?: number): void;
   /**
    * Create a tilemap backed by a texture atlas. Returns an opaque TilemapId handle.
    * The tilemap stores a grid of tile IDs that map to sub-regions of the atlas texture.
@@ -933,6 +1491,9 @@ declare module "@arcane/runtime/rendering" {
    * Tile IDs correspond to positions in the texture atlas (left-to-right, top-to-bottom).
    * Tile ID 0 = empty (not drawn). No-op in headless mode.
    *
+   * If the tile ID is registered as animated (via registerAnimatedTile), the tile
+   * will automatically cycle through its frames when drawn.
+   *
    * @param id - Tilemap handle from createTilemap().
    * @param gx - Grid X position (column). 0 = leftmost.
    * @param gy - Grid Y position (row). 0 = topmost.
@@ -941,6 +1502,7 @@ declare module "@arcane/runtime/rendering" {
   export declare function setTile(id: TilemapId, gx: number, gy: number, tileId: number): void;
   /**
    * Get the tile ID at grid position (gx, gy).
+   * Returns the original tile ID (not the animated frame).
    * Returns 0 if out of bounds or in headless mode.
    *
    * @param id - Tilemap handle from createTilemap().
@@ -959,6 +1521,22 @@ declare module "@arcane/runtime/rendering" {
    * @param layer - Draw order layer. Default: 0.
    */
   export declare function drawTilemap(id: TilemapId, x?: number, y?: number, layer?: number): void;
+  /**
+   * Fill a rectangular region of a tilemap with a single tile ID.
+   * Convenient for bulk tile placement.
+   *
+   * @param id - Tilemap handle.
+   * @param startX - Starting grid X.
+   * @param startY - Starting grid Y.
+   * @param endX - Ending grid X (exclusive).
+   * @param endY - Ending grid Y (exclusive).
+   * @param tileId - Tile ID to fill with.
+   */
+  export declare function fillTiles(id: TilemapId, startX: number, startY: number, endX: number, endY: number, tileId: number): void;
+  /**
+   * Fill a rectangular region of a layered tilemap with a single tile ID.
+   */
+  export declare function fillLayerTiles(tilemap: LayeredTilemap, layerName: string, startX: number, startY: number, endX: number, endY: number, tileId: number): void;
 
 }
 
@@ -1051,6 +1629,120 @@ declare module "@arcane/runtime/ui" {
       /** If true, x/y are screen pixels (HUD). If false, world units. Default: false. */
       screenSpace?: boolean;
   };
+
+  /**
+   * Immediate-mode button widget.
+   *
+   * The game owns ButtonState objects. Each frame:
+   * 1. Call updateButton() with current mouse input to compute hover/press/click.
+   * 2. Call drawButton() to render the button.
+   *
+   * @example
+   * const btn = createButton(100, 200, 120, 32, "Start Game");
+   * // In frame loop:
+   * updateButton(btn, mouseX, mouseY, mouseDown);
+   * if (btn.clicked) { startGame(); }
+   * drawButton(btn);
+   */
+  /** Visual state of a button. */
+  export type ButtonVisual = "normal" | "hover" | "pressed" | "disabled";
+  /** Style options for a button. */
+  export type ButtonStyle = {
+      /** Background color in normal state. */
+      normalColor?: Color;
+      /** Background color when hovered. */
+      hoverColor?: Color;
+      /** Background color when pressed. */
+      pressedColor?: Color;
+      /** Background color when disabled. */
+      disabledColor?: Color;
+      /** Text color. */
+      textColor?: Color;
+      /** Text color when disabled. */
+      disabledTextColor?: Color;
+      /** Border color. */
+      borderColor?: Color;
+      /** Border width in pixels. Default: 2. */
+      borderWidth?: number;
+      /** Text scale. Default: 1. */
+      textScale?: number;
+      /** Draw order layer. Default: 90. */
+      layer?: number;
+      /** Padding inside the button around text. Default: 4. */
+      padding?: number;
+  };
+  /** Mutable state for a button widget. */
+  export type ButtonState = {
+      /** X position in screen pixels. */
+      x: number;
+      /** Y position in screen pixels. */
+      y: number;
+      /** Width in screen pixels. */
+      w: number;
+      /** Height in screen pixels. */
+      h: number;
+      /** Button label text. */
+      label: string;
+      /** Whether the button is disabled. */
+      disabled: boolean;
+      /** Current visual state (read after updateButton). */
+      visual: ButtonVisual;
+      /** True for exactly one frame when clicked (read after updateButton). */
+      clicked: boolean;
+      /** True if the mouse is over the button (read after updateButton). */
+      hovered: boolean;
+      /** True if the button is currently being pressed (read after updateButton). */
+      pressed: boolean;
+      /** Internal: was mouse down on previous frame. */
+      _wasDown: boolean;
+      /** Style overrides. */
+      style: ButtonStyle;
+      /** Focus ID for tab navigation. -1 = not focusable. */
+      focusId: number;
+      /** Whether this button currently has focus. */
+      focused: boolean;
+  };
+  /**
+   * Create a new button state object.
+   *
+   * @param x - X position in screen pixels.
+   * @param y - Y position in screen pixels.
+   * @param w - Width in screen pixels.
+   * @param h - Height in screen pixels.
+   * @param label - Button label text.
+   * @param style - Optional style overrides.
+   * @returns A new ButtonState.
+   */
+  export declare function createButton(x: number, y: number, w: number, h: number, label: string, style?: ButtonStyle): ButtonState;
+  /**
+   * Test whether a point is inside a rectangle.
+   *
+   * @param px - Point X.
+   * @param py - Point Y.
+   * @param rx - Rectangle X.
+   * @param ry - Rectangle Y.
+   * @param rw - Rectangle width.
+   * @param rh - Rectangle height.
+   * @returns True if point is inside the rectangle.
+   */
+  export declare function hitTest(px: number, py: number, rx: number, ry: number, rw: number, rh: number): boolean;
+  /**
+   * Update button state for this frame. Call once per frame before drawButton().
+   *
+   * @param btn - The button state to update.
+   * @param mouseX - Current mouse X in screen pixels.
+   * @param mouseY - Current mouse Y in screen pixels.
+   * @param mouseDown - Whether the left mouse button is currently held.
+   * @param enterPressed - Whether the Enter/Return key was pressed this frame (for focus activation). Default: false.
+   */
+  export declare function updateButton(btn: ButtonState, mouseX: number, mouseY: number, mouseDown: boolean, enterPressed?: boolean): void;
+  /**
+   * Draw the button. Call after updateButton() each frame.
+   * No-op in headless mode.
+   *
+   * @param btn - The button state to draw.
+   */
+  export declare function drawButton(btn: ButtonState): void;
 
   /**
    * Standard color palette and layout helpers for consistent UI styling.
@@ -1256,6 +1948,171 @@ declare module "@arcane/runtime/ui" {
   export declare function darken(color: Color, amount?: number): Color;
 
   /**
+   * Focus management system for tab navigation between interactive widgets.
+   *
+   * Maintains an ordered list of focusable widgets. Tab/Shift+Tab cycles focus.
+   * Widgets with focus get visual indicators and keyboard activation.
+   *
+   * @example
+   * const focus = createFocusManager();
+   * registerFocusable(focus, btn1);
+   * registerFocusable(focus, btn2);
+   * registerFocusable(focus, slider1);
+   * // In frame loop:
+   * updateFocus(focus, tabPressed, shiftDown);
+   */
+  /** A widget that can receive focus. */
+  export type Focusable = {
+      focusId: number;
+      focused: boolean;
+      disabled?: boolean;
+  };
+  /** State for the focus management system. */
+  export type FocusManagerState = {
+      /** Ordered list of focusable widgets. */
+      widgets: Focusable[];
+      /** Index of the currently focused widget (-1 = none). */
+      focusIndex: number;
+      /** Auto-increment ID counter. */
+      _nextId: number;
+  };
+  /**
+   * Create a new focus manager.
+   */
+  export declare function createFocusManager(): FocusManagerState;
+  /**
+   * Register a widget with the focus system. Assigns it a unique focusId.
+   * Widgets are focused in registration order when Tab is pressed.
+   *
+   * @param fm - The focus manager.
+   * @param widget - The widget to register (must have focusId and focused fields).
+   */
+  export declare function registerFocusable(fm: FocusManagerState, widget: Focusable): void;
+  /**
+   * Unregister a widget from the focus system.
+   *
+   * @param fm - The focus manager.
+   * @param widget - The widget to unregister.
+   */
+  export declare function unregisterFocusable(fm: FocusManagerState, widget: Focusable): void;
+  /**
+   * Update focus state based on Tab/Shift+Tab input.
+   * Call once per frame with the current keyboard state.
+   *
+   * @param fm - The focus manager.
+   * @param tabPressed - Whether Tab was pressed this frame.
+   * @param shiftDown - Whether Shift is held (for reverse navigation).
+   */
+  export declare function updateFocus(fm: FocusManagerState, tabPressed: boolean, shiftDown: boolean): void;
+  /**
+   * Clear all focus. No widget will be focused.
+   *
+   * @param fm - The focus manager.
+   */
+  export declare function clearFocus(fm: FocusManagerState): void;
+  /**
+   * Set focus to a specific widget.
+   *
+   * @param fm - The focus manager.
+   * @param widget - The widget to focus.
+   */
+  export declare function setFocusTo(fm: FocusManagerState, widget: Focusable): void;
+  /**
+   * Get the currently focused widget, or null if none.
+   *
+   * @param fm - The focus manager.
+   */
+  export declare function getFocusedWidget(fm: FocusManagerState): Focusable | null;
+
+  /**
+   * Layout helpers for positioning UI widgets.
+   *
+   * Provides vertical stacks, horizontal rows, and screen anchoring.
+   * Layout functions compute positions; they don't draw anything.
+   *
+   * @example
+   * const positions = verticalStack(10, 10, 32, 4, 8);
+   * // positions = [{x:10,y:10}, {x:10,y:50}, {x:10,y:90}, {x:10,y:130}]
+   */
+  /** A position returned by layout functions. */
+  export type LayoutPosition = {
+      x: number;
+      y: number;
+  };
+  /** Anchor positions relative to viewport. */
+  export type Anchor = "top-left" | "top-center" | "top-right" | "center-left" | "center" | "center-right" | "bottom-left" | "bottom-center" | "bottom-right";
+  /**
+   * Compute positions for a vertical stack of items.
+   *
+   * @param x - X position of the stack (all items share this X).
+   * @param y - Y position of the first item.
+   * @param itemHeight - Height of each item in pixels.
+   * @param count - Number of items.
+   * @param spacing - Vertical gap between items in pixels. Default: 4.
+   * @returns Array of {x, y} positions for each item.
+   */
+  export declare function verticalStack(x: number, y: number, itemHeight: number, count: number, spacing?: number): LayoutPosition[];
+  /**
+   * Compute positions for a horizontal row of items.
+   *
+   * @param x - X position of the first item.
+   * @param y - Y position of the row (all items share this Y).
+   * @param itemWidth - Width of each item in pixels.
+   * @param count - Number of items.
+   * @param spacing - Horizontal gap between items in pixels. Default: 4.
+   * @returns Array of {x, y} positions for each item.
+   */
+  export declare function horizontalRow(x: number, y: number, itemWidth: number, count: number, spacing?: number): LayoutPosition[];
+  /**
+   * Compute a position anchored to the viewport.
+   *
+   * @param anchor - Anchor position (e.g. "top-left", "center", "bottom-right").
+   * @param viewportW - Viewport width in pixels.
+   * @param viewportH - Viewport height in pixels.
+   * @param contentW - Width of the content to anchor.
+   * @param contentH - Height of the content to anchor.
+   * @param padding - Padding from viewport edges. Default: 10.
+   * @returns {x, y} position for the content's top-left corner.
+   */
+  export declare function anchorPosition(anchor: Anchor, viewportW: number, viewportH: number, contentW: number, contentH: number, padding?: number): LayoutPosition;
+  /**
+   * Compute positions for a vertical stack of items with varying heights.
+   *
+   * @param x - X position of the stack.
+   * @param y - Y position of the first item.
+   * @param heights - Array of item heights in pixels.
+   * @param spacing - Vertical gap between items. Default: 4.
+   * @returns Array of {x, y} positions for each item.
+   */
+  export declare function verticalStackVariableHeight(x: number, y: number, heights: number[], spacing?: number): LayoutPosition[];
+  /**
+   * Compute positions for a horizontal row of items with varying widths.
+   *
+   * @param x - X position of the first item.
+   * @param y - Y position of the row.
+   * @param widths - Array of item widths in pixels.
+   * @param spacing - Horizontal gap between items. Default: 4.
+   * @returns Array of {x, y} positions for each item.
+   */
+  export declare function horizontalRowVariableWidth(x: number, y: number, widths: number[], spacing?: number): LayoutPosition[];
+  /**
+   * Compute the total height of a vertical stack.
+   *
+   * @param itemHeight - Height of each item.
+   * @param count - Number of items.
+   * @param spacing - Gap between items. Default: 4.
+   */
+  export declare function verticalStackHeight(itemHeight: number, count: number, spacing?: number): number;
+  /**
+   * Compute the total width of a horizontal row.
+   *
+   * @param itemWidth - Width of each item.
+   * @param count - Number of items.
+   * @param spacing - Gap between items. Default: 4.
+   */
+  export declare function horizontalRowWidth(itemWidth: number, count: number, spacing?: number): number;
+
+  /**
    * Draw a filled rectangle.
    * No-op in headless mode.
    *
@@ -1316,6 +2173,386 @@ declare module "@arcane/runtime/ui" {
    * @param options - Text color, background, border, padding, scale, layer, and screenSpace.
    */
   export declare function drawLabel(text: string, x: number, y: number, options?: LabelOptions): void;
+
+  /**
+   * Immediate-mode horizontal slider widget.
+   *
+   * @example
+   * const vol = createSlider(100, 200, 200, 0, 100, 50);
+   * // In frame loop:
+   * updateSlider(vol, mouseX, mouseY, mouseDown);
+   * drawSlider(vol);
+   * const volume = vol.value; // 0-100
+   */
+  /** Style options for a slider. */
+  export type SliderStyle = {
+      /** Height of the track in pixels. Default: 8. */
+      trackHeight?: number;
+      /** Width of the handle in pixels. Default: 16. */
+      handleWidth?: number;
+      /** Height of the handle in pixels. Default: 20. */
+      handleHeight?: number;
+      /** Track background color. */
+      trackColor?: Color;
+      /** Track fill color (left of handle). */
+      fillColor?: Color;
+      /** Handle color. */
+      handleColor?: Color;
+      /** Handle color when dragging. */
+      handleDragColor?: Color;
+      /** Handle color when hovered. */
+      handleHoverColor?: Color;
+      /** Border color. */
+      borderColor?: Color;
+      /** Label text color. */
+      textColor?: Color;
+      /** Text scale. Default: 1. */
+      textScale?: number;
+      /** Draw order layer. Default: 90. */
+      layer?: number;
+      /** Whether to show the current value as text. Default: false. */
+      showValue?: boolean;
+      /** Number of decimal places for displayed value. Default: 0. */
+      decimals?: number;
+  };
+  /** Mutable state for a slider widget. */
+  export type SliderState = {
+      /** X position in screen pixels. */
+      x: number;
+      /** Y position in screen pixels. */
+      y: number;
+      /** Total width of the slider track in screen pixels. */
+      w: number;
+      /** Minimum value. */
+      min: number;
+      /** Maximum value. */
+      max: number;
+      /** Current value (between min and max). */
+      value: number;
+      /** Optional label displayed above the slider. */
+      label: string;
+      /** Whether the slider is disabled. */
+      disabled: boolean;
+      /** True if the value changed this frame. */
+      changed: boolean;
+      /** Whether the mouse is hovering over the handle. */
+      hovered: boolean;
+      /** Whether the handle is being dragged. */
+      dragging: boolean;
+      /** Style overrides. */
+      style: SliderStyle;
+      /** Focus ID for tab navigation. */
+      focusId: number;
+      /** Whether this slider has focus. */
+      focused: boolean;
+  };
+  /**
+   * Create a new slider state.
+   *
+   * @param x - X position in screen pixels.
+   * @param y - Y position in screen pixels.
+   * @param w - Total width of the slider track.
+   * @param min - Minimum value.
+   * @param max - Maximum value.
+   * @param value - Initial value.
+   * @param label - Optional label text.
+   * @param style - Optional style overrides.
+   */
+  export declare function createSlider(x: number, y: number, w: number, min: number, max: number, value: number, label?: string, style?: SliderStyle): SliderState;
+  /**
+   * Get the total height of the slider (including label if present).
+   */
+  export declare function getSliderHeight(sl: SliderState): number;
+  /**
+   * Update slider state for this frame.
+   *
+   * @param sl - The slider state to update.
+   * @param mouseX - Current mouse X in screen pixels.
+   * @param mouseY - Current mouse Y in screen pixels.
+   * @param mouseDown - Whether the left mouse button is currently held.
+   * @param arrowLeftPressed - Whether left arrow was pressed (for focus). Default: false.
+   * @param arrowRightPressed - Whether right arrow was pressed (for focus). Default: false.
+   */
+  export declare function updateSlider(sl: SliderState, mouseX: number, mouseY: number, mouseDown: boolean, arrowLeftPressed?: boolean, arrowRightPressed?: boolean): void;
+  /**
+   * Draw the slider. Call after updateSlider() each frame.
+   * No-op in headless mode.
+   *
+   * @param sl - The slider state to draw.
+   */
+  export declare function drawSlider(sl: SliderState): void;
+
+  /**
+   * Immediate-mode single-line text input widget.
+   *
+   * @example
+   * const name = createTextInput(100, 200, 200, "Player Name");
+   * // In frame loop:
+   * updateTextInput(name, mouseX, mouseY, mouseDown, keys);
+   * drawTextInput(name, totalTime);
+   * const text = name.text;
+   */
+  /** Style options for a text input. */
+  export type TextInputStyle = {
+      /** Input field height in pixels. Default: 24. */
+      height?: number;
+      /** Background color. */
+      bgColor?: Color;
+      /** Background color when focused. */
+      focusedBgColor?: Color;
+      /** Border color. */
+      borderColor?: Color;
+      /** Border color when focused. */
+      focusedBorderColor?: Color;
+      /** Text color. */
+      textColor?: Color;
+      /** Placeholder text color. */
+      placeholderColor?: Color;
+      /** Cursor color. */
+      cursorColor?: Color;
+      /** Selection highlight color. */
+      selectionColor?: Color;
+      /** Text scale. Default: 1. */
+      textScale?: number;
+      /** Internal padding in pixels. Default: 4. */
+      padding?: number;
+      /** Draw order layer. Default: 90. */
+      layer?: number;
+      /** Border width in pixels. Default: 2. */
+      borderWidth?: number;
+  };
+  /** Key event data passed to updateTextInput. */
+  export type TextInputKeyEvent = {
+      /** The key name (e.g. "a", "Backspace", "ArrowLeft"). */
+      key: string;
+      /** Whether this key was just pressed this frame. */
+      pressed: boolean;
+  };
+  /** Mutable state for a text input widget. */
+  export type TextInputState = {
+      /** X position in screen pixels. */
+      x: number;
+      /** Y position in screen pixels. */
+      y: number;
+      /** Width in screen pixels. */
+      w: number;
+      /** Current text content. */
+      text: string;
+      /** Placeholder text shown when empty. */
+      placeholder: string;
+      /** Cursor position (character index). */
+      cursorPos: number;
+      /** Whether the input has focus (accepts keyboard input). */
+      active: boolean;
+      /** Whether the input is disabled. */
+      disabled: boolean;
+      /** Whether the text was modified this frame. */
+      changed: boolean;
+      /** Whether the mouse is hovering over the input. */
+      hovered: boolean;
+      /** Maximum allowed text length. 0 = unlimited. */
+      maxLength: number;
+      /** Style overrides. */
+      style: TextInputStyle;
+      /** Focus ID for tab navigation. */
+      focusId: number;
+      /** Whether this input has focus (alias for active, used by focus system). */
+      focused: boolean;
+  };
+  /**
+   * Create a new text input state.
+   *
+   * @param x - X position in screen pixels.
+   * @param y - Y position in screen pixels.
+   * @param w - Width in screen pixels.
+   * @param placeholder - Placeholder text shown when empty.
+   * @param style - Optional style overrides.
+   */
+  export declare function createTextInput(x: number, y: number, w: number, placeholder?: string, style?: TextInputStyle): TextInputState;
+  /**
+   * Update text input state for this frame.
+   *
+   * @param ti - The text input state to update.
+   * @param mouseX - Current mouse X in screen pixels.
+   * @param mouseY - Current mouse Y in screen pixels.
+   * @param mouseDown - Whether the left mouse button is currently held.
+   * @param keys - Array of key events this frame.
+   */
+  export declare function updateTextInput(ti: TextInputState, mouseX: number, mouseY: number, mouseDown: boolean, keys: TextInputKeyEvent[]): void;
+  /**
+   * Draw the text input. Call after updateTextInput() each frame.
+   * No-op in headless mode.
+   *
+   * @param ti - The text input state to draw.
+   * @param time - Current time in seconds (for cursor blink animation).
+   */
+  export declare function drawTextInput(ti: TextInputState, time?: number): void;
+
+  /**
+   * Immediate-mode toggle widgets: checkbox and radio group.
+   *
+   * @example
+   * const cb = createCheckbox(10, 10, "Enable Sound");
+   * // In frame loop:
+   * updateCheckbox(cb, mouseX, mouseY, mouseDown);
+   * drawCheckbox(cb);
+   * if (cb.checked) { enableSound(); }
+   *
+   * @example
+   * const rg = createRadioGroup(10, 50, ["Easy", "Normal", "Hard"], 1);
+   * updateRadioGroup(rg, mouseX, mouseY, mouseDown);
+   * drawRadioGroup(rg);
+   * const difficulty = rg.selectedIndex; // 0, 1, or 2
+   */
+  /** Style options for a checkbox. */
+  export type CheckboxStyle = {
+      /** Size of the checkbox box in pixels. Default: 16. */
+      boxSize?: number;
+      /** Gap between box and label text in pixels. Default: 6. */
+      gap?: number;
+      /** Box border color. */
+      borderColor?: Color;
+      /** Box background when unchecked. */
+      uncheckedColor?: Color;
+      /** Box background when checked. */
+      checkedColor?: Color;
+      /** Checkmark/fill color. */
+      markColor?: Color;
+      /** Label text color. */
+      textColor?: Color;
+      /** Text scale. Default: 1. */
+      textScale?: number;
+      /** Draw order layer. Default: 90. */
+      layer?: number;
+  };
+  /** Mutable state for a checkbox widget. */
+  export type CheckboxState = {
+      /** X position in screen pixels. */
+      x: number;
+      /** Y position in screen pixels. */
+      y: number;
+      /** Label text. */
+      label: string;
+      /** Whether the checkbox is checked. */
+      checked: boolean;
+      /** Whether the checkbox was toggled this frame. */
+      toggled: boolean;
+      /** Whether the mouse is hovering over the checkbox. */
+      hovered: boolean;
+      /** Whether the checkbox is disabled. */
+      disabled: boolean;
+      /** Internal: was mouse down last frame. */
+      _wasDown: boolean;
+      /** Style overrides. */
+      style: CheckboxStyle;
+      /** Focus ID for tab navigation. */
+      focusId: number;
+      /** Whether this checkbox has focus. */
+      focused: boolean;
+  };
+  /**
+   * Create a new checkbox state.
+   *
+   * @param x - X position in screen pixels.
+   * @param y - Y position in screen pixels.
+   * @param label - Label text displayed next to the checkbox.
+   * @param checked - Initial checked state. Default: false.
+   * @param style - Optional style overrides.
+   */
+  export declare function createCheckbox(x: number, y: number, label: string, checked?: boolean, style?: CheckboxStyle): CheckboxState;
+  /**
+   * Update checkbox state for this frame. Call once per frame before drawCheckbox().
+   *
+   * @param cb - The checkbox state to update.
+   * @param mouseX - Current mouse X in screen pixels.
+   * @param mouseY - Current mouse Y in screen pixels.
+   * @param mouseDown - Whether the left mouse button is currently held.
+   * @param enterPressed - Whether Enter was pressed this frame (for focus). Default: false.
+   */
+  export declare function updateCheckbox(cb: CheckboxState, mouseX: number, mouseY: number, mouseDown: boolean, enterPressed?: boolean): void;
+  /**
+   * Draw the checkbox. Call after updateCheckbox() each frame.
+   * No-op in headless mode.
+   *
+   * @param cb - The checkbox state to draw.
+   */
+  export declare function drawCheckbox(cb: CheckboxState): void;
+  /** Style options for a radio group. */
+  export type RadioGroupStyle = {
+      /** Diameter of each radio circle in pixels. Default: 16. */
+      circleSize?: number;
+      /** Gap between circle and label text in pixels. Default: 6. */
+      gap?: number;
+      /** Vertical spacing between radio options. Default: 24. */
+      spacing?: number;
+      /** Circle border color. */
+      borderColor?: Color;
+      /** Circle fill when unselected. */
+      unselectedColor?: Color;
+      /** Circle fill when selected. */
+      selectedColor?: Color;
+      /** Inner dot color when selected. */
+      dotColor?: Color;
+      /** Label text color. */
+      textColor?: Color;
+      /** Text scale. Default: 1. */
+      textScale?: number;
+      /** Draw order layer. Default: 90. */
+      layer?: number;
+  };
+  /** Mutable state for a radio group widget. */
+  export type RadioGroupState = {
+      /** X position in screen pixels. */
+      x: number;
+      /** Y position in screen pixels. */
+      y: number;
+      /** Array of option labels. */
+      options: string[];
+      /** Currently selected index (0-based). */
+      selectedIndex: number;
+      /** True if selection changed this frame. */
+      changed: boolean;
+      /** Index of the hovered option, or -1 if none. */
+      hoveredIndex: number;
+      /** Whether the radio group is disabled. */
+      disabled: boolean;
+      /** Internal: was mouse down last frame over which index (-1 = none). */
+      _wasDownIndex: number;
+      /** Style overrides. */
+      style: RadioGroupStyle;
+      /** Focus ID for tab navigation. */
+      focusId: number;
+      /** Whether this radio group has focus. */
+      focused: boolean;
+  };
+  /**
+   * Create a new radio group state.
+   *
+   * @param x - X position in screen pixels.
+   * @param y - Y position in screen pixels.
+   * @param options - Array of option label strings.
+   * @param selectedIndex - Initially selected index. Default: 0.
+   * @param style - Optional style overrides.
+   */
+  export declare function createRadioGroup(x: number, y: number, options: string[], selectedIndex?: number, style?: RadioGroupStyle): RadioGroupState;
+  /**
+   * Update radio group state for this frame.
+   *
+   * @param rg - The radio group state to update.
+   * @param mouseX - Current mouse X in screen pixels.
+   * @param mouseY - Current mouse Y in screen pixels.
+   * @param mouseDown - Whether the left mouse button is currently held.
+   * @param arrowUpPressed - Whether arrow-up was pressed (for focus navigation). Default: false.
+   * @param arrowDownPressed - Whether arrow-down was pressed (for focus navigation). Default: false.
+   */
+  export declare function updateRadioGroup(rg: RadioGroupState, mouseX: number, mouseY: number, mouseDown: boolean, arrowUpPressed?: boolean, arrowDownPressed?: boolean): void;
+  /**
+   * Draw the radio group. Call after updateRadioGroup() each frame.
+   * No-op in headless mode.
+   *
+   * @param rg - The radio group state to draw.
+   */
+  export declare function drawRadioGroup(rg: RadioGroupState): void;
 
 }
 

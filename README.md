@@ -96,7 +96,7 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phase 13 complete (Camera Polish)!** 🎉
+**Phases 14-16 complete (Tilemap Polish + Animation Polish + Interactive UI)!** 🎉
 
 All packages published and ready to use:
 - **npm**: [@arcane-engine/runtime@0.6.1](https://www.npmjs.com/package/@arcane-engine/runtime), [@arcane-engine/create@0.6.1](https://www.npmjs.com/package/@arcane-engine/create)
@@ -108,6 +108,9 @@ All packages published and ready to use:
 - ✅ Custom WGSL shaders: user-defined fragment shaders with 16 vec4 uniform slots
 - ✅ Post-processing pipeline: offscreen render targets, effect chaining, built-in bloom/blur/vignette/CRT
 - ✅ Camera polish: bounds/limits, deadzone, smooth follow, smooth zoom, parallax scrolling
+- ✅ Tilemap polish: multiple layers, animated tiles, auto-tiling (4-bit/8-bit bitmask), tile properties
+- ✅ Animation polish: state machine (states, transitions, conditions), crossfade blending, frame events
+- ✅ Interactive UI: buttons, checkboxes, radio groups, sliders, text input, layout helpers, focus/tab navigation
 - ✅ Rust physics engine: rigid bodies, circle/AABB shapes, spatial hash broadphase, SAT narrowphase, sequential impulse solver, distance + revolute joints, sleep system, raycast, AABB queries
 - ✅ Scene management: scene stack, transitions, lifecycle hooks
 - ✅ Save/load: serialization, schema migrations, auto-save, file I/O ops
@@ -115,11 +118,11 @@ All packages published and ready to use:
 - ✅ Agent protocol (HTTP inspector, describe/inspect commands)
 - ✅ Standalone install: `cargo install arcane-cli` just works
 - ✅ Built-in asset discovery: 25 free CC0 packs with search, download, and extraction
-- ✅ 961 TS tests + 203 Rust tests passing
+- ✅ 1243 TS tests + 203 Rust tests passing
 - ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
-- ✅ Example projects (Sokoban, Breakout, Tower Defense, BFRPG dungeon crawler, Physics Playground, Menu Flow, Asteroids, Parallax Scroller)
+- ✅ Example projects (Sokoban, Breakout, Tower Defense, BFRPG RPG, Physics Playground, Menu Flow, Asteroids, Parallax Scroller, Tilemap Showcase, Character Controller, UI Showcase)
 
-**Next:** Phase 14 (Tilemap Polish).
+**Next:** Phase 17 (Audio Polish).
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 

@@ -4,7 +4,7 @@
 
 Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for performance, TypeScript scripting for game logic.
 
-**Current status: Phase 13 (Camera Polish) COMPLETE ✅ — Camera bounds/limits, deadzone, smooth follow, smooth zoom (tween-based), parallax scrolling. 961 TS (Node) + 1591 (V8) + 203 Rust tests passing. Next: Phase 14 (Tilemap Polish).**
+**Current status: Phases 14-16 COMPLETE ✅ — Tilemap polish (layers, auto-tiling, animated tiles, tile properties), animation polish (state machine, blending, frame events), interactive UI (buttons, toggles, sliders, text input, layout, focus). 1243 TS (Node) + 2142 (V8) + 203 Rust tests passing. Next: Phase 17 (Audio Polish).**
 
 ## Repository Structure
 
@@ -110,6 +110,8 @@ arcane/
 │   │   ├── sprites.ts             — drawSprite(), clearSprites()
 │   │   ├── camera.ts              — setCamera(), getCamera(), followTarget(), followTargetSmooth(), setCameraBounds(), setCameraDeadzone(), zoomTo(), zoomToPoint()
 │   │   ├── parallax.ts            — drawParallaxSprite() multi-layer depth scrolling
+│   │   ├── autotile.ts            — 4-bit/8-bit bitmask auto-tiling
+│   │   ├── animation-fsm.ts       — Animation state machine (states, transitions, blending)
 │   │   ├── input.ts               — isKeyDown(), isKeyPressed(), getMousePosition()
 │   │   ├── tilemap.ts             — createTilemap(), setTile(), getTile(), drawTilemap()
 │   │   ├── lighting.ts            — setAmbientLight(), addPointLight(), clearLights()
@@ -122,6 +124,12 @@ arcane/
 │   ├── ui/
 │   │   ├── types.ts               — Color, RectOptions, PanelOptions, BarOptions, LabelOptions
 │   │   ├── primitives.ts          — drawRect(), drawPanel(), drawBar(), drawLabel()
+│   │   ├── button.ts              — createButton(), updateButton(), drawButton()
+│   │   ├── toggle.ts              — createCheckbox(), createRadioGroup(), updateCheckbox(), updateRadioGroup()
+│   │   ├── slider.ts              — createSlider(), updateSlider(), drawSlider()
+│   │   ├── text-input.ts          — createTextInput(), updateTextInput(), drawTextInput()
+│   │   ├── layout.ts              — verticalStack(), horizontalRow(), anchorTo()
+│   │   ├── focus.ts               — createFocusManager(), updateFocus(), tab navigation
 │   │   └── index.ts               — Barrel export
 │   ├── pathfinding/
 │   │   ├── types.ts               — PathGrid, PathOptions, PathResult
@@ -158,7 +166,10 @@ arcane/
 │   ├── bfrpg-crawler/             — Phase 6 demo: BFRPG dungeon crawler with character creation, combat, AI
 │   ├── menu-flow/                 — Phase 10 demo: scene management, save/load, menu flow
 │   ├── physics-playground/        — Phase 11 demo: rigid body physics sandbox
-│   └── parallax-scroller/        — Phase 13 demo: parallax scrolling + camera features
+│   ├── parallax-scroller/        — Phase 13 demo: parallax scrolling + camera features
+│   ├── tilemap-showcase/         — Phase 14 demo: layers, auto-tiling, animated tiles
+│   ├── character-controller/     — Phase 15 demo: animation state machine + blending
+│   └── ui-showcase/              — Phase 16 demo: interactive UI widgets
 ├── recipes/
 │   ├── turn-based-combat/         — Initiative, attack/defend, victory detection
 │   ├── inventory-equipment/       — Items, stacking, weight, equipment slots, stat bonuses
