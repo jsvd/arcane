@@ -2,6 +2,50 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.7.0] - 2026-02-12
+
+### Added
+- **Phase 13: Camera Polish**
+  - Camera bounds/limits: `setCameraBounds()`, `getCameraBounds()` — clamp camera to map edges
+  - Camera deadzone: `setCameraDeadzone()`, `getCameraDeadzone()` — player moves freely in center zone
+  - Smooth camera follow: `followTargetSmooth()` with exponential lerp
+  - Smooth zoom: `zoomTo()`, `zoomToPoint()` with easing
+  - Parallax scrolling: `drawParallaxSprite()` with configurable depth factor
+  - Parallax scroller demo showcasing all camera features
+
+- **Phase 14: Tilemap Polish**
+  - Multiple tilemap layers: `createLayeredTilemap()`, `setLayerTile()`, `drawLayeredTilemap()`
+  - Animated tiles: `registerAnimatedTile()`, `updateAnimatedTiles()`
+  - Auto-tiling: 4-bit and 8-bit bitmask algorithms (`computeAutotileBitmask4/8`, `applyAutotile`)
+  - Tile properties: `defineTileProperties()`, `getTilePropertyAt()`
+  - Layer visibility and opacity control
+  - Tilemap showcase demo
+
+- **Phase 15: Animation Polish**
+  - Animation state machine (FSM): `createAnimationFSM()`, states, transitions, conditions
+  - Crossfade blending between animation states
+  - Frame events: `addFrameEvent()`, `updateAnimationWithEvents()`
+  - Character controller demo with animation FSM
+
+- **Phase 16: Interactive UI**
+  - Buttons: `createButton()`, `updateButton()`, `drawButton()` with hover/press states
+  - Toggles: `createCheckbox()`, `createRadioGroup()` with mutual exclusion
+  - Sliders: `createSlider()`, `updateSlider()`, `drawSlider()` with drag support
+  - Text input: `createTextInput()`, `updateTextInput()`, `drawTextInput()` with cursor and selection
+  - Layout helpers: `verticalStack()`, `horizontalRow()`, `anchorTo()`
+  - Focus/tab navigation: `createFocusManager()`, `updateFocus()`
+  - UI showcase demo
+
+- **Isometric 2.5D Demo**
+  - Isometric coordinate transforms (iso <-> Cartesian)
+  - Depth-based sprite sorting (Y-position determines draw order)
+  - Click-to-move with A* pathfinding
+  - Coin collection, smooth camera follow
+  - Detailed composite sprite rendering (35+ textures)
+
+### Fixed
+- `screenToWorld()` returned wrong coordinates when camera bounds clamping was active — clamped position was not synced back to the bridge (engine-wide fix affecting all demos with camera bounds + mouse input)
+
 ## [0.6.1] - 2026-02-12
 
 ### Fixed

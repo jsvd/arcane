@@ -99,8 +99,8 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 **Phases 14-16 complete (Tilemap Polish + Animation Polish + Interactive UI)!** 🎉
 
 All packages published and ready to use:
-- **npm**: [@arcane-engine/runtime@0.6.1](https://www.npmjs.com/package/@arcane-engine/runtime), [@arcane-engine/create@0.6.1](https://www.npmjs.com/package/@arcane-engine/create)
-- **crates.io**: [arcane-engine@0.6.1](https://crates.io/crates/arcane-engine), [arcane-cli@0.6.1](https://crates.io/crates/arcane-cli)
+- **npm**: [@arcane-engine/runtime@0.7.0](https://www.npmjs.com/package/@arcane-engine/runtime), [@arcane-engine/create@0.7.0](https://www.npmjs.com/package/@arcane-engine/create)
+- **crates.io**: [arcane-engine@0.7.0](https://crates.io/crates/arcane-engine), [arcane-cli@0.7.0](https://crates.io/crates/arcane-cli)
 
 **Current features:**
 - ✅ Core engine: rendering, audio, text, UI, animation, pathfinding, tweening, particles
@@ -120,7 +120,7 @@ All packages published and ready to use:
 - ✅ Built-in asset discovery: 25 free CC0 packs with search, download, and extraction
 - ✅ 1243 TS tests + 203 Rust tests passing
 - ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
-- ✅ Example projects (Sokoban, Breakout, Tower Defense, BFRPG RPG, Physics Playground, Menu Flow, Asteroids, Parallax Scroller, Tilemap Showcase, Character Controller, UI Showcase)
+- ✅ Example projects (Sokoban, Breakout, Tower Defense, BFRPG RPG, Physics Playground, Menu Flow, Asteroids, Parallax Scroller, Tilemap Showcase, Character Controller, UI Showcase, Isometric Dungeon)
 
 **Next:** Phase 17 (Audio Polish).
 
