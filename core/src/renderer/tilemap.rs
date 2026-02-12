@@ -119,6 +119,7 @@ impl Tilemap {
                     flip_y: false,
                     opacity: 1.0,
                     blend_mode: 0,
+                    shader_id: 0,
                 });
             }
         }

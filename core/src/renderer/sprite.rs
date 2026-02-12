@@ -36,6 +36,7 @@ pub struct SpriteCommand {
     pub flip_y: bool,
     pub opacity: f32,
     pub blend_mode: u8,
+    pub shader_id: u32,
 }
 
 /// Per-vertex data for the unit quad.
@@ -379,11 +380,12 @@ impl SpritePipeline {
     }
 
     /// Render a sorted list of sprite commands.
-    /// Commands should be sorted by layer → blend_mode → texture_id.
+    /// Commands should be sorted by layer → shader_id → blend_mode → texture_id.
     pub fn render(
         &self,
         gpu: &GpuContext,
         textures: &TextureStore,
+        shaders: &super::shader::ShaderStore,
         camera: &Camera2D,
         lighting: &LightingUniform,
         commands: &[SpriteCommand],
@@ -428,14 +430,17 @@ impl SpritePipeline {
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 
-        // Batch by blend_mode + texture_id (commands pre-sorted)
+        // Batch by shader_id + blend_mode + texture_id (commands pre-sorted)
+        let mut current_shader: Option<u32> = None;
         let mut current_blend: Option<u8> = None;
         let mut i = 0;
         while i < commands.len() {
+            let shader = commands[i].shader_id;
             let blend = commands[i].blend_mode.min(3);
             let tex_id = commands[i].texture_id;
             let batch_start = i;
             while i < commands.len()
+                && commands[i].shader_id == shader
                 && commands[i].blend_mode.min(3) == blend
                 && commands[i].texture_id == tex_id
             {
@@ -443,10 +448,24 @@ impl SpritePipeline {
             }
             let batch = &commands[batch_start..i];
 
-            // Switch pipeline when blend mode changes
-            if current_blend != Some(blend) {
-                render_pass.set_pipeline(&self.pipelines[blend as usize]);
-                current_blend = Some(blend);
+            // Switch pipeline: built-in (shader_id 0) vs custom
+            if shader == 0 {
+                if current_shader != Some(0) || current_blend != Some(blend) {
+                    render_pass.set_pipeline(&self.pipelines[blend as usize]);
+                    current_shader = Some(0);
+                    current_blend = Some(blend);
+                }
+            } else if current_shader != Some(shader) {
+                if let Some(pipeline) = shaders.get_pipeline(shader) {
+                    render_pass.set_pipeline(pipeline);
+                    if let Some(bg) = shaders.get_bind_group(shader) {
+                        render_pass.set_bind_group(3, bg, &[]);
+                    }
+                    current_shader = Some(shader);
+                    current_blend = None;
+                } else {
+                    continue; // skip batch if shader not loaded
+                }
             }
 
             // Get texture bind group

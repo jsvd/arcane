@@ -5,6 +5,7 @@ mod camera;
 mod tilemap;
 mod lighting;
 pub mod font;
+pub mod shader;
 
 pub use gpu::GpuContext;
 pub use sprite::{SpriteCommand, SpritePipeline};
@@ -12,6 +13,7 @@ pub use texture::{TextureId, TextureStore};
 pub use camera::Camera2D;
 pub use tilemap::{Tilemap, TilemapStore};
 pub use lighting::{LightingState, LightingUniform, PointLight, LightData, MAX_LIGHTS};
+pub use shader::ShaderStore;
 
 use anyhow::Result;
 
@@ -19,6 +21,7 @@ use anyhow::Result;
 pub struct Renderer {
     pub gpu: GpuContext,
     pub sprites: SpritePipeline,
+    pub shaders: ShaderStore,
     pub textures: TextureStore,
     pub camera: Camera2D,
     pub lighting: LightingState,
@@ -36,6 +39,7 @@ impl Renderer {
         let scale_factor = window.scale_factor() as f32;
         let gpu = GpuContext::new(window)?;
         let sprites = SpritePipeline::new(&gpu);
+        let shaders = ShaderStore::new(&gpu);
         let textures = TextureStore::new();
         // Set camera viewport to logical pixels so world units are DPI-independent
         let logical_w = gpu.config.width as f32 / scale_factor;
@@ -47,6 +51,7 @@ impl Renderer {
         Ok(Self {
             gpu,
             sprites,
+            shaders,
             textures,
             camera,
             lighting: LightingState::default(),
@@ -65,13 +70,17 @@ impl Renderer {
             &wgpu::CommandEncoderDescriptor { label: Some("frame_encoder") },
         );
 
-        // Sort by layer → blend_mode → texture_id for batching
+        // Sort by layer → shader_id → blend_mode → texture_id for batching
         self.frame_commands.sort_by(|a, b| {
             a.layer
                 .cmp(&b.layer)
+                .then(a.shader_id.cmp(&b.shader_id))
                 .then(a.blend_mode.cmp(&b.blend_mode))
                 .then(a.texture_id.cmp(&b.texture_id))
         });
+
+        // Flush dirty custom shader uniforms
+        self.shaders.flush(&self.gpu);
 
         let lighting_uniform = self.lighting.to_uniform();
         let clear_color = wgpu::Color {
@@ -84,6 +93,7 @@ impl Renderer {
         self.sprites.render(
             &self.gpu,
             &self.textures,
+            &self.shaders,
             &self.camera,
             &lighting_uniform,
             &self.frame_commands,

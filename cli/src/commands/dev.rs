@@ -308,6 +308,29 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
             }
         }
 
+        // Process custom shader creation requests
+        let pending_shaders: Vec<(u32, String, String)> = {
+            let mut bridge = bridge_for_loop.borrow_mut();
+            std::mem::take(&mut bridge.shader_create_queue)
+        };
+
+        // Process shader param updates
+        let shader_params: Vec<(u32, u32, [f32; 4])> = {
+            let mut bridge = bridge_for_loop.borrow_mut();
+            std::mem::take(&mut bridge.shader_param_queue)
+        };
+
+        if let Some(ref mut renderer) = state.renderer {
+            for (id, name, source) in pending_shaders {
+                renderer.shaders.create(&renderer.gpu, id, &name, &source);
+            }
+            for (shader_id, index, values) in shader_params {
+                renderer
+                    .shaders
+                    .set_param(shader_id, index, values[0], values[1], values[2], values[3]);
+            }
+        }
+
         // Drain audio commands from bridge and send to audio thread
         let audio_cmds: Vec<BridgeAudioCommand> = {
             let mut bridge = bridge_for_loop.borrow_mut();

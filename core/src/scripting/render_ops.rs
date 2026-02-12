@@ -63,6 +63,12 @@ pub struct RenderBridgeState {
     pub clear_color: [f32; 4],
     /// Directory for save files (.arcane/saves/ relative to game entry file).
     pub save_dir: PathBuf,
+    /// Custom shader creation queue: (id, name, wgsl_source).
+    pub shader_create_queue: Vec<(u32, String, String)>,
+    /// Custom shader param updates: (shader_id, index, [x, y, z, w]).
+    pub shader_param_queue: Vec<(u32, u32, [f32; 4])>,
+    /// Next shader ID to assign.
+    pub next_shader_id: u32,
 }
 
 impl RenderBridgeState {
@@ -94,6 +100,9 @@ impl RenderBridgeState {
             scale_factor: 1.0,
             clear_color: [0.1, 0.1, 0.15, 1.0],
             save_dir,
+            shader_create_queue: Vec::new(),
+            shader_param_queue: Vec::new(),
+            next_shader_id: 1,
         }
     }
 }
@@ -124,6 +133,7 @@ pub fn op_draw_sprite(
     flip_y: f64,
     opacity: f64,
     blend_mode: f64,
+    shader_id: f64,
 ) {
     let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
     bridge.borrow_mut().sprite_commands.push(SpriteCommand {
@@ -148,6 +158,7 @@ pub fn op_draw_sprite(
         flip_y: flip_y != 0.0,
         opacity: opacity as f32,
         blend_mode: (blend_mode as u8).min(3),
+        shader_id: shader_id as u32,
     });
 }
 
@@ -528,6 +539,39 @@ pub fn op_list_save_files(state: &mut OpState) -> Vec<String> {
     keys
 }
 
+// --- Shader ops ---
+
+/// Create a custom fragment shader from WGSL source. Returns a shader ID.
+#[deno_core::op2(fast)]
+pub fn op_create_shader(state: &mut OpState, #[string] name: &str, #[string] source: &str) -> u32 {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let mut b = bridge.borrow_mut();
+    let id = b.next_shader_id;
+    b.next_shader_id += 1;
+    b.shader_create_queue
+        .push((id, name.to_string(), source.to_string()));
+    id
+}
+
+/// Set a vec4 parameter slot on a custom shader. Index 0-15.
+#[deno_core::op2(fast)]
+pub fn op_set_shader_param(
+    state: &mut OpState,
+    shader_id: u32,
+    index: u32,
+    x: f64,
+    y: f64,
+    z: f64,
+    w: f64,
+) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().shader_param_queue.push((
+        shader_id,
+        index,
+        [x as f32, y as f32, z as f32, w as f32],
+    ));
+}
+
 deno_core::extension!(
     render_ext,
     ops = [
@@ -561,5 +605,7 @@ deno_core::extension!(
         op_load_file,
         op_delete_file,
         op_list_save_files,
+        op_create_shader,
+        op_set_shader_param,
     ],
 );

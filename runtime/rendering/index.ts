@@ -56,3 +56,7 @@ export {
 // Audio
 export type { SoundId, PlayOptions } from "./audio.ts";
 export { loadSound, playSound, playMusic, stopSound, stopAll, setVolume } from "./audio.ts";
+
+// Custom Shaders
+export type { ShaderId } from "./shader.ts";
+export { createShaderFromSource, setShaderParam } from "./shader.ts";

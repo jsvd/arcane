@@ -57,6 +57,8 @@ export type SpriteOptions = {
    * - "screen": highlights/lightening (src + dst * (1 - src))
    */
   blendMode?: "alpha" | "additive" | "multiply" | "screen";
+  /** Custom shader handle from createShaderFromSource(). Default: 0 (built-in shader). */
+  shaderId?: number;
 };
 
 /** Camera state returned by {@link getCamera}. */

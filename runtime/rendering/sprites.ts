@@ -66,6 +66,7 @@ export function drawSprite(opts: SpriteOptions): void {
     screen: 3,
   };
   const blendMode = blendModeMap[opts.blendMode ?? "alpha"] ?? 0;
+  const shaderId = opts.shaderId ?? 0;
 
   (globalThis as any).Deno.core.ops.op_draw_sprite(
     texId,
@@ -89,6 +90,7 @@ export function drawSprite(opts: SpriteOptions): void {
     flipY,
     opacity,
     blendMode,
+    shaderId,
   );
 }
 
