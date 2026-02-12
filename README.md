@@ -241,6 +241,7 @@ cargo check --no-default-features
 cargo run --release -- dev demos/platformer/platformer-visual.ts
 cargo run --release -- dev demos/roguelike/roguelike-visual.ts
 cargo run --release -- dev demos/bfrpg-crawler/bfrpg-visual.ts
+cargo run --release -- dev demos/isometric-dungeon/isometric-dungeon.ts
 
 # With hot-reload (edit .ts files while running)
 cargo run --release -- dev demos/platformer/platformer-visual.ts

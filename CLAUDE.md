@@ -169,7 +169,8 @@ arcane/
 │   ├── parallax-scroller/        — Phase 13 demo: parallax scrolling + camera features
 │   ├── tilemap-showcase/         — Phase 14 demo: layers, auto-tiling, animated tiles
 │   ├── character-controller/     — Phase 15 demo: animation state machine + blending
-│   └── ui-showcase/              — Phase 16 demo: interactive UI widgets
+│   ├── ui-showcase/              — Phase 16 demo: interactive UI widgets
+│   └── isometric-dungeon/        — Isometric 2.5D: coordinate transforms, depth sorting, pathfinding
 ├── recipes/
 │   ├── turn-based-combat/         — Initiative, attack/defend, victory detection
 │   ├── inventory-equipment/       — Items, stacking, weight, equipment slots, stat bonuses
