@@ -1,6 +1,6 @@
 {
   "name": "@arcane-engine/runtime",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Agent-native 2D game engine runtime - TypeScript APIs for state management, rendering, and game logic",
   "type": "module",
   "main": "./index.ts",
