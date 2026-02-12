@@ -57,8 +57,9 @@ export const Colors = {
 } as const;
 
 /**
- * Standard HUD layout constants. Spacing values (PADDING, LINE_HEIGHT, TEXT_SCALE) work at
- * any resolution. **Position values assume 800×600** — for other viewports, compute positions
+ * Standard HUD layout constants. All values use **logical pixels** (DPI-independent).
+ * Spacing values (PADDING, LINE_HEIGHT, TEXT_SCALE) work at any resolution.
+ * **Position values assume 800×600** — for other viewports, compute positions
  * from `getViewportSize()` instead (e.g. `{ x: vpW - 100, y: 10 }` for top-right).
  */
 export const HUDLayout = {

@@ -18,7 +18,7 @@ Imports use `@arcane/runtime/{module}`:
 
 ## Coordinate System
 
-**This is not a web canvas.** The coordinate system is camera-based, not screen-based. The viewport size is **not fixed** — use `getViewportSize()` to get the actual dimensions.
+**This is not a web canvas.** The coordinate system is camera-based, not screen-based. The viewport size is **not fixed** — use `getViewportSize()` to get the actual dimensions. Viewport values are in **logical pixels** (DPI-independent) — a 2x Retina display with an 800×600 window still returns 800×600, not 1600×1200.
 
 ```
   World space (where sprites live):
@@ -416,6 +416,7 @@ registerMigration({
 - `loadTexture()` and `loadSound()` cache by path — calling twice returns the same handle.
 - Layer ordering: 0 = background, 1-10 = game objects, 100+ = HUD.
 - Use `createSolidTexture(name, r, g, b)` for quick colored rectangles without image assets.
+- Use `setBackgroundColor(r, g, b)` (0.0-1.0 range) to change the window background color. Default is dark blue-gray.
 - Test game logic in `*.test.ts` files using `describe`, `it`, `assert` from `@arcane/runtime/testing`.
 - Tests run in both Node.js and V8 — avoid Node-specific APIs in test files.
 - Call `clearSprites()` at the start of your `onFrame` to ensure a clean slate each frame.

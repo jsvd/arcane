@@ -378,15 +378,32 @@ declare module "@arcane/runtime/rendering" {
    */
   export declare function getMousePosition(): MousePosition;
   /**
-   * Get the current viewport size in pixels.
+   * Get the current viewport size in logical pixels (DPI-independent).
+   * On a 2x Retina display with an 800x600 window, this returns `{ width: 800, height: 600 }`,
+   * not the physical pixel dimensions.
    * Returns `{ width: 800, height: 600 }` in headless mode.
    *
-   * @returns Viewport dimensions in pixels.
+   * @returns Viewport dimensions in logical pixels.
    */
   export declare function getViewportSize(): {
       width: number;
       height: number;
   };
+  /**
+   * Get the display scale factor (e.g. 2.0 on Retina/HiDPI, 1.0 on standard displays).
+   * Returns 1.0 in headless mode.
+   */
+  export declare function getScaleFactor(): number;
+  /**
+   * Set the background/clear color for the render pass.
+   * Values are in 0.0-1.0 range. Default is dark blue-gray (0.1, 0.1, 0.15).
+   * No-op in headless mode.
+   *
+   * @param r - Red channel (0.0 to 1.0).
+   * @param g - Green channel (0.0 to 1.0).
+   * @param b - Blue channel (0.0 to 1.0).
+   */
+  export declare function setBackgroundColor(r: number, g: number, b: number): void;
   /**
    * Convert screen/window coordinates to world coordinates using the current camera.
    * Accounts for camera position and zoom.
