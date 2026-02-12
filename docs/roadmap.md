@@ -623,11 +623,183 @@ Now that packages are published, focus on adoption and ecosystem growth.
 
 ---
 
-## Phase 14: Advanced Input + Interactive UI
+## Phase 14: Camera Polish
 
 **Status: Planned**
 
-Expand platform reach and make UI interactive (not just draw-only).
+Complete the camera system with features expected in a modern 2D engine.
+
+### Deliverables
+- [ ] **Camera bounds/limits** (`runtime/rendering/camera.ts`)
+  - [ ] Clamp camera to map edges (prevent showing void)
+  - [ ] Configurable bounds rectangle
+- [ ] **Camera deadzone** (`runtime/rendering/camera.ts`)
+  - [ ] Target can move within deadzone without camera following
+  - [ ] Configurable deadzone size and shape
+- [ ] **Smooth zoom** (`runtime/rendering/camera.ts`)
+  - [ ] Animated zoom transitions using Phase 9 tweens
+  - [ ] Zoom toward cursor/point (not just center)
+- [ ] **Parallax scrolling** (`runtime/rendering/parallax.ts`)
+  - [ ] Multi-layer backgrounds at different scroll speeds
+  - [ ] Per-layer depth factor (0 = fixed, 1 = moves with camera)
+  - [ ] Seamless tiling for infinite scroll
+- [ ] **Multiple viewports** (`core/src/renderer/viewport.rs`)
+  - [ ] Split-screen support (two viewports on same game state)
+  - [ ] Per-viewport camera
+  - [ ] Minimap viewport
+- [ ] **Demo: Parallax Scroller** (`demos/parallax-scroller/`)
+  - [ ] Side-scrolling platformer with 3-layer parallax background
+  - [ ] Camera deadzone (player can move in center without camera moving)
+  - [ ] Camera bounds (stops at map edges)
+  - [ ] Smooth zoom on events
+
+### Success Criteria
+- [ ] Parallax layers scroll at correct speeds (depth illusion)
+- [ ] Camera deadzone makes movement feel better
+- [ ] Camera bounds prevent showing void at map edges
+- [ ] Split-screen works (two viewports on same game state)
+- [ ] 30+ tests for camera features
+
+---
+
+## Phase 15: Tilemap Polish
+
+**Status: Planned**
+
+Extend the tilemap system with layers, auto-tiling, and non-orthogonal grids.
+
+### Deliverables
+- [ ] **Multiple tilemap layers** (`runtime/rendering/tilemap.ts`)
+  - [ ] Background, midground, foreground layers
+  - [ ] Per-layer parallax scrolling (uses Phase 14 parallax infrastructure)
+  - [ ] Collision layer (separate from visual layers)
+  - [ ] Layer visibility toggle
+- [ ] **Auto-tiling** (`runtime/rendering/autotile.ts`)
+  - [ ] Bitmask auto-tiling (Wang tiles, blob tiles)
+  - [ ] Automatic tile selection based on neighbors
+  - [ ] Support for 47-tile and 16-tile sets
+- [ ] **Animated tiles** (`runtime/rendering/tilemap.ts`)
+  - [ ] Per-tile animation (water, lava, torches)
+  - [ ] Frame cycling independent of sprite animations
+- [ ] **Isometric/Hexagonal grids** (`runtime/rendering/tilemap-iso.ts`)
+  - [ ] Isometric grid (diamond layout, 2:1 ratio)
+  - [ ] Hexagonal grid (pointy-top, flat-top)
+  - [ ] Screen-to-tile coordinate conversion
+- [ ] **Tile properties** (`runtime/rendering/tilemap.ts`)
+  - [ ] Custom metadata per tile (walkable, damage, friction, etc.)
+  - [ ] Query tile properties by position
+- [ ] **Demo: Isometric RPG Town** (`demos/iso-town/`)
+  - [ ] Isometric tilemap (buildings, roads, trees)
+  - [ ] Multiple layers (ground, buildings, roofs)
+  - [ ] Animated water tiles
+  - [ ] Auto-tiling for roads
+
+### Success Criteria
+- [ ] Multiple layers render correctly (z-ordering)
+- [ ] Auto-tiling works (place one tile, neighbors update automatically)
+- [ ] Animated tiles cycle correctly (water ripples)
+- [ ] Isometric rendering looks correct (depth sorting)
+- [ ] 40+ tests for tilemap features
+
+---
+
+## Phase 16: Animation Polish
+
+**Status: Planned**
+
+Complete the animation system with state machines, blending, and events.
+
+### Deliverables
+- [ ] **Animation state machine** (`runtime/rendering/animation-fsm.ts`)
+  - [ ] States: idle, walk, run, jump, attack
+  - [ ] Transitions with conditions
+  - [ ] Animation blending (smooth transitions)
+  - [ ] Animation events (trigger callbacks on specific frames)
+- [x] **Multi-row sprite sheets** — already implemented in Phase 9.5 (`createAnimation()` accepts `cols` and `rows`)
+- [ ] **Demo: Character Controller** (`demos/character-controller/`)
+  - [ ] Character with animation state machine (idle, walk, jump, attack)
+  - [ ] Smooth transitions between animation states
+  - [ ] Frame events (attack hitbox on specific frame)
+
+### Success Criteria
+- [ ] Animation state machine handles transitions smoothly
+- [ ] Frame events fire at correct times
+- [ ] 30+ tests for animation features
+
+---
+
+## Phase 17: Interactive UI
+
+**Status: Planned**
+
+Make UI interactive (not just draw-only). Buttons, text input, layout system.
+
+### Deliverables
+- [ ] **Interactive widgets** (`runtime/ui/interactive.ts`)
+  - [ ] Button: hover, pressed, released states
+  - [ ] Text input field (capture keyboard, cursor blink)
+  - [ ] Checkbox, radio button, slider
+  - [ ] Scroll container (overflow with scrollbar)
+  - [ ] Drag-and-drop (for inventory management)
+  - [ ] Focus system (tab navigation)
+  - [ ] Modal dialogs (confirm, cancel, text input)
+- [ ] **Layout system** (`runtime/ui/layout.ts`)
+  - [ ] Flexbox-style auto-layout (horizontal, vertical, grid)
+  - [ ] Anchoring (attach to screen edges/corners with margins)
+  - [ ] Responsive sizing (fill, fit-content, fixed)
+- [ ] **Demo: Settings + Inventory UI** (`demos/ui-showcase/`)
+  - [ ] Menu with button hover states
+  - [ ] Settings screen (volume sliders)
+  - [ ] Inventory grid with drag-and-drop
+  - [ ] Modal confirm dialog
+
+### Success Criteria
+- [ ] UI buttons respond to mouse clicks with visual feedback
+- [ ] Text input captures keyboard correctly
+- [ ] Drag-and-drop feels natural (inventory management)
+- [ ] Layout system handles screen resize gracefully
+- [ ] 50+ tests for UI widgets and layout
+
+---
+
+## Phase 18: Audio Polish
+
+**Status: Planned**
+
+Complete the audio system with spatial audio, mixing, and effects.
+
+### Deliverables
+- [ ] **Spatial/Positional audio** (`runtime/rendering/audio.ts`, `core/src/audio/spatial.rs`)
+  - [ ] Volume based on distance from listener
+  - [ ] Panning based on left/right position
+  - [ ] Set listener position (usually camera or player)
+- [ ] **Audio mixer** (`runtime/rendering/audio.ts`)
+  - [ ] Audio buses: SFX, music, ambient, voice
+  - [ ] Per-bus volume control
+  - [ ] Master volume
+- [ ] **Audio polish**
+  - [ ] Crossfade between music tracks
+  - [ ] Audio pooling (limit concurrent instances of same sound)
+  - [ ] Pitch variation (randomize pitch for repeated sounds)
+  - [ ] Audio effects: reverb, echo, low-pass filter
+- [ ] **Demo: Audio Showcase** (`demos/audio-showcase/`)
+  - [ ] Spatial audio (sound sources positioned in world)
+  - [ ] Music crossfade between areas
+  - [ ] Mixer with separate SFX/music volume
+
+### Success Criteria
+- [ ] Spatial audio feels natural (volume/panning based on position)
+- [ ] Music crossfade is smooth (no pops or clicks)
+- [ ] Audio buses allow independent volume control
+- [ ] 30+ tests for audio features
+
+---
+
+## Phase 19: Input Systems
+
+**Status: Planned**
+
+Expand platform input beyond keyboard/mouse with gamepad, touch, and an action mapping system.
 
 ### Deliverables
 - [ ] **Gamepad support** (`core/src/platform/gamepad.rs`, `runtime/rendering/input.ts`)
@@ -646,126 +818,16 @@ Expand platform reach and make UI interactive (not just draw-only).
   - [ ] Map actions to physical inputs (keyboard, gamepad, touch)
   - [ ] Remappable controls (user can rebind)
   - [ ] Input buffering (queue inputs for combos)
-- [ ] **Interactive UI** (`runtime/ui/interactive.ts`)
-  - [ ] Button: hover, pressed, released states
-  - [ ] Text input field (capture keyboard, cursor blink)
-  - [ ] Checkbox, radio button, slider
-  - [ ] Scroll container (overflow with scrollbar)
-  - [ ] Drag-and-drop (for inventory management)
-  - [ ] Focus system (tab navigation, gamepad navigation)
-  - [ ] Modal dialogs (confirm, cancel, text input)
-- [ ] **Layout system** (`runtime/ui/layout.ts`)
-  - [ ] Flexbox-style auto-layout (horizontal, vertical, grid)
-  - [ ] Anchoring (attach to screen edges/corners with margins)
-  - [ ] Responsive sizing (fill, fit-content, fixed)
-- [ ] **Demo: Gamepad Platformer + UI** (`demos/gamepad-ui/`)
+- [ ] **Demo: Gamepad Platformer** (`demos/gamepad-platformer/`)
   - [ ] Platformer controlled via gamepad (analog stick movement)
-  - [ ] Menu with button hover states
-  - [ ] Settings screen (volume sliders, control remapping UI)
   - [ ] Touch controls overlay for mobile
+  - [ ] Rebindable controls settings screen
 
 ### Success Criteria
 - [ ] Gamepad input works on Windows, macOS, Linux
 - [ ] Touch input works (test on mobile browser)
-- [ ] UI buttons respond to mouse, touch, and gamepad
-- [ ] Text input captures keyboard correctly
-- [ ] Drag-and-drop feels natural (inventory management)
-- [ ] Layout system handles screen resize gracefully
-- [ ] Tests validate input mapping and UI state (80+ tests)
-
----
-
-## Phase 15: Audio + Camera Polish
-
-**Status: Planned**
-
-Complete the audio and camera systems with features expected in a modern 2D engine.
-
-### Deliverables
-- [ ] **Spatial/Positional audio** (`runtime/rendering/audio.ts`, `core/src/audio/spatial.rs`)
-  - [ ] Volume based on distance from listener
-  - [ ] Panning based on left/right position
-  - [ ] Set listener position (usually camera or player)
-- [ ] **Audio mixer** (`runtime/rendering/audio.ts`)
-  - [ ] Audio buses: SFX, music, ambient, voice
-  - [ ] Per-bus volume control
-  - [ ] Master volume
-- [ ] **Audio polish**
-  - [ ] Crossfade between music tracks
-  - [ ] Audio pooling (limit concurrent instances of same sound)
-  - [ ] Pitch variation (randomize pitch for repeated sounds)
-  - [ ] Audio effects: reverb, echo, low-pass filter
-- [ ] **Camera features** (`runtime/rendering/camera.ts`)
-  - [ ] Camera bounds/limits (clamp to map edges)
-  - [ ] Camera deadzone (target can move without camera following)
-  - [ ] Smooth zoom (animated zoom transitions using Phase 9 tweens)
-  - [ ] Parallax scrolling (multi-layer backgrounds at different speeds)
-  - [ ] Multiple viewports (split-screen support)
-- [ ] **Demo: Parallax Scroller + Audio** (`demos/parallax-audio/`)
-  - [ ] Side-scrolling platformer with 3-layer parallax background
-  - [ ] Spatial audio (enemies make sound based on position)
-  - [ ] Music crossfade between areas
-  - [ ] Camera deadzone (player can move in center without camera moving)
-  - [ ] Camera bounds (stops at map edges)
-
-### Success Criteria
-- [ ] Spatial audio feels natural (volume/panning based on position)
-- [ ] Music crossfade is smooth (no pops or clicks)
-- [ ] Parallax layers scroll at correct speeds (depth illusion)
-- [ ] Camera deadzone makes movement feel better
-- [ ] Split-screen works (two viewports on same game state)
-- [ ] 40+ tests for audio and camera features
-
----
-
-## Phase 16: Tilemap + Animation Polish
-
-**Status: Planned**
-
-Complete the tilemap and animation systems with advanced features.
-
-### Deliverables
-- [ ] **Multiple tilemap layers** (`runtime/rendering/tilemap.ts`)
-  - [ ] Background, midground, foreground layers
-  - [ ] Per-layer parallax scrolling
-  - [ ] Collision layer (separate from visual layers)
-  - [ ] Layer visibility toggle
-- [ ] **Auto-tiling** (`runtime/rendering/autotile.ts`)
-  - [ ] Bitmask auto-tiling (Wang tiles, blob tiles)
-  - [ ] Automatic tile selection based on neighbors
-  - [ ] Support for 47-tile and 16-tile sets
-- [ ] **Animated tiles** (`runtime/rendering/tilemap.ts`)
-  - [ ] Per-tile animation (water, lava, torches)
-  - [ ] Frame cycling independent of sprite animations
-- [ ] **Isometric/Hexagonal grids** (`runtime/rendering/tilemap-iso.ts`)
-  - [ ] Isometric grid (diamond layout, 2:1 ratio)
-  - [ ] Hexagonal grid (pointy-top, flat-top)
-  - [ ] Screen-to-tile coordinate conversion
-- [ ] **Tile properties** (`runtime/rendering/tilemap.ts`)
-  - [ ] Custom metadata per tile (walkable, damage, friction, etc.)
-  - [ ] Query tile properties by position
-- [ ] **Animation state machine** (`runtime/rendering/animation-fsm.ts`)
-  - [ ] States: idle, walk, run, jump, attack
-  - [ ] Transitions with conditions
-  - [ ] Animation blending (smooth transitions)
-  - [ ] Animation events (trigger callbacks on specific frames)
-- [ ] **Multi-row sprite sheets** (`runtime/rendering/animation.ts`)
-  - [ ] Support sprite sheets with multiple rows (each row = one animation)
-  - [ ] Auto-detect grid layout
-- [ ] **Demo: Isometric RPG Town** (`demos/iso-town/`)
-  - [ ] Isometric tilemap (buildings, roads, trees)
-  - [ ] Multiple layers (ground, buildings, roofs)
-  - [ ] Animated water tiles
-  - [ ] Character with animation state machine (idle, walk transitions)
-  - [ ] Auto-tiling for roads
-
-### Success Criteria
-- [ ] Multiple layers render correctly (z-ordering)
-- [ ] Auto-tiling works (place one tile, neighbors update automatically)
-- [ ] Animated tiles cycle correctly (water ripples)
-- [ ] Isometric rendering looks correct (depth sorting)
-- [ ] Animation state machine handles transitions smoothly
-- [ ] 60+ tests for tilemap and animation features
+- [ ] Input mapping allows rebinding at runtime
+- [ ] 40+ tests for input mapping and gesture detection
 
 ---
 
