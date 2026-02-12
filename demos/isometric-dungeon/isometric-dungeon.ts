@@ -56,9 +56,11 @@ function worldToIso(wx: number, wy: number): { x: number; y: number } {
   };
 }
 
-/** Convert world position to integer grid cell. */
+/** Convert world position to integer grid cell.
+ *  Offsets by TILE_H/2 because tiles are drawn centered on isoToWorld(),
+ *  which returns the top vertex of the diamond, not its center. */
 function worldToGrid(wx: number, wy: number): { x: number; y: number } {
-  const iso = worldToIso(wx, wy);
+  const iso = worldToIso(wx, wy + TILE_H / 2);
   return { x: Math.floor(iso.x), y: Math.floor(iso.y) };
 }
 
