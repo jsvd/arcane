@@ -292,7 +292,7 @@ generateMap();
 
 onFrame(() => {
   const dt = getDeltaTime();
-  const [vpW, vpH] = getViewportSize();
+  const { width: vpW, height: vpH } = getViewportSize();
 
   // Update animated tiles
   updateAnimatedTiles(dt);
