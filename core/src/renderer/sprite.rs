@@ -314,6 +314,7 @@ impl SpritePipeline {
         commands: &[SpriteCommand],
         target: &wgpu::TextureView,
         encoder: &mut wgpu::CommandEncoder,
+        clear_color: wgpu::Color,
     ) {
         // Update camera uniform
         let camera_uniform = CameraUniform {
@@ -338,12 +339,7 @@ impl SpritePipeline {
                 view: target,
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color {
-                        r: 0.1,
-                        g: 0.1,
-                        b: 0.15,
-                        a: 1.0,
-                    }),
+                    load: wgpu::LoadOp::Clear(clear_color),
                     store: wgpu::StoreOp::Store,
                 },
             })],

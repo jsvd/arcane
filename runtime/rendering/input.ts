@@ -68,15 +68,40 @@ export function getMousePosition(): MousePosition {
 }
 
 /**
- * Get the current viewport size in pixels.
+ * Get the current viewport size in logical pixels (DPI-independent).
+ * On a 2x Retina display with an 800x600 window, this returns `{ width: 800, height: 600 }`,
+ * not the physical pixel dimensions.
  * Returns `{ width: 800, height: 600 }` in headless mode.
  *
- * @returns Viewport dimensions in pixels.
+ * @returns Viewport dimensions in logical pixels.
  */
 export function getViewportSize(): { width: number; height: number } {
   if (!hasViewportOp) return { width: 800, height: 600 };
   const [w, h] = (globalThis as any).Deno.core.ops.op_get_viewport_size();
   return { width: w, height: h };
+}
+
+/**
+ * Get the display scale factor (e.g. 2.0 on Retina/HiDPI, 1.0 on standard displays).
+ * Returns 1.0 in headless mode.
+ */
+export function getScaleFactor(): number {
+  if (!hasViewportOp) return 1.0;
+  return (globalThis as any).Deno.core.ops.op_get_scale_factor();
+}
+
+/**
+ * Set the background/clear color for the render pass.
+ * Values are in 0.0-1.0 range. Default is dark blue-gray (0.1, 0.1, 0.15).
+ * No-op in headless mode.
+ *
+ * @param r - Red channel (0.0 to 1.0).
+ * @param g - Green channel (0.0 to 1.0).
+ * @param b - Blue channel (0.0 to 1.0).
+ */
+export function setBackgroundColor(r: number, g: number, b: number): void {
+  if (!hasViewportOp) return;
+  (globalThis as any).Deno.core.ops.op_set_background_color(r, g, b);
 }
 
 /**

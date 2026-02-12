@@ -18,6 +18,8 @@ export {
   isKeyPressed,
   getMousePosition,
   getViewportSize,
+  getScaleFactor,
+  setBackgroundColor,
   screenToWorld,
   getMouseWorldPosition,
 } from "./input.ts";

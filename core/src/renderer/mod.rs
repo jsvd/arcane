@@ -24,15 +24,26 @@ pub struct Renderer {
     pub lighting: LightingState,
     /// Sprite commands queued for the current frame.
     pub frame_commands: Vec<SpriteCommand>,
+    /// Display scale factor (e.g. 2.0 on Retina). Used to convert physical → logical pixels.
+    pub scale_factor: f32,
+    /// Clear color for the render pass background. Default: dark blue-gray.
+    pub clear_color: [f32; 4],
 }
 
 impl Renderer {
     /// Create a new renderer attached to a winit window.
     pub fn new(window: std::sync::Arc<winit::window::Window>) -> Result<Self> {
+        let scale_factor = window.scale_factor() as f32;
         let gpu = GpuContext::new(window)?;
         let sprites = SpritePipeline::new(&gpu);
         let textures = TextureStore::new();
-        let camera = Camera2D::default();
+        // Set camera viewport to logical pixels so world units are DPI-independent
+        let logical_w = gpu.config.width as f32 / scale_factor;
+        let logical_h = gpu.config.height as f32 / scale_factor;
+        let camera = Camera2D {
+            viewport_size: [logical_w, logical_h],
+            ..Camera2D::default()
+        };
         Ok(Self {
             gpu,
             sprites,
@@ -40,6 +51,8 @@ impl Renderer {
             camera,
             lighting: LightingState::default(),
             frame_commands: Vec::new(),
+            scale_factor,
+            clear_color: [0.1, 0.1, 0.15, 1.0],
         })
     }
 
@@ -58,6 +71,12 @@ impl Renderer {
         });
 
         let lighting_uniform = self.lighting.to_uniform();
+        let clear_color = wgpu::Color {
+            r: self.clear_color[0] as f64,
+            g: self.clear_color[1] as f64,
+            b: self.clear_color[2] as f64,
+            a: self.clear_color[3] as f64,
+        };
 
         self.sprites.render(
             &self.gpu,
@@ -67,6 +86,7 @@ impl Renderer {
             &self.frame_commands,
             &view,
             &mut encoder,
+            clear_color,
         );
 
         self.gpu.queue.submit(std::iter::once(encoder.finish()));
@@ -77,12 +97,18 @@ impl Renderer {
     }
 
     /// Resize the surface when the window size changes.
-    pub fn resize(&mut self, width: u32, height: u32) {
-        if width > 0 && height > 0 {
-            self.gpu.config.width = width;
-            self.gpu.config.height = height;
+    /// GPU surface uses physical pixels; camera viewport uses logical pixels.
+    pub fn resize(&mut self, physical_width: u32, physical_height: u32, scale_factor: f32) {
+        if physical_width > 0 && physical_height > 0 {
+            self.scale_factor = scale_factor;
+            self.gpu.config.width = physical_width;
+            self.gpu.config.height = physical_height;
             self.gpu.surface.configure(&self.gpu.device, &self.gpu.config);
-            self.camera.viewport_size = [width as f32, height as f32];
+            // Camera uses logical pixels so 1 world unit ≈ 1 logical pixel at zoom 1
+            self.camera.viewport_size = [
+                physical_width as f32 / scale_factor,
+                physical_height as f32 / scale_factor,
+            ];
         }
     }
 }

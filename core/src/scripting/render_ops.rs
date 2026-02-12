@@ -54,9 +54,13 @@ pub struct RenderBridgeState {
     pub sound_path_to_id: std::collections::HashMap<String, u32>,
     /// Font texture creation queue (texture IDs to create as built-in font).
     pub font_texture_queue: Vec<u32>,
-    /// Current viewport dimensions (synced from renderer each frame).
+    /// Current viewport dimensions in logical pixels (synced from renderer each frame).
     pub viewport_width: f32,
     pub viewport_height: f32,
+    /// Display scale factor (e.g. 2.0 on Retina).
+    pub scale_factor: f32,
+    /// Clear/background color [r, g, b, a] in 0.0-1.0 range.
+    pub clear_color: [f32; 4],
     /// Directory for save files (.arcane/saves/ relative to game entry file).
     pub save_dir: PathBuf,
 }
@@ -87,6 +91,8 @@ impl RenderBridgeState {
             font_texture_queue: Vec::new(),
             viewport_width: 800.0,
             viewport_height: 600.0,
+            scale_factor: 1.0,
+            clear_color: [0.1, 0.1, 0.15, 1.0],
             save_dir,
         }
     }
@@ -428,6 +434,21 @@ pub fn op_get_viewport_size(state: &mut OpState) -> Vec<f64> {
     vec![b.viewport_width as f64, b.viewport_height as f64]
 }
 
+/// Get the display scale factor (e.g. 2.0 on Retina).
+#[deno_core::op2(fast)]
+pub fn op_get_scale_factor(state: &mut OpState) -> f64 {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow().scale_factor as f64
+}
+
+/// Set the background/clear color (r, g, b in 0.0-1.0 range).
+#[deno_core::op2(fast)]
+pub fn op_set_background_color(state: &mut OpState, r: f64, g: f64, b: f64) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let mut br = bridge.borrow_mut();
+    br.clear_color = [r as f32, g as f32, b as f32, 1.0];
+}
+
 // --- File I/O ops (save/load) ---
 
 /// Write a save file. Returns true on success.
@@ -520,6 +541,8 @@ deno_core::extension!(
         op_set_master_volume,
         op_create_font_texture,
         op_get_viewport_size,
+        op_get_scale_factor,
+        op_set_background_color,
         op_save_file,
         op_load_file,
         op_delete_file,

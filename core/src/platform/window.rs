@@ -58,6 +58,8 @@ struct AppState {
     render_state: Rc<RefCell<RenderState>>,
     frame_callback: FrameCallback,
     last_frame: Instant,
+    /// Display scale factor (e.g. 2.0 on Retina).
+    scale_factor: f64,
 }
 
 impl ApplicationHandler for AppState {
@@ -78,6 +80,8 @@ impl ApplicationHandler for AppState {
                 .create_window(attrs)
                 .expect("Failed to create window"),
         );
+
+        self.scale_factor = window.scale_factor();
 
         match Renderer::new(window.clone()) {
             Ok(renderer) => {
@@ -108,8 +112,12 @@ impl ApplicationHandler for AppState {
             WindowEvent::Resized(new_size) => {
                 let mut state = self.render_state.borrow_mut();
                 if let Some(ref mut renderer) = state.renderer {
-                    renderer.resize(new_size.width, new_size.height);
+                    renderer.resize(new_size.width, new_size.height, self.scale_factor as f32);
                 }
+            }
+
+            WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
+                self.scale_factor = scale_factor;
             }
 
             WindowEvent::KeyboardInput {
@@ -130,8 +138,11 @@ impl ApplicationHandler for AppState {
             }
 
             WindowEvent::CursorMoved { position, .. } => {
+                // Convert from physical pixels to logical pixels
+                let logical_x = position.x as f32 / self.scale_factor as f32;
+                let logical_y = position.y as f32 / self.scale_factor as f32;
                 let mut state = self.render_state.borrow_mut();
-                state.input.mouse_move(position.x as f32, position.y as f32);
+                state.input.mouse_move(logical_x, logical_y);
             }
 
             WindowEvent::MouseInput { state: button_state, button, .. } => {
@@ -267,6 +278,7 @@ pub fn run_event_loop(
         render_state,
         frame_callback,
         last_frame: Instant::now(),
+        scale_factor: 1.0,
     };
 
     event_loop.run_app(&mut app)?;

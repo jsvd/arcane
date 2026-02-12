@@ -179,11 +179,14 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
 
     // Frame callback: sync input → call TS → collect sprite commands
     let frame_callback = Box::new(move |state: &mut RenderState| -> Result<()> {
-        // Sync viewport size from renderer to bridge
-        if let Some(ref renderer) = state.renderer {
+        // Sync viewport (logical pixels), scale factor, and clear color between renderer and bridge
+        if let Some(ref mut renderer) = state.renderer {
             let mut bridge = bridge_for_loop.borrow_mut();
             bridge.viewport_width = renderer.camera.viewport_size[0];
             bridge.viewport_height = renderer.camera.viewport_size[1];
+            bridge.scale_factor = renderer.scale_factor;
+            // Sync clear color from bridge → renderer (TS can set it via op)
+            renderer.clear_color = bridge.clear_color;
         }
 
         // Check for hot-reload
