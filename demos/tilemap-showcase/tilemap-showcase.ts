@@ -368,10 +368,9 @@ onFrame(() => {
   const scale = 1 / cam.zoom;
 
   // Title
-  drawText("Tilemap Showcase", {
-    x: hudOffsetX + 8 * scale,
-    y: hudOffsetY + 8 * scale,
-    size: 10 * scale,
+  drawText("Tilemap Showcase", hudOffsetX + 8 * scale, hudOffsetY + 8 * scale, {
+    scale: 10 * scale,
+    layer: 200,
   });
 
   // Layer status
@@ -381,28 +380,25 @@ onFrame(() => {
     const name = layers[i];
     const vis = layerVisibility[name] ?? true;
     const label = `[${i + 1}] ${name}: ${vis ? "ON" : "OFF"}`;
-    drawText(label, {
-      x: hudOffsetX + 8 * scale,
-      y: hudOffsetY + yOff * scale,
-      size: 8 * scale,
-      color: vis ? { r: 0.5, g: 1, b: 0.5, a: 1 } : { r: 0.5, g: 0.5, b: 0.5, a: 1 },
+    drawText(label, hudOffsetX + 8 * scale, hudOffsetY + yOff * scale, {
+      scale: 8 * scale,
+      layer: 200,
+      tint: vis ? { r: 0.5, g: 1, b: 0.5, a: 1 } : { r: 0.5, g: 0.5, b: 0.5, a: 1 },
     });
     yOff += 12;
   }
 
   // Parallax status
-  drawText(`[P] Parallax: ${parallaxEnabled ? "ON" : "OFF"}`, {
-    x: hudOffsetX + 8 * scale,
-    y: hudOffsetY + yOff * scale,
-    size: 8 * scale,
+  drawText(`[P] Parallax: ${parallaxEnabled ? "ON" : "OFF"}`, hudOffsetX + 8 * scale, hudOffsetY + yOff * scale, {
+    scale: 8 * scale,
+    layer: 200,
   });
   yOff += 16;
 
   // Cursor info
-  drawText(`Cursor: (${cursorGX}, ${cursorGY})`, {
-    x: hudOffsetX + 8 * scale,
-    y: hudOffsetY + yOff * scale,
-    size: 8 * scale,
+  drawText(`Cursor: (${cursorGX}, ${cursorGY})`, hudOffsetX + 8 * scale, hudOffsetY + yOff * scale, {
+    scale: 8 * scale,
+    layer: 200,
   });
   yOff += 12;
 
@@ -412,38 +408,33 @@ onFrame(() => {
   const decoProp = getTilePropertyAt(map, "decoration", cursorGX, cursorGY, "name");
   const walkable = getTilePropertyAt(map, "collision", cursorGX, cursorGY, "solid");
 
-  drawText(`Ground: ${groundProp ?? "empty"}`, {
-    x: hudOffsetX + 8 * scale,
-    y: hudOffsetY + yOff * scale,
-    size: 8 * scale,
+  drawText(`Ground: ${groundProp ?? "empty"}`, hudOffsetX + 8 * scale, hudOffsetY + yOff * scale, {
+    scale: 8 * scale,
+    layer: 200,
   });
   yOff += 12;
-  drawText(`Wall: ${wallProp ?? "empty"}`, {
-    x: hudOffsetX + 8 * scale,
-    y: hudOffsetY + yOff * scale,
-    size: 8 * scale,
+  drawText(`Wall: ${wallProp ?? "empty"}`, hudOffsetX + 8 * scale, hudOffsetY + yOff * scale, {
+    scale: 8 * scale,
+    layer: 200,
   });
   yOff += 12;
-  drawText(`Deco: ${decoProp ?? "empty"}`, {
-    x: hudOffsetX + 8 * scale,
-    y: hudOffsetY + yOff * scale,
-    size: 8 * scale,
+  drawText(`Deco: ${decoProp ?? "empty"}`, hudOffsetX + 8 * scale, hudOffsetY + yOff * scale, {
+    scale: 8 * scale,
+    layer: 200,
   });
   yOff += 12;
-  drawText(`Solid: ${walkable === true ? "YES" : "no"}`, {
-    x: hudOffsetX + 8 * scale,
-    y: hudOffsetY + yOff * scale,
-    size: 8 * scale,
-    color: walkable ? { r: 1, g: 0.3, b: 0.3, a: 1 } : { r: 0.5, g: 1, b: 0.5, a: 1 },
+  drawText(`Solid: ${walkable === true ? "YES" : "no"}`, hudOffsetX + 8 * scale, hudOffsetY + yOff * scale, {
+    scale: 8 * scale,
+    layer: 200,
+    tint: walkable ? { r: 1, g: 0.3, b: 0.3, a: 1 } : { r: 0.5, g: 1, b: 0.5, a: 1 },
   });
   yOff += 16;
 
   // Controls
-  drawText("Arrows=Camera Z/X=Zoom WASD=Cursor", {
-    x: hudOffsetX + 8 * scale,
-    y: hudOffsetY + (vpH / cam.zoom - 24) * scale,
-    size: 7 * scale,
-    color: { r: 0.7, g: 0.7, b: 0.7, a: 1 },
+  drawText("Arrows=Camera Z/X=Zoom WASD=Cursor", hudOffsetX + 8 * scale, hudOffsetY + (vpH / cam.zoom - 24) * scale, {
+    scale: 7 * scale,
+    layer: 200,
+    tint: { r: 0.7, g: 0.7, b: 0.7, a: 1 },
   });
 });
 
