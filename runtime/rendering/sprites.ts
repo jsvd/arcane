@@ -59,6 +59,13 @@ export function drawSprite(opts: SpriteOptions): void {
   const flipX = opts.flipX ? 1 : 0;
   const flipY = opts.flipY ? 1 : 0;
   const opacity = opts.opacity ?? 1;
+  const blendModeMap: Record<string, number> = {
+    alpha: 0,
+    additive: 1,
+    multiply: 2,
+    screen: 3,
+  };
+  const blendMode = blendModeMap[opts.blendMode ?? "alpha"] ?? 0;
 
   (globalThis as any).Deno.core.ops.op_draw_sprite(
     texId,
@@ -81,6 +88,7 @@ export function drawSprite(opts: SpriteOptions): void {
     flipX,
     flipY,
     opacity,
+    blendMode,
   );
 }
 

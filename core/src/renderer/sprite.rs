@@ -6,6 +6,12 @@ use super::gpu::GpuContext;
 use super::lighting::LightingUniform;
 use super::texture::TextureStore;
 
+/// Blend mode constants. Matches TS enum order.
+pub const BLEND_ALPHA: u8 = 0;
+pub const BLEND_ADDITIVE: u8 = 1;
+pub const BLEND_MULTIPLY: u8 = 2;
+pub const BLEND_SCREEN: u8 = 3;
+
 /// A sprite draw command queued from TypeScript.
 #[derive(Debug, Clone)]
 pub struct SpriteCommand {
@@ -29,6 +35,7 @@ pub struct SpriteCommand {
     pub flip_x: bool,
     pub flip_y: bool,
     pub opacity: f32,
+    pub blend_mode: u8,
 }
 
 /// Per-vertex data for the unit quad.
@@ -69,8 +76,54 @@ const QUAD_VERTICES: &[QuadVertex] = &[
 
 const QUAD_INDICES: &[u16] = &[0, 1, 2, 0, 2, 3];
 
+/// Get the wgpu BlendState for each blend mode.
+fn blend_state_for(mode: u8) -> wgpu::BlendState {
+    use wgpu::{BlendComponent, BlendFactor, BlendOperation};
+    match mode {
+        BLEND_ALPHA => wgpu::BlendState::ALPHA_BLENDING,
+        BLEND_ADDITIVE => wgpu::BlendState {
+            color: BlendComponent {
+                src_factor: BlendFactor::SrcAlpha,
+                dst_factor: BlendFactor::One,
+                operation: BlendOperation::Add,
+            },
+            alpha: BlendComponent {
+                src_factor: BlendFactor::One,
+                dst_factor: BlendFactor::One,
+                operation: BlendOperation::Add,
+            },
+        },
+        BLEND_MULTIPLY => wgpu::BlendState {
+            color: BlendComponent {
+                src_factor: BlendFactor::Dst,
+                dst_factor: BlendFactor::OneMinusSrcAlpha,
+                operation: BlendOperation::Add,
+            },
+            alpha: BlendComponent {
+                src_factor: BlendFactor::DstAlpha,
+                dst_factor: BlendFactor::OneMinusSrcAlpha,
+                operation: BlendOperation::Add,
+            },
+        },
+        BLEND_SCREEN => wgpu::BlendState {
+            color: BlendComponent {
+                src_factor: BlendFactor::One,
+                dst_factor: BlendFactor::OneMinusSrc,
+                operation: BlendOperation::Add,
+            },
+            alpha: BlendComponent {
+                src_factor: BlendFactor::One,
+                dst_factor: BlendFactor::OneMinusSrcAlpha,
+                operation: BlendOperation::Add,
+            },
+        },
+        _ => wgpu::BlendState::ALPHA_BLENDING, // unknown → default to alpha
+    }
+}
+
 pub struct SpritePipeline {
-    pipeline: wgpu::RenderPipeline,
+    /// One pipeline per blend mode: [alpha, additive, multiply, screen]
+    pipelines: [wgpu::RenderPipeline; 4],
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     camera_buffer: wgpu::Buffer,
@@ -215,39 +268,47 @@ impl SpritePipeline {
             ],
         };
 
-        let pipeline = gpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("sprite_pipeline"),
-            layout: Some(&pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: Some("vs_main"),
-                buffers: &[vertex_layout, instance_layout],
-                compilation_options: Default::default(),
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: Some("fs_main"),
-                targets: &[Some(wgpu::ColorTargetState {
-                    format: gpu.config.format,
-                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
-                compilation_options: Default::default(),
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                strip_index_format: None,
-                front_face: wgpu::FrontFace::Ccw,
-                cull_mode: None,
-                polygon_mode: wgpu::PolygonMode::Fill,
-                unclipped_depth: false,
-                conservative: false,
-            },
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState::default(),
-            multiview: None,
-            cache: None,
-        });
+        // Create one pipeline per blend mode
+        let blend_names = ["alpha", "additive", "multiply", "screen"];
+        let pipelines: Vec<wgpu::RenderPipeline> = (0..4u8)
+            .map(|mode| {
+                gpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                    label: Some(&format!("sprite_pipeline_{}", blend_names[mode as usize])),
+                    layout: Some(&pipeline_layout),
+                    vertex: wgpu::VertexState {
+                        module: &shader,
+                        entry_point: Some("vs_main"),
+                        buffers: &[vertex_layout.clone(), instance_layout.clone()],
+                        compilation_options: Default::default(),
+                    },
+                    fragment: Some(wgpu::FragmentState {
+                        module: &shader,
+                        entry_point: Some("fs_main"),
+                        targets: &[Some(wgpu::ColorTargetState {
+                            format: gpu.config.format,
+                            blend: Some(blend_state_for(mode)),
+                            write_mask: wgpu::ColorWrites::ALL,
+                        })],
+                        compilation_options: Default::default(),
+                    }),
+                    primitive: wgpu::PrimitiveState {
+                        topology: wgpu::PrimitiveTopology::TriangleList,
+                        strip_index_format: None,
+                        front_face: wgpu::FrontFace::Ccw,
+                        cull_mode: None,
+                        polygon_mode: wgpu::PolygonMode::Fill,
+                        unclipped_depth: false,
+                        conservative: false,
+                    },
+                    depth_stencil: None,
+                    multisample: wgpu::MultisampleState::default(),
+                    multiview: None,
+                    cache: None,
+                })
+            })
+            .collect();
+
+        let pipelines: [wgpu::RenderPipeline; 4] = pipelines.try_into().unwrap();
 
         let vertex_buffer = gpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("quad_vertex_buffer"),
@@ -306,7 +367,7 @@ impl SpritePipeline {
         });
 
         Self {
-            pipeline,
+            pipelines,
             vertex_buffer,
             index_buffer,
             camera_buffer,
@@ -317,7 +378,8 @@ impl SpritePipeline {
         }
     }
 
-    /// Render a sorted list of sprite commands. Commands should be sorted by layer then texture_id.
+    /// Render a sorted list of sprite commands.
+    /// Commands should be sorted by layer → blend_mode → texture_id.
     pub fn render(
         &self,
         gpu: &GpuContext,
@@ -361,21 +423,31 @@ impl SpritePipeline {
             occlusion_query_set: None,
         });
 
-        render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
         render_pass.set_bind_group(2, &self.lighting_bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 
-        // Batch by texture_id
+        // Batch by blend_mode + texture_id (commands pre-sorted)
+        let mut current_blend: Option<u8> = None;
         let mut i = 0;
         while i < commands.len() {
+            let blend = commands[i].blend_mode.min(3);
             let tex_id = commands[i].texture_id;
             let batch_start = i;
-            while i < commands.len() && commands[i].texture_id == tex_id {
+            while i < commands.len()
+                && commands[i].blend_mode.min(3) == blend
+                && commands[i].texture_id == tex_id
+            {
                 i += 1;
             }
             let batch = &commands[batch_start..i];
+
+            // Switch pipeline when blend mode changes
+            if current_blend != Some(blend) {
+                render_pass.set_pipeline(&self.pipelines[blend as usize]);
+                current_blend = Some(blend);
+            }
 
             // Get texture bind group
             let bind_group = match textures.get_bind_group(tex_id) {

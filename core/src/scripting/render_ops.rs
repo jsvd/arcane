@@ -123,6 +123,7 @@ pub fn op_draw_sprite(
     flip_x: f64,
     flip_y: f64,
     opacity: f64,
+    blend_mode: f64,
 ) {
     let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
     bridge.borrow_mut().sprite_commands.push(SpriteCommand {
@@ -146,6 +147,7 @@ pub fn op_draw_sprite(
         flip_x: flip_x != 0.0,
         flip_y: flip_y != 0.0,
         opacity: opacity as f32,
+        blend_mode: (blend_mode as u8).min(3),
     });
 }
 

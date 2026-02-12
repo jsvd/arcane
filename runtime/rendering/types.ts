@@ -49,6 +49,14 @@ export type SpriteOptions = {
   flipY?: boolean;
   /** Opacity 0-1, multiplied with tint alpha. Default: 1 (fully opaque). */
   opacity?: number;
+  /**
+   * Blend mode for compositing. Default: "alpha".
+   * - "alpha": standard transparency (src * srcA + dst * (1 - srcA))
+   * - "additive": glow/fire/particles (src * srcA + dst)
+   * - "multiply": shadows/darkening (src * dst)
+   * - "screen": highlights/lightening (src + dst * (1 - src))
+   */
+  blendMode?: "alpha" | "additive" | "multiply" | "screen";
 };
 
 /** Camera state returned by {@link getCamera}. */

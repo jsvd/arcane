@@ -65,9 +65,12 @@ impl Renderer {
             &wgpu::CommandEncoderDescriptor { label: Some("frame_encoder") },
         );
 
-        // Sort by layer, then by texture for batching
+        // Sort by layer → blend_mode → texture_id for batching
         self.frame_commands.sort_by(|a, b| {
-            a.layer.cmp(&b.layer).then(a.texture_id.cmp(&b.texture_id))
+            a.layer
+                .cmp(&b.layer)
+                .then(a.blend_mode.cmp(&b.blend_mode))
+                .then(a.texture_id.cmp(&b.texture_id))
         });
 
         let lighting_uniform = self.lighting.to_uniform();

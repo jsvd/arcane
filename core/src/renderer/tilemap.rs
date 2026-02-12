@@ -118,6 +118,7 @@ impl Tilemap {
                     flip_x: false,
                     flip_y: false,
                     opacity: 1.0,
+                    blend_mode: 0,
                 });
             }
         }
