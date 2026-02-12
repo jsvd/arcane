@@ -581,49 +581,7 @@ Sprite rendering system extended with rotation, advanced blending, custom shader
 
 ---
 
-## Phase 13: Community Building
-
-**Status: Planned**
-
-Now that packages are published, focus on adoption and ecosystem growth.
-
-### Deliverables
-- [ ] **Announcements**
-  - [ ] Show HN post with demo links
-  - [ ] Reddit posts (r/gamedev, r/programming, r/rust, r/typescript)
-  - [ ] Twitter/X thread with feature highlights
-  - [ ] Blog post: "Building an AI-Native Game Engine"
-- [ ] **Community Channels**
-  - [ ] Discord server setup (channels: general, showcase, recipes, support)
-  - [ ] GitHub Discussions enabled
-  - [ ] Community guidelines and moderation
-- [ ] **Content Creation**
-  - [ ] Video walkthrough: "Build Your First Game with Arcane"
-  - [ ] Blog series: deep dives into architecture decisions
-  - [ ] Tutorial videos for each recipe
-  - [ ] Showcase community-built games
-- [ ] **Community Engagement**
-  - [ ] Respond to GitHub issues within 48h
-  - [ ] Review and merge community PRs
-  - [ ] Featured game of the week on Discord
-  - [ ] Monthly community calls (share roadmap, demo new features)
-- [ ] **Documentation Improvements**
-  - [ ] FAQ based on common questions
-  - [ ] Troubleshooting guide
-  - [ ] Migration guides (version upgrades)
-  - [ ] Performance optimization guide
-
-### Success Criteria
-- [ ] 100+ GitHub stars in first month
-- [ ] 10+ community members in Discord
-- [ ] 3+ community-contributed recipes
-- [ ] 5+ games built by community (not just demos)
-- [ ] Active discussion on GitHub/Discord
-- [ ] Positive sentiment in announcements (upvotes, comments)
-
----
-
-## Phase 14: Camera Polish
+## Phase 13: Camera Polish
 
 **Status: Planned**
 
@@ -662,7 +620,7 @@ Complete the camera system with features expected in a modern 2D engine.
 
 ---
 
-## Phase 15: Tilemap Polish
+## Phase 14: Tilemap Polish
 
 **Status: Planned**
 
@@ -671,7 +629,7 @@ Extend the tilemap system with layers, auto-tiling, and non-orthogonal grids.
 ### Deliverables
 - [ ] **Multiple tilemap layers** (`runtime/rendering/tilemap.ts`)
   - [ ] Background, midground, foreground layers
-  - [ ] Per-layer parallax scrolling (uses Phase 14 parallax infrastructure)
+  - [ ] Per-layer parallax scrolling (uses Phase 13 parallax infrastructure)
   - [ ] Collision layer (separate from visual layers)
   - [ ] Layer visibility toggle
 - [ ] **Auto-tiling** (`runtime/rendering/autotile.ts`)
@@ -703,7 +661,7 @@ Extend the tilemap system with layers, auto-tiling, and non-orthogonal grids.
 
 ---
 
-## Phase 16: Animation Polish
+## Phase 15: Animation Polish
 
 **Status: Planned**
 
@@ -728,7 +686,7 @@ Complete the animation system with state machines, blending, and events.
 
 ---
 
-## Phase 17: Interactive UI
+## Phase 16: Interactive UI
 
 **Status: Planned**
 
@@ -762,7 +720,7 @@ Make UI interactive (not just draw-only). Buttons, text input, layout system.
 
 ---
 
-## Phase 18: Audio Polish
+## Phase 17: Audio Polish
 
 **Status: Planned**
 
@@ -795,7 +753,7 @@ Complete the audio system with spatial audio, mixing, and effects.
 
 ---
 
-## Phase 19: Input Systems
+## Phase 18: Input Systems
 
 **Status: Planned**
 
@@ -828,6 +786,48 @@ Expand platform input beyond keyboard/mouse with gamepad, touch, and an action m
 - [ ] Touch input works (test on mobile browser)
 - [ ] Input mapping allows rebinding at runtime
 - [ ] 40+ tests for input mapping and gesture detection
+
+---
+
+## Phase 19: Community Building
+
+**Status: Planned**
+
+Focus on adoption, ecosystem growth, and documentation polish. Can run in parallel with engineering phases.
+
+### Deliverables
+- [ ] **Announcements**
+  - [ ] Show HN post with demo links
+  - [ ] Reddit posts (r/gamedev, r/programming, r/rust, r/typescript)
+  - [ ] Twitter/X thread with feature highlights
+  - [ ] Blog post: "Building an AI-Native Game Engine"
+- [ ] **Community Channels**
+  - [ ] Discord server setup (channels: general, showcase, recipes, support)
+  - [ ] GitHub Discussions enabled
+  - [ ] Community guidelines and moderation
+- [ ] **Content Creation**
+  - [ ] Video walkthrough: "Build Your First Game with Arcane"
+  - [ ] Blog series: deep dives into architecture decisions
+  - [ ] Tutorial videos for each recipe
+  - [ ] Showcase community-built games
+- [ ] **Community Engagement**
+  - [ ] Respond to GitHub issues within 48h
+  - [ ] Review and merge community PRs
+  - [ ] Featured game of the week on Discord
+  - [ ] Monthly community calls (share roadmap, demo new features)
+- [ ] **Documentation Improvements**
+  - [ ] FAQ based on common questions
+  - [ ] Troubleshooting guide
+  - [ ] Migration guides (version upgrades)
+  - [ ] Performance optimization guide
+
+### Success Criteria
+- [ ] 100+ GitHub stars in first month
+- [ ] 10+ community members in Discord
+- [ ] 3+ community-contributed recipes
+- [ ] 5+ games built by community (not just demos)
+- [ ] Active discussion on GitHub/Discord
+- [ ] Positive sentiment in announcements (upvotes, comments)
 
 ---
 

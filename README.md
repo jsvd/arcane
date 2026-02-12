@@ -118,7 +118,7 @@ All packages published and ready to use:
 - ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
 - ✅ Example projects (Sokoban, Breakout, Tower Defense, BFRPG dungeon crawler, Physics Playground, Menu Flow, Asteroids)
 
-**Next:** Phase 13 (Community Building).
+**Next:** Phase 13 (Camera Polish).
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 
