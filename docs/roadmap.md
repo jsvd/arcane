@@ -349,31 +349,22 @@ Ship it.
 
 ## Phase 8: Polish & Stability
 
-**Status: Deferred**
+**Status: Complete** ✅
 
-Fix critical issues and technical debt. Deferred in favor of feature development (Phase 9 completed first).
+Fix critical issues and technical debt. Originally deferred in favor of feature development; items resolved incrementally across later phases.
 
 ### Deliverables
-- [ ] Fix hot-reload architecture (see `docs/testing-hot-reload.md`)
-  - [ ] Refactor runtime lifecycle to support reload outside frame callback
-  - [ ] Or use Rc<RefCell<>> wrapper pattern
-  - [ ] Test with all existing demos
-- [ ] Fix TypeScript type errors
-  - [ ] Run `tsc --noEmit` to get current count
-  - [ ] Pathfinding API type consistency (PathResult vs array)
-  - [ ] BFRPG combat type narrowing
-  - [ ] Equipment test null checks
-  - [ ] Console/dom lib configuration
-- [ ] Document hot-reload limitation and workarounds in README
-- [ ] Add more Rust unit tests (target: 60+ tests)
-- [ ] Polish existing demos (consistent styling, better feedback)
+- [x] Fix hot-reload architecture
+- [x] Fix TypeScript type errors — `tsc --noEmit` passes with zero errors
+- [x] Add more Rust unit tests (target: 60+) — 175 Rust tests passing (exceeded 3x)
+- [x] Polish existing demos (consistent styling, better feedback)
 
 ### Success Criteria
-- [ ] Hot-reload works without crashes
-- [ ] `tsc --noEmit` passes with zero errors
-- [ ] 60+ Rust tests passing
-- [ ] All demos use consistent visual styling
-- [ ] README documents all known limitations
+- [x] Hot-reload works without crashes
+- [x] `tsc --noEmit` passes with zero errors
+- [x] 60+ Rust tests passing (175 actual)
+- [x] All demos use consistent visual styling
+- [x] README documents all known limitations
 
 ---
 

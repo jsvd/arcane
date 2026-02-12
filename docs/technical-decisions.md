@@ -471,18 +471,21 @@ The homebrew approach follows the same pattern as every other Arcane subsystem:
 
 Key reference: Erin Catto's GDC talks on sequential impulse solvers (the algorithm behind Box2D).
 
-### What We Build
+### What We Built
 - Shapes: circle, AABB, convex polygon
 - Integrator: semi-implicit Euler
 - Broad phase: spatial hash grid
 - Narrow phase: SAT (Separating Axis Theorem) for all shape pairs
-- Resolution: sequential impulse solver with restitution + friction
+- Resolution: sequential impulse solver with accumulated impulses (Box2D-style clamping)
+- Warm starting: cached impulses from previous frame, 0.95 scale factor
+- Pre-computed solver data: restitution velocity bias + friction tangent computed once per frame (not per-iteration)
 - Constraints: distance joint, revolute joint
-- Sleep system: velocity threshold + timer
+- Sleep system: island-based sleeping via union-find (all connected dynamic bodies sleep/wake together)
 - Collision layers/masks
+- Sleeping flag exposed to JS API
 
 ### What We Skip (can add later if needed)
 - Continuous collision detection (add if tunneling becomes a problem)
 - Compound shapes (use multiple bodies instead)
-- Island solver optimization (overkill under 1000 bodies)
+- Island solver (solve each island independently for parallelism — overkill under 1000 bodies)
 - Prismatic/weld joints (add when a demo needs them)
