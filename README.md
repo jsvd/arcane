@@ -96,7 +96,7 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phase 9.5 complete (Standalone Install + LLM Dev Experience)!** 🎉
+**Phase 10 complete (Scene Management + Save/Load)!** 🎉
 
 All packages published and ready to use:
 - **npm**: [@arcane-engine/runtime@0.3.0](https://www.npmjs.com/package/@arcane-engine/runtime), [@arcane-engine/create@0.3.0](https://www.npmjs.com/package/@arcane-engine/create)
@@ -104,15 +104,17 @@ All packages published and ready to use:
 
 **Current features:**
 - ✅ Core engine: rendering, physics, audio, text, UI, animation, pathfinding, tweening, particles
+- ✅ Scene management: scene stack, transitions, lifecycle hooks
+- ✅ Save/load: serialization, schema migrations, auto-save, file I/O ops
 - ✅ Recipe framework with 4 recipes (turn-based combat, inventory, grid movement, fog of war)
 - ✅ Agent protocol (HTTP inspector, describe/inspect commands)
 - ✅ Standalone install: `cargo install arcane-cli` just works
 - ✅ Built-in asset discovery: 25 free CC0 packs with search, download, and extraction
-- ✅ 1022 TS tests + 79 Rust tests passing
+- ✅ 1262 TS tests + 98 Rust tests passing
 - ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
-- ✅ Example projects (Sokoban, Tower Defense, BFRPG dungeon crawler, Juice Showcase)
+- ✅ Example projects (Sokoban, Tower Defense, BFRPG dungeon crawler, Juice Showcase, Menu Flow)
 
-**Next:** Phase 10 (Scene Management + Save/Load) — Scene system with transitions, save/load with schema migration, menu flow demo.
+**Next:** Phase 11 (Physics System) — Rigid body physics, constraints, broad-phase optimization.
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 

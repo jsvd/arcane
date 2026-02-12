@@ -4,7 +4,7 @@
 
 Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for performance, TypeScript scripting for game logic.
 
-**Current status: Phase 9.5 (Standalone Install + LLM Dev Experience) COMPLETE ✅ — `cargo install arcane-cli` works end-to-end, templates/recipes embedded in binary, runtime resolves from node_modules. 1022 TS + 79 Rust tests passing. Next: Phase 10 (Scene Management + Save/Load).**
+**Current status: Phase 10 (Scene Management + Save/Load) COMPLETE ✅ — Scene stack with transitions, save/load with schema migrations, file I/O ops, menu flow demo. 1262 TS + 98 Rust tests passing. Next: Phase 11 (Physics System).**
 
 ## Repository Structure
 
@@ -114,6 +114,16 @@ arcane/
 │   │   ├── types.ts               — Rule, SystemDef, RuleResult, ExtendOptions
 │   │   ├── system.ts              — system(), rule(), applyRule(), extend()
 │   │   └── index.ts               — Barrel export
+│   ├── scenes/
+│   │   ├── types.ts               — SceneContext, SceneDef, SceneInstance, TransitionConfig
+│   │   ├── scene.ts               — createScene(), pushScene(), popScene(), replaceScene(), startSceneManager()
+│   │   └── index.ts               — Barrel export
+│   ├── persistence/
+│   │   ├── types.ts               — SaveMetadata, SaveFile, Migration, StorageBackend
+│   │   ├── storage.ts             — createMemoryStorage(), createFileStorage()
+│   │   ├── save.ts                — serialize(), deserialize(), saveGame(), loadGame(), migrations
+│   │   ├── autosave.ts            — enableAutoSave(), updateAutoSave(), triggerAutoSave()
+│   │   └── index.ts               — Barrel export
 │   └── agent/
 │       ├── types.ts               — AgentConfig, ActionInfo, DescribeOptions, etc.
 │       ├── protocol.ts            — registerAgent(), AgentProtocol on globalThis
@@ -128,7 +138,8 @@ arcane/
 │   ├── platformer/                — Phase 4 demo: gravity, platforms, coins, text HUD, UI bars
 │   ├── tower-defense/             — Phase 5 demo: tower placement, enemy waves, pathfinding
 │   ├── sprite-demo/               — Phase 5.5 demo: asset loading validation with sprite sheet + sound
-│   └── bfrpg-crawler/             — Phase 6 demo: BFRPG dungeon crawler with character creation, combat, AI
+│   ├── bfrpg-crawler/             — Phase 6 demo: BFRPG dungeon crawler with character creation, combat, AI
+│   └── menu-flow/                 — Phase 10 demo: scene management, save/load, menu flow
 ├── recipes/
 │   ├── turn-based-combat/         — Initiative, attack/defend, victory detection
 │   ├── inventory-equipment/       — Items, stacking, weight, equipment slots, stat bonuses

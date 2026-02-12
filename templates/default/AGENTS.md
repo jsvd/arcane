@@ -268,7 +268,92 @@ File organization: `src/game.ts` (logic), `src/visual.ts` (rendering), `src/*.te
 
 Read `types/arcane.d.ts` for the complete API with JSDoc documentation. Always check it before using an unfamiliar function.
 
-All module imports: `@arcane/runtime/state`, `@arcane/runtime/rendering`, `@arcane/runtime/ui`, `@arcane/runtime/physics`, `@arcane/runtime/pathfinding`, `@arcane/runtime/tweening`, `@arcane/runtime/particles`, `@arcane/runtime/systems`, `@arcane/runtime/agent`, `@arcane/runtime/testing`.
+All module imports: `@arcane/runtime/state`, `@arcane/runtime/rendering`, `@arcane/runtime/ui`, `@arcane/runtime/physics`, `@arcane/runtime/pathfinding`, `@arcane/runtime/tweening`, `@arcane/runtime/particles`, `@arcane/runtime/systems`, `@arcane/runtime/scenes`, `@arcane/runtime/persistence`, `@arcane/runtime/agent`, `@arcane/runtime/testing`.
+
+## Scenes
+
+Use the scene manager for multi-screen games (title, menu, gameplay, pause, game over). Import from `@arcane/runtime/scenes`.
+
+```typescript
+import {
+  createScene, createSceneInstance, startSceneManager,
+  pushScene, popScene, replaceScene, getActiveScene,
+} from "@arcane/runtime/scenes";
+
+// Define a scene with typed state
+const GameScene = createScene<{ score: number }>({
+  name: "game",
+  create: () => ({ score: 0 }),
+  onEnter: (state, ctx) => state,           // called once when pushed/replaced
+  onUpdate: (state, dt, ctx) => state,      // called every frame (return new state)
+  onRender: (state, ctx) => { /* draw */ },  // called every frame after update
+  onPause: (state) => state,                 // called when another scene pushes on top
+  onResume: (state, ctx) => state,           // called when the scene above pops
+  onExit: (state) => {},                     // called when popped/replaced
+});
+
+// Start the scene manager (takes ownership of onFrame)
+startSceneManager(createSceneInstance(GameScene), {
+  onUpdate: (dt) => { updateTweens(dt); updateParticles(dt); },
+});
+
+// Navigate between scenes from within callbacks via ctx:
+// ctx.push(instance, transition?)  — push on top (current pauses)
+// ctx.pop(transition?)             — pop current (previous resumes)
+// ctx.replace(instance, transition?) — swap current for new
+// ctx.getData<T>()                 — get data passed to createSceneInstance
+
+// Transitions: { type: "fade", duration: 0.3, color: { r: 0, g: 0, b: 0 } }
+// Use { type: "none" } for instant transitions (e.g., pause overlay)
+```
+
+**Scene stack**: push adds on top (current pauses), pop removes top (previous resumes), replace swaps top. Pause overlays use push + pop with `{ type: "none" }` transition.
+
+**Data passing**: `createSceneInstance(SceneDef, data)` — access via `ctx.getData<T>()` inside callbacks. Use for passing scores, loaded state, etc. between scenes.
+
+## Save/Load
+
+Persist game state with schema migration support. Import from `@arcane/runtime/persistence`.
+
+```typescript
+import {
+  configureSaveSystem, saveGame, loadGame, hasSave, deleteSave, listSaves,
+  enableAutoSave, disableAutoSave, updateAutoSave,
+} from "@arcane/runtime/persistence";
+import { createFileStorage } from "@arcane/runtime/persistence/storage";
+
+// Configure (call once at startup)
+configureSaveSystem({ storage: createFileStorage(), version: 1 });
+
+// Save
+saveGame(gameState, { slot: "save1", label: "Level 3" });
+
+// Load
+const result = loadGame<GameState>("save1");
+if (result.ok) {
+  gameState = result.state!;
+}
+
+// Check / list / delete
+if (hasSave("save1")) { /* ... */ }
+const saves = listSaves();  // SaveMetadata[] sorted by timestamp desc
+deleteSave("save1");
+
+// Auto-save (call updateAutoSave(dt) each frame)
+enableAutoSave({ getState: () => gameState, interval: 30, options: { slot: "autosave" } });
+// In onFrame or scene manager onUpdate:
+updateAutoSave(dt);
+```
+
+**Schema migrations** — handle save format changes between versions:
+```typescript
+configureSaveSystem({ version: 2 });
+registerMigration({
+  version: 2, description: "Add inventory",
+  up: (data: any) => ({ ...data, inventory: [] }),
+});
+// Old v1 saves are automatically migrated to v2 on load
+```
 
 ## Tips
 
