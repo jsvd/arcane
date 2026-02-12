@@ -86,12 +86,18 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
 
     // Frame callback: sync input → call TS → collect sprite commands
     let frame_callback = Box::new(move |state: &mut RenderState| -> Result<()> {
-        // Sync viewport (logical pixels), scale factor, and clear color between renderer and bridge
+        // Sync viewport (logical pixels), scale factor, and clear color between renderer and bridge.
+        // Also sync the renderer's clamped camera position back to the bridge so that
+        // getCamera() returns the position the GPU actually rendered with (after bounds clamping),
+        // not the unclamped position TS requested. Without this, screenToWorld() computes
+        // wrong world coordinates whenever camera bounds clamp the position.
         if let Some(ref mut renderer) = state.renderer {
             let mut bridge = bridge_for_loop.borrow_mut();
             bridge.viewport_width = renderer.camera.viewport_size[0];
             bridge.viewport_height = renderer.camera.viewport_size[1];
             bridge.scale_factor = renderer.scale_factor;
+            bridge.camera_x = renderer.camera.x;
+            bridge.camera_y = renderer.camera.y;
             // Sync clear color from bridge → renderer (TS can set it via op)
             renderer.clear_color = bridge.clear_color;
         }
