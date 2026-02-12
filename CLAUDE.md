@@ -4,7 +4,7 @@
 
 Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for performance, TypeScript scripting for game logic.
 
-**Current status: Phase 10 (Scene Management + Save/Load) COMPLETE ✅ — Scene stack with transitions, save/load with schema migrations, file I/O ops, menu flow demo. 1262 TS + 98 Rust tests passing. Next: Phase 11 (Physics System).**
+**Current status: Phase 11 (Physics System) COMPLETE ✅ — Homebrew Rust physics engine with rigid bodies, SAT collision, sequential impulse solver, joints, sleep system. 984 TS + 175 Rust tests passing. Next: Phase 12 (ECS / Performance).**
 
 ## Repository Structure
 
@@ -38,7 +38,18 @@ arcane/
 │   │   │   ├── module_loader.rs   — TsModuleLoader: TS transpilation via deno_ast
 │   │   │   ├── runtime.rs         — ArcaneRuntime: V8 + module loader + crypto polyfill
 │   │   │   ├── test_runner.rs     — V8 test runner with #[op2] result reporting
-│   │   │   └── render_ops.rs      — #[op2] ops: sprites, camera, tilemap, lighting, input, audio, font, viewport
+│   │   │   ├── render_ops.rs      — #[op2] ops: sprites, camera, tilemap, lighting, input, audio, font, viewport
+│   │   │   └── physics_ops.rs    — #[op2] ops: physics world, bodies, constraints, queries (NOT feature-gated)
+│   │   ├── physics/               — Homebrew rigid body physics (NOT feature-gated)
+│   │   │   ├── mod.rs             — Module declarations
+│   │   │   ├── types.rs           — RigidBody, Shape, Material, Contact, Constraint
+│   │   │   ├── integrate.rs       — Semi-implicit Euler integration
+│   │   │   ├── broadphase.rs      — Spatial hash grid
+│   │   │   ├── narrowphase.rs     — SAT collision detection (all shape pairs)
+│   │   │   ├── resolve.rs         — Sequential impulse solver
+│   │   │   ├── constraints.rs     — Distance + revolute joint solving
+│   │   │   ├── sleep.rs           — Sleep system (velocity threshold + timer)
+│   │   │   └── world.rs           — PhysicsWorld: fixed timestep, body storage, queries, raycast
 │   │   ├── renderer/              — [feature = "renderer"]
 │   │   │   ├── mod.rs             — Renderer: owns GPU, sprite pipeline, textures, lighting
 │   │   │   ├── gpu.rs             — GpuContext: wgpu device/surface/pipeline setup
@@ -88,7 +99,12 @@ arcane/
 │   │   └── index.ts               — Public API barrel export
 │   ├── physics/
 │   │   ├── aabb.ts                — AABB type, aabbOverlap(), circleAABBOverlap/Resolve()
-│   │   └── index.ts               — Barrel export
+│   │   ├── types.ts               — BodyId, BodyDef, ShapeDef, MaterialDef, BodyState, Contact, RayHit
+│   │   ├── world.ts               — createPhysicsWorld(), stepPhysics(), destroyPhysicsWorld()
+│   │   ├── body.ts                — createBody(), removeBody(), getBodyState(), setBodyVelocity(), applyForce/Impulse()
+│   │   ├── constraints.ts         — createDistanceJoint(), createRevoluteJoint(), removeConstraint()
+│   │   ├── query.ts               — queryAABB(), raycast(), getContacts()
+│   │   └── index.ts               — Barrel export (aabb helpers + physics engine API)
 │   ├── rendering/
 │   │   ├── types.ts               — TextureId, SpriteOptions, CameraState, TilemapId
 │   │   ├── sprites.ts             — drawSprite(), clearSprites()
@@ -139,7 +155,8 @@ arcane/
 │   ├── tower-defense/             — Phase 5 demo: tower placement, enemy waves, pathfinding
 │   ├── sprite-demo/               — Phase 5.5 demo: asset loading validation with sprite sheet + sound
 │   ├── bfrpg-crawler/             — Phase 6 demo: BFRPG dungeon crawler with character creation, combat, AI
-│   └── menu-flow/                 — Phase 10 demo: scene management, save/load, menu flow
+│   ├── menu-flow/                 — Phase 10 demo: scene management, save/load, menu flow
+│   └── physics-playground/        — Phase 11 demo: rigid body physics sandbox
 ├── recipes/
 │   ├── turn-based-combat/         — Initiative, attack/defend, victory detection
 │   ├── inventory-equipment/       — Items, stacking, weight, equipment slots, stat bonuses

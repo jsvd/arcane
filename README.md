@@ -96,25 +96,26 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phase 10 complete (Scene Management + Save/Load)!** 🎉
+**Phase 11 complete (Physics System)!** 🎉
 
 All packages published and ready to use:
 - **npm**: [@arcane-engine/runtime@0.4.2](https://www.npmjs.com/package/@arcane-engine/runtime), [@arcane-engine/create@0.4.2](https://www.npmjs.com/package/@arcane-engine/create)
 - **crates.io**: [arcane-engine@0.4.2](https://crates.io/crates/arcane-engine), [arcane-cli@0.4.2](https://crates.io/crates/arcane-cli)
 
 **Current features:**
-- ✅ Core engine: rendering, physics, audio, text, UI, animation, pathfinding, tweening, particles
+- ✅ Core engine: rendering, audio, text, UI, animation, pathfinding, tweening, particles
+- ✅ Rust physics engine: rigid bodies, circle/AABB shapes, spatial hash broadphase, SAT narrowphase, sequential impulse solver, distance + revolute joints, sleep system, raycast, AABB queries
 - ✅ Scene management: scene stack, transitions, lifecycle hooks
 - ✅ Save/load: serialization, schema migrations, auto-save, file I/O ops
 - ✅ Recipe framework with 4 recipes (turn-based combat, inventory, grid movement, fog of war)
 - ✅ Agent protocol (HTTP inspector, describe/inspect commands)
 - ✅ Standalone install: `cargo install arcane-cli` just works
 - ✅ Built-in asset discovery: 25 free CC0 packs with search, download, and extraction
-- ✅ 1262 TS tests + 98 Rust tests passing
+- ✅ 984 TS tests + 175 Rust tests passing
 - ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
-- ✅ Example projects (Sokoban, Tower Defense, BFRPG dungeon crawler, Juice Showcase, Menu Flow)
+- ✅ Example projects (Sokoban, Breakout, Tower Defense, BFRPG dungeon crawler, Physics Playground, Menu Flow)
 
-**Next:** Phase 11 (Physics System) — Rigid body physics, constraints, broad-phase optimization.
+**Next:** Phase 12 (ECS / Performance) — Entity Component System, spatial indexing, batched rendering.
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 

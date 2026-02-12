@@ -207,7 +207,7 @@ describe("Lifecycle order", () => {
     });
     const instance = createSceneInstance(def);
     pushScene(instance, { type: "none" });
-    assert.equal(getActiveScene()!.state.x, 10);
+    assert.equal((getActiveScene()!.state as any).x, 10);
   });
 
   it("onUpdate called each frame with dt", () => {
@@ -321,7 +321,7 @@ describe("State isolation", () => {
     popScene({ type: "none" });
     // a should still have count=2 (from before pause), then update will run
     updateSceneManager(0.016); // a.count = 3
-    assert.equal(getActiveScene()!.state.count, 3);
+    assert.equal((getActiveScene()!.state as any).count, 3);
   });
 
   it("state mutations in onUpdate persist across frames", () => {
@@ -333,7 +333,7 @@ describe("State isolation", () => {
     updateSceneManager(0.016);
     updateSceneManager(0.016);
     updateSceneManager(0.016);
-    assert.equal(getActiveScene()!.state.n, 3);
+    assert.equal((getActiveScene()!.state as any).n, 3);
   });
 
   it("onEnter return value becomes the new state", () => {
@@ -342,7 +342,7 @@ describe("State isolation", () => {
       onEnter: (_s: any, _ctx: SceneContext) => ({ ready: true }),
     });
     pushScene(createSceneInstance(def), { type: "none" });
-    assert.equal(getActiveScene()!.state.ready, true);
+    assert.equal((getActiveScene()!.state as any).ready, true);
   });
 
   it("scene state not shared between instances", () => {

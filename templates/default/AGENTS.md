@@ -128,12 +128,66 @@ const TEX2 = loadTexture("assets/sprite.png");              // image file
 
 **Camera** — `setCamera(x, y, zoom)` sets position and zoom. `followTarget(x, y)` is a convenience wrapper. Call every frame.
 
-**Collision** — Import from `@arcane/runtime/physics`:
+**Collision (simple)** — Import from `@arcane/runtime/physics`:
 ```typescript
 import { aabbOverlap, circleAABBResolve } from "@arcane/runtime/physics";
 if (aabbOverlap(a, b)) { /* AABB vs AABB overlap test */ }
 const normal = circleAABBResolve(cx, cy, radius, box); // returns {nx, ny} or null
 ```
+
+**Physics Engine (rigid body)** — For games that need real physics (platformers, breakout, stacking puzzles):
+```typescript
+import {
+  createPhysicsWorld, stepPhysics, destroyPhysicsWorld,
+  createBody, removeBody, getBodyState,
+  setBodyVelocity, applyForce, applyImpulse,
+  createDistanceJoint, createRevoluteJoint,
+  getContacts, queryAABB, raycast,
+} from "@arcane/runtime/physics";
+
+// 1. Create world with gravity (call once at init)
+createPhysicsWorld({ gravityX: 0, gravityY: 400 });
+
+// 2. Create bodies — shape types: circle, aabb
+const ground = createBody({
+  type: "static",
+  shape: { type: "aabb", halfW: 400, halfH: 20 },
+  x: 400, y: 580,  // position = center of body
+  material: { restitution: 0.3, friction: 0.8 },
+});
+const ball = createBody({
+  type: "dynamic",
+  shape: { type: "circle", radius: 10 },
+  x: 400, y: 100,
+  mass: 1.0,
+  material: { restitution: 0.8, friction: 0.3 },
+});
+
+// 3. In onFrame: step physics, read state, render
+stepPhysics(dt);
+const state = getBodyState(ball); // { x, y, angle, vx, vy, angularVelocity }
+drawSprite({ textureId: TEX, x: state.x - 10, y: state.y - 10, w: 20, h: 20, layer: 1 });
+
+// 4. Apply forces/impulses
+applyImpulse(ball, 0, -200);     // instant velocity change (jump)
+applyForce(ball, 100, 0);         // continuous push (wind)
+setBodyVelocity(ball, 0, 0);      // directly set velocity
+
+// 5. Constraints (joints)
+const joint = createDistanceJoint(bodyA, bodyB, 50); // fixed distance
+const hinge = createRevoluteJoint(bodyA, bodyB, pivotX, pivotY);
+
+// 6. Query contacts for game logic
+for (const c of getContacts()) {
+  if (c.bodyA === ball || c.bodyB === ball) { /* ball hit something */ }
+}
+```
+
+Body types: `"static"` (walls, ground — immovable), `"dynamic"` (affected by forces/gravity), `"kinematic"` (moved by code, pushes dynamic bodies).
+
+Shape types: `{ type: "circle", radius }` or `{ type: "aabb", halfW, halfH }`. Position is always the center of the shape.
+
+Collision layers: `layer` (what this body is) and `mask` (what it collides with). Two bodies collide if `(a.layer & b.mask) != 0 && (b.layer & a.mask) != 0`. Default: layer=0x0001, mask=0xFFFF (collide with everything).
 
 **Entities** — State is immutable. Return new state from update functions:
 ```typescript
