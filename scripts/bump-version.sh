@@ -2,11 +2,11 @@
 set -euo pipefail
 
 # Usage: scripts/bump-version.sh <new-version>
-# Example: scripts/bump-version.sh 0.5.1
+# Example: scripts/bump-version.sh 0.6.0
 
 if [ $# -ne 1 ]; then
   echo "Usage: $0 <new-version>"
-  echo "Example: $0 0.5.1"
+  echo "Example: $0 0.6.0"
   exit 1
 fi
 
@@ -43,7 +43,11 @@ sed -i '' "s/\"@arcane-engine\/runtime\": \"^$OLD\"/\"@arcane-engine\/runtime\":
 # 6. README.md — published package links
 sed -i '' "s/@$OLD/@$NEW/g" "$ROOT/README.md"
 
-# 7. Regenerate Cargo.lock
+# 7. Sync cli/data/ from source templates + assets
+echo "Syncing cli/data/..."
+"$ROOT/scripts/prepublish.sh"
+
+# 8. Regenerate Cargo.lock
 echo "Regenerating Cargo.lock..."
 (cd "$ROOT" && cargo check --quiet 2>&1)
 
@@ -54,6 +58,7 @@ FILES=(
   "$ROOT/packages/create/package.json"
   "$ROOT/packages/runtime/package.json"
   "$ROOT/templates/default/package.json"
+  "$ROOT/cli/data/templates/default/package.json"
 )
 STALE=$(grep -n "$OLD" "${FILES[@]}" 2>/dev/null || true)
 if [ -n "$STALE" ]; then
