@@ -7,6 +7,17 @@ import { drawSprite } from "./sprites.ts";
  */
 export type AnimationId = number;
 
+/** Callback invoked when a specific animation frame is reached. */
+export type FrameEventCallback = (frame: number) => void;
+
+/** A frame event binding: fires callback when the animation reaches a specific frame. */
+export type FrameEvent = {
+  /** The frame index (0-based) that triggers this event. */
+  frame: number;
+  /** Callback invoked when the frame is reached. */
+  callback: FrameEventCallback;
+};
+
 /** Internal definition of a sprite-sheet animation. */
 export type AnimationDef = {
   /** Texture handle containing the sprite sheet. */
@@ -25,6 +36,8 @@ export type AnimationDef = {
   cols?: number;
   /** Number of rows in the spritesheet (default: 1). */
   rows?: number;
+  /** Frame events: callbacks triggered when specific frames are reached. */
+  events?: FrameEvent[];
 };
 
 /** State of a playing animation instance. Immutable -- update via {@link updateAnimation}. */
@@ -70,7 +83,7 @@ export function createAnimation(
   frameH: number,
   frameCount: number,
   fps: number,
-  options?: { loop?: boolean; cols?: number; rows?: number },
+  options?: { loop?: boolean; cols?: number; rows?: number; events?: FrameEvent[] },
 ): AnimationId {
   const id = nextId++;
   registry.set(id, {
@@ -82,8 +95,101 @@ export function createAnimation(
     loop: options?.loop ?? true,
     cols: options?.cols,
     rows: options?.rows,
+    events: options?.events ? [...options.events] : undefined,
   });
   return id;
+}
+
+/**
+ * Add a frame event to an existing animation definition.
+ * The callback fires each time updateAnimationWithEvents() crosses the given frame.
+ *
+ * @param defId - AnimationId to add the event to.
+ * @param frame - Frame index (0-based) that triggers the event.
+ * @param callback - Function called when the frame is reached.
+ */
+export function addFrameEvent(
+  defId: AnimationId,
+  frame: number,
+  callback: FrameEventCallback,
+): void {
+  const def = registry.get(defId);
+  if (!def) return;
+  if (!def.events) def.events = [];
+  def.events.push({ frame, callback });
+}
+
+/**
+ * Advance an animation and fire any frame events that were crossed.
+ * Events fire for every frame crossed between the old and new frame index,
+ * including on loop wraps. Each event fires at most once per update call.
+ *
+ * @param anim - Current animation state.
+ * @param dt - Time delta in seconds.
+ * @returns Updated animation state (same as updateAnimation).
+ */
+export function updateAnimationWithEvents(
+  anim: AnimationState,
+  dt: number,
+): AnimationState {
+  const def = registry.get(anim.defId);
+  if (!def || anim.finished) return { ...anim };
+
+  const oldFrame = anim.frame;
+  const next = updateAnimation(anim, dt);
+  const newFrame = next.frame;
+
+  if (def.events && def.events.length > 0) {
+    if (def.loop) {
+      // Looping: detect frames crossed including wraps
+      const oldRaw = Math.floor(anim.elapsed * def.fps);
+      const newRaw = Math.floor(next.elapsed * def.fps);
+      if (newRaw > oldRaw) {
+        // Collect unique frames crossed (mod frameCount)
+        const fired = new Set<number>();
+        for (let r = oldRaw + 1; r <= newRaw; r++) {
+          const f = r % def.frameCount;
+          if (!fired.has(f)) {
+            fired.add(f);
+            for (const evt of def.events) {
+              if (evt.frame === f) evt.callback(f);
+            }
+          }
+        }
+      }
+    } else {
+      // Non-looping: fire events for frames between old and new
+      if (newFrame > oldFrame) {
+        for (const evt of def.events) {
+          if (evt.frame > oldFrame && evt.frame <= newFrame) {
+            evt.callback(evt.frame);
+          }
+        }
+      }
+      // If just finished, fire event for last frame if crossed
+      if (next.finished && !anim.finished) {
+        const lastFrame = def.frameCount - 1;
+        for (const evt of def.events) {
+          if (evt.frame === lastFrame && oldFrame < lastFrame) {
+            evt.callback(lastFrame);
+          }
+        }
+      }
+    }
+  }
+
+  return next;
+}
+
+/**
+ * Get the animation definition for a given ID.
+ * Useful for querying frame count, fps, texture, and events.
+ *
+ * @param defId - AnimationId to look up.
+ * @returns The animation definition, or undefined if not found.
+ */
+export function getAnimationDef(defId: AnimationId): AnimationDef | undefined {
+  return registry.get(defId);
 }
 
 /**
