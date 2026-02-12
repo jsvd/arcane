@@ -1031,7 +1031,7 @@ fn test_ball_on_ground_contacts() {
     }
     // Eventually there should be contacts
     // Note: contacts are only from the last sub-step
-    let contacts = world.get_contacts();
+    let _contacts = world.get_contacts();
     // The ball should have fallen and hit the ground by now
     let ball = world.get_body(_ball).unwrap();
     assert!(ball.y > -3.0, "Ball should have fallen");
@@ -1175,7 +1175,7 @@ fn test_physics_ops_create_body_and_step() {
         const id = Deno.core.ops.op_create_body(1, 0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.3, 0.5, 65535, 65535);
         Deno.core.ops.op_physics_step(1.0 / 60.0);
         const s = Deno.core.ops.op_get_body_state(id);
-        if (s.length !== 6) throw new Error("Expected 6 elements");
+        if (s.length !== 7) throw new Error("Expected 7 elements");
         if (s[1] <= 0) throw new Error("Body should have moved down");
         "#,
     )
@@ -1415,7 +1415,7 @@ fn test_physics_ops_aabb_body() {
         const id = Deno.core.ops.op_create_body(1, 1, 2.0, 3.0, 0.0, 0.0, 1.0, 0.3, 0.5, 65535, 65535);
         Deno.core.ops.op_physics_step(1.0 / 60.0);
         const s = Deno.core.ops.op_get_body_state(id);
-        if (s.length !== 6) throw new Error("Should return state");
+        if (s.length !== 7) throw new Error("Should return state");
         if (s[1] <= 0) throw new Error("AABB body should fall with gravity");
         "#,
     )
@@ -2143,4 +2143,58 @@ fn test_stacked_boxes_reach_sleep_within_2_seconds() {
             (id, b.sleeping, b.vx, b.vy, b.sleep_timer)
         }).collect::<Vec<_>>()
     );
+}
+
+#[test]
+fn test_12_stacked_boxes_reach_sleep_within_5_seconds() {
+    let mut world = PhysicsWorld::new(0.0, 400.0);
+
+    // Ground
+    world.add_body(
+        BodyType::Static, Shape::AABB { half_w: 200.0, half_h: 10.0 },
+        200.0, 310.0, 0.0,
+        Material { restitution: 0.0, friction: 0.5 },
+        0xFFFF, 0xFFFF,
+    );
+
+    // Stack 12 boxes
+    let box_size = 15.0;
+    let mut box_ids = Vec::new();
+    for i in 0..12 {
+        let y = 280.0 - (i as f32 * 32.0);
+        let id = world.add_body(
+            BodyType::Dynamic, Shape::AABB { half_w: box_size, half_h: box_size },
+            200.0, y, 1.0,
+            Material { restitution: 0.0, friction: 0.5 },
+            0xFFFF, 0xFFFF,
+        );
+        box_ids.push(id);
+    }
+
+    // Simulate and track when each body sleeps
+    let mut all_asleep_frame = None;
+    for frame in 0..600 { // 10 seconds max
+        world.step(1.0 / 60.0);
+        let all_sleeping = box_ids.iter().all(|&id| world.get_body(id).unwrap().sleeping);
+        if all_sleeping {
+            all_asleep_frame = Some(frame);
+            break;
+        }
+    }
+
+    // Print diagnostic info
+    let states: Vec<_> = box_ids.iter().map(|&id| {
+        let b = world.get_body(id).unwrap();
+        (id, b.sleeping, b.vx, b.vy, b.sleep_timer)
+    }).collect();
+
+    assert!(all_asleep_frame.is_some(),
+        "12 stacked boxes should all sleep within 10s. States: {:?}", states);
+
+    let frame = all_asleep_frame.unwrap();
+    let seconds = frame as f32 / 60.0;
+    eprintln!("12-box stack settled at frame {} ({:.1}s)", frame, seconds);
+
+    assert!(frame < 300,
+        "12-box stack should sleep within 5s, took {:.1}s (frame {})", seconds, frame);
 }

@@ -334,8 +334,7 @@ onFrame(() => {
     const state = getBodyState(tracked.id);
     const x = state.x;
     const y = state.y;
-    const sleeping = state.vx * state.vx + state.vy * state.vy < 0.1 &&
-                     state.angularVelocity * state.angularVelocity < 0.01;
+    const sleeping = state.sleeping;
 
     let tex: number;
     switch (tracked.kind) {

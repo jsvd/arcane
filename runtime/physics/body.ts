@@ -4,7 +4,7 @@ const hasPhysicsOps =
   typeof (globalThis as any).Deno !== "undefined" &&
   typeof (globalThis as any).Deno?.core?.ops?.op_create_physics_world === "function";
 
-const defaultBodyState: BodyState = { x: 0, y: 0, angle: 0, vx: 0, vy: 0, angularVelocity: 0 };
+const defaultBodyState: BodyState = { x: 0, y: 0, angle: 0, vx: 0, vy: 0, angularVelocity: 0, sleeping: false };
 
 /**
  * Create a rigid body in the physics world.
@@ -71,6 +71,7 @@ export function getBodyState(id: BodyId): BodyState {
     vx: arr[3],
     vy: arr[4],
     angularVelocity: arr[5],
+    sleeping: arr[6] === 1.0,
   };
 }
 

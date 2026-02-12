@@ -39,6 +39,7 @@ export type BodyState = {
   readonly vx: number;
   readonly vy: number;
   readonly angularVelocity: number;
+  readonly sleeping: boolean;
 };
 
 /** Contact information from collision detection. */

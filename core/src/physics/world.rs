@@ -132,7 +132,9 @@ impl PhysicsWorld {
         for contact in &mut self.contacts {
             let key = (contact.body_a.min(contact.body_b), contact.body_a.max(contact.body_b));
             if let Some(&(jn, jt)) = self.warm_cache.get(&key) {
-                // Scale by 0.95 to avoid over-shooting when contacts shift slightly
+                // Scale slightly to avoid overshoot when contacts shift between frames.
+                // Island-based sleeping prevents the cascade that made 0.95 problematic
+                // with per-body sleeping (no body sleeps until the whole stack settles).
                 contact.accumulated_jn = jn * 0.95;
                 contact.accumulated_jt = jt * 0.95;
             }

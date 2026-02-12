@@ -103,6 +103,7 @@ fn op_get_body_state(state: &mut OpState, id: u32) -> Vec<f64> {
             body.vx as f64,
             body.vy as f64,
             body.angular_velocity as f64,
+            if body.sleeping { 1.0 } else { 0.0 },
         ],
         None => vec![],
     }

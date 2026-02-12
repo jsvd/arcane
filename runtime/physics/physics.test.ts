@@ -234,7 +234,7 @@ describe("Physics API", () => {
     });
 
     it("BodyState has all expected fields", () => {
-      const state: BodyState = { x: 1, y: 2, angle: 0.5, vx: 3, vy: 4, angularVelocity: 0.1 };
+      const state: BodyState = { x: 1, y: 2, angle: 0.5, vx: 3, vy: 4, angularVelocity: 0.1, sleeping: false };
       assert.equal(state.x, 1);
       assert.equal(state.y, 2);
       assert.equal(state.angle, 0.5);
