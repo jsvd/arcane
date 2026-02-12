@@ -504,68 +504,66 @@ Architectural features that unlock "real game" structure.
 
 **Status: Planned**
 
-Replace hand-rolled physics with a proper rigid body system. This is the biggest architectural decision since Phase 1.
+Replace hand-rolled physics with a proper rigid body system. Homebrew Rust implementation — no external physics dependencies. See ADR-015 for the decision rationale.
 
-### Key Decision: Box2D vs Pure TypeScript
+### Architecture
 
-**Option A: Wrap Box2D**
-- **Pros**: Battle-tested, feature-complete, fast (C++)
-- **Cons**: Headless mode complications, C++ dependency, FFI complexity
+Physics lives in Rust (`core/src/physics/`), exposed to TS via `#[op2]` ops, with a thin TS API (`runtime/physics/`). Same pattern as rendering, audio, and file I/O. Fixed timestep accumulator for frame-rate independence.
 
-**Option B: Pure TypeScript**
-- **Pros**: Headless-testable, no external deps, agent-friendly, inspectable
-- **Cons**: More implementation work, performance unknown
-
-**Recommendation**: Start with **pure TypeScript** (aligns with Arcane philosophy). Migrate to Box2D only if profiling shows a bottleneck (per Performance Optimization section).
+```
+TS game code → op_create_body, op_step_physics, op_get_body_position → Rust physics world
+```
 
 ### Deliverables
-- [ ] **Core physics** (`runtime/physics/rigid-body.ts`)
-  - [ ] RigidBody: mass, velocity, acceleration, angularVelocity, torque
-  - [ ] Collision shapes: Circle, AABB, Polygon, Compound
-  - [ ] Collision detection: shape vs shape (all pairs)
-  - [ ] Collision response: impulse resolution, restitution (bounciness), friction
-  - [ ] Integrator: Verlet or RK4 for stability
-- [ ] **Constraints/Joints** (`runtime/physics/constraints.ts`)
-  - [ ] Distance joint (rope, spring)
-  - [ ] Revolute joint (hinge, door)
-  - [ ] Prismatic joint (slider)
-  - [ ] Weld joint (glue objects together)
-- [ ] **Broad-phase optimization** (`runtime/physics/broadphase.ts`)
-  - [ ] Spatial hash grid for O(n) pair culling
-  - [ ] Only check nearby objects for collision
-- [ ] **Physics world** (`runtime/physics/world.ts`)
-  - [ ] World.step(dt): integrate, detect, resolve
-  - [ ] Collision layers/masks (filter what collides with what)
-  - [ ] Continuous collision detection (CCD) to prevent tunneling
-  - [ ] Sleep/wake system (static objects don't simulate)
-- [ ] **Integration with state system**
-  - [ ] PhysicsBody component in entity state
-  - [ ] Physics.step() produces state diffs
-  - [ ] Sync rendering positions from physics
-- [ ] **Demo: Physics Playground** (`demos/physics-playground/`)
+- [ ] **Rust physics core** (`core/src/physics/`)
+  - [ ] `types.rs` — RigidBody (static/dynamic/kinematic), Shape (Circle, AABB, Polygon), Material (restitution, friction)
+  - [ ] `world.rs` — PhysicsWorld: body storage, step(dt), fixed timestep accumulator
+  - [ ] `integrate.rs` — Semi-implicit Euler integration (velocity then position)
+  - [ ] `broadphase.rs` — Spatial hash grid for O(n) collision pair culling
+  - [ ] `narrowphase.rs` — SAT collision detection for all shape pairs (circle-circle, circle-AABB, AABB-AABB, polygon-polygon, mixed)
+  - [ ] `resolve.rs` — Sequential impulse solver with restitution + friction
+  - [ ] `constraints.rs` — Distance joint (rope/spring), revolute joint (hinge)
+  - [ ] `sleep.rs` — Velocity threshold + timer, wake on contact
+- [ ] **Rust ops** (`core/src/scripting/physics_ops.rs`)
+  - [ ] `op_create_physics_world` — create world with gravity
+  - [ ] `op_create_body` — add body with shape, mass, position, material
+  - [ ] `op_remove_body` — remove body by ID
+  - [ ] `op_step_physics` — advance simulation by dt
+  - [ ] `op_get_body_state` — position, velocity, angle for a body
+  - [ ] `op_set_body_velocity` — apply velocity directly
+  - [ ] `op_apply_force` / `op_apply_impulse` — push a body
+  - [ ] `op_create_constraint` — add joint between bodies
+  - [ ] `op_remove_constraint` — remove joint
+  - [ ] `op_set_collision_layers` — set layer/mask for a body
+  - [ ] `op_query_aabb` — query bodies in a region
+  - [ ] `op_raycast` — cast ray, return first hit
+  - [ ] `op_get_contacts` — list collision contacts this frame
+- [ ] **TS API** (`runtime/physics/`)
+  - [ ] `runtime/physics/types.ts` — BodyId, BodyDef, ShapeDef, Material, Contact, RayHit
+  - [ ] `runtime/physics/world.ts` — createPhysicsWorld(), stepPhysics(), destroyPhysicsWorld()
+  - [ ] `runtime/physics/body.ts` — createBody(), removeBody(), getBodyPosition(), setBodyVelocity(), applyForce(), applyImpulse()
+  - [ ] `runtime/physics/constraints.ts` — createDistanceJoint(), createRevoluteJoint(), removeConstraint()
+  - [ ] `runtime/physics/query.ts` — queryAABB(), raycast(), getContacts()
+  - [ ] `runtime/physics/index.ts` — barrel export
+- [ ] **Demo: Physics Playground** (`demos/physics-playground/physics-playground.ts`)
   - [ ] Falling blocks that stack and come to rest
-  - [ ] Seesaw with weight balance (revolute joint at center)
-  - [ ] Rope constraint (chain of distance joints)
-  - [ ] Bouncing projectiles (high restitution)
+  - [ ] Seesaw (revolute joint at center, blocks on ends)
+  - [ ] Rope (chain of distance joints)
+  - [ ] Bouncing ball (high restitution)
   - [ ] Domino chain reaction
-  - [ ] Collision layer demo (some objects pass through others)
-- [ ] **Retrofit existing demos**
-  - [ ] Replace Breakout physics with RigidBody system
-  - [ ] Replace Platformer gravity with RigidBody + kinematic controller
+  - [ ] Collision layers (some objects pass through others)
+  - [ ] Interactive: click to spawn bodies, drag to launch
+- [ ] **Retrofit Breakout** — replace hand-rolled ball/paddle physics with rigid bodies
 
 ### Success Criteria
 - [ ] Stable stacking (objects come to rest, no jitter)
 - [ ] 60 FPS with 500+ rigid bodies
 - [ ] Constraints don't drift or explode
-- [ ] Fully testable headless (150+ physics tests)
-- [ ] Breakout and Platformer physics are simpler with new system
-- [ ] CCD prevents fast objects from tunneling
-- [ ] Agent can query physics state (velocities, forces, contacts)
-
-### Open Questions
-- [ ] Should physics be frame-rate independent? (fixed timestep vs variable)
-- [ ] How to handle physics <-> state sync? (ECS-style or manual sync?)
-- [ ] Trigger volumes (non-collision zones that fire events)?
+- [ ] 80+ Rust tests for physics core (shapes, broadphase, solver, constraints, sleep)
+- [ ] 40+ TS tests for physics API (ops bridge, queries, lifecycle)
+- [ ] Breakout physics is simpler with the new system
+- [ ] Headless build still compiles (`cargo check --no-default-features`)
+- [ ] Agent can query physics state (positions, velocities, contacts)
 
 ---
 

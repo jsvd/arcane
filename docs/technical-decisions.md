@@ -399,6 +399,9 @@ Every release requires manually syncing `packages/runtime/src/` from `runtime/`.
 ### Recommended Fix
 Option 2 (publish from `runtime/` directly) or Option 3 (prepublish script). Either eliminates the manual copy step.
 
+### Resolution (v0.4.2)
+Fixed by replacing the copy with a symlink (`packages/runtime/src` → `../../runtime`). The npm package now always reflects the current source. Recipes were also moved from embedded-in-binary to npm distribution (symlink to `../../recipes`), and a `scripts/prepublish.sh` syncs only templates + assets catalog for crate publishing.
+
 ---
 
 ## ADR-014: CLI-First Asset Management
@@ -422,3 +425,64 @@ Phase 9.5 shipped an MCP server (`arcane-assets-mcp`) for asset discovery. This 
 - **Simpler architecture**: One binary, one catalog file, no inter-process communication
 - **Agent-friendly**: `--json` flag on all commands for structured output that agents can parse
 - **MCP can return later**: If MCP becomes valuable again (e.g., for richer tool descriptions), the catalog and search logic are reusable. The CLI is the right default.
+
+---
+
+## ADR-015: Homebrew Rust Physics Engine (Not Rapier, Not Pure TS)
+
+### Context
+Phase 11 adds rigid body physics. The roadmap originally proposed pure TypeScript, but physics is an engine system (like rendering and audio), not game logic. The performance target is 500+ bodies at 60 FPS.
+
+### Options Considered
+
+1. **Pure TypeScript** — Consistent with "game logic in TS" philosophy
+   - Pro: Headless-testable, no new deps, agent-readable
+   - Con: Performance ceiling for collision + constraint solving
+   - Con: The performance migration table already flags collision at >2k entities as a Rust trigger — why build in TS knowing we'll migrate?
+
+2. **Wrap Rapier2D** — Mature, battle-tested Rust physics engine
+   - Pro: Correct, fast, feature-complete (CCD, islands, sleeping)
+   - Con: Pulls in nalgebra, parry2d, crossbeam — significant dependency tree
+   - Con: API shaped for general simulation, not Arcane's `#[op2]` bridge
+   - Con: Overkill for 2D indie games (soft bodies, heightfields, etc.)
+
+3. **Homebrew Rust physics** — Custom engine built for Arcane's needs
+   - Pro: Zero new dependencies
+   - Pro: API designed for `#[op2]` ops from the start
+   - Pro: Only implements what 2D indie games need
+   - Pro: Simpler builds, smaller binary
+   - Pro: Agents can read and understand ~1500 lines of focused code
+   - Con: More implementation work than wrapping Rapier
+   - Con: Won't have features we haven't built (but YAGNI)
+
+### Decision
+**Homebrew Rust physics.**
+
+### Rationale
+Physics belongs in Rust for the same reason rendering does — it's a performance-critical engine system, not game logic. The architecture diagram in the README already places physics in the Rust core layer.
+
+Rapier2D is excellent but overpowered. Arcane targets platformers, breakout, physics puzzles, and stacking demos — not fluid simulation or ragdolls. The core algorithm (integrate → broad phase → narrow phase → resolve) is well-understood and fits in ~1500 lines of Rust.
+
+The homebrew approach follows the same pattern as every other Arcane subsystem:
+- Rust implementation behind `#[op2]` ops
+- Thin TS API that agents call (`createBody`, `stepPhysics`, `getBodyPosition`)
+- Headless-testable via `cargo test` (no GPU dependency)
+- No new external dependencies
+
+Key reference: Erin Catto's GDC talks on sequential impulse solvers (the algorithm behind Box2D).
+
+### What We Build
+- Shapes: circle, AABB, convex polygon
+- Integrator: semi-implicit Euler
+- Broad phase: spatial hash grid
+- Narrow phase: SAT (Separating Axis Theorem) for all shape pairs
+- Resolution: sequential impulse solver with restitution + friction
+- Constraints: distance joint, revolute joint
+- Sleep system: velocity threshold + timer
+- Collision layers/masks
+
+### What We Skip (can add later if needed)
+- Continuous collision detection (add if tunneling becomes a problem)
+- Compound shapes (use multiple bodies instead)
+- Island solver optimization (overkill under 1000 bodies)
+- Prismatic/weld joints (add when a demo needs them)
