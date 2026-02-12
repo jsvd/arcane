@@ -115,16 +115,43 @@ export type { BitmapFont, TextOptions, TextMeasurement } from "./text.ts";
 export { loadFont, getDefaultFont, measureText, drawText } from "./text.ts";
 
 // Animation
-export type { AnimationId, AnimationDef, AnimationState } from "./animation.ts";
+export type { AnimationId, AnimationDef, AnimationState, FrameEvent, FrameEventCallback } from "./animation.ts";
 export {
   createAnimation,
   playAnimation,
   updateAnimation,
+  updateAnimationWithEvents,
   getAnimationUV,
+  getAnimationDef,
   drawAnimatedSprite,
   resetAnimation,
   stopAnimation,
+  addFrameEvent,
 } from "./animation.ts";
+
+// Animation State Machine
+export type {
+  FSMStateDef,
+  BooleanCondition,
+  ThresholdCondition,
+  TriggerCondition,
+  AnimationFinishedCondition,
+  TransitionCondition,
+  FSMTransition,
+  FSMConfig,
+  FSMParams,
+  BlendState,
+  FSMState,
+} from "./animation-fsm.ts";
+export {
+  createAnimationFSM,
+  getCurrentState,
+  isBlending,
+  getBlendProgress,
+  setFSMState,
+  updateFSM,
+  drawFSMSprite,
+} from "./animation-fsm.ts";
 
 // Audio
 export type { SoundId, PlayOptions } from "./audio.ts";
