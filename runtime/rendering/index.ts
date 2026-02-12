@@ -44,7 +44,68 @@ export { onFrame, getDeltaTime } from "./loop.ts";
 
 // Tilemap
 export type { TilemapId, TilemapOptions } from "./types.ts";
-export { createTilemap, setTile, getTile, drawTilemap } from "./tilemap.ts";
+export type {
+  AnimatedTileDef,
+  TileProperties,
+  TilemapLayer,
+  LayerOptions,
+  LayeredTilemap,
+} from "./tilemap.ts";
+export {
+  createTilemap,
+  setTile,
+  getTile,
+  drawTilemap,
+  fillTiles,
+  // Layered tilemaps
+  createLayeredTilemap,
+  setLayerTile,
+  getLayerTile,
+  setLayerVisible,
+  setLayerOpacity,
+  getLayerNames,
+  drawLayeredTilemap,
+  fillLayerTiles,
+  // Animated tiles
+  registerAnimatedTile,
+  unregisterAnimatedTile,
+  clearAnimatedTiles,
+  updateAnimatedTiles,
+  resolveAnimatedTile,
+  getAnimatedTileDefs,
+  // Tile properties
+  defineTileProperties,
+  getTileProperties,
+  getTileProperty,
+  getTilePropertiesAt,
+  getTilePropertyAt,
+  clearTileProperties,
+} from "./tilemap.ts";
+
+// Auto-tiling
+export type {
+  NeighborCheck,
+  AutotileMapping,
+  AutotileRule,
+} from "./autotile.ts";
+export {
+  NORTH,
+  EAST,
+  SOUTH,
+  WEST,
+  NORTHEAST,
+  SOUTHEAST,
+  SOUTHWEST,
+  NORTHWEST,
+  computeAutotileBitmask4,
+  computeAutotileBitmask8,
+  createAutotileMapping4,
+  createAutotileMapping8,
+  createAutotileRule,
+  resolveAutotile,
+  applyAutotile,
+  BITMASK4_LABELS,
+} from "./autotile.ts";
 
 // Lighting
 export { setAmbientLight, addPointLight, clearLights } from "./lighting.ts";
