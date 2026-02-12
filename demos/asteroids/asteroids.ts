@@ -301,7 +301,7 @@ function update(s: GameState, dt: number): void {
     // Shooting
     ship.shootCooldown -= dt;
     if (
-      (isKeyPressed(" ") || isKeyDown(" ")) &&
+      (isKeyPressed("Space") || isKeyDown("Space")) &&
       ship.shootCooldown <= 0
     ) {
       ship.shootCooldown = SHOOT_COOLDOWN;
