@@ -112,6 +112,9 @@ impl Tilemap {
                     tint_g: 1.0,
                     tint_b: 1.0,
                     tint_a: 1.0,
+                    rotation: 0.0,
+                    origin_x: 0.5,
+                    origin_y: 0.5,
                 });
             }
         }

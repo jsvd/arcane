@@ -37,6 +37,12 @@ export type SpriteOptions = {
    * Each channel is 0.0-1.0. Default: white `{ r: 1, g: 1, b: 1, a: 1 }` (no tint).
    */
   tint?: { r: number; g: number; b: number; a: number };
+  /** Rotation angle in radians. Default: 0 (no rotation). Positive = clockwise. */
+  rotation?: number;
+  /** X origin for rotation, 0-1 relative to sprite width. Default: 0.5 (center). */
+  originX?: number;
+  /** Y origin for rotation, 0-1 relative to sprite height. Default: 0.5 (center). */
+  originY?: number;
 };
 
 /** Camera state returned by {@link getCamera}. */

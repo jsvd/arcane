@@ -43,6 +43,7 @@ struct InstanceInput {
     @location(4) uv_offset: vec2<f32>,
     @location(5) uv_size: vec2<f32>,
     @location(6) tint: vec4<f32>,
+    @location(7) rotation_origin: vec4<f32>,
 };
 
 struct VertexOutput {
@@ -56,10 +57,27 @@ struct VertexOutput {
 fn vs_main(vertex: VertexInput, instance: InstanceInput) -> VertexOutput {
     var out: VertexOutput;
 
-    let world_xy = vec2<f32>(
-        vertex.position.x * instance.size.x + instance.world_pos.x,
-        vertex.position.y * instance.size.y + instance.world_pos.y,
+    let rotation = instance.rotation_origin.x;
+    let origin = vec2<f32>(instance.rotation_origin.y, instance.rotation_origin.z);
+
+    // Scale unit quad by sprite size
+    var pos = vertex.position * instance.size;
+
+    // Rotate around origin point
+    let pivot = origin * instance.size;
+    pos = pos - pivot;
+
+    let cos_r = cos(rotation);
+    let sin_r = sin(rotation);
+    let rotated = vec2<f32>(
+        pos.x * cos_r - pos.y * sin_r,
+        pos.x * sin_r + pos.y * cos_r,
     );
+
+    pos = rotated + pivot;
+
+    // Translate to world position
+    let world_xy = pos + instance.world_pos;
 
     let world = vec4<f32>(world_xy.x, world_xy.y, 0.0, 1.0);
     out.clip_position = camera.view_proj * world;

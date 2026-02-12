@@ -23,6 +23,9 @@ pub struct SpriteCommand {
     pub tint_g: f32,
     pub tint_b: f32,
     pub tint_a: f32,
+    pub rotation: f32,
+    pub origin_x: f32,
+    pub origin_y: f32,
 }
 
 /// Per-vertex data for the unit quad.
@@ -42,6 +45,8 @@ struct SpriteInstance {
     uv_offset: [f32; 2],
     uv_size: [f32; 2],
     tint: [f32; 4],
+    /// [rotation_radians, origin_x (0-1), origin_y (0-1), padding]
+    rotation_origin: [f32; 4],
 }
 
 /// Camera uniform buffer data.
@@ -198,6 +203,11 @@ impl SpritePipeline {
                     offset: 32,
                     shader_location: 6,
                     format: wgpu::VertexFormat::Float32x4, // tint
+                },
+                wgpu::VertexAttribute {
+                    offset: 48,
+                    shader_location: 7,
+                    format: wgpu::VertexFormat::Float32x4, // rotation_origin
                 },
             ],
         };
@@ -379,6 +389,7 @@ impl SpritePipeline {
                     uv_offset: [cmd.uv_x, cmd.uv_y],
                     uv_size: [cmd.uv_w, cmd.uv_h],
                     tint: [cmd.tint_r, cmd.tint_g, cmd.tint_b, cmd.tint_a],
+                    rotation_origin: [cmd.rotation, cmd.origin_x, cmd.origin_y, 0.0],
                 })
                 .collect();
 

@@ -117,6 +117,9 @@ pub fn op_draw_sprite(
     tint_g: f64,
     tint_b: f64,
     tint_a: f64,
+    rotation: f64,
+    origin_x: f64,
+    origin_y: f64,
 ) {
     let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
     bridge.borrow_mut().sprite_commands.push(SpriteCommand {
@@ -134,6 +137,9 @@ pub fn op_draw_sprite(
         tint_g: tint_g as f32,
         tint_b: tint_b as f32,
         tint_a: tint_a as f32,
+        rotation: rotation as f32,
+        origin_x: origin_x as f32,
+        origin_y: origin_y as f32,
     });
 }
 
