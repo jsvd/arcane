@@ -1,3 +1,4 @@
+pub mod physics;
 pub mod scripting;
 
 #[cfg(feature = "renderer")]
