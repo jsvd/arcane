@@ -188,55 +188,159 @@ const goblinAmbush = encounter({
 })
 ```
 
-## Procedural Generation
+## Procedural Generation (Wave Function Collapse)
 
-Procedural generation functions return world specs — the same data structures used for hand-authored content:
+Arcane provides a Wave Function Collapse (WFC) algorithm for tile-based level generation. WFC takes a tileset with adjacency rules and collapses a grid of possibilities into a valid layout.
+
+### Defining a Tileset
+
+A tileset declares which tiles can be neighbors in each direction:
 
 ```typescript
-const randomDungeon = generateDungeon({
-  rooms: between(5, 12),
-  difficulty: 'medium',
-  theme: 'undead_crypt',
-  guarantees: [
-    atLeastOne('boss_encounter'),
-    atLeastOne('treasure_room'),
-    noDeadEnds(),
-  ],
-})
+import { generate, reachability, exactCount, border } from "@arcane/runtime/procgen";
 
-// randomDungeon is a regular world spec — same type as hand-authored worlds
-// Can be tested, serialized, inspected the same way
+const tileset = {
+  // tile ID → adjacency rules
+  0: { name: "floor", weight: 10, north: [0, 1, 2], east: [0, 1, 2], south: [0, 1, 2], west: [0, 1, 2] },
+  1: { name: "wall",  weight: 3,  north: [0, 1, 3], east: [0, 1, 3], south: [0, 1, 3], west: [0, 1, 3] },
+  2: { name: "door",  weight: 1,  north: [0], east: [0], south: [0], west: [0] },
+  3: { name: "water", weight: 2,  north: [0, 3], east: [0, 3], south: [0, 3], west: [0, 3] },
+};
 ```
 
-Procedural and hand-authored content use the same data model. You can:
-- Generate a dungeon, then hand-tweak specific rooms
-- Start with a hand-authored layout, then procedurally fill rooms
-- Generate encounters, then override specific ones
+Each tile has a `weight` (higher = more likely to be placed) and four adjacency lists specifying which tile IDs are valid neighbors.
+
+### Generating a Level
+
+```typescript
+const result = generate({
+  tileset,
+  width: 20,
+  height: 15,
+  seed: 42,             // Deterministic via PRNG seed
+  constraints: [
+    reachability(0),     // All floor tiles must be connected
+    exactCount(2, 2),    // Exactly 2 door tiles
+    border(1),           // Walls around the border
+  ],
+});
+
+if (result.success) {
+  // result.grid is a 2D array: number[][] (tile IDs)
+  for (let y = 0; y < result.grid.length; y++) {
+    for (let x = 0; x < result.grid[y].length; x++) {
+      setTile(tilemapId, x, y, result.grid[y][x]);
+    }
+  }
+}
+```
+
+### Constraints
+
+Constraints validate a generated grid and reject invalid ones:
+
+| Constraint | Description |
+|---|---|
+| `reachability(tileId)` | All cells with this tile ID must be flood-fill connected |
+| `exactCount(tileId, n)` | Exactly `n` cells must contain this tile |
+| `minCount(tileId, n)` | At least `n` cells must contain this tile |
+| `maxCount(tileId, n)` | At most `n` cells may contain this tile |
+| `border(tileId)` | All border cells must be this tile |
+| `custom(fn)` | Arbitrary validation function `(grid) => boolean` |
+
+### Generate-and-Test
+
+For constraint-heavy generation, use `generateAndTest()` which retries until constraints pass:
+
+```typescript
+import { generateAndTest, reachability, minCount } from "@arcane/runtime/procgen";
+
+const result = generateAndTest({
+  tileset,
+  width: 30,
+  height: 20,
+  seed: 123,
+  constraints: [reachability(0), minCount(2, 3)],
+  maxAttempts: 50,    // Retry up to 50 times
+});
+
+if (result.success) {
+  // result.grid is valid, result.attempts shows how many tries it took
+}
+```
+
+### Validation
+
+You can also validate a hand-authored or modified grid:
+
+```typescript
+import { validateLevel, reachability } from "@arcane/runtime/procgen";
+
+const isValid = validateLevel(myGrid, [reachability(0)]);
+```
+
+Procedural and hand-authored content use the same grid format. You can generate a dungeon, then hand-tweak specific cells, then re-validate.
 
 ## Testing Worlds
 
-Worlds are data, so they're testable:
+Worlds are data, so they're testable. Arcane provides three testing strategies:
+
+### Unit Tests with the Test Harness
 
 ```typescript
-test('crypt has a path from entrance to boss', () => {
-  const world = CryptOfTheGoblinKing
-  const path = findPath(world, 'entrance', 'throne_room')
-  expect(path).toBeDefined()
-  expect(path.length).toBeGreaterThan(0)
-})
+import { describe, it, assert } from "@arcane/runtime/testing";
+import { generate, reachability } from "@arcane/runtime/procgen";
 
-test('all rooms are reachable', () => {
-  const world = CryptOfTheGoblinKing
-  const reachable = findReachableRooms(world, 'entrance')
-  expect(reachable).toEqual(Object.keys(world.rooms))
-})
+describe("dungeon generation", () => {
+  it("all floor tiles are connected", () => {
+    const result = generate({ tileset, width: 20, height: 15, seed: 42,
+      constraints: [reachability(0)] });
+    assert.ok(result.success);
+  });
+});
+```
 
-test('generated dungeon meets constraints', () => {
-  for (let seed = 0; seed < 100; seed++) {
-    const dungeon = generateDungeon({ ...params, rng: seed })
-    expect(dungeon.rooms.length).toBeGreaterThanOrEqual(5)
-    expect(hasBossEncounter(dungeon)).toBe(true)
-    expect(hasDeadEnds(dungeon)).toBe(false)
-  }
-})
+### Replay Testing — Record and Replay Game Sessions
+
+Record a sequence of inputs and replay them to verify determinism:
+
+```typescript
+import { startRecording, stopRecording, replay, diffReplays } from "@arcane/runtime/testing";
+
+// Record a gameplay session
+const recording = startRecording();
+recording.addFrame({ keys: ["ArrowRight"] });
+recording.addFrame({ keys: ["ArrowRight", "Space"] });
+const session = stopRecording(recording);
+
+// Replay and verify deterministic outcome
+const result1 = replay(session, myGameStepFn, initialState);
+const result2 = replay(session, myGameStepFn, initialState);
+
+// Compare — should be identical (deterministic)
+const diff = diffReplays(result1, result2);
+assert.equal(diff.divergenceFrame, -1); // -1 = no divergence
+```
+
+### Property-Based Testing — Test Invariants Across Random Inputs
+
+Verify that game invariants hold across many random input sequences:
+
+```typescript
+import { checkProperty, assertProperty, randomKeys } from "@arcane/runtime/testing";
+
+// Test: player HP never goes below 0, no matter what buttons are pressed
+assertProperty({
+  generator: randomKeys(100),  // 100 random key sequences
+  runs: 50,                    // Test 50 different sequences
+  property: (inputs) => {
+    let state = initialState;
+    for (const frame of inputs) {
+      state = gameStep(state, frame);
+      if (state.player.hp < 0) return false;  // Invariant violated
+    }
+    return true;
+  },
+});
+// On failure: automatically shrinks to minimal failing input sequence
 ```

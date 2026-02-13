@@ -36,6 +36,9 @@ MODULES=(
   "particles:Particles"
   "pathfinding:Pathfinding"
   "systems:Systems"
+  "scenes:Scenes"
+  "persistence:Persistence"
+  "procgen:Procedural Generation"
   "agent:Agent"
   "testing:Testing"
 )
@@ -46,7 +49,7 @@ MODULES=(
   echo "// Regenerate with: ./scripts/generate-declarations.sh"
   echo "//"
   echo "// Import from: @arcane/runtime/{module}"
-  echo "// Modules: rendering, ui, state, physics, tweening, particles, pathfinding, systems, agent, testing"
+  echo "// Modules: rendering, ui, state, physics, tweening, particles, pathfinding, systems, scenes, persistence, procgen, agent, testing"
   echo ""
 
   for entry in "${MODULES[@]}"; do

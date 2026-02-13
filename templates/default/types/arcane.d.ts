@@ -3,7 +3,7 @@
 // Regenerate with: ./scripts/generate-declarations.sh
 //
 // Import from: @arcane/runtime/{module}
-// Modules: rendering, ui, state, physics, tweening, particles, pathfinding, systems, agent, testing
+// Modules: rendering, ui, state, physics, tweening, particles, pathfinding, systems, scenes, persistence, procgen, agent, testing
 
 // ============================================================================
 // Module: @arcane/runtime/rendering (Rendering)
@@ -1429,14 +1429,28 @@ declare module "@arcane/runtime/rendering" {
       /** Vertical offset from baseline. */
       offsetY: number;
   };
-  /** Descriptor for an MSDF (signed distance field) font. */
+  /**
+   * Descriptor for an MSDF (signed distance field) font.
+   *
+   * MSDF fonts render text as resolution-independent signed distance fields,
+   * supporting outline and shadow effects. Each font owns a pool of shader
+   * instances so that multiple `drawText()` calls in the same frame can use
+   * different outline/shadow parameters without overwriting each other.
+   */
   export type MSDFFont = {
       /** Internal font ID (from the Rust MSDF font store). */
       fontId: number;
       /** Texture handle for the MSDF atlas. */
       textureId: TextureId;
-      /** Shader ID for the MSDF rendering pipeline. */
+      /** Shader ID for the MSDF rendering pipeline (first slot in the pool). Backward-compatible shorthand for `shaderPool[0]`. */
       shaderId: number;
+      /**
+       * Pool of shader IDs (same WGSL, separate uniform buffers).
+       * Each unique outline/shadow/scale combo in a frame claims a pool slot.
+       * The pool resets every frame. With 8 slots, up to 8 distinct param combos
+       * can coexist. Beyond 8, slots wrap around (last params win for that slot).
+       */
+      shaderPool: number[];
       /** Font size the atlas was generated at. */
       fontSize: number;
       /** Line height in pixels at the native font size. */
@@ -1517,9 +1531,13 @@ declare module "@arcane/runtime/rendering" {
    * Load an MSDF font from a pre-generated atlas image and metrics JSON file.
    * The atlas should be generated with msdf-atlas-gen or a compatible tool.
    *
+   * The atlas texture is uploaded in linear format (not sRGB) so that the SDF
+   * distance field values are sampled correctly by the MSDF shader.
+   *
    * @param atlasPath - Path to the MSDF atlas PNG image.
    * @param metricsJson - JSON string containing glyph metrics (msdf-atlas-gen format).
-   * @returns MSDFFont descriptor for use with drawText().
+   * @returns MSDFFont descriptor for use with drawText(). Includes a `shaderPool` for
+   *   per-draw-call outline/shadow parameters.
    *
    * @example
    * const metrics = await fetch("fonts/roboto-msdf.json").then(r => r.text());
@@ -1564,6 +1582,13 @@ declare module "@arcane/runtime/rendering" {
    *   outline: { width: 1.0, color: { r: 0, g: 0, b: 0, a: 1 } },
    *   shadow: { offsetX: 2, offsetY: 2, color: { r: 0, g: 0, b: 0, a: 0.5 } },
    * });
+   *
+   * @example
+   * // Multiple drawText calls with different params in the same frame work correctly.
+   * // Each unique outline/shadow combo gets its own shader slot from the pool.
+   * drawText("Red outline", 10, 10, { msdfFont: font, outline: { width: 1, color: { r: 1, g: 0, b: 0, a: 1 } } });
+   * drawText("Blue outline", 10, 40, { msdfFont: font, outline: { width: 2, color: { r: 0, g: 0, b: 1, a: 1 } } });
+   * drawText("No effects", 10, 70, { msdfFont: font });
    */
   export declare function drawText(text: string, x: number, y: number, options?: TextOptions): void;
   export {};
@@ -4715,6 +4740,645 @@ declare module "@arcane/runtime/systems" {
    */
   export declare function extend<S>(base: SystemDef<S>, options: ExtendOptions<S>): SystemDef<S>;
   export {};
+
+}
+
+// ============================================================================
+// Module: @arcane/runtime/scenes (Scenes)
+// ============================================================================
+
+declare module "@arcane/runtime/scenes" {
+  /**
+   * Scene management type definitions.
+   */
+  /** Context passed to scene lifecycle callbacks for stack navigation. */
+  export type SceneContext = Readonly<{
+      /** Push a new scene on top of the stack (current scene pauses). */
+      push: (scene: SceneInstance<any>, transition?: TransitionConfig) => void;
+      /** Pop the current scene (resumes the one below). No-op if only one scene on stack. */
+      pop: (transition?: TransitionConfig) => void;
+      /** Replace the current scene (exit current, enter new). */
+      replace: (scene: SceneInstance<any>, transition?: TransitionConfig) => void;
+      /** Get data passed to this scene via createSceneInstance. */
+      getData: <T = unknown>() => T | undefined;
+  }>;
+  /** Definition of a scene: name + lifecycle hooks. All hooks except name and create are optional. */
+  export type SceneDef<S = void> = Readonly<{
+      /** Unique name for this scene (for debugging). */
+      name: string;
+      /** Factory function that creates initial state for each instance. */
+      create: () => S;
+      /** Called once when scene first becomes active (pushed/replaced onto stack). */
+      onEnter?: (state: S, ctx: SceneContext) => S;
+      /** Called every frame while the scene is the active (topmost) scene. */
+      onUpdate?: (state: S, dt: number, ctx: SceneContext) => S;
+      /** Called every frame for rendering while scene is active. */
+      onRender?: (state: S, ctx: SceneContext) => void;
+      /** Called when another scene is pushed on top of this one. */
+      onPause?: (state: S) => S;
+      /** Called when the scene above is popped, making this one active again. */
+      onResume?: (state: S, ctx: SceneContext) => S;
+      /** Called when scene is removed from the stack (popped or replaced). */
+      onExit?: (state: S) => void;
+  }>;
+  /** A live instance of a scene with its runtime state. */
+  export type SceneInstance<S = unknown> = {
+      def: SceneDef<S>;
+      state: S;
+      entered: boolean;
+      data?: unknown;
+  };
+  /** Transition visual effect type. */
+  export type TransitionType = "none" | "fade";
+  /** Configuration for scene transitions. */
+  export type TransitionConfig = {
+      /** Transition type. Default: "fade". */
+      type?: TransitionType;
+      /** Duration in seconds. Default: 0.3. */
+      duration?: number;
+      /** Fade color. Default: black { r: 0, g: 0, b: 0 }. */
+      color?: {
+          r: number;
+          g: number;
+          b: number;
+      };
+  };
+
+  /**
+   * Core scene management implementation.
+   *
+   * Manages a scene stack with lifecycle hooks and optional transitions.
+   * Use {@link startSceneManager} to take ownership of onFrame, or call
+   * {@link updateSceneManager} manually each frame for custom integration.
+   */
+  /**
+   * Type-safety helper that returns the scene definition unchanged.
+   * Use to get type inference on the state parameter without casting.
+   *
+   * @param def - The scene definition.
+   * @returns The same definition, unchanged.
+   */
+  export declare function createScene<S>(def: SceneDef<S>): SceneDef<S>;
+  /**
+   * Create a live scene instance from a definition.
+   * Calls `def.create()` to produce initial state. The scene is NOT entered yet.
+   *
+   * @param def - Scene definition.
+   * @param data - Optional data accessible via `ctx.getData()` inside lifecycle hooks.
+   * @returns A new SceneInstance ready to be pushed onto the stack.
+   */
+  export declare function createSceneInstance<S>(def: SceneDef<S>, data?: unknown): SceneInstance<S>;
+  /**
+   * Take ownership of the onFrame loop and push the initial scene.
+   * Calls `onFrame()` from the rendering loop module, so only one scene manager
+   * (or one onFrame callback) can be active at a time.
+   *
+   * @param initial - The first scene instance to push.
+   * @param options - Optional user onUpdate callback invoked each frame after the scene updates.
+   */
+  export declare function startSceneManager(initial: SceneInstance<any>, options?: {
+      onUpdate?: (dt: number) => void;
+  }): void;
+  /**
+   * Advance the scene manager by one frame. Call this manually if you want to
+   * integrate the scene manager into your own onFrame callback instead of using
+   * {@link startSceneManager}.
+   *
+   * @param dt - Delta time in seconds since last frame.
+   */
+  export declare function updateSceneManager(dt: number): void;
+  /**
+   * Push a scene onto the stack. The current active scene is paused.
+   * If a transition is configured, the push happens at the transition midpoint.
+   *
+   * @param instance - Scene instance to push.
+   * @param transition - Optional transition configuration.
+   */
+  export declare function pushScene(instance: SceneInstance<any>, transition?: TransitionConfig): void;
+  /**
+   * Pop the topmost scene from the stack. The scene below resumes.
+   * No-op if only one scene remains on the stack.
+   * If a transition is configured, the pop happens at the transition midpoint.
+   *
+   * @param transition - Optional transition configuration.
+   */
+  export declare function popScene(transition?: TransitionConfig): void;
+  /**
+   * Replace the topmost scene with a new one.
+   * The current scene exits, the new scene enters.
+   * If a transition is configured, the replacement happens at the transition midpoint.
+   *
+   * @param instance - Scene instance to replace with.
+   * @param transition - Optional transition configuration.
+   */
+  export declare function replaceScene(instance: SceneInstance<any>, transition?: TransitionConfig): void;
+  /**
+   * Get the currently active (topmost) scene instance, or undefined if the stack is empty.
+   *
+   * @returns The active scene instance.
+   */
+  export declare function getActiveScene(): SceneInstance | undefined;
+  /**
+   * Get the number of scenes currently on the stack.
+   *
+   * @returns Stack depth.
+   */
+  export declare function getSceneStackDepth(): number;
+  /**
+   * Check whether a transition is currently in progress.
+   *
+   * @returns True if transitioning.
+   */
+  export declare function isTransitioning(): boolean;
+  /**
+   * Stop the scene manager. Calls onExit on all stacked scenes (bottom to top),
+   * then clears the stack.
+   */
+  export declare function stopSceneManager(): void;
+  /**
+   * Reset all scene manager state. For testing only.
+   */
+  export declare function _resetSceneManager(): void;
+
+}
+
+// ============================================================================
+// Module: @arcane/runtime/persistence (Persistence)
+// ============================================================================
+
+declare module "@arcane/runtime/persistence" {
+  /**
+   * Save/load system type definitions.
+   */
+  /** Metadata stored with each save file. */
+  export type SaveMetadata = Readonly<{
+      /** Save slot identifier. */
+      slot: string;
+      /** Unix timestamp (ms) when save was created. */
+      timestamp: number;
+      /** Schema version number for migration support. */
+      version: number;
+      /** Optional human-readable label. */
+      label?: string;
+      /** Optional cumulative play time in seconds. */
+      playtime?: number;
+  }>;
+  /** Envelope wrapping saved game state with metadata. */
+  export type SaveFile<S = unknown> = Readonly<{
+      /** Magic marker identifying this as an Arcane save file. */
+      __arcane: "save";
+      /** Schema version for migration. */
+      __version: number;
+      /** Save metadata. */
+      metadata: SaveMetadata;
+      /** The actual game state. */
+      state: S;
+  }>;
+  /** A schema migration that transforms state from one version to the next. */
+  export type Migration = Readonly<{
+      /** Target version this migration produces. */
+      version: number;
+      /** Human-readable description. */
+      description: string;
+      /** Transform function: takes state at version-1, returns state at version. */
+      up: (data: unknown) => unknown;
+  }>;
+  /** Options for saving. */
+  export type SaveOptions = {
+      /** Save slot name. Default: "default". */
+      slot?: string;
+      /** Human-readable label. */
+      label?: string;
+      /** Cumulative play time in seconds. */
+      playtime?: number;
+  };
+  /** Result of a load operation. */
+  export type LoadResult<S = unknown> = Readonly<{
+      /** Whether the load succeeded. */
+      ok: boolean;
+      /** Loaded state (present if ok is true). */
+      state?: S;
+      /** Save metadata (present if ok is true). */
+      metadata?: SaveMetadata;
+      /** Error message (present if ok is false). */
+      error?: string;
+  }>;
+  /** Backend for reading/writing save data. */
+  export type StorageBackend = Readonly<{
+      /** Write a value to storage. */
+      write: (key: string, value: string) => void;
+      /** Read a value from storage. Returns null if not found. */
+      read: (key: string) => string | null;
+      /** Remove a value from storage. */
+      remove: (key: string) => void;
+      /** List all keys in storage. */
+      list: () => string[];
+  }>;
+
+  /**
+   * Auto-save functionality.
+   */
+  /**
+   * Enable auto-save with the given configuration.
+   */
+  export declare function enableAutoSave<S>(config: {
+      getState: () => S;
+      interval?: number;
+      options?: SaveOptions;
+  }): void;
+  /**
+   * Disable auto-save.
+   */
+  export declare function disableAutoSave(): void;
+  /**
+   * Advance the auto-save timer. Saves when elapsed >= interval.
+   * Returns true if a save was performed this frame.
+   */
+  export declare function updateAutoSave(dt: number): boolean;
+  /**
+   * Trigger an immediate auto-save if enabled.
+   */
+  export declare function triggerAutoSave(): void;
+  /**
+   * Check if auto-save is currently enabled.
+   */
+  export declare function isAutoSaveEnabled(): boolean;
+  /**
+   * Reset auto-save state for testing.
+   */
+  export declare function _resetAutoSave(): void;
+
+  /**
+   * Core save/load implementation.
+   */
+  /**
+   * Configure the save system. Only updates provided fields.
+   */
+  export declare function configureSaveSystem(config: {
+      storage?: StorageBackend;
+      version?: number;
+      prefix?: string;
+  }): void;
+  /**
+   * Register a schema migration. Migrations are kept sorted by version.
+   * Throws if a migration with the same version already exists.
+   */
+  export declare function registerMigration(migration: Migration): void;
+  /**
+   * Serialize game state into a JSON string with save envelope.
+   */
+  export declare function serialize<S>(state: S, options?: SaveOptions): string;
+  /**
+   * Apply migrations to data from fromVersion up to currentVersion.
+   */
+  export declare function applyMigrations(data: unknown, fromVersion: number): unknown;
+  /**
+   * Deserialize a JSON string back into a LoadResult.
+   * Validates the save envelope and applies migrations if needed.
+   */
+  export declare function deserialize<S>(json: string): LoadResult<S>;
+  /**
+   * Save game state to the configured storage backend.
+   */
+  export declare function saveGame<S>(state: S, options?: SaveOptions): void;
+  /**
+   * Load game state from the configured storage backend.
+   */
+  export declare function loadGame<S>(slot?: string): LoadResult<S>;
+  /**
+   * Delete a save from storage.
+   */
+  export declare function deleteSave(slot?: string): void;
+  /**
+   * Check if a save exists in storage.
+   */
+  export declare function hasSave(slot?: string): boolean;
+  /**
+   * List all saves, returning metadata sorted by timestamp descending.
+   */
+  export declare function listSaves(): SaveMetadata[];
+  /**
+   * Reset all module-level state to defaults. For testing only.
+   */
+  export declare function _resetSaveSystem(): void;
+
+  /**
+   * Storage backend implementations.
+   */
+  /**
+   * Create an in-memory storage backend.
+   * Works everywhere (Node, V8, headless). Good for tests.
+   */
+  export declare function createMemoryStorage(): StorageBackend;
+  /**
+   * Create a file-based storage backend using Rust ops.
+   * Falls back to memory storage in headless mode.
+   */
+  export declare function createFileStorage(): StorageBackend;
+
+}
+
+// ============================================================================
+// Module: @arcane/runtime/procgen (Procedural Generation)
+// ============================================================================
+
+declare module "@arcane/runtime/procgen" {
+  /**
+   * Types for the procedural generation module.
+   *
+   * Wave Function Collapse (WFC) generates grids by propagating adjacency
+   * constraints. A tileset defines which tiles can neighbor each other in
+   * each cardinal direction. Constraints are checked post-generation and
+   * can trigger retries.
+   */
+  /** Cardinal directions for adjacency rules. */
+  export type Direction = "north" | "east" | "south" | "west";
+  /** All four cardinal directions, ordered for iteration. */
+  export declare const DIRECTIONS: readonly Direction[];
+  /** Map a direction to its opposite. */
+  export declare const OPPOSITE: Record<Direction, Direction>;
+  /** Offsets for each direction: [dx, dy]. North is -y, south is +y. */
+  export declare const DIR_OFFSET: Record<Direction, {
+      dx: number;
+      dy: number;
+  }>;
+  /**
+   * Adjacency rules for a single tile type.
+   * Maps each direction to the set of tile IDs that are allowed neighbors.
+   */
+  export type AdjacencyRule = {
+      [dir in Direction]: readonly number[];
+  };
+  /**
+   * A tileset for WFC generation.
+   * Maps tile IDs to their adjacency rules and optional weights.
+   */
+  export type TileSet = {
+      /**
+       * Map of tile ID to adjacency rules.
+       * Each tile defines which other tiles can appear next to it in each direction.
+       */
+      tiles: Record<number, AdjacencyRule>;
+      /**
+       * Optional weights for tile selection during collapse.
+       * Higher weight = more likely to be chosen. Defaults to 1 for all tiles.
+       */
+      weights?: Record<number, number>;
+  };
+  /**
+   * A constraint checked after generation. Returns true if the grid is valid.
+   * If a constraint returns false, the generation is retried (up to maxRetries).
+   */
+  export type Constraint = (grid: WFCGrid) => boolean;
+  /**
+   * Configuration for a WFC generation run.
+   */
+  export type WFCConfig = {
+      /** The tileset defining tile adjacency rules. */
+      tileset: TileSet;
+      /** Grid width in tiles. Must be > 0. */
+      width: number;
+      /** Grid height in tiles. Must be > 0. */
+      height: number;
+      /** PRNG seed for reproducible generation. */
+      seed: number;
+      /** Post-generation constraints. All must return true. Default: []. */
+      constraints?: readonly Constraint[];
+      /** Maximum retries if constraints fail or WFC hits a contradiction. Default: 100. */
+      maxRetries?: number;
+      /** Maximum backtrack steps during a single WFC run before giving up. Default: 1000. */
+      maxBacktracks?: number;
+  };
+  /**
+   * The output grid from a WFC generation.
+   * A 2D array stored in row-major order (grid[y][x]).
+   */
+  export type WFCGrid = {
+      /** Grid width in tiles. */
+      width: number;
+      /** Grid height in tiles. */
+      height: number;
+      /** 2D tile data. Access as tiles[y][x]. Each value is a tile ID from the tileset. */
+      tiles: number[][];
+  };
+  /**
+   * Result of a WFC generation attempt.
+   */
+  export type WFCResult = {
+      /** Whether generation succeeded (no contradictions, all constraints met). */
+      success: boolean;
+      /** The generated grid, or null if generation failed. */
+      grid: WFCGrid | null;
+      /** Number of retries used before success (or exhaustion). */
+      retries: number;
+      /** Total time in milliseconds (approximate, using Date.now). */
+      elapsed: number;
+  };
+  /**
+   * Configuration for batch generation and testing.
+   */
+  export type GenerateAndTestConfig = {
+      /** WFC configuration (constraints included here apply to every run). */
+      wfc: WFCConfig;
+      /** Number of levels to generate. */
+      iterations: number;
+      /** Test function run on each successful generation. Return true if the level passes. */
+      testFn: (grid: WFCGrid) => boolean;
+  };
+  /**
+   * Result of a batch generate-and-test run.
+   */
+  export type GenerateAndTestResult = {
+      /** Number of levels that generated and passed the test function. */
+      passed: number;
+      /** Number of levels that generated but failed the test function. */
+      failed: number;
+      /** Number of levels that failed to generate (WFC contradiction or constraint failure). */
+      generationFailures: number;
+      /** Total iterations attempted. */
+      total: number;
+  };
+
+  /**
+   * Pre-built constraints for WFC generation.
+   *
+   * Constraints are functions `(grid: WFCGrid) => boolean` checked after
+   * generation. If any constraint fails, the generation retries.
+   *
+   * Includes reachability (flood fill), tile count bounds, border enforcement,
+   * and support for custom constraint functions.
+   */
+  /**
+   * Reachability constraint: all cells matching `walkableFn` must be connected
+   * via flood fill (4-directional adjacency).
+   *
+   * Useful for ensuring dungeons have no isolated rooms.
+   *
+   * @param walkableFn - Returns true for tiles that should be reachable.
+   * @returns A constraint function.
+   *
+   * @example
+   * ```ts
+   * const connected = reachability((tileId) => tileId !== WALL);
+   * const result = generate({ ...config, constraints: [connected] });
+   * ```
+   */
+  export declare function reachability(walkableFn: (tileId: number) => boolean): Constraint;
+  /**
+   * Exact count constraint: the grid must contain exactly `n` cells with the given tile ID.
+   *
+   * @param tileId - The tile ID to count.
+   * @param n - The exact count required.
+   * @returns A constraint function.
+   */
+  export declare function exactCount(tileId: number, n: number): Constraint;
+  /**
+   * Minimum count constraint: the grid must contain at least `n` cells with the given tile ID.
+   *
+   * @param tileId - The tile ID to count.
+   * @param n - The minimum count required.
+   * @returns A constraint function.
+   */
+  export declare function minCount(tileId: number, n: number): Constraint;
+  /**
+   * Maximum count constraint: the grid must contain at most `n` cells with the given tile ID.
+   *
+   * @param tileId - The tile ID to count.
+   * @param n - The maximum count allowed.
+   * @returns A constraint function.
+   */
+  export declare function maxCount(tileId: number, n: number): Constraint;
+  /**
+   * Border constraint: all edge cells must be the given tile ID.
+   *
+   * @param tileId - The tile ID required on all edges.
+   * @returns A constraint function.
+   *
+   * @example
+   * ```ts
+   * const wallBorder = border(WALL);
+   * const result = generate({ ...config, constraints: [wallBorder] });
+   * ```
+   */
+  export declare function border(tileId: number): Constraint;
+  /**
+   * Custom constraint: wraps any `(grid) => boolean` function as a Constraint.
+   * This is a convenience identity function that provides type safety.
+   *
+   * @param fn - A function that takes a WFCGrid and returns true if valid.
+   * @returns The same function typed as a Constraint.
+   */
+  export declare function custom(fn: (grid: WFCGrid) => boolean): Constraint;
+  /**
+   * Count occurrences of a tile ID in a grid. Useful in custom constraints.
+   *
+   * @param grid - The grid to search.
+   * @param tileId - The tile ID to count.
+   * @returns Number of cells with the given tile ID.
+   */
+  export declare function countTile(grid: WFCGrid, tileId: number): number;
+  /**
+   * Find all positions of a tile ID in a grid. Useful in custom constraints.
+   *
+   * @param grid - The grid to search.
+   * @param tileId - The tile ID to find.
+   * @returns Array of {x, y} positions.
+   */
+  export declare function findTile(grid: WFCGrid, tileId: number): {
+      x: number;
+      y: number;
+  }[];
+
+  /**
+   * Validation and batch generation testing for procedural generation.
+   *
+   * `validateLevel` checks all constraints on a grid.
+   * `generateAndTest` runs batch generation with a test function for quality assurance.
+   */
+  /**
+   * Validate a grid against a list of constraints.
+   * Returns true if all constraints pass.
+   *
+   * @param grid - The grid to validate.
+   * @param constraints - Array of constraint functions.
+   * @returns True if all constraints are satisfied.
+   *
+   * @example
+   * ```ts
+   * const valid = validateLevel(grid, [
+   *   reachability((id) => id !== WALL),
+   *   exactCount(ENTRANCE, 1),
+   * ]);
+   * ```
+   */
+  export declare function validateLevel(grid: WFCGrid, constraints: readonly Constraint[]): boolean;
+  /**
+   * Batch generate levels and run a test function on each.
+   * Reports how many generated successfully, passed, and failed.
+   *
+   * Each iteration uses a different seed: `config.wfc.seed + i`.
+   *
+   * @param config - Batch generation configuration.
+   * @returns Summary of passed, failed, and generation failures.
+   *
+   * @example
+   * ```ts
+   * const result = generateAndTest({
+   *   wfc: { tileset, width: 20, height: 20, seed: 1, constraints: [connected] },
+   *   iterations: 100,
+   *   testFn: (grid) => {
+   *     const entrances = findTile(grid, ENTRANCE);
+   *     return entrances.length === 1;
+   *   },
+   * });
+   * console.log(`${result.passed}/${result.total} levels passed`);
+   * ```
+   */
+  export declare function generateAndTest(config: GenerateAndTestConfig): GenerateAndTestResult;
+
+  /**
+   * Wave Function Collapse (WFC) — tile-based procedural generation.
+   *
+   * Generates a grid by iteratively collapsing cells with the fewest possibilities,
+   * then propagating adjacency constraints. Supports backtracking on contradictions
+   * and post-generation constraint validation with retries.
+   *
+   * Uses the existing seeded PRNG from `runtime/state/prng.ts` for reproducibility.
+   */
+  /**
+   * Generate a grid using Wave Function Collapse.
+   *
+   * The algorithm:
+   * 1. Initialize all cells with all tile possibilities.
+   * 2. Select the cell with minimum entropy (fewest possibilities).
+   * 3. Collapse it to a single tile (weighted random).
+   * 4. Propagate constraints to neighbors (remove impossible tiles).
+   * 5. If a contradiction is found, backtrack.
+   * 6. Repeat until all cells are collapsed.
+   * 7. Validate post-generation constraints; retry if needed.
+   *
+   * @param config - WFC generation configuration.
+   * @returns A WFCResult with the generated grid or failure info.
+   *
+   * @example
+   * ```ts
+   * const result = generate({
+   *   tileset: {
+   *     tiles: {
+   *       0: { north: [0,1], east: [0,1], south: [0,1], west: [0,1] },
+   *       1: { north: [0,1], east: [0,1], south: [0,1], west: [0,1] },
+   *     },
+   *   },
+   *   width: 10,
+   *   height: 10,
+   *   seed: 42,
+   * });
+   * if (result.success && result.grid) {
+   *   // result.grid.tiles[y][x] contains tile IDs
+   * }
+   * ```
+   */
+  export declare function generate(config: WFCConfig): WFCResult;
 
 }
 

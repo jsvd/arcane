@@ -197,51 +197,78 @@ Some operations that were originally planned as MCP tools are now built-in CLI c
 
 - **`arcane assets list/search/download`** — Asset discovery and download. Ships in the binary, no config needed. See [Asset Management](asset-management.md).
 
-## MCP Tools (Planned)
+## MCP Server
 
-MCP (Model Context Protocol) tools give Claude Code direct programmatic access to engine functionality. The tools below are planned — not yet implemented.
+The MCP (Model Context Protocol) server runs alongside `arcane dev` via `--mcp <port>`. It implements JSON-RPC 2.0 and exposes 10 tools for AI agents to inspect and control a running game.
 
-### Phase 1 MCP Tools
+### Starting the MCP Server
 
-#### `arcane-state` — State Inspector
-```
-arcane_state.query(path)       → query game state tree
-arcane_state.diff(before, after) → compute state diff
-arcane_state.validate(state)   → validate state against schema
+```bash
+arcane dev my-game.ts --mcp 3001
 ```
 
-#### `arcane-test-runner` — Headless Test Execution
-```
-arcane_test.run_all()          → run all tests
-arcane_test.run_file(path)     → run tests in a specific file
-arcane_test.run_headless(scenario) → execute a scenario headless
+The server responds to standard MCP protocol messages: `initialize`, `tools/list`, `tools/call`, and `ping`.
+
+### Available Tools
+
+| Tool | Description | Input |
+|---|---|---|
+| `get_state` | Get full game state or a nested path | `{ path?: string }` |
+| `describe_state` | Human-readable text description of game state | `{ verbosity?: "minimal" \| "normal" \| "detailed" }` |
+| `list_actions` | List all available actions the agent can take | *none* |
+| `execute_action` | Execute a registered game action | `{ name: string, payload?: string }` |
+| `inspect_scene` | Query a specific dot-path in the state tree | `{ path: string }` |
+| `capture_snapshot` | Capture the full game state for later comparison | *none* |
+| `simulate_action` | "What if" — simulate an action without mutating state | `{ action: string }` |
+| `rewind_state` | Rewind to a previous state (if history is available) | `{ steps?: number }` |
+| `get_history` | Get the action/state history | *none* |
+| `hot_reload` | Trigger a hot-reload of the game script | *none* |
+
+### Example: Agent Interaction
+
+```bash
+# List available tools
+curl -X POST http://localhost:3001 -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+# Get current game state
+curl -X POST http://localhost:3001 -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_state","arguments":{}}}'
+
+# Execute an action
+curl -X POST http://localhost:3001 -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"execute_action","arguments":{"name":"attack","payload":"{\"target\":\"goblin_1\"}"}}}'
 ```
 
-### Phase 3 MCP Tools
+### Architecture
 
-#### `arcane-inspector` — Live Game Inspector
 ```
-arcane_inspector.describe()    → text description of game state
-arcane_inspector.screenshot()  → capture rendered frame
-arcane_inspector.action(spec)  → execute an action
-arcane_inspector.rewind(turn)  → rewind to a previous state
-arcane_inspector.simulate(actions) → "what if" without mutating state
-```
-
-#### `arcane-world` — World Authoring Tools
-```
-arcane_world.validate(spec)    → validate a world spec
-arcane_world.visualize(spec)   → ASCII visualization of world layout
-arcane_world.pathfind(from, to) → check connectivity between rooms
+Agent (Claude Code / HTTP client)
+    ↓ JSON-RPC 2.0 over HTTP
+MCP Server (core/agent/mcp.rs, tiny_http)
+    ↓ channel message
+Frame callback (cli/commands/dev.rs)
+    ↓ eval_to_string
+globalThis.__arcaneAgent (runtime/agent/protocol.ts)
+    ↓ response
+Frame callback → channel → MCP Server → HTTP response
 ```
 
-### Phase 6 MCP Tools
+The MCP server runs on a background thread. Requests are forwarded to the game loop via an MPSC channel and processed during the frame callback, so agent actions are synchronized with the game's update cycle.
 
-#### `arcane-playtest` — Automated Playtesting
-```
-arcane_playtest.run(dungeon, config) → automated playthrough
-arcane_playtest.balance_report(dungeon) → difficulty analysis
-arcane_playtest.coverage(dungeon)    → which paths/encounters were tested
+### Registering an Agent in Your Game
+
+For the MCP server to work, your game must call `registerAgent()`:
+
+```typescript
+import { registerAgent } from "@arcane/runtime/agent";
+
+registerAgent({
+  getState: () => gameState,
+  setState: (s) => { gameState = s; },
+  actions: {
+    move: (dir) => { /* move player */ },
+    attack: (target) => { /* attack */ },
+  },
+  describe: (opts) => `Player at ${gameState.player.x},${gameState.player.y}`,
+});
 ```
 
 ## Self-Evolution Process
@@ -296,6 +323,10 @@ Track all tooling changes here:
 | Phase 0 | Initial agent/skill/MCP tool definitions | Project bootstrap |
 | Phase 1.5 | Add agent teams guidance | Enable coordinated multi-session development |
 | Phase 9.5 | Replace asset MCP server with `arcane assets` CLI | Zero-config asset discovery (ADR-014) |
+| Phase 17 | MCP server implemented (10 tools, JSON-RPC 2.0) | Agent intelligence: live game interaction |
+| Phase 17 | Snapshot-replay + property-based testing | Determinism testing, automated regression |
+| Phase 18 | WFC procedural generation with constraints | Code-defined level generation |
+| Phase 19 | Radiance Cascades GI + advanced lighting | 2D global illumination, emissive surfaces |
 
 ### Creating New Agents
 

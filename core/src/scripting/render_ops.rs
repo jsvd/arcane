@@ -107,8 +107,10 @@ pub struct RenderBridgeState {
     pub msdf_builtin_queue: Vec<(u32, u32)>,
     /// Queue for creating MSDF shader: (shader_id, wgsl_source).
     pub msdf_shader_queue: Vec<(u32, String)>,
-    /// MSDF shader ID (assigned once, reused for all MSDF text).
-    pub msdf_shader_id: Option<u32>,
+    /// Pool of MSDF shader IDs (same WGSL, separate uniform buffers for per-draw-call params).
+    pub msdf_shader_pool: Vec<u32>,
+    /// Pending MSDF texture loads (needs linear sampling, not sRGB).
+    pub msdf_texture_load_queue: Vec<(String, u32)>,
 }
 
 impl RenderBridgeState {
@@ -161,7 +163,8 @@ impl RenderBridgeState {
             msdf_fonts: MsdfFontStore::new(),
             msdf_builtin_queue: Vec::new(),
             msdf_shader_queue: Vec::new(),
-            msdf_shader_id: None,
+            msdf_shader_pool: Vec::new(),
+            msdf_texture_load_queue: Vec::new(),
         }
     }
 }
@@ -868,10 +871,12 @@ pub fn op_create_msdf_builtin_font(state: &mut OpState) -> String {
         // The font was registered with the texture_id as the lookup key
         let font_id_key = format!("__msdf_font_{tex_id}__");
         if let Some(&font_id) = b.texture_path_to_id.get(&font_id_key) {
-            let shader_id = b.msdf_shader_id.unwrap_or(0);
+            let pool = &b.msdf_shader_pool;
+            let shader_id = pool.first().copied().unwrap_or(0);
+            let pool_json: Vec<String> = pool.iter().map(|id| id.to_string()).collect();
             return format!(
-                "{{\"fontId\":{},\"textureId\":{},\"shaderId\":{}}}",
-                font_id, tex_id, shader_id
+                "{{\"fontId\":{},\"textureId\":{},\"shaderId\":{},\"shaderPool\":[{}]}}",
+                font_id, tex_id, shader_id, pool_json.join(",")
             );
         }
     }
@@ -895,12 +900,14 @@ pub fn op_create_msdf_builtin_font(state: &mut OpState) -> String {
     // dev.rs will call generate_builtin_msdf_font() again and upload pixels.
     b.msdf_builtin_queue.push((font_id, tex_id));
 
-    // Ensure MSDF shader exists
-    let shader_id = ensure_msdf_shader(&mut b);
+    // Ensure MSDF shader pool exists
+    let pool = ensure_msdf_shader_pool(&mut b);
+    let shader_id = pool.first().copied().unwrap_or(0);
+    let pool_json: Vec<String> = pool.iter().map(|id| id.to_string()).collect();
 
     format!(
-        "{{\"fontId\":{},\"textureId\":{},\"shaderId\":{}}}",
-        font_id, tex_id, shader_id
+        "{{\"fontId\":{},\"textureId\":{},\"shaderId\":{},\"shaderPool\":[{}]}}",
+        font_id, tex_id, shader_id, pool_json.join(",")
     )
 }
 
@@ -979,7 +986,7 @@ pub fn op_load_msdf_font(
         let id = b.next_texture_id;
         b.next_texture_id += 1;
         b.texture_path_to_id.insert(resolved.clone(), id);
-        b.texture_load_queue.push((resolved, id));
+        b.msdf_texture_load_queue.push((resolved, id));
         id
     };
 
@@ -992,28 +999,37 @@ pub fn op_load_msdf_font(
     };
 
     let font_id = b.msdf_fonts.register(font);
-    let shader_id = ensure_msdf_shader(&mut b);
+    let pool = ensure_msdf_shader_pool(&mut b);
+    let shader_id = pool.first().copied().unwrap_or(0);
+    let pool_json: Vec<String> = pool.iter().map(|id| id.to_string()).collect();
 
     format!(
-        "{{\"fontId\":{},\"textureId\":{},\"shaderId\":{}}}",
-        font_id, tex_id, shader_id
+        "{{\"fontId\":{},\"textureId\":{},\"shaderId\":{},\"shaderPool\":[{}]}}",
+        font_id, tex_id, shader_id, pool_json.join(",")
     )
 }
 
-/// Ensure the MSDF shader exists in the bridge state. Returns the shader ID.
-fn ensure_msdf_shader(b: &mut RenderBridgeState) -> u32 {
-    if let Some(id) = b.msdf_shader_id {
-        return id;
+/// Pool size for MSDF shaders (same WGSL, different uniform buffers).
+const MSDF_SHADER_POOL_SIZE: usize = 8;
+
+/// Ensure the MSDF shader pool exists in the bridge state. Returns the pool of shader IDs.
+fn ensure_msdf_shader_pool(b: &mut RenderBridgeState) -> Vec<u32> {
+    if !b.msdf_shader_pool.is_empty() {
+        return b.msdf_shader_pool.clone();
     }
 
-    let id = b.next_shader_id;
-    b.next_shader_id += 1;
-    b.msdf_shader_id = Some(id);
-
     let source = crate::renderer::msdf::MSDF_FRAGMENT_SOURCE.to_string();
-    b.msdf_shader_queue.push((id, source));
+    let mut pool = Vec::with_capacity(MSDF_SHADER_POOL_SIZE);
 
-    id
+    for _ in 0..MSDF_SHADER_POOL_SIZE {
+        let id = b.next_shader_id;
+        b.next_shader_id += 1;
+        b.msdf_shader_queue.push((id, source.clone()));
+        pool.push(id);
+    }
+
+    b.msdf_shader_pool = pool.clone();
+    pool
 }
 
 deno_core::extension!(

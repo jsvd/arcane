@@ -18,7 +18,14 @@ const hasRenderOps =
  * });
  */
 export function onFrame(callback: () => void): void {
-  (globalThis as any).__frameCallback = callback;
+  (globalThis as any).__frameCallback = () => {
+    // Reset MSDF shader param cache at the start of each frame
+    // so pool slots can be reused for different param combos.
+    if (typeof (globalThis as any).__arcane_reset_msdf_cache === "function") {
+      (globalThis as any).__arcane_reset_msdf_cache();
+    }
+    callback();
+  };
 }
 
 /**

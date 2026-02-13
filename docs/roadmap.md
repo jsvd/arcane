@@ -1022,15 +1022,39 @@ Items discovered during development that don't block current work but should be 
 
 ### MSDF Text: Per-Draw-Call Shader Params
 
-**Status:** Open
+**Status:** Done ✅
 **Discovered:** Phase 19 polish
 **Severity:** Medium — affects visual fidelity of MSDF outline/shadow effects
 
-All MSDF text in a frame shares a single shader uniform buffer (one shader ID). When multiple `drawText()` calls use different outline/shadow parameters, only the last call's params take effect for all MSDF glyphs. This means you cannot mix outline colors or shadow settings in the same frame.
+Fixed via multi-shader pool approach: 8 identical MSDF shaders (same WGSL, separate uniform buffers) allocated per font. Per-frame cache maps unique param combos to pool slots, reset each frame. `MSDFFont.shaderPool` exposes the pool; `drawMSDFTextInternal` selects a slot based on outline/shadow/scale params.
 
-**Workaround:** Use the same outline/shadow params for all MSDF text in a frame, or use bitmap text for some lines.
+### MSDF Text: External Font sRGB Bug
 
-**Fix options (pick one):**
-1. **Per-instance params:** Encode outline/shadow in the sprite instance vertex data (extra floats per glyph). Most flexible, but increases instance stride.
-2. **Multi-shader:** Allocate a separate shader ID per unique param set. Adds draw calls but requires no vertex layout changes.
-3. **Instanced uniform index:** Add a uniform array index per instance and look up params in a uniform array. Minimal vertex overhead.
+**Status:** Done ✅
+**Discovered:** Phase 19 polish
+**Severity:** High — external MSDF fonts loaded via `loadMSDFFont()` will render invisible
+
+Fixed: Added `msdf_texture_load_queue` on `RenderBridgeState`. `op_load_msdf_font` pushes to this queue instead of `texture_load_queue`. In `dev.rs`, the new queue is processed via `upload_raw_linear()` (linear format, not sRGB), matching the builtin MSDF font path.
+
+### Dead Code Cleanup
+
+**Status:** Done ✅
+**Discovered:** Phase 19 polish
+
+`runtime/rendering/validate.ts` was never imported, exported, or referenced. Deleted.
+
+### Test Coverage Gaps
+
+**Status:** Open
+**Discovered:** Phase 19 audit
+**Severity:** Low — all code works, just lacks dedicated test files
+
+19 runtime modules have no dedicated `*.test.ts` file:
+- `runtime/physics/` — world, body, constraints, query (7 files)
+- `runtime/persistence/` — save, storage, autosave (3 files)
+- `runtime/rendering/` — sprites, loop, texture, postprocess, shader (5 files)
+- `runtime/procgen/` — constraints, validate (2 files)
+- `runtime/testing/` — harness (1 file)
+- `runtime/agent/` — protocol (1 file, though agent.test.ts covers it partially)
+
+These modules are exercised indirectly by demo tests and integration tests. Adding targeted unit tests would improve confidence for future refactors.

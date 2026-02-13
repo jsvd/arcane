@@ -17,20 +17,56 @@ The Rust core owns everything performance-critical and platform-specific:
 - wgpu-based 2D renderer
 - Tile-based rendering with multiple layers, autotiling, animated tiles
 - Sprite system with atlases, animation state machines, blend trees
-- 2D dynamic lighting, shadows, ambient occlusion
-- Data-driven particle system (defined in code, not a visual editor)
 - Custom shaders in WGSL, hot-reloadable, with typed parameter binding
 - Post-processing: bloom, chromatic aberration, screen shake, palette effects
-- Native UI renderer (no DOM overhead)
+- MSDF text rendering for resolution-independent text with outlines and shadows
+
+#### Lighting System
+
+Point lights, directional lights, and spot lights are sent per-frame from TS to the Rust renderer via the render bridge. The sprite shader samples lights in the fragment stage.
+
+- **Point lights**: position, radius, color, intensity
+- **Directional lights**: angle, color, intensity (infinite distance, parallel rays)
+- **Spot lights**: position, angle, spread cone, range, color, intensity
+- **Ambient light**: global RGB tint (default white = no darkening)
+
+#### Global Illumination — Radiance Cascades
+
+Arcane implements 2D global illumination using Radiance Cascades, a multi-scale ray-marching approach run as a GPU compute pipeline (`core/renderer/radiance.rs`, `shaders/radiance.wgsl`).
+
+```
+Pass 1 (seed):    Write emissive surfaces + occluders into probe grid
+Pass 2 (cascade): Multi-scale ray march from fine to coarse (4 cascade levels)
+Pass 3 (merge):   Merge cascade data into a final GI texture, sampled by sprites
+```
+
+TS controls:
+- `enableGlobalIllumination()` / `disableGlobalIllumination()` — toggle
+- `setGIQuality({ probeSpacing, interval, cascadeCount })` — quality vs performance
+- `setGIIntensity(multiplier)` — brightness
+- `addEmissive({ x, y, width, height, r, g, b, intensity })` — light sources
+- `addOccluder({ x, y, width, height })` — shadow casters
+
+#### MSDF Text Pipeline
+
+MSDF (Multi-channel Signed Distance Field) text uses a custom fragment shader for resolution-independent rendering. Each MSDF font gets a pool of 8 shader instances (same WGSL, separate uniform buffers) so different `drawText()` calls in the same frame can have distinct outline/shadow parameters without overwriting each other. The pool is keyed per unique param combo and reset every frame.
+
+- **Builtin font**: CP437 bitmap converted to SDF via `generate_builtin_msdf_font()`
+- **External fonts**: Loaded via `loadMSDFFont(atlasPath, metricsJson)`, atlas uploaded with linear (not sRGB) texture format
+- **Shader params** (per uniform buffer): slot 0 = SDF metrics, slots 1-2 = outline, slots 3-4 = shadow
 
 ### Physics (`core/physics/`)
-- 2D only: AABB collision, raycasts, overlap queries
-- Simple and fast — not a full physics simulation
-- Sufficient for tile-based and action games
+- Homebrew 2D rigid body physics (NOT feature-gated — runs headless too)
+- Shapes: AABB, circle, convex polygon
+- SAT collision detection, sequential impulse solver
+- Distance and revolute joint constraints
+- Sleep system, spatial hash broadphase
+- Raycasts, AABB overlap queries
 
 ### Audio (`core/audio/`)
-- Spatial audio, mixing, streaming
-- Built on symphonia
+- Sound loading and playback via rodio
+- Looping, per-sound volume, master volume
+- Runs on a dedicated background thread
 
 ### ECS (`core/ecs/`)
 - Entity storage, component arrays, archetype queries
@@ -99,10 +135,27 @@ addParticleEffect('slash', { position: entity.position })
 // Batched draw calls, GPU upload, shader execution — all invisible to game logic
 ```
 
+### Procedural Generation (`runtime/procgen/`)
+- Wave Function Collapse (WFC) algorithm for tile-based level generation
+- Configurable adjacency rules per tile (north/east/south/west neighbor lists)
+- Constraint system: `reachability()`, `exactCount()`, `minCount()`, `maxCount()`, `border()`, `custom()`
+- `validateLevel()` — run constraints against a generated grid
+- `generateAndTest()` — retry generation until constraints pass or max attempts reached
+- Seeded PRNG for deterministic generation
+
 ### Testing (`runtime/testing/`)
-- Mock renderer that captures render commands as assertions
-- Fluent state builder for test setup
-- Text description renderer (game state → natural language)
+- Universal test harness (`describe`, `it`, `assert`) that runs in both Node and V8
+- **Snapshot replay**: `startRecording()` / `stopRecording()` / `replay()` — record input sequences and replay them deterministically against physics or game state
+- **Replay diffing**: `diffReplays()` — compare two replay sessions to find divergence points
+- **Property-based testing**: `checkProperty()` / `assertProperty()` — generate random input sequences, test invariants across many runs, with automatic shrinking on failure
+- **Generators**: `randomKeys()`, `randomClicks()`, `randomActions()`, `combineGenerators()` — composable input generators for property tests
+- State snapshots for determinism verification
+
+### Agent Protocol (`runtime/agent/`)
+- `registerAgent()` installs `globalThis.__arcaneAgent` with `getState`, `setState`, `describe`, `listActions`, `executeAction`, `simulate`, `rewind`, `captureSnapshot`
+- Rust evaluates TS expressions via `eval_to_string` to interact with the agent
+- HTTP inspector (`--inspector <port>` on `arcane dev`) polls requests in the frame callback
+- **MCP server** (`--mcp <port>` on `arcane dev`): JSON-RPC 2.0 protocol with 10 tools — `get_state`, `describe_state`, `list_actions`, `execute_action`, `inspect_scene`, `capture_snapshot`, `simulate_action`, `rewind_state`, `hot_reload`, `get_history`
 
 ## Directory Structure
 
@@ -110,52 +163,63 @@ addParticleEffect('slash', { position: entity.position })
 arcane/
 ├── core/                    # Rust engine core
 │   ├── renderer/            # wgpu-based 2D renderer
-│   │   ├── tilemap.rs
-│   │   ├── sprites.rs
-│   │   ├── lighting.rs
-│   │   ├── particles.rs
-│   │   ├── shaders/
-│   │   └── ui.rs
-│   ├── audio/
-│   ├── physics/
-│   ├── spatial/
-│   ├── ecs/
-│   ├── scripting/           # V8 embedding, hot-reload
-│   └── platform/            # Windowing, input, file I/O
+│   │   ├── mod.rs           # Renderer: GPU, sprites, textures, camera, lighting
+│   │   ├── sprite.rs        # Instanced quad rendering + lighting
+│   │   ├── tilemap.rs       # Tile data, atlas UV, camera culling
+│   │   ├── lighting.rs      # Point lights, ambient, GPU uniform
+│   │   ├── radiance.rs      # Radiance Cascades 2D GI compute pipeline
+│   │   ├── msdf.rs          # MSDF font atlas, glyph metrics, SDF shader
+│   │   ├── shader.rs        # Custom WGSL fragment shaders, 16 vec4 uniforms
+│   │   ├── postprocess.rs   # Bloom, blur, vignette, CRT effects
+│   │   └── shaders/
+│   │       ├── sprite.wgsl
+│   │       ├── radiance.wgsl
+│   │       └── msdf.wgsl
+│   ├── audio/               # rodio-based sound loading + playback
+│   ├── physics/             # Homebrew 2D rigid body physics
+│   ├── agent/               # HTTP inspector + MCP server
+│   ├── scripting/           # V8 embedding, hot-reload, render/physics/replay ops
+│   └── platform/            # Windowing (winit), input handling
 │
 ├── runtime/                 # TypeScript game runtime
-│   ├── state/
-│   ├── systems/
-│   ├── world/
-│   ├── entities/
-│   ├── events/
+│   ├── state/               # State tree, transactions, queries, PRNG
+│   ├── systems/             # Declarative system/rule definitions
 │   ├── rendering/           # TS → Rust renderer bridge
-│   │   ├── sprites.ts
-│   │   ├── effects.ts
-│   │   ├── camera.ts
-│   │   └── ui.ts
-│   └── testing/
-│       ├── mock-renderer.ts
-│       ├── state-builder.ts
-│       └── describe.ts
+│   │   ├── sprites.ts       # drawSprite(), clearSprites()
+│   │   ├── camera.ts        # Camera control, follow, bounds, deadzone
+│   │   ├── tilemap.ts       # Tilemaps, layers, auto-tiling
+│   │   ├── lighting.ts      # Lights, GI, emissives, occluders, day/night
+│   │   ├── text.ts          # Bitmap + MSDF text, outlines, shadows
+│   │   ├── animation.ts     # Sprite animation, animation FSM
+│   │   ├── audio.ts         # Sound loading, playback, music
+│   │   └── postprocess.ts   # Post-processing effects
+│   ├── ui/                  # Buttons, sliders, checkboxes, text input, layout
+│   ├── physics/             # Physics world, body, constraint, query wrappers
+│   ├── procgen/             # Wave Function Collapse, constraints, validation
+│   ├── scenes/              # Scene stack, transitions, lifecycle
+│   ├── persistence/         # Save/load, migrations, auto-save
+│   ├── tweening/            # Tween, easing, sequence, parallel, stagger
+│   ├── particles/           # Particle emitter with pooling
+│   ├── pathfinding/         # A* pathfinding
+│   ├── agent/               # Agent protocol, MCP tools, describe
+│   └── testing/             # Harness, snapshots, replay, property-based testing
 │
 ├── recipes/                 # Composable game system modules
 │   ├── turn-based-combat/
 │   ├── inventory-equipment/
-│   ├── dialogue-branching/
-│   ├── dungeon-generation/
-│   ├── fog-of-war/
-│   ├── save-load/
-│   └── character-progression/
+│   ├── grid-movement/
+│   └── fog-of-war/
 │
 ├── cli/                     # The arcane CLI
-│   ├── create.rs
-│   ├── dev.rs
-│   ├── test.rs
-│   ├── build.rs
-│   └── agent.rs
+│   └── commands/
+│       ├── dev.rs           # arcane dev (window + game loop + hot-reload)
+│       ├── test.rs          # arcane test (V8 headless test runner)
+│       ├── describe.rs      # arcane describe (text state description)
+│       ├── inspect.rs       # arcane inspect (query state paths)
+│       ├── add.rs           # arcane add (copy recipe into project)
+│       └── assets.rs        # arcane assets (discover + download assets)
 │
-└── editor/                  # Optional web-based inspector
+└── demos/                   # Genre-spanning demo games
 ```
 
 ## The Rendering Bridge
@@ -203,11 +267,12 @@ Game logic is pure functions over state. The engine core provides performance, n
 
 | Dependency | Purpose | Why |
 |---|---|---|
-| wgpu | GPU rendering | Cross-platform (Vulkan, Metal, DX12, WebGPU), compiles to native and WASM |
-| deno_core | V8 embedding | Solved Rust↔V8 FFI, performant data bridge |
-| winit | Windowing | Standard Rust windowing, cross-platform |
-| gilrs | Gamepad input | Unified gamepad API |
-| symphonia | Audio | Pure Rust audio decoding |
-| rapier | Physics | 2D physics (if needed beyond AABB) |
+| wgpu 24 | GPU rendering | Cross-platform (Vulkan, Metal, DX12, WebGPU) |
+| deno_core 0.385 | V8 embedding | Solved Rust↔V8 FFI, performant data bridge |
+| winit 0.30 | Windowing | Standard Rust windowing, cross-platform |
+| rodio 0.20 | Audio | Sound loading, mixing, playback |
+| image 0.25 | Texture loading | PNG/JPEG decoding |
+| tiny_http 0.12 | Inspector/MCP | HTTP server for agent protocol |
+| notify 7 | Hot-reload | File watching for `arcane dev` |
 
 See [Technical Decisions](technical-decisions.md) for detailed rationale.

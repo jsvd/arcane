@@ -250,4 +250,41 @@ describe("msdf text", () => {
     };
     assert.equal(shadow.softness, undefined);
   });
+
+  it("MSDFFont.shaderPool is an array with length > 0", () => {
+    const font = getDefaultMSDFFont();
+    assert.ok(Array.isArray(font.shaderPool), "shaderPool should be an array");
+    assert.ok(font.shaderPool.length > 0, "shaderPool should have at least one entry");
+  });
+
+  it("MSDFFont.shaderId equals shaderPool[0]", () => {
+    const font = getDefaultMSDFFont();
+    assert.equal(font.shaderId, font.shaderPool[0]);
+  });
+
+  it("loadMSDFFont headless returns shaderPool with one entry", () => {
+    const font = loadMSDFFont("nonexistent.png", "{}");
+    assert.ok(Array.isArray(font.shaderPool), "shaderPool should be an array");
+    assert.equal(font.shaderPool.length, 1);
+    assert.equal(font.shaderPool[0], 0);
+  });
+
+  it("multiple drawText calls with different outline params don't throw", () => {
+    const font = getDefaultMSDFFont();
+    drawText("Red outline", 10, 10, {
+      msdfFont: font,
+      scale: 2,
+      outline: { width: 1.0, color: { r: 1, g: 0, b: 0, a: 1 } },
+    });
+    drawText("Blue outline", 10, 40, {
+      msdfFont: font,
+      scale: 2,
+      outline: { width: 2.0, color: { r: 0, g: 0, b: 1, a: 1 } },
+    });
+    drawText("No outline", 10, 70, {
+      msdfFont: font,
+      scale: 2,
+    });
+    assert.ok(true, "multiple drawText calls with different params completed");
+  });
 });

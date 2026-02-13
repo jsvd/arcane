@@ -250,6 +250,35 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
             }
         }
 
+        // Process MSDF texture loads (needs linear format, not sRGB)
+        let pending_msdf_textures: Vec<(String, u32)> = {
+            let mut bridge = bridge_for_loop.borrow_mut();
+            std::mem::take(&mut bridge.msdf_texture_load_queue)
+        };
+
+        if let Some(ref mut renderer) = state.renderer {
+            for (path, id) in pending_msdf_textures {
+                match std::fs::read(&path) {
+                    Ok(img_data) => match image::load_from_memory(&img_data) {
+                        Ok(img) => {
+                            let rgba = img.to_rgba8();
+                            let (w, h) = rgba.dimensions();
+                            renderer.textures.upload_raw_linear(
+                                &renderer.gpu,
+                                &renderer.sprites.texture_bind_group_layout,
+                                id,
+                                &rgba,
+                                w,
+                                h,
+                            );
+                        }
+                        Err(e) => eprintln!("Failed to decode MSDF texture {path}: {e}"),
+                    },
+                    Err(e) => eprintln!("Failed to read MSDF texture {path}: {e}"),
+                }
+            }
+        }
+
         // Process MSDF shader creation requests
         let pending_msdf_shaders: Vec<(u32, String)> = {
             let mut bridge = bridge_for_loop.borrow_mut();
@@ -616,6 +645,7 @@ fn reload_runtime(
         b.spot_lights.clear();
         b.msdf_builtin_queue.clear();
         b.msdf_shader_queue.clear();
+        b.msdf_texture_load_queue.clear();
 
         // Clear solid texture cache so they can be recreated with new colors.
         // Keep file texture cache to avoid re-uploading large images.

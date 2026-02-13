@@ -62,14 +62,28 @@ export type MSDFGlyph = {
   offsetY: number;
 };
 
-/** Descriptor for an MSDF (signed distance field) font. */
+/**
+ * Descriptor for an MSDF (signed distance field) font.
+ *
+ * MSDF fonts render text as resolution-independent signed distance fields,
+ * supporting outline and shadow effects. Each font owns a pool of shader
+ * instances so that multiple `drawText()` calls in the same frame can use
+ * different outline/shadow parameters without overwriting each other.
+ */
 export type MSDFFont = {
   /** Internal font ID (from the Rust MSDF font store). */
   fontId: number;
   /** Texture handle for the MSDF atlas. */
   textureId: TextureId;
-  /** Shader ID for the MSDF rendering pipeline. */
+  /** Shader ID for the MSDF rendering pipeline (first slot in the pool). Backward-compatible shorthand for `shaderPool[0]`. */
   shaderId: number;
+  /**
+   * Pool of shader IDs (same WGSL, separate uniform buffers).
+   * Each unique outline/shadow/scale combo in a frame claims a pool slot.
+   * The pool resets every frame. With 8 slots, up to 8 distinct param combos
+   * can coexist. Beyond 8, slots wrap around (last params win for that slot).
+   */
+  shaderPool: number[];
   /** Font size the atlas was generated at. */
   fontSize: number;
   /** Line height in pixels at the native font size. */
@@ -133,6 +147,49 @@ let defaultMsdfFont: MSDFFont | null = null;
 
 // Cache for MSDF glyph metrics per font
 const msdfGlyphCache: Map<string, MSDFGlyph> = new Map();
+
+// --- MSDF shader pool state ---
+
+/** Pool of MSDF shader IDs (populated from first font creation). */
+let msdfShaderPool: number[] = [];
+
+/** Per-frame allocation counter into the pool. */
+let msdfNextPoolSlot = 0;
+
+/** Per-frame cache: param key → pool index. */
+const msdfParamCache: Map<string, number> = new Map();
+
+/** Build a cache key from MSDF shader params (2 decimal precision). */
+function msdfParamKey(
+  screenPxRange: number,
+  outline: TextOutline | undefined,
+  shadow: TextShadow | undefined,
+): string {
+  const spr = screenPxRange.toFixed(2);
+  if (!outline && !shadow) return spr;
+  const ow = outline ? outline.width.toFixed(2) : "0";
+  const or = outline ? outline.color.r.toFixed(2) : "0";
+  const og = outline ? outline.color.g.toFixed(2) : "0";
+  const ob = outline ? outline.color.b.toFixed(2) : "0";
+  const oa = outline ? outline.color.a.toFixed(2) : "0";
+  const sx = shadow ? shadow.offsetX.toFixed(2) : "0";
+  const sy = shadow ? shadow.offsetY.toFixed(2) : "0";
+  const ss = shadow ? (shadow.softness ?? 1).toFixed(2) : "0";
+  const sr = shadow ? shadow.color.r.toFixed(2) : "0";
+  const sg = shadow ? shadow.color.g.toFixed(2) : "0";
+  const sb = shadow ? shadow.color.b.toFixed(2) : "0";
+  const sa = shadow ? shadow.color.a.toFixed(2) : "0";
+  return `${spr}|${ow},${or},${og},${ob},${oa}|${sx},${sy},${ss},${sr},${sg},${sb},${sa}`;
+}
+
+/** Reset the per-frame MSDF param cache. Called at frame start. */
+function resetMSDFParamCache(): void {
+  msdfParamCache.clear();
+  msdfNextPoolSlot = 0;
+}
+
+// Register reset callback on globalThis so loop.ts can call it without circular imports
+(globalThis as any).__arcane_reset_msdf_cache = resetMSDFParamCache;
 
 // --- Bitmap font functions ---
 
@@ -227,10 +284,14 @@ export function getDefaultMSDFFont(): MSDFFont {
     ).Deno.core.ops.op_get_msdf_font_info(result.fontId);
     const info = JSON.parse(infoJson);
 
+    const pool: number[] = result.shaderPool ?? [result.shaderId];
+    if (msdfShaderPool.length === 0) msdfShaderPool = pool;
+
     defaultMsdfFont = {
       fontId: result.fontId,
       textureId: result.textureId,
       shaderId: result.shaderId,
+      shaderPool: pool,
       fontSize: info.fontSize,
       lineHeight: info.lineHeight,
       distanceRange: info.distanceRange,
@@ -241,6 +302,7 @@ export function getDefaultMSDFFont(): MSDFFont {
       fontId: 0,
       textureId: 0,
       shaderId: 0,
+      shaderPool: [0],
       fontSize: 8,
       lineHeight: 8,
       distanceRange: 4,
@@ -254,9 +316,13 @@ export function getDefaultMSDFFont(): MSDFFont {
  * Load an MSDF font from a pre-generated atlas image and metrics JSON file.
  * The atlas should be generated with msdf-atlas-gen or a compatible tool.
  *
+ * The atlas texture is uploaded in linear format (not sRGB) so that the SDF
+ * distance field values are sampled correctly by the MSDF shader.
+ *
  * @param atlasPath - Path to the MSDF atlas PNG image.
  * @param metricsJson - JSON string containing glyph metrics (msdf-atlas-gen format).
- * @returns MSDFFont descriptor for use with drawText().
+ * @returns MSDFFont descriptor for use with drawText(). Includes a `shaderPool` for
+ *   per-draw-call outline/shadow parameters.
  *
  * @example
  * const metrics = await fetch("fonts/roboto-msdf.json").then(r => r.text());
@@ -273,6 +339,7 @@ export function loadMSDFFont(
       fontId: 0,
       textureId: 0,
       shaderId: 0,
+      shaderPool: [0],
       fontSize: 32,
       lineHeight: 38,
       distanceRange: 4,
@@ -294,10 +361,14 @@ export function loadMSDFFont(
   ).Deno.core.ops.op_get_msdf_font_info(result.fontId);
   const info = JSON.parse(infoJson);
 
+  const pool: number[] = result.shaderPool ?? [result.shaderId];
+  if (msdfShaderPool.length === 0) msdfShaderPool = pool;
+
   return {
     fontId: result.fontId,
     textureId: result.textureId,
     shaderId: result.shaderId,
+    shaderPool: pool,
     fontSize: info.fontSize,
     lineHeight: info.lineHeight,
     distanceRange: info.distanceRange,
@@ -442,6 +513,13 @@ export function measureText(
  *   outline: { width: 1.0, color: { r: 0, g: 0, b: 0, a: 1 } },
  *   shadow: { offsetX: 2, offsetY: 2, color: { r: 0, g: 0, b: 0, a: 0.5 } },
  * });
+ *
+ * @example
+ * // Multiple drawText calls with different params in the same frame work correctly.
+ * // Each unique outline/shadow combo gets its own shader slot from the pool.
+ * drawText("Red outline", 10, 10, { msdfFont: font, outline: { width: 1, color: { r: 1, g: 0, b: 0, a: 1 } } });
+ * drawText("Blue outline", 10, 40, { msdfFont: font, outline: { width: 2, color: { r: 0, g: 0, b: 1, a: 1 } } });
+ * drawText("No effects", 10, 70, { msdfFont: font });
  */
 export function drawText(
   text: string,
@@ -517,7 +595,7 @@ export function drawText(
 
 /**
  * Internal: draw text using MSDF rendering.
- * Sets shader params for outline/shadow, then emits sprite commands with the MSDF shader.
+ * Allocates a shader from the pool based on param combo, sets uniforms, emits sprites.
  */
 function drawMSDFTextInternal(
   text: string,
@@ -533,8 +611,23 @@ function drawMSDFTextInternal(
   const outline = options.outline;
   const shadow = options.shadow;
 
-  // Set MSDF shader parameters before drawing
-  // We need to check for the set_shader_param op
+  // Compute screen pixel range for SDF rendering.
+  const glyphScreenSize = msdfFont.fontSize * scale;
+  const atlasGlyphSize = msdfFont.fontSize + 2 * msdfFont.distanceRange;
+  const screenPxRange = (glyphScreenSize / atlasGlyphSize) * msdfFont.distanceRange;
+
+  // Resolve which shader to use from the pool
+  const pool = msdfFont.shaderPool.length > 0 ? msdfFont.shaderPool : [msdfFont.shaderId];
+  const key = msdfParamKey(screenPxRange, outline, shadow);
+  let poolIndex = msdfParamCache.get(key);
+  if (poolIndex === undefined) {
+    poolIndex = msdfNextPoolSlot % pool.length;
+    msdfNextPoolSlot++;
+    msdfParamCache.set(key, poolIndex);
+  }
+  const sid = pool[poolIndex];
+
+  // Set MSDF shader parameters
   const hasShaderParamOp =
     typeof (globalThis as any).Deno?.core?.ops?.op_set_shader_param ===
     "function";
@@ -543,17 +636,6 @@ function drawMSDFTextInternal(
     const setParam = (
       globalThis as any
     ).Deno.core.ops.op_set_shader_param;
-    const sid = msdfFont.shaderId;
-
-    // Compute screen pixel range for SDF rendering.
-    // This controls the sharpness of the anti-aliasing.
-    // screen_px_range = (glyph_size_on_screen / glyph_size_in_atlas) * distance_range
-    const glyphScreenSize = msdfFont.fontSize * scale;
-    // The atlas glyph cell includes padding, so atlas glyph size = fontSize + 2*padding
-    // For the builtin font: fontSize=8, padding=4, so atlas cell = 16
-    // The glyph in the atlas occupies (fontSize + 2*4) pixels, but we want fontSize pixels
-    const atlasGlyphSize = msdfFont.fontSize + 2 * msdfFont.distanceRange;
-    const screenPxRange = (glyphScreenSize / atlasGlyphSize) * msdfFont.distanceRange;
 
     // Slot 0: [distance_range, font_size_px, screen_px_range, _pad]
     setParam(sid, 0, msdfFont.distanceRange, msdfFont.fontSize, Math.max(screenPxRange, 1.0), 0);
@@ -582,7 +664,7 @@ function drawMSDFTextInternal(
   // Get glyph metrics
   const glyphs = getMSDFGlyphs(msdfFont, text);
 
-  // Draw each glyph as a sprite with the MSDF shader
+  // Draw each glyph as a sprite with the allocated MSDF shader
   let cursorX = x;
 
   for (let i = 0; i < glyphs.length; i++) {
@@ -628,7 +710,7 @@ function drawMSDFTextInternal(
       layer,
       uv: { x: g.uv[0], y: g.uv[1], w: g.uv[2], h: g.uv[3] },
       tint,
-      shaderId: msdfFont.shaderId,
+      shaderId: sid,
     });
 
     cursorX += g.advance * scale;
