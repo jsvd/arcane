@@ -6518,5 +6518,244 @@ declare module "@arcane/runtime/testing" {
    */
   export declare function emptySnapshot(frame?: number): WorldSnapshot;
 
+  /**
+   * Draw call capture and visual assertion helpers.
+   *
+   * Captures the *intent* of draw calls (what the game code asked to render)
+   * as structured data. Works in both headless and renderer modes — captures
+   * happen at the TS level before the Rust op boundary.
+   *
+   * ## Usage
+   *
+   * ```typescript
+   * import { enableDrawCallCapture, disableDrawCallCapture, getDrawCalls, clearDrawCalls } from "@arcane/runtime/testing";
+   *
+   * enableDrawCallCapture();
+   * // ... run one frame of game logic ...
+   * const calls = getDrawCalls();
+   * // calls is an array of DrawCall objects describing everything drawn
+   * disableDrawCallCapture();
+   * ```
+   *
+   * ## Visual Assertions
+   *
+   * ```typescript
+   * import { assertSpriteDrawn, assertTextDrawn, assertDrawCallCount } from "@arcane/runtime/testing";
+   *
+   * assertSpriteDrawn({ x: 100, y: 200 });           // at least one sprite at (100, 200)
+   * assertTextDrawn("HP: 10");                         // text containing "HP: 10" was drawn
+   * assertDrawCallCount("sprite", 5);                  // exactly 5 sprites drawn
+   * ```
+   */
+  /** Discriminated union of all captured draw call types. */
+  export type DrawCall = SpriteDrawCall | TextDrawCall | RectDrawCall | PanelDrawCall | BarDrawCall | LabelDrawCall | TilemapDrawCall;
+  /** A drawSprite() call. */
+  export type SpriteDrawCall = {
+      type: "sprite";
+      textureId: number;
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      layer: number;
+      rotation: number;
+      flipX: boolean;
+      flipY: boolean;
+      opacity: number;
+      blendMode: string;
+      shaderId: number;
+  };
+  /** A drawText() call (the full text, not individual glyph sprites). */
+  export type TextDrawCall = {
+      type: "text";
+      content: string;
+      x: number;
+      y: number;
+      scale: number;
+      layer: number;
+      screenSpace: boolean;
+  };
+  /** A drawRect() call. */
+  export type RectDrawCall = {
+      type: "rect";
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      layer: number;
+      screenSpace: boolean;
+  };
+  /** A drawPanel() call. */
+  export type PanelDrawCall = {
+      type: "panel";
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      layer: number;
+      screenSpace: boolean;
+      borderWidth: number;
+  };
+  /** A drawBar() call. */
+  export type BarDrawCall = {
+      type: "bar";
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      fillRatio: number;
+      layer: number;
+      screenSpace: boolean;
+  };
+  /** A drawLabel() call. */
+  export type LabelDrawCall = {
+      type: "label";
+      content: string;
+      x: number;
+      y: number;
+      scale: number;
+      layer: number;
+      screenSpace: boolean;
+  };
+  /** A drawTilemap() call. */
+  export type TilemapDrawCall = {
+      type: "tilemap";
+      tilemapId: number;
+      x: number;
+      y: number;
+      layer: number;
+  };
+  /** Filter criteria for finding draw calls. All fields are optional — only specified fields are matched. */
+  export type DrawCallFilter = {
+      type?: DrawCall["type"];
+      x?: number;
+      y?: number;
+      w?: number;
+      h?: number;
+      layer?: number;
+      textureId?: number;
+      content?: string;
+      screenSpace?: boolean;
+      /** Match x/y within this tolerance (default: 0.001). */
+      tolerance?: number;
+  };
+  /**
+   * Enable draw call capture. All subsequent drawSprite/drawText/drawRect/etc.
+   * calls will be logged as structured DrawCall objects. Works in headless mode.
+   *
+   * Call {@link getDrawCalls} to retrieve captured calls.
+   * Call {@link clearDrawCalls} between frames to reset.
+   * Call {@link disableDrawCallCapture} to stop capturing.
+   */
+  export declare function enableDrawCallCapture(): void;
+  /**
+   * Disable draw call capture and clear the log.
+   */
+  export declare function disableDrawCallCapture(): void;
+  /**
+   * Get all draw calls captured since the last {@link clearDrawCalls} or
+   * {@link enableDrawCallCapture}. Returns a copy of the array.
+   *
+   * @returns Array of DrawCall objects, or empty array if capture is not enabled.
+   */
+  export declare function getDrawCalls(): DrawCall[];
+  /**
+   * Clear all captured draw calls without disabling capture.
+   * Call this between frames to see only the current frame's draws.
+   */
+  export declare function clearDrawCalls(): void;
+  /** @internal Push a draw call to the capture log. No-op when capture is disabled. */
+  export declare function _logDrawCall(call: DrawCall): void;
+  /**
+   * Find all captured draw calls matching the given filter.
+   * Returns an empty array if none match or capture is not enabled.
+   *
+   * @param filter - Criteria to match against. All specified fields must match.
+   * @returns Matching DrawCall objects.
+   *
+   * @example
+   * const sprites = findDrawCalls({ type: "sprite", layer: 1 });
+   * const hudText = findDrawCalls({ type: "text", screenSpace: true });
+   */
+  export declare function findDrawCalls(filter: DrawCallFilter): DrawCall[];
+  /**
+   * Assert that at least one sprite was drawn matching the given filter.
+   * Throws with a descriptive message if no matching sprite is found.
+   *
+   * @param filter - Optional criteria. If omitted, asserts any sprite was drawn.
+   *
+   * @example
+   * assertSpriteDrawn({ x: 100, y: 200 });
+   * assertSpriteDrawn({ textureId: playerTex, layer: 1 });
+   */
+  export declare function assertSpriteDrawn(filter?: Omit<DrawCallFilter, "type">): void;
+  /**
+   * Assert that text containing the given content was drawn.
+   * Matches against both drawText() and drawLabel() calls.
+   *
+   * @param content - Substring to search for in drawn text.
+   * @param filter - Additional filter criteria (layer, screenSpace, etc.).
+   *
+   * @example
+   * assertTextDrawn("HP: 10");
+   * assertTextDrawn("Score", { screenSpace: true });
+   */
+  export declare function assertTextDrawn(content: string, filter?: Omit<DrawCallFilter, "type" | "content">): void;
+  /**
+   * Assert the exact number of draw calls of a given type.
+   *
+   * @param type - Draw call type to count.
+   * @param expected - Expected count.
+   *
+   * @example
+   * assertDrawCallCount("sprite", 5);
+   * assertDrawCallCount("text", 2);
+   */
+  export declare function assertDrawCallCount(type: DrawCall["type"], expected: number): void;
+  /**
+   * Assert that no draw calls overlap a given point (within tolerance).
+   * Checks sprites, rects, panels, and bars for bounding box containment.
+   *
+   * @param x - World X coordinate.
+   * @param y - World Y coordinate.
+   * @param tolerance - Padding around the point. Default: 0.
+   *
+   * @example
+   * assertNothingDrawnAt(500, 500); // no sprites/rects cover this point
+   */
+  export declare function assertNothingDrawnAt(x: number, y: number, tolerance?: number): void;
+  /**
+   * Assert that at least one draw call exists on the given layer.
+   *
+   * @param layer - Layer number to check.
+   *
+   * @example
+   * assertLayerHasDrawCalls(0);  // ground layer has something
+   * assertLayerHasDrawCalls(90); // UI layer has something
+   */
+  export declare function assertLayerHasDrawCalls(layer: number): void;
+  /**
+   * Assert that a draw call of the given type was drawn in screen space (HUD).
+   * Only applies to types that support screenSpace: text, rect, panel, bar, label.
+   *
+   * @param type - Draw call type.
+   *
+   * @example
+   * assertScreenSpaceDrawn("text");  // at least one HUD text
+   * assertScreenSpaceDrawn("bar");   // at least one HUD bar
+   */
+  export declare function assertScreenSpaceDrawn(type: "text" | "rect" | "panel" | "bar" | "label"): void;
+  /**
+   * Get a summary of all captured draw calls, grouped by type.
+   * Useful for debugging and logging.
+   *
+   * @returns Object with type counts and total.
+   *
+   * @example
+   * const summary = getDrawCallSummary();
+   * // { total: 15, sprite: 10, text: 3, rect: 2, ... }
+   */
+  export declare function getDrawCallSummary(): Record<string, number>;
+
 }
 

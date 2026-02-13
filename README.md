@@ -124,7 +124,7 @@ All packages published and ready to use:
 - ✅ MSDF text rendering: resolution-independent text with outline and shadow support
 - ✅ Standalone install: `cargo install arcane-cli` just works
 - ✅ Built-in asset discovery: 25 free CC0 packs with search, download, and extraction
-- ✅ 1488 TS (Node) + 2614 (V8) + 231 Rust tests passing
+- ✅ 1530 TS (Node) + 2698 (V8) + 221 Rust tests passing
 - ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
 - ✅ 22 example projects (Hello World, Card Battler, Sokoban, Breakout, Roguelike, Platformer, Tower Defense, Sprite Demo, BFRPG RPG, Asteroids, Juice Showcase, Menu Flow, Physics Playground, Parallax Scroller, Tilemap Showcase, Character Controller, UI Showcase, Agent Testing, WFC Dungeon, Lighting Showcase, MSDF Text Showcase, Isometric Dungeon)
 
