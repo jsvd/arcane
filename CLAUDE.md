@@ -25,7 +25,8 @@ arcane/
 │   ├── agent-tooling.md           — Claude Code agents, skills, MCP tools
 │   ├── development-workflow.md    — Parallel dev, model selection, worktrees
 │   ├── roadmap.md                 — Phased development plan
-│   └── technical-decisions.md     — ADR-style decision log
+│   ├── technical-decisions.md     — ADR-style decision log
+│   └── documentation-refresh.md   — Checklist for auditing and refreshing all docs
 ├── core/                          — arcane-core lib crate
 │   ├── Cargo.toml                 — Feature-gated: `renderer` (default on)
 │   ├── src/
@@ -259,6 +260,10 @@ Read `docs/engineering-philosophy.md` first. It governs everything else.
 ## Maintaining API Declarations
 
 After changing any public API in `runtime/`, run `scripts/generate-declarations.sh` and commit the updated `templates/default/types/arcane.d.ts`. This file ships with scaffolded projects and is the primary API reference for LLMs.
+
+## Documentation Refresh
+
+After phase completions or significant changes, run the documentation refresh checklist in [docs/documentation-refresh.md](docs/documentation-refresh.md). It covers auditing `docs/`, verifying user-facing READMEs, updating the scaffolding template (AGENTS.md, COOKBOOK.md, arcane.d.ts), and fixing stale test counts, demo lists, and cross-references.
 
 ## Agent Tooling
 
