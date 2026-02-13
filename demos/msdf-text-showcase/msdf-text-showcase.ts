@@ -529,7 +529,7 @@ onFrame(() => {
 
 registerAgent({
   name: "msdf-text-showcase",
-  version: "1.0.0",
-  actions: {},
-  describe: () => ({ text: "MSDF text rendering showcase with effects" }),
+  getState: () => ({ section: currentSection }),
+  setState: (s) => { currentSection = s.section; },
+  describe: (s) => `MSDF text showcase | Section ${s.section}/${totalSections}`,
 });
