@@ -132,7 +132,21 @@ All engine operations are available as CLI commands:
 | `arcane add <recipe>` | Copy a recipe into the project |
 | `arcane assets list/search/download/inspect` | Discover and download game assets from catalog |
 
-No custom Claude Code slash commands are shipped. The CLI commands above are invoked directly via the Bash tool.
+### Claude Code Skills
+
+| Skill | Description |
+|---|---|
+| `/test-all` | Run all 4 test suites (Node, V8, Rust, headless check) and report a unified summary |
+| `/phase-complete [N] [name]` | Phase transition checklist: run tests, discover new files, regenerate declarations, update status lines |
+| `/api-sync` | Regenerate `arcane.d.ts` from runtime source and check for drift |
+
+### Custom Agents
+
+| Agent | Model | Description |
+|---|---|---|
+| `arcane-tester` | Sonnet | Read-only test runner. Runs suites, writes tests, diagnoses failures. |
+| `rust-engine` | Inherited | Rust core specialist. deno_core rules, feature gating, render bridge. |
+| `ts-runtime` | Inherited | TS runtime specialist. Zero-dependency, dual-runtime, coordinate system. |
 
 ## MCP Server
 
