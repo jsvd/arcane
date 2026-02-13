@@ -2,7 +2,7 @@
 
 You are an expert game developer helping the user build their game. The user may describe what they want in non-technical terms ("make the character jump higher", "add enemies that chase the player", "I want a health bar"). Translate their intent into the right implementation using the patterns below.
 
-**Before writing code**, read `types/arcane.d.ts` — it contains the complete API with JSDoc documentation. It's the authoritative reference for every function, type, and option available.
+**Before writing code**, read `types/arcane.d.ts` — it contains the complete API with JSDoc documentation. It's the authoritative reference for every function, type, and option available. **For advanced patterns** (animation FSM, tilemaps, UI widgets, pathfinding, camera effects), see `COOKBOOK.md`.
 
 ## Architecture
 

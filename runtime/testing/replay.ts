@@ -424,3 +424,154 @@ export function emptyFrame(overrides: Partial<InputFrame> = {}): InputFrame {
     dt: overrides.dt,
   };
 }
+
+// ---------------------------------------------------------------------------
+// WorldSnapshot integration
+// ---------------------------------------------------------------------------
+
+import type { WorldSnapshot, CaptureOptions } from "./snapshot.ts";
+import { captureWorldSnapshot, diffSnapshots } from "./snapshot.ts";
+
+/**
+ * Callback that captures a WorldSnapshot at a given frame during replay.
+ * Called after the update function runs for each frame.
+ *
+ * @param state - Current game state after the frame update.
+ * @param frame - Current frame number (0-indexed).
+ * @returns CaptureOptions for the snapshot, or undefined to skip capture.
+ */
+export type SnapshotCaptureFn<S> = (state: S, frame: number) => CaptureOptions | undefined;
+
+/**
+ * Options for replayWithSnapshots().
+ */
+export type ReplayWithSnapshotsOptions<S> = ReplayOptions<S> & {
+  /** Callback to capture a WorldSnapshot after each frame. Return undefined to skip. */
+  captureEveryFrame?: SnapshotCaptureFn<S>;
+  /** Specific frame numbers at which to capture WorldSnapshots. */
+  captureAtFrames?: readonly number[];
+  /** Capture function used for captureAtFrames (required if captureAtFrames is set). */
+  captureFn?: SnapshotCaptureFn<S>;
+};
+
+/**
+ * Result of replayWithSnapshots().
+ */
+export type ReplayWithSnapshotsResult<S> = ReplayResult<S> & {
+  /** WorldSnapshots captured during replay, keyed by frame number. */
+  worldSnapshots: ReadonlyMap<number, WorldSnapshot>;
+};
+
+/**
+ * Replay a recording with WorldSnapshot capture support.
+ *
+ * Like `replay()`, but additionally captures WorldSnapshots at specified frames.
+ * This enables comparing full engine state between replay runs using `diffSnapshots()`.
+ *
+ * @param recording - The recording to replay.
+ * @param updateFn - Pure update function: (state, input) => newState.
+ * @param initialState - Starting state for the replay.
+ * @param options - Replay options plus snapshot capture configuration.
+ * @returns ReplayWithSnapshotsResult with captured WorldSnapshots.
+ *
+ * @example
+ * ```ts
+ * const result = replayWithSnapshots(recording, updateFn, initState, {
+ *   captureAtFrames: [0, 10, 20],
+ *   captureFn: (state, frame) => ({
+ *     frame,
+ *     prng: state.rng,
+ *     userData: { score: state.score },
+ *   }),
+ * });
+ * // Compare snapshots at frame 10
+ * const snap10 = result.worldSnapshots.get(10)!;
+ * ```
+ */
+export function replayWithSnapshots<S>(
+  recording: Recording<S>,
+  updateFn: UpdateFn<S>,
+  initialState: S,
+  options: ReplayWithSnapshotsOptions<S> = {},
+): ReplayWithSnapshotsResult<S> {
+  const worldSnapshots = new Map<number, WorldSnapshot>();
+  const captureAtSet = new Set(options.captureAtFrames ?? []);
+  const captureFn = options.captureFn ?? options.captureEveryFrame;
+
+  // Build a wrapper update function that captures snapshots after each frame
+  let currentFrameNum = -1;
+  const wrappedUpdateFn: UpdateFn<S> = (state, input) => {
+    const newState = updateFn(state, input);
+    currentFrameNum++;
+
+    // Capture if this is an every-frame capture
+    if (options.captureEveryFrame) {
+      const captureOpts = options.captureEveryFrame(newState, currentFrameNum);
+      if (captureOpts) {
+        worldSnapshots.set(currentFrameNum, captureWorldSnapshot({
+          ...captureOpts,
+          frame: currentFrameNum,
+        }));
+      }
+    }
+
+    // Capture if this frame is in the captureAtFrames set
+    if (captureAtSet.has(currentFrameNum) && captureFn && !options.captureEveryFrame) {
+      const captureOpts = captureFn(newState, currentFrameNum);
+      if (captureOpts) {
+        worldSnapshots.set(currentFrameNum, captureWorldSnapshot({
+          ...captureOpts,
+          frame: currentFrameNum,
+        }));
+      }
+    }
+
+    return newState;
+  };
+
+  const result = replay(recording, wrappedUpdateFn, initialState, {
+    assertFrame: options.assertFrame,
+    expectedFinalState: options.expectedFinalState,
+    stopAtFrame: options.stopAtFrame,
+  });
+
+  return {
+    ...result,
+    worldSnapshots,
+  };
+}
+
+/**
+ * Compare WorldSnapshots from two replay runs at matching frame numbers.
+ *
+ * Useful for checking determinism: replay the same recording twice with
+ * WorldSnapshot capture and compare all subsystem states.
+ *
+ * @param snapshotsA - WorldSnapshots from first replay, keyed by frame.
+ * @param snapshotsB - WorldSnapshots from second replay, keyed by frame.
+ * @returns Array of { frame, diffs } for each frame that differs.
+ */
+export function compareReplaySnapshots(
+  snapshotsA: ReadonlyMap<number, WorldSnapshot>,
+  snapshotsB: ReadonlyMap<number, WorldSnapshot>,
+): { frame: number; diffs: string[] }[] {
+  const allFrames = new Set([...snapshotsA.keys(), ...snapshotsB.keys()]);
+  const results: { frame: number; diffs: string[] }[] = [];
+
+  for (const frame of [...allFrames].sort((a, b) => a - b)) {
+    const snapA = snapshotsA.get(frame);
+    const snapB = snapshotsB.get(frame);
+
+    if (!snapA || !snapB) {
+      results.push({ frame, diffs: ["<missing snapshot>"] });
+      continue;
+    }
+
+    const diffs = diffSnapshots(snapA, snapB);
+    if (diffs.length > 0) {
+      results.push({ frame, diffs });
+    }
+  }
+
+  return results;
+}

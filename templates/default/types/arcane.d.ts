@@ -1366,23 +1366,87 @@ declare module "@arcane/runtime/rendering" {
       /** ASCII code of the first glyph in the atlas. Default: 32 (space). */
       firstChar: number;
   };
+  /** RGBA color (0.0-1.0 per channel). */
+  type Color = {
+      r: number;
+      g: number;
+      b: number;
+      a: number;
+  };
+  /** Outline configuration for MSDF text. */
+  export type TextOutline = {
+      /** Outline width in SDF distance units (0.5 = thin, 2.0 = thick). */
+      width: number;
+      /** Outline color. */
+      color: Color;
+  };
+  /** Shadow configuration for MSDF text. */
+  export type TextShadow = {
+      /** Horizontal shadow offset in pixels. */
+      offsetX: number;
+      /** Vertical shadow offset in pixels. */
+      offsetY: number;
+      /** Shadow color. */
+      color: Color;
+      /** Shadow blur/softness (1.0 = sharp, 3.0 = soft). Default: 1.0. */
+      softness?: number;
+  };
+  /** Glyph metrics from an MSDF font atlas. */
+  export type MSDFGlyph = {
+      /** Unicode codepoint. */
+      char: number;
+      /** UV rectangle in the atlas [x, y, w, h] (normalized 0-1). */
+      uv: [number, number, number, number];
+      /** Advance width in pixels (at the font's native size). */
+      advance: number;
+      /** Glyph pixel width at native size. */
+      width: number;
+      /** Glyph pixel height at native size. */
+      height: number;
+      /** Horizontal offset from cursor. */
+      offsetX: number;
+      /** Vertical offset from baseline. */
+      offsetY: number;
+  };
+  /** Descriptor for an MSDF (signed distance field) font. */
+  export type MSDFFont = {
+      /** Internal font ID (from the Rust MSDF font store). */
+      fontId: number;
+      /** Texture handle for the MSDF atlas. */
+      textureId: TextureId;
+      /** Shader ID for the MSDF rendering pipeline. */
+      shaderId: number;
+      /** Font size the atlas was generated at. */
+      fontSize: number;
+      /** Line height in pixels at the native font size. */
+      lineHeight: number;
+      /** SDF distance range in pixels. */
+      distanceRange: number;
+  };
   /** Options for {@link drawText} and {@link measureText}. */
   export type TextOptions = {
       /** Font to use. Default: built-in 8x8 CP437 bitmap font via getDefaultFont(). */
       font?: BitmapFont;
+      /** MSDF font to use. When set, uses resolution-independent SDF rendering. Overrides `font`. */
+      msdfFont?: MSDFFont;
       /** Scale multiplier for glyph size. Default: 1. A value of 2 draws at 16x16. */
       scale?: number;
       /** RGBA tint color for the text (0.0-1.0 per channel). Default: white. */
-      tint?: {
-          r: number;
-          g: number;
-          b: number;
-          a: number;
-      };
+      tint?: Color;
       /** Draw order layer. Default: 100 (above most game sprites). */
       layer?: number;
       /** If true, position is in screen pixels (HUD). If false, position is in world units. Default: false. */
       screenSpace?: boolean;
+      /**
+       * Outline effect (MSDF fonts only). Ignored for bitmap fonts.
+       * Renders a colored outline around the text at the specified width.
+       */
+      outline?: TextOutline;
+      /**
+       * Shadow effect (MSDF fonts only). Ignored for bitmap fonts.
+       * Renders a colored shadow behind the text at the specified offset.
+       */
+      shadow?: TextShadow;
   };
   /** Result of {@link measureText}. Dimensions in pixels (before camera transform). */
   export type TextMeasurement = {
@@ -1412,7 +1476,39 @@ declare module "@arcane/runtime/rendering" {
    */
   export declare function getDefaultFont(): BitmapFont;
   /**
+   * Get the default built-in MSDF font, lazily initialized.
+   * This is a signed distance field version of the CP437 bitmap font,
+   * providing resolution-independent text with support for outlines and shadows.
+   * In headless mode returns a dummy font.
+   *
+   * @returns The built-in MSDFFont.
+   *
+   * @example
+   * const font = getDefaultMSDFFont();
+   * drawText("Crisp at any size!", 10, 10, {
+   *   msdfFont: font,
+   *   scale: 4,
+   *   screenSpace: true,
+   * });
+   */
+  export declare function getDefaultMSDFFont(): MSDFFont;
+  /**
+   * Load an MSDF font from a pre-generated atlas image and metrics JSON file.
+   * The atlas should be generated with msdf-atlas-gen or a compatible tool.
+   *
+   * @param atlasPath - Path to the MSDF atlas PNG image.
+   * @param metricsJson - JSON string containing glyph metrics (msdf-atlas-gen format).
+   * @returns MSDFFont descriptor for use with drawText().
+   *
+   * @example
+   * const metrics = await fetch("fonts/roboto-msdf.json").then(r => r.text());
+   * const font = loadMSDFFont("fonts/roboto-msdf.png", metrics);
+   * drawText("Custom font!", 10, 10, { msdfFont: font, scale: 2, screenSpace: true });
+   */
+  export declare function loadMSDFFont(atlasPath: string, metricsJson: string): MSDFFont;
+  /**
    * Measure the pixel dimensions of a text string without drawing it.
+   * Works with both bitmap fonts and MSDF fonts.
    * Pure math -- works in headless mode.
    *
    * @param text - The string to measure.
@@ -1424,23 +1520,32 @@ declare module "@arcane/runtime/rendering" {
    * Draw a text string using the sprite pipeline (one sprite per character).
    * Must be called every frame. No-op in headless mode.
    *
+   * When `msdfFont` is specified in options, uses MSDF rendering for
+   * resolution-independent text with optional outline and shadow effects.
+   * When only `font` or no font is specified, uses the classic bitmap renderer.
+   *
    * @param text - The string to draw.
    * @param x - X position (screen pixels if screenSpace, world units otherwise).
    * @param y - Y position (screen pixels if screenSpace, world units otherwise).
-   * @param options - Font, scale, tint, layer, and screenSpace options.
+   * @param options - Font, scale, tint, layer, screenSpace, outline, and shadow options.
    *
    * @example
    * // Draw HUD text at the top-left of the screen
    * drawText("HP: 100", 10, 10, { scale: 2, screenSpace: true });
    *
    * @example
-   * // Draw world-space text above an entity
-   * drawText("Enemy", enemy.x, enemy.y - 12, {
-   *   tint: { r: 1, g: 0.3, b: 0.3, a: 1 },
-   *   layer: 50,
+   * // Draw MSDF text with outline and shadow
+   * const font = getDefaultMSDFFont();
+   * drawText("Sharp Text!", 100, 100, {
+   *   msdfFont: font,
+   *   scale: 3,
+   *   screenSpace: true,
+   *   outline: { width: 1.0, color: { r: 0, g: 0, b: 0, a: 1 } },
+   *   shadow: { offsetX: 2, offsetY: 2, color: { r: 0, g: 0, b: 0, a: 0.5 } },
    * });
    */
   export declare function drawText(text: string, x: number, y: number, options?: TextOptions): void;
+  export {};
 
   /**
    * Load a texture from a PNG file path. Returns an opaque texture handle.
@@ -5287,6 +5392,446 @@ declare module "@arcane/runtime/testing" {
    * @returns Complete InputFrame.
    */
   export declare function emptyFrame(overrides?: Partial<InputFrame>): InputFrame;
+  /**
+   * Callback that captures a WorldSnapshot at a given frame during replay.
+   * Called after the update function runs for each frame.
+   *
+   * @param state - Current game state after the frame update.
+   * @param frame - Current frame number (0-indexed).
+   * @returns CaptureOptions for the snapshot, or undefined to skip capture.
+   */
+  export type SnapshotCaptureFn<S> = (state: S, frame: number) => CaptureOptions | undefined;
+  /**
+   * Options for replayWithSnapshots().
+   */
+  export type ReplayWithSnapshotsOptions<S> = ReplayOptions<S> & {
+      /** Callback to capture a WorldSnapshot after each frame. Return undefined to skip. */
+      captureEveryFrame?: SnapshotCaptureFn<S>;
+      /** Specific frame numbers at which to capture WorldSnapshots. */
+      captureAtFrames?: readonly number[];
+      /** Capture function used for captureAtFrames (required if captureAtFrames is set). */
+      captureFn?: SnapshotCaptureFn<S>;
+  };
+  /**
+   * Result of replayWithSnapshots().
+   */
+  export type ReplayWithSnapshotsResult<S> = ReplayResult<S> & {
+      /** WorldSnapshots captured during replay, keyed by frame number. */
+      worldSnapshots: ReadonlyMap<number, WorldSnapshot>;
+  };
+  /**
+   * Replay a recording with WorldSnapshot capture support.
+   *
+   * Like `replay()`, but additionally captures WorldSnapshots at specified frames.
+   * This enables comparing full engine state between replay runs using `diffSnapshots()`.
+   *
+   * @param recording - The recording to replay.
+   * @param updateFn - Pure update function: (state, input) => newState.
+   * @param initialState - Starting state for the replay.
+   * @param options - Replay options plus snapshot capture configuration.
+   * @returns ReplayWithSnapshotsResult with captured WorldSnapshots.
+   *
+   * @example
+   * ```ts
+   * const result = replayWithSnapshots(recording, updateFn, initState, {
+   *   captureAtFrames: [0, 10, 20],
+   *   captureFn: (state, frame) => ({
+   *     frame,
+   *     prng: state.rng,
+   *     userData: { score: state.score },
+   *   }),
+   * });
+   * // Compare snapshots at frame 10
+   * const snap10 = result.worldSnapshots.get(10)!;
+   * ```
+   */
+  export declare function replayWithSnapshots<S>(recording: Recording<S>, updateFn: UpdateFn<S>, initialState: S, options?: ReplayWithSnapshotsOptions<S>): ReplayWithSnapshotsResult<S>;
+  /**
+   * Compare WorldSnapshots from two replay runs at matching frame numbers.
+   *
+   * Useful for checking determinism: replay the same recording twice with
+   * WorldSnapshot capture and compare all subsystem states.
+   *
+   * @param snapshotsA - WorldSnapshots from first replay, keyed by frame.
+   * @param snapshotsB - WorldSnapshots from second replay, keyed by frame.
+   * @returns Array of { frame, diffs } for each frame that differs.
+   */
+  export declare function compareReplaySnapshots(snapshotsA: ReadonlyMap<number, WorldSnapshot>, snapshotsB: ReadonlyMap<number, WorldSnapshot>): {
+      frame: number;
+      diffs: string[];
+  }[];
+
+  /**
+   * World Snapshot — capture and restore complete game state for deterministic replay.
+   *
+   * Captures all subsystem state needed for deterministic replay:
+   * - PRNG state (xoshiro128** state array)
+   * - Animation states (current frame, elapsed time)
+   * - Animation FSM states (current state, blend progress)
+   * - Active tween states (id, progress, paused)
+   * - Active particle emitter states (particles, timers)
+   * - Scene stack state (active scene name, stack names)
+   * - Custom user state (generic slot for game-specific data)
+   *
+   * All capture/restore functions are best-effort: systems that aren't active
+   * are safely skipped.
+   *
+   * @example
+   * ```ts
+   * // Capture a snapshot with PRNG and animation state
+   * const snapshot = captureWorldSnapshot({
+   *   prng: myPrngState,
+   *   animations: [playerAnim, enemyAnim],
+   *   userData: { score: 100, level: 3 },
+   * });
+   *
+   * // ... game state changes ...
+   *
+   * // Restore back to the snapshot
+   * const restored = restoreWorldSnapshot(snapshot);
+   * myPrngState = restored.prng!;
+   * playerAnim = restored.animations![0];
+   * ```
+   */
+  /** Serialized state of a single animation instance. */
+  export type AnimationSnapshot = Readonly<{
+      /** Reference to the animation definition. */
+      defId: AnimationId;
+      /** Total elapsed time in seconds. */
+      elapsed: number;
+      /** Current frame index. */
+      frame: number;
+      /** Whether the animation has finished (non-looping). */
+      finished: boolean;
+  }>;
+  /** Serialized state of a blend transition in an animation FSM. */
+  export type BlendSnapshot = Readonly<{
+      /** Animation state of the outgoing animation. */
+      fromAnim: AnimationSnapshot;
+      /** AnimationId of the outgoing animation. */
+      fromAnimId: AnimationId;
+      /** Elapsed blend time in seconds. */
+      elapsed: number;
+      /** Total blend duration in seconds. */
+      duration: number;
+  }>;
+  /** Serialized state of an animation FSM instance. */
+  export type FSMSnapshot = Readonly<{
+      /** Name of the current active state. */
+      currentState: string;
+      /** Animation playback state for the current animation. */
+      animation: AnimationSnapshot;
+      /** Active blend/crossfade, or null if not blending. */
+      blend: BlendSnapshot | null;
+  }>;
+  /** Serialized state of a single tween. */
+  export type TweenSnapshot = Readonly<{
+      /** Tween unique ID. */
+      id: string;
+      /** Current lifecycle state. */
+      state: string;
+      /** Seconds elapsed since the tween became active. */
+      elapsed: number;
+      /** Seconds elapsed during the delay phase. */
+      delayElapsed: number;
+      /** Total animation duration. */
+      duration: number;
+      /** Current repeat iteration. */
+      currentRepeat: number;
+      /** Whether playing in reverse (yoyo). */
+      isReversed: boolean;
+      /** Target property values. */
+      props: Record<string, number>;
+      /** Start values captured when tween became active. */
+      startValues: Record<string, number>;
+  }>;
+  /** Serialized state of a single particle. */
+  export type ParticleSnapshot = Readonly<{
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      ax: number;
+      ay: number;
+      rotation: number;
+      rotationSpeed: number;
+      scale: number;
+      scaleSpeed: number;
+      color: {
+          r: number;
+          g: number;
+          b: number;
+          a: number;
+      };
+      startColor: {
+          r: number;
+          g: number;
+          b: number;
+          a: number;
+      };
+      endColor: {
+          r: number;
+          g: number;
+          b: number;
+          a: number;
+      };
+      lifetime: number;
+      age: number;
+      alive: boolean;
+      textureId: number;
+  }>;
+  /** Serialized state of a single emitter. */
+  export type EmitterSnapshot = Readonly<{
+      /** Emitter unique ID. */
+      id: string;
+      /** All particles (alive and dead). */
+      particles: readonly ParticleSnapshot[];
+      /** Emission accumulator for continuous mode. */
+      emissionAccumulator: number;
+      /** Whether the emitter is actively spawning. */
+      active: boolean;
+      /** Whether the emitter has fired (burst/one-shot). */
+      used: boolean;
+  }>;
+  /** Serialized scene stack state. */
+  export type SceneStackSnapshot = Readonly<{
+      /** Names of scenes on the stack, bottom to top. */
+      sceneNames: readonly string[];
+      /** Name of the active (topmost) scene. */
+      activeSceneName: string | null;
+      /** Stack depth. */
+      depth: number;
+  }>;
+  /**
+   * Complete world snapshot capturing all subsystem state.
+   *
+   * Each field is optional — only systems that the game uses need to be captured.
+   * Fields that are `undefined` were not captured and will be skipped on restore.
+   */
+  export type WorldSnapshot = Readonly<{
+      /** Timestamp when the snapshot was taken (milliseconds since epoch). */
+      timestamp: number;
+      /** Frame number when the snapshot was taken (user-provided). */
+      frame: number;
+      /** PRNG state (xoshiro128** internal words). */
+      prng: PRNGState | null;
+      /** Animation instance states. */
+      animations: readonly AnimationSnapshot[] | null;
+      /** Animation FSM instance states. */
+      fsms: readonly FSMSnapshot[] | null;
+      /** Active tween states. */
+      tweens: readonly TweenSnapshot[] | null;
+      /** Active particle emitter states. */
+      emitters: readonly EmitterSnapshot[] | null;
+      /** Scene stack state. */
+      sceneStack: SceneStackSnapshot | null;
+      /** Custom user state (JSON-serializable). */
+      userData: unknown;
+      /** Version tag for forward compatibility. */
+      version: number;
+  }>;
+  /**
+   * Options for capturing a world snapshot.
+   *
+   * Pass only the systems you want to capture. Everything is optional.
+   */
+  export type CaptureOptions = {
+      /** Current frame number. */
+      frame?: number;
+      /** PRNG state to capture. */
+      prng?: PRNGState;
+      /** Animation states to capture. */
+      animations?: readonly AnimationState[];
+      /** Animation FSM states to capture. */
+      fsms?: readonly FSMState[];
+      /** Active tweens to capture (pass the Tween objects from the tween system). */
+      tweens?: readonly TweenSnapshotInput[];
+      /** Emitter states to capture (pass the Emitter objects from the particle system). */
+      emitters?: readonly EmitterSnapshotInput[];
+      /** Scene stack info to capture. */
+      sceneStack?: SceneStackInput;
+      /** Custom user state (will be deep-cloned via JSON). */
+      userData?: unknown;
+  };
+  /** Input type for capturing tween state. Matches the Tween interface shape. */
+  export type TweenSnapshotInput = {
+      id: string;
+      state: string;
+      elapsed: number;
+      delayElapsed: number;
+      duration: number;
+      currentRepeat: number;
+      isReversed: boolean;
+      props: Record<string, number>;
+      startValues: Record<string, number>;
+  };
+  /** Input type for capturing emitter state. Matches the Emitter interface shape. */
+  export type EmitterSnapshotInput = {
+      id: string;
+      particles: readonly ParticleInputData[];
+      emissionAccumulator: number;
+      active: boolean;
+      used: boolean;
+  };
+  /** Input type for a single particle. Matches the Particle interface shape. */
+  export type ParticleInputData = {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      ax: number;
+      ay: number;
+      rotation: number;
+      rotationSpeed: number;
+      scale: number;
+      scaleSpeed: number;
+      color: {
+          r: number;
+          g: number;
+          b: number;
+          a: number;
+      };
+      startColor: {
+          r: number;
+          g: number;
+          b: number;
+          a: number;
+      };
+      endColor: {
+          r: number;
+          g: number;
+          b: number;
+          a: number;
+      };
+      lifetime: number;
+      age: number;
+      alive: boolean;
+      textureId: number;
+  };
+  /** Input type for capturing scene stack state. */
+  export type SceneStackInput = {
+      sceneNames: readonly string[];
+      activeSceneName: string | null;
+      depth: number;
+  };
+  /**
+   * Result of restoring a world snapshot.
+   *
+   * Contains the restored values for each system. Use these to update your
+   * local state references.
+   */
+  export type RestoreResult = {
+      /** Restored PRNG state, or undefined if not captured. */
+      prng: PRNGState | undefined;
+      /** Restored animation states, or undefined if not captured. */
+      animations: AnimationState[] | undefined;
+      /** Restored animation FSM states (partial — config must be re-attached by caller). */
+      fsms: FSMSnapshotRestoreData[] | undefined;
+      /** Restored tween data, or undefined if not captured. */
+      tweens: TweenSnapshot[] | undefined;
+      /** Restored emitter data, or undefined if not captured. */
+      emitters: EmitterSnapshot[] | undefined;
+      /** Restored scene stack info, or undefined if not captured. */
+      sceneStack: SceneStackSnapshot | undefined;
+      /** Restored custom user state, or undefined if not captured. */
+      userData: unknown;
+  };
+  /** Data needed to restore an FSM state. Caller must re-attach config and sortedTransitions. */
+  export type FSMSnapshotRestoreData = {
+      currentState: string;
+      animation: AnimationState;
+      blend: BlendState | null;
+  };
+  /**
+   * Capture a world snapshot of the specified subsystem states.
+   *
+   * Only the systems you pass will be captured. Everything else is set to null.
+   * All values are deep-cloned so mutations after capture do not affect the snapshot.
+   *
+   * @param options - Which systems to capture and their current state.
+   * @returns An immutable WorldSnapshot.
+   *
+   * @example
+   * ```ts
+   * const snapshot = captureWorldSnapshot({
+   *   frame: 42,
+   *   prng: myRng,
+   *   animations: [walkAnim, idleAnim],
+   *   userData: { score: playerScore },
+   * });
+   * ```
+   */
+  export declare function captureWorldSnapshot(options?: CaptureOptions): WorldSnapshot;
+  /**
+   * Restore subsystem state from a world snapshot.
+   *
+   * Returns a RestoreResult containing the restored values for each system.
+   * Systems that were not captured (null in the snapshot) return undefined.
+   *
+   * For FSMs, the caller must re-attach the config and sortedTransitions from
+   * the original FSMState, since those contain function references that cannot
+   * be serialized.
+   *
+   * @param snapshot - The WorldSnapshot to restore from.
+   * @returns RestoreResult with restored state for each system.
+   *
+   * @example
+   * ```ts
+   * const restored = restoreWorldSnapshot(snapshot);
+   * if (restored.prng) myRng = restored.prng;
+   * if (restored.animations) {
+   *   walkAnim = restored.animations[0];
+   *   idleAnim = restored.animations[1];
+   * }
+   * ```
+   */
+  export declare function restoreWorldSnapshot(snapshot: WorldSnapshot): RestoreResult;
+  /**
+   * Apply restored FSM data back to an existing FSMState object.
+   *
+   * Since FSMState contains function references (config, sortedTransitions) that
+   * cannot be serialized, this helper merges the restored snapshot data back into
+   * an existing FSMState while preserving the original config.
+   *
+   * @param original - The original FSMState with config and sortedTransitions intact.
+   * @param restored - The restored data from restoreWorldSnapshot().fsms.
+   * @returns A new FSMState with restored animation/blend state and original config.
+   */
+  export declare function applyFSMRestore(original: FSMState, restored: FSMSnapshotRestoreData): FSMState;
+  /**
+   * Serialize a WorldSnapshot to a JSON string for persistence or transport.
+   *
+   * @param snapshot - The snapshot to serialize.
+   * @returns JSON string representation.
+   */
+  export declare function serializeSnapshot(snapshot: WorldSnapshot): string;
+  /**
+   * Deserialize a WorldSnapshot from a JSON string.
+   *
+   * @param json - JSON string from serializeSnapshot().
+   * @returns Parsed WorldSnapshot.
+   * @throws Error if the JSON is invalid or version is unsupported.
+   */
+  export declare function deserializeSnapshot(json: string): WorldSnapshot;
+  /**
+   * Compare two world snapshots and return a list of subsystems that differ.
+   *
+   * Useful for debugging determinism issues: capture snapshots at the same frame
+   * in two replays and compare them to find which system diverged.
+   *
+   * @param a - First snapshot.
+   * @param b - Second snapshot.
+   * @returns Array of subsystem names that differ between the two snapshots.
+   */
+  export declare function diffSnapshots(a: WorldSnapshot, b: WorldSnapshot): string[];
+  /**
+   * Create an empty WorldSnapshot with all fields set to null/default.
+   * Useful as a starting point or for testing.
+   *
+   * @param frame - Optional frame number. Default: 0.
+   * @returns An empty WorldSnapshot.
+   */
+  export declare function emptySnapshot(frame?: number): WorldSnapshot;
 
 }
 

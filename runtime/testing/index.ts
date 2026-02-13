@@ -9,6 +9,8 @@ export {
   diffReplays,
   createRecording,
   emptyFrame,
+  replayWithSnapshots,
+  compareReplaySnapshots,
 } from "./replay.ts";
 export type {
   InputFrame,
@@ -20,7 +22,38 @@ export type {
   ReplayResult,
   DiffResult,
   UpdateFn,
+  SnapshotCaptureFn,
+  ReplayWithSnapshotsOptions,
+  ReplayWithSnapshotsResult,
 } from "./replay.ts";
+
+// World Snapshots
+export {
+  captureWorldSnapshot,
+  restoreWorldSnapshot,
+  applyFSMRestore,
+  serializeSnapshot,
+  deserializeSnapshot,
+  diffSnapshots,
+  emptySnapshot,
+} from "./snapshot.ts";
+export type {
+  AnimationSnapshot,
+  BlendSnapshot,
+  FSMSnapshot,
+  TweenSnapshot,
+  ParticleSnapshot,
+  EmitterSnapshot,
+  SceneStackSnapshot,
+  WorldSnapshot,
+  CaptureOptions,
+  TweenSnapshotInput,
+  EmitterSnapshotInput,
+  ParticleInputData,
+  SceneStackInput,
+  RestoreResult,
+  FSMSnapshotRestoreData,
+} from "./snapshot.ts";
 
 // Property-based testing
 export {
