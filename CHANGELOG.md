@@ -2,6 +2,36 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.8.0] - 2026-02-13
+
+### Added
+- **Draw Call Capture & Visual Assertions** (`runtime/testing/visual.ts`)
+  - `enableDrawCallCapture()` / `disableDrawCallCapture()` — toggle structured logging of all draw calls
+  - `getDrawCalls()` / `clearDrawCalls()` — retrieve and reset captured draw calls
+  - `findDrawCalls(filter)` — query by type, position, layer, texture, content, screenSpace
+  - `assertSpriteDrawn()`, `assertTextDrawn()`, `assertDrawCallCount()` — visual assertions for headless tests
+  - `assertNothingDrawnAt()`, `assertLayerHasDrawCalls()`, `assertScreenSpaceDrawn()` — spatial and HUD assertions
+  - `getDrawCallSummary()` — frame overview grouped by draw call type
+  - Instruments all 7 draw functions: drawSprite, drawText, drawRect, drawPanel, drawBar, drawLabel, drawTilemap
+  - Works in headless mode — captures intent before the Rust op boundary
+
+- **Claude Code Skills** (`.claude/skills/`)
+  - `/test-all` — run all 4 test suites (Node, V8, Rust, headless check) with unified summary
+  - `/phase-complete` — phase transition checklist: tests, declarations, status lines
+  - `/api-sync` — regenerate arcane.d.ts and check for drift
+
+- **Custom Agents** (`.claude/agents/`)
+  - `arcane-tester` (Sonnet) — read-only test runner, writes tests, diagnoses failures
+  - `rust-engine` — Rust core specialist with deno_core rules and pinned versions
+  - `ts-runtime` — TS runtime specialist with dual-runtime constraints
+
+- Visual Testing recipe in COOKBOOK.md
+- Common Mistakes section in AGENTS.md template (8 most frequent agent bugs)
+
+### Changed
+- `docs/agent-tooling.md` — removed 3 unused agent definitions, replaced fictional skills with honest CLI note, modernized CLI tools into table, documented new skills and custom agents
+- Regenerated `arcane.d.ts` with visual testing API declarations
+
 ## [0.7.0] - 2026-02-12
 
 ### Added
