@@ -960,6 +960,179 @@ declare module "@arcane/runtime/rendering" {
    * No-op in headless mode.
    */
   export declare function clearLights(): void;
+  /**
+   * Enable Radiance Cascades global illumination.
+   * When enabled, light propagates realistically through the scene:
+   * emissive surfaces cast light, occluders block it, and light bounces.
+   * Existing point lights and ambient light continue to work alongside GI.
+   * No-op in headless mode.
+   */
+  export declare function enableGlobalIllumination(): void;
+  /**
+   * Disable Radiance Cascades global illumination.
+   * Falls back to the basic point-light system.
+   * No-op in headless mode.
+   */
+  export declare function disableGlobalIllumination(): void;
+  /**
+   * Set the global illumination intensity multiplier.
+   * Higher values = brighter GI light. Default: 1.0.
+   * No-op in headless mode.
+   *
+   * @param intensity - GI brightness, 0.0+. Default: 1.0.
+   */
+  export declare function setGIIntensity(intensity: number): void;
+  /** Options for an emissive surface. */
+  export interface EmissiveOptions {
+      /** World X position. */
+      x: number;
+      /** World Y position. */
+      y: number;
+      /** Width in world units. */
+      width: number;
+      /** Height in world units. */
+      height: number;
+      /** Red channel, 0.0-1.0. Default: 1. */
+      r?: number;
+      /** Green channel, 0.0-1.0. Default: 1. */
+      g?: number;
+      /** Blue channel, 0.0-1.0. Default: 1. */
+      b?: number;
+      /** Emission intensity. Default: 1. */
+      intensity?: number;
+  }
+  /**
+   * Add an emissive surface that radiates light in GI mode.
+   * Emissive surfaces act as area light sources when GI is enabled.
+   * Must be called every frame (cleared at frame start).
+   * No-op in headless mode or when GI is disabled.
+   *
+   * @param options - Emissive surface configuration.
+   */
+  export declare function addEmissive(options: EmissiveOptions): void;
+  /**
+   * Clear all emissive surfaces for this frame.
+   * No-op in headless mode.
+   */
+  export declare function clearEmissives(): void;
+  /** Options for an occluder (light-blocking rectangle). */
+  export interface OccluderOptions {
+      /** World X position. */
+      x: number;
+      /** World Y position. */
+      y: number;
+      /** Width in world units. */
+      width: number;
+      /** Height in world units. */
+      height: number;
+  }
+  /**
+   * Add a rectangular occluder that blocks light in GI mode.
+   * Occluders cast shadows when light rays encounter them.
+   * Must be called every frame (cleared at frame start).
+   * No-op in headless mode or when GI is disabled.
+   *
+   * @param options - Occluder rectangle.
+   */
+  export declare function addOccluder(options: OccluderOptions): void;
+  /**
+   * Clear all occluders for this frame.
+   * No-op in headless mode.
+   */
+  export declare function clearOccluders(): void;
+  /** Options for a directional light (infinite parallel rays). */
+  export interface DirectionalLightOptions {
+      /** Light direction angle in radians. 0 = right, PI/2 = down. */
+      angle: number;
+      /** Red channel, 0.0-1.0. Default: 1. */
+      r?: number;
+      /** Green channel, 0.0-1.0. Default: 1. */
+      g?: number;
+      /** Blue channel, 0.0-1.0. Default: 1. */
+      b?: number;
+      /** Light brightness. Default: 1. */
+      intensity?: number;
+  }
+  /**
+   * Add a directional light (sun/moon — infinite distance, parallel rays).
+   * Directional lights affect the entire scene uniformly from a given angle.
+   * Must be called every frame (cleared with clearLights()).
+   * No-op in headless mode.
+   *
+   * @param options - Directional light configuration.
+   */
+  export declare function addDirectionalLight(options: DirectionalLightOptions): void;
+  /** Options for a spot light (positioned cone of light). */
+  export interface SpotLightOptions {
+      /** World X position. */
+      x: number;
+      /** World Y position. */
+      y: number;
+      /** Direction angle in radians. 0 = right, PI/2 = down. */
+      angle: number;
+      /** Cone half-angle spread in radians. Default: 0.5 (about 28 degrees). */
+      spread?: number;
+      /** Light range in world units. Default: 200. */
+      range?: number;
+      /** Red channel, 0.0-1.0. Default: 1. */
+      r?: number;
+      /** Green channel, 0.0-1.0. Default: 1. */
+      g?: number;
+      /** Blue channel, 0.0-1.0. Default: 1. */
+      b?: number;
+      /** Light brightness. Default: 1. */
+      intensity?: number;
+  }
+  /**
+   * Add a spot light (positioned cone of light, like a flashlight).
+   * Must be called every frame (cleared with clearLights()).
+   * No-op in headless mode.
+   *
+   * @param options - Spot light configuration.
+   */
+  export declare function addSpotLight(options: SpotLightOptions): void;
+  /** Color temperature presets as [r, g, b] tuples (0.0-1.0 range). */
+  export declare const colorTemp: {
+      /** Warm candlelight (1800K). */
+      candlelight: [number, number, number];
+      /** Warm incandescent (2700K). */
+      incandescent: [number, number, number];
+      /** Warm white (3000K). */
+      warmWhite: [number, number, number];
+      /** Neutral daylight (5500K). */
+      daylight: [number, number, number];
+      /** Cool fluorescent (6500K). */
+      fluorescent: [number, number, number];
+      /** Cool moonlight (7500K). */
+      moonlight: [number, number, number];
+      /** Vibrant neon pink. */
+      neonPink: [number, number, number];
+      /** Vibrant neon blue. */
+      neonBlue: [number, number, number];
+      /** Vibrant neon green. */
+      neonGreen: [number, number, number];
+      /** Fire/torch (warm orange). */
+      torch: [number, number, number];
+      /** Magical purple glow. */
+      magic: [number, number, number];
+      /** Blood red. */
+      blood: [number, number, number];
+  };
+  /** Options for the day/night cycle helper. */
+  export interface DayNightOptions {
+      /** Time of day, 0.0-1.0. 0=midnight, 0.25=dawn, 0.5=noon, 0.75=dusk. */
+      timeOfDay: number;
+      /** Overall brightness multiplier. Default: 1. */
+      intensity?: number;
+  }
+  /**
+   * Set ambient and directional lighting based on time of day.
+   * This is a convenience helper that calls setAmbientLight() and
+   * optionally addDirectionalLight() to simulate a day/night cycle.
+   *
+   * @param options - Day/night configuration.
+   */
+  export declare function setDayNightCycle(options: DayNightOptions): void;
 
   /**
    * Register a callback to be called every frame by the Arcane renderer.
