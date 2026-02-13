@@ -1,11 +1,11 @@
-# @arcane/runtime
+# @arcane-engine/runtime
 
 TypeScript runtime for Arcane — a code-first, test-native, agent-native 2D game engine.
 
 ## Installation
 
 ```bash
-npm install @arcane/runtime
+npm install @arcane-engine/runtime
 ```
 
 **Note:** You also need the Arcane CLI:
@@ -16,16 +16,22 @@ cargo install arcane-cli
 ## Quick Example
 
 ```typescript
-import { createStore } from "@arcane/runtime/state";
-import { onFrame, drawSprite } from "@arcane/runtime/rendering";
+import { onFrame, drawSprite, createSolidTexture, setCamera, getViewportSize } from "@arcane/runtime/rendering";
 
-const store = createStore({ player: { x: 0, y: 0 } });
+const TEX = createSolidTexture("player", 60, 180, 255);
+const { width: VPW, height: VPH } = getViewportSize();
 
 onFrame(() => {
-  const state = store.getState();
-  drawSprite("player", state.player.x, state.player.y, { width: 32, height: 32 });
+  setCamera(VPW / 2, VPH / 2); // (0,0) = top-left
+  drawSprite({ textureId: TEX, x: 100, y: 100, w: 32, h: 32, layer: 1 });
 });
 ```
+
+> **Note:** Code imports use `@arcane/runtime/{module}` (mapped via tsconfig paths to `@arcane-engine/runtime`). The Arcane CLI scaffolds this automatically.
+
+## Modules
+
+`state`, `rendering`, `ui`, `physics`, `pathfinding`, `tweening`, `particles`, `systems`, `scenes`, `persistence`, `procgen`, `agent`, `testing`
 
 ## Documentation
 

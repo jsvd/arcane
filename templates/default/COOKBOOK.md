@@ -414,3 +414,172 @@ zoomTo(2.0, 0.5, easeInOutCubic);
 // Zoom to 3x centered on a specific world position
 zoomToPoint(3.0, bossX, bossY, 1.0, easeInOutCubic);
 ```
+
+## MSDF Text (Crisp Scalable Text)
+
+Resolution-independent text that stays sharp at any zoom level. Supports outlines, shadows, and color.
+
+```typescript
+import { getDefaultMSDFFont, loadMSDFFont, drawText, measureText } from "@arcane/runtime/rendering";
+
+const font = getDefaultMSDFFont(); // built-in monospace font
+
+// Basic usage — crisp at any camera zoom
+drawText("Hello World", 100, 100, { msdfFont: font, scale: 2.0, layer: 10 });
+
+// Colored text with outline
+drawText("GAME OVER", 200, 150, {
+  msdfFont: font, scale: 4.0, layer: 10,
+  color: { r: 1, g: 0.2, b: 0.2, a: 1 },
+  outlineWidth: 0.12,
+  outlineColor: { r: 0, g: 0, b: 0, a: 1 },
+});
+
+// Drop shadow
+drawText("Score: 1000", 10, 10, {
+  msdfFont: font, scale: 1.5, layer: 100, screenSpace: true,
+  shadowOffsetX: 1, shadowOffsetY: 1,
+  shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
+});
+
+// Measure text width for centering
+const { width: VPW } = getViewportSize();
+const textW = measureText("Centered", font, 2.0);
+drawText("Centered", (VPW - textW) / 2, 50, {
+  msdfFont: font, scale: 2.0, screenSpace: true, layer: 100,
+});
+
+// Load external MSDF font (atlas PNG + metrics JSON)
+const customFont = loadMSDFFont("assets/roboto-msdf.png", "assets/roboto-msdf.json");
+drawText("Custom font", 100, 200, { msdfFont: customFont, scale: 1.0, layer: 10 });
+```
+
+**When to use MSDF vs bitmap text:** Use MSDF (`msdfFont`) when text needs to look crisp at varying zoom levels or large sizes. Use bitmap (`font` from `getDefaultFont()`) for small fixed-size text like debug overlays.
+
+## Global Illumination
+
+2D global illumination via Radiance Cascades. Emissive sprites cast colored light; occluders block it.
+
+```typescript
+import {
+  setGIEnabled, setGIQuality, setAmbientLight,
+  addPointLight, addDirectionalLight, addSpotLight, clearLights,
+  drawSprite,
+} from "@arcane/runtime/rendering";
+
+// Enable GI (call once at init, before onFrame)
+setGIEnabled(true);
+setGIQuality("medium"); // "low" (fast), "medium" (balanced), "high" (quality)
+
+// Dark ambient for dungeon atmosphere
+setAmbientLight(0.08, 0.08, 0.12);
+
+// In onFrame — lights are per-frame, clear and re-add:
+// Point light: x, y, radius, r, g, b, intensity
+addPointLight(player.x + 16, player.y + 16, 120, 1.0, 0.8, 0.5, 1.5);
+
+// Directional light (sunlight/moonlight): angle (radians), r, g, b, intensity
+addDirectionalLight(Math.PI * 0.75, 0.3, 0.3, 0.5, 0.4); // cool moonlight from upper-right
+
+// Spot light: x, y, radius, angle, arc, r, g, b, intensity
+addSpotLight(guardX, guardY, 200, guardAngle, Math.PI / 4, 1, 1, 0.8, 2.0);
+
+// Emissive sprites emit light into the GI system
+drawSprite({ textureId: TEX_LAVA, x: 100, y: 200, w: 32, h: 8, emissive: true, layer: 1 });
+drawSprite({ textureId: TEX_CRYSTAL, x: 300, y: 150, w: 16, h: 16, emissive: true, layer: 1 });
+
+// Occluder sprites block light (walls, pillars)
+drawSprite({ textureId: TEX_PILLAR, x: 200, y: 180, w: 16, h: 48, occluder: true, layer: 1 });
+```
+
+**Day/night cycle** — animate ambient light and directional light over time:
+```typescript
+const dayProgress = (totalTime % 60) / 60; // 0-1 over 60 seconds
+const sunAngle = dayProgress * Math.PI * 2;
+const brightness = Math.max(0, Math.sin(dayProgress * Math.PI)); // peaks at noon
+setAmbientLight(0.1 + 0.4 * brightness, 0.1 + 0.35 * brightness, 0.15 + 0.25 * brightness);
+addDirectionalLight(sunAngle, 1.0, 0.9, 0.7, brightness * 0.6);
+```
+
+## Wave Function Collapse (Procedural Generation)
+
+Generate tile-based levels with adjacency and structural constraints.
+
+```typescript
+import { generateWFC } from "@arcane/runtime/procgen";
+import { reachability, border, minCount, maxCount, exactCount } from "@arcane/runtime/procgen";
+
+const FLOOR = "floor", WALL = "wall", DOOR = "door", CHEST = "chest";
+
+const result = generateWFC({
+  width: 30,
+  height: 20,
+  tiles: [FLOOR, WALL, DOOR, CHEST],
+  adjacency: [
+    { tile: FLOOR, neighbors: { north: [FLOOR, DOOR, WALL, CHEST], east: [FLOOR, DOOR, WALL, CHEST], south: [FLOOR, DOOR, WALL, CHEST], west: [FLOOR, DOOR, WALL, CHEST] } },
+    { tile: WALL,  neighbors: { north: [WALL, FLOOR, DOOR], east: [WALL, FLOOR, DOOR], south: [WALL, FLOOR, DOOR], west: [WALL, FLOOR, DOOR] } },
+    { tile: DOOR,  neighbors: { north: [FLOOR], east: [FLOOR], south: [FLOOR], west: [FLOOR] } },
+    { tile: CHEST, neighbors: { north: [FLOOR, WALL], east: [FLOOR, WALL], south: [FLOOR, WALL], west: [FLOOR, WALL] } },
+  ],
+  constraints: [
+    border(WALL),                      // edges are always walls
+    reachability(FLOOR, DOOR, CHEST),  // all walkable tiles connected
+    minCount(DOOR, 2),                // at least 2 doors
+    maxCount(CHEST, 5),               // at most 5 chests
+  ],
+  seed: 42,
+  maxAttempts: 100,
+});
+
+if (result.success) {
+  for (let y = 0; y < result.height; y++) {
+    for (let x = 0; x < result.width; x++) {
+      const tile = result.grid[y][x];
+      // Map tile names to tilemap indices and setTile(...)
+    }
+  }
+}
+```
+
+**Validate generated levels** — run gameplay-specific checks after generation:
+```typescript
+import { validateLevel, generateAndTest } from "@arcane/runtime/procgen";
+
+// validateLevel runs custom predicates on the generated grid
+const valid = validateLevel(result, [
+  (grid) => grid.flat().filter(t => t === DOOR).length >= 2,
+  (grid) => { /* check path from entrance to exit exists */ return true; },
+]);
+
+// generateAndTest: keep generating until validation passes
+const goodLevel = generateAndTest(wfcOptions, validators, { maxRetries: 50 });
+```
+
+## Property-Based Testing
+
+Verify game logic invariants across randomly generated inputs with automatic shrinking.
+
+```typescript
+import { describe, it, assert } from "@arcane/runtime/testing";
+import { checkProperty, assertProperty, integer, float, array, oneOf, record } from "@arcane/runtime/testing";
+
+describe("combat math", () => {
+  it("damage is never negative", () => {
+    assertProperty(
+      [integer(1, 100), integer(0, 50)],  // attack, defense
+      ([attack, defense]) => calculateDamage(attack, defense) >= 0,
+    );
+  });
+
+  it("healing doesn't exceed max HP", () => {
+    assertProperty(
+      [integer(1, 100), integer(1, 100), integer(1, 50)],  // current, max, heal
+      ([current, max, heal]) => {
+        const result = applyHealing(current, max, heal);
+        return result >= current && result <= max;
+      },
+      { iterations: 500 },  // run 500 random cases
+    );
+  });
+});
+```

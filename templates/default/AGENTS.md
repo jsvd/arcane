@@ -260,6 +260,54 @@ setShaderParam(shader, 0, 0.5, 0, 0, 0);  // set uniform slot 0 (16 vec4 slots a
 drawSprite({ textureId: TEX, x, y, w: 32, h: 32, shaderId: shader, layer: 1 });
 ```
 
+**MSDF Text** — Resolution-independent text with outlines and shadows:
+```typescript
+import { getDefaultMSDFFont, drawText } from "@arcane/runtime/rendering";
+
+const font = getDefaultMSDFFont();
+
+// Basic crisp text (scales cleanly at any zoom)
+drawText("Hello World", 100, 100, { msdfFont: font, scale: 2.0, layer: 10 });
+
+// With outline
+drawText("Outlined", 100, 140, {
+  msdfFont: font, scale: 2.0, layer: 10,
+  outlineWidth: 0.15, outlineColor: { r: 0, g: 0, b: 0, a: 1 },
+});
+
+// With drop shadow
+drawText("Shadowed", 100, 180, {
+  msdfFont: font, scale: 2.0, layer: 10,
+  shadowOffsetX: 2, shadowOffsetY: 2, shadowColor: { r: 0, g: 0, b: 0, a: 0.5 },
+});
+
+// Screen-space HUD text (ignores camera)
+drawText(`Score: ${score}`, 10, 10, { msdfFont: font, scale: 1.5, screenSpace: true, layer: 100 });
+```
+
+**Lighting + Global Illumination** — Point lights with indirect GI bounce:
+```typescript
+import {
+  setAmbientLight, addPointLight, setGIEnabled, setGIQuality, clearLights,
+} from "@arcane/runtime/rendering";
+
+// Enable GI (call once at init)
+setGIEnabled(true);
+setGIQuality("medium"); // "low", "medium", "high"
+
+// Set base ambient light
+setAmbientLight(0.1, 0.1, 0.15);
+
+// In onFrame — lights must be re-added each frame:
+addPointLight(player.x, player.y, 150, 1.0, 0.8, 0.5, 1.5); // warm torch
+
+// Emissive sprites contribute to GI (light bounces off nearby surfaces)
+drawSprite({ textureId: TEX_LAVA, x: 100, y: 200, w: 32, h: 32, emissive: true, layer: 1 });
+
+// Occluder sprites block light propagation
+drawSprite({ textureId: TEX_WALL, x: 150, y: 200, w: 16, h: 64, occluder: true, layer: 1 });
+```
+
 **Audio** — Load once, play in response to events:
 ```typescript
 const SFX_JUMP = loadSound("assets/jump.wav");
@@ -366,7 +414,43 @@ File organization: `src/game.ts` (logic), `src/visual.ts` (rendering), `src/*.te
 
 Read `types/arcane.d.ts` for the complete API with JSDoc documentation. Always check it before using an unfamiliar function.
 
-All module imports: `@arcane/runtime/state`, `@arcane/runtime/rendering`, `@arcane/runtime/ui`, `@arcane/runtime/physics`, `@arcane/runtime/pathfinding`, `@arcane/runtime/tweening`, `@arcane/runtime/particles`, `@arcane/runtime/systems`, `@arcane/runtime/scenes`, `@arcane/runtime/persistence`, `@arcane/runtime/agent`, `@arcane/runtime/testing`.
+All module imports: `@arcane/runtime/state`, `@arcane/runtime/rendering`, `@arcane/runtime/ui`, `@arcane/runtime/physics`, `@arcane/runtime/pathfinding`, `@arcane/runtime/tweening`, `@arcane/runtime/particles`, `@arcane/runtime/systems`, `@arcane/runtime/scenes`, `@arcane/runtime/persistence`, `@arcane/runtime/procgen`, `@arcane/runtime/agent`, `@arcane/runtime/testing`.
+
+## Procedural Generation
+
+Generate levels using Wave Function Collapse. Import from `@arcane/runtime/procgen`.
+
+```typescript
+import { generateWFC } from "@arcane/runtime/procgen";
+import { reachability, border, minCount } from "@arcane/runtime/procgen";
+
+const result = generateWFC({
+  width: 20,
+  height: 15,
+  tiles: ["floor", "wall", "door"],
+  adjacency: [
+    { tile: "floor", neighbors: { north: ["floor", "door", "wall"], east: ["floor", "door", "wall"], south: ["floor", "door", "wall"], west: ["floor", "door", "wall"] } },
+    { tile: "wall",  neighbors: { north: ["wall", "floor"], east: ["wall", "floor"], south: ["wall", "floor"], west: ["wall", "floor"] } },
+    { tile: "door",  neighbors: { north: ["floor"], east: ["floor"], south: ["floor"], west: ["floor"] } },
+  ],
+  constraints: [
+    border("wall"),                    // walls on all edges
+    reachability("floor", "door"),     // all floors and doors connected
+    minCount("door", 2),              // at least 2 doors
+  ],
+  seed: 42,
+  maxAttempts: 100,
+});
+
+if (result.success) {
+  // result.grid[y][x] = tile name
+  for (let y = 0; y < result.height; y++) {
+    for (let x = 0; x < result.width; x++) {
+      const tile = result.grid[y][x]; // "floor", "wall", or "door"
+    }
+  }
+}
+```
 
 ## Scenes
 
@@ -511,6 +595,37 @@ for (const p of particles) {
     layer: 5,
   });
 }
+```
+
+## Testing
+
+Beyond basic `describe`/`it`/`assert`, Arcane provides property-based testing and replay testing.
+
+**Property-based testing** — verify invariants across random inputs:
+```typescript
+import { describe, it, assert } from "@arcane/runtime/testing";
+import { checkProperty, assertProperty, integer, array } from "@arcane/runtime/testing";
+
+describe("sorting", () => {
+  it("preserves array length", () => {
+    assertProperty(
+      [array(integer(-100, 100), 0, 50)],  // generator: arrays of 0-50 ints
+      ([arr]) => arr.sort().length === arr.length,
+    );
+  });
+
+  it("produces sorted output", () => {
+    const result = checkProperty(
+      [array(integer(0, 1000), 1, 20)],
+      ([arr]) => {
+        const sorted = [...arr].sort((a, b) => a - b);
+        return sorted.every((v, i) => i === 0 || v >= sorted[i - 1]);
+      },
+      { iterations: 200 },
+    );
+    assert.ok(result.passed, result.failureMessage);
+  });
+});
 ```
 
 ## Tips

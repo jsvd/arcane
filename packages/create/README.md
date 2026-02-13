@@ -1,21 +1,24 @@
-# @arcane/create
+# @arcane-engine/create
 
 Scaffolding tool for creating new Arcane game projects.
 
 ## Usage
 
 ```bash
-npm create @arcane/game my-game
+npm create @arcane-engine/game my-game
 cd my-game
 npm install
 arcane dev
 ```
 
 This creates a new Arcane project with:
-- `package.json` with @arcane/runtime dependency
-- `tsconfig.json` for TypeScript
+- `package.json` with @arcane-engine/runtime dependency
+- `tsconfig.json` for TypeScript (with `@arcane/runtime` → `@arcane-engine/runtime` path mapping)
 - `src/game.ts` for pure game logic
 - `src/visual.ts` for rendering (entry point)
+- `AGENTS.md` with LLM development guide
+- `COOKBOOK.md` with advanced pattern recipes
+- `types/arcane.d.ts` with full API declarations
 - `README.md` with usage instructions
 
 ## Prerequisites
@@ -37,11 +40,11 @@ export PATH="$PATH:$(pwd)/target/release"
 
 ## What This Does
 
-`@arcane/create` is a thin wrapper around `arcane new <name>`. It's provided for npm ecosystem ergonomics:
+`@arcane-engine/create` is a thin wrapper around `arcane new <name>`. It's provided for npm ecosystem ergonomics:
 
 ```bash
 # These are equivalent:
-npm create @arcane/game my-game
+npm create @arcane-engine/game my-game
 arcane new my-game
 ```
 
