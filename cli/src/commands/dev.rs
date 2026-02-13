@@ -13,7 +13,7 @@ use arcane_engine::scripting::ArcaneRuntime;
 use super::{create_import_map, type_check};
 
 /// Run the dev server: open a window, load TS entry file, run game loop.
-pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
+pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) -> Result<()> {
     let entry_path = std::fs::canonicalize(&entry)
         .with_context(|| format!("Cannot find entry file: {entry}"))?;
 
@@ -65,6 +65,14 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
         let (tx, rx) = arcane_engine::agent::inspector_channel();
         let _handle = arcane_engine::agent::inspector::start_inspector(port, tx);
         // Leak the handle — inspector runs for the lifetime of the process
+        std::mem::forget(_handle);
+        rx
+    });
+
+    // Start MCP server if requested
+    let mcp_rx = mcp_port.map(|port| {
+        let (tx, rx) = arcane_engine::agent::inspector_channel();
+        let _handle = arcane_engine::agent::mcp::start_mcp_server(port, tx);
         std::mem::forget(_handle);
         rx
     });
@@ -320,6 +328,14 @@ pub fn run(entry: String, inspector_port: Option<u16>) -> Result<()> {
 
         // Poll inspector requests (if inspector is active)
         if let Some(ref rx) = inspector_rx {
+            while let Ok((req, resp_tx)) = rx.try_recv() {
+                let response = process_inspector_request(rt, req);
+                let _ = resp_tx.send(response);
+            }
+        }
+
+        // Poll MCP requests (if MCP server is active)
+        if let Some(ref rx) = mcp_rx {
             while let Ok((req, resp_tx)) = rx.try_recv() {
                 let response = process_inspector_request(rt, req);
                 let _ = resp_tx.send(response);

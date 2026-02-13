@@ -23,6 +23,9 @@ enum Commands {
         /// Enable HTTP inspector on the given port (e.g. --inspector 4321)
         #[arg(long)]
         inspector: Option<u16>,
+        /// Enable MCP server on the given port (e.g. --mcp 4322)
+        #[arg(long)]
+        mcp: Option<u16>,
     },
     /// Print a text description of game state (headless)
     Describe {
@@ -143,9 +146,9 @@ fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Test { path } => commands::test::run(path),
-        Commands::Dev { entry, inspector } => {
+        Commands::Dev { entry, inspector, mcp } => {
             let entry = entry.unwrap_or_else(|| "src/visual.ts".to_string());
-            commands::dev::run(entry, inspector)
+            commands::dev::run(entry, inspector, mcp)
         },
         Commands::Describe { entry, verbosity } => commands::describe::run(entry, verbosity),
         Commands::Inspect { entry, path } => commands::inspect::run(entry, path),

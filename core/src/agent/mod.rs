@@ -1,4 +1,5 @@
 pub mod inspector;
+pub mod mcp;
 
 use std::sync::mpsc;
 
