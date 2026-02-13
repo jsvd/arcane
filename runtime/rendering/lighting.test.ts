@@ -6,6 +6,7 @@ import {
   enableGlobalIllumination,
   disableGlobalIllumination,
   setGIIntensity,
+  setGIQuality,
   addEmissive,
   clearEmissives,
   addOccluder,
@@ -50,6 +51,24 @@ describe("lighting — GI control", () => {
     setGIIntensity(1.0);
     setGIIntensity(0.5);
     setGIIntensity(2.0);
+  });
+});
+
+// --- GI Quality ---
+
+describe("lighting — GI quality", () => {
+  it("setGIQuality does not throw with empty options", () => {
+    setGIQuality({});
+  });
+
+  it("setGIQuality accepts individual params", () => {
+    setGIQuality({ probeSpacing: 4 });
+    setGIQuality({ interval: 2 });
+    setGIQuality({ cascadeCount: 3 });
+  });
+
+  it("setGIQuality accepts all params combined", () => {
+    setGIQuality({ probeSpacing: 16, interval: 8, cascadeCount: 5 });
   });
 });
 
