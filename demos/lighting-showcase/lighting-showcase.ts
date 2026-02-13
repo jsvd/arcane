@@ -63,6 +63,11 @@ const TEX_PLAYER = createSolidTexture("player", 220, 200, 60, 255);
 const TEX_GRASS = createSolidTexture("grass", 40, 120, 40, 255);
 const TEX_SKY = createSolidTexture("sky", 100, 150, 220, 255);
 
+// Helper to reduce drawSprite boilerplate
+function sprite(textureId: number, x: number, y: number, w: number, h: number, layer: number) {
+  drawSprite({ textureId, x, y, w, h, layer });
+}
+
 // --- State ---
 let giEnabled = true;
 let giIntensity = 1.0;
@@ -85,16 +90,16 @@ function drawDungeonScene(dt: number) {
 
   // Floor
   for (let x = 0; x < VPW; x += 32) {
-    drawSprite(TEX_FLOOR, x, VPH - 32, 32, 32, -10);
-    drawSprite(TEX_FLOOR, x, VPH - 64, 32, 32, -10);
+    sprite(TEX_FLOOR, x, VPH - 32, 32, 32, -10);
+    sprite(TEX_FLOOR, x, VPH - 64, 32, 32, -10);
   }
 
   // Walls on left and right
   for (let y = 0; y < VPH; y += 32) {
-    drawSprite(TEX_WALL, 0, y, 32, 32, -5);
-    drawSprite(TEX_WALL, 32, y, 32, 32, -5);
-    drawSprite(TEX_WALL, VPW - 32, y, 32, 32, -5);
-    drawSprite(TEX_WALL, VPW - 64, y, 32, 32, -5);
+    sprite(TEX_WALL, 0, y, 32, 32, -5);
+    sprite(TEX_WALL, 32, y, 32, 32, -5);
+    sprite(TEX_WALL, VPW - 32, y, 32, 32, -5);
+    sprite(TEX_WALL, VPW - 64, y, 32, 32, -5);
 
     // Occluders for walls
     addOccluder({ x: 0, y, width: 64, height: 32 });
@@ -105,7 +110,7 @@ function drawDungeonScene(dt: number) {
   const pillarX = VPW / 2 - 32;
   const pillarY = VPH / 2 - 64;
   for (let dy = 0; dy < 128; dy += 32) {
-    drawSprite(TEX_WALL, pillarX, pillarY + dy, 64, 32, -5);
+    sprite(TEX_WALL, pillarX, pillarY + dy, 64, 32, -5);
   }
   addOccluder({ x: pillarX, y: pillarY, width: 64, height: 128 });
 
@@ -114,14 +119,14 @@ function drawDungeonScene(dt: number) {
   const flicker = 0.8 + Math.sin(frameCount * 0.1) * 0.2;
 
   // Left wall torches
-  drawSprite(TEX_EMISSIVE_WARM, 64, 150, 16, 16, 0);
+  sprite(TEX_EMISSIVE_WARM, 64, 150, 16, 16, 0);
   addEmissive({
     x: 64, y: 150, width: 16, height: 16,
     r: torchColor[0], g: torchColor[1], b: torchColor[2],
     intensity: 2.0 * flicker,
   });
 
-  drawSprite(TEX_EMISSIVE_WARM, 64, 400, 16, 16, 0);
+  sprite(TEX_EMISSIVE_WARM, 64, 400, 16, 16, 0);
   addEmissive({
     x: 64, y: 400, width: 16, height: 16,
     r: torchColor[0], g: torchColor[1], b: torchColor[2],
@@ -129,14 +134,14 @@ function drawDungeonScene(dt: number) {
   });
 
   // Right wall torches
-  drawSprite(TEX_EMISSIVE_WARM, VPW - 80, 150, 16, 16, 0);
+  sprite(TEX_EMISSIVE_WARM, VPW - 80, 150, 16, 16, 0);
   addEmissive({
     x: VPW - 80, y: 150, width: 16, height: 16,
     r: torchColor[0], g: torchColor[1], b: torchColor[2],
     intensity: 2.0 * flicker,
   });
 
-  drawSprite(TEX_EMISSIVE_WARM, VPW - 80, 400, 16, 16, 0);
+  sprite(TEX_EMISSIVE_WARM, VPW - 80, 400, 16, 16, 0);
   addEmissive({
     x: VPW - 80, y: 400, width: 16, height: 16,
     r: torchColor[0], g: torchColor[1], b: torchColor[2],
@@ -157,15 +162,15 @@ function drawLavaScene(dt: number) {
 
   // Stone floor
   for (let x = 0; x < VPW; x += 32) {
-    drawSprite(TEX_FLOOR, x, 0, 32, 32, -10);
-    drawSprite(TEX_FLOOR, x, 32, 32, 32, -10);
+    sprite(TEX_FLOOR, x, 0, 32, 32, -10);
+    sprite(TEX_FLOOR, x, 32, 32, 32, -10);
   }
 
   // Lava river in the middle
   const lavaY = VPH / 2 - 16;
   for (let x = 0; x < VPW; x += 32) {
     const pulse = 0.7 + Math.sin(frameCount * 0.05 + x * 0.02) * 0.3;
-    drawSprite(TEX_EMISSIVE_LAVA, x, lavaY, 32, 64, 0);
+    sprite(TEX_EMISSIVE_LAVA, x, lavaY, 32, 64, 0);
 
     addEmissive({
       x, y: lavaY, width: 32, height: 64,
@@ -176,17 +181,17 @@ function drawLavaScene(dt: number) {
 
   // Stone platforms above and below lava
   for (let x = 64; x < VPW - 64; x += 96) {
-    drawSprite(TEX_WALL, x, lavaY - 48, 64, 32, -5);
+    sprite(TEX_WALL, x, lavaY - 48, 64, 32, -5);
     addOccluder({ x, y: lavaY - 48, width: 64, height: 32 });
 
-    drawSprite(TEX_WALL, x + 32, lavaY + 80, 64, 32, -5);
+    sprite(TEX_WALL, x + 32, lavaY + 80, 64, 32, -5);
     addOccluder({ x: x + 32, y: lavaY + 80, width: 64, height: 32 });
   }
 
   // Walls
   for (let y = 0; y < VPH; y += 32) {
-    drawSprite(TEX_WALL, 0, y, 32, 32, -5);
-    drawSprite(TEX_WALL, VPW - 32, y, 32, 32, -5);
+    sprite(TEX_WALL, 0, y, 32, 32, -5);
+    sprite(TEX_WALL, VPW - 32, y, 32, 32, -5);
     addOccluder({ x: 0, y, width: 32, height: 32 });
     addOccluder({ x: VPW - 32, y, width: 32, height: 32 });
   }
@@ -208,8 +213,8 @@ function drawOutdoorScene(dt: number) {
 
   // Ground
   for (let x = 0; x < VPW; x += 32) {
-    drawSprite(TEX_GRASS, x, VPH - 32, 32, 32, -10);
-    drawSprite(TEX_GRASS, x, VPH - 64, 32, 32, -10);
+    sprite(TEX_GRASS, x, VPH - 32, 32, 32, -10);
+    sprite(TEX_GRASS, x, VPH - 64, 32, 32, -10);
   }
 
   // House with windows (emissive at night)
@@ -218,7 +223,7 @@ function drawOutdoorScene(dt: number) {
 
   for (let dy = 0; dy < 128; dy += 32) {
     for (let dx = 0; dx < 192; dx += 32) {
-      drawSprite(TEX_WALL, houseX + dx, houseY + dy, 32, 32, -5);
+      sprite(TEX_WALL, houseX + dx, houseY + dy, 32, 32, -5);
     }
   }
   addOccluder({ x: houseX, y: houseY, width: 192, height: 128 });
@@ -228,14 +233,14 @@ function drawOutdoorScene(dt: number) {
   if (windowGlow > 0.1) {
     const warmColor = colorTemp.incandescent;
 
-    drawSprite(TEX_EMISSIVE_WARM, houseX + 32, houseY + 32, 24, 24, 0);
+    sprite(TEX_EMISSIVE_WARM, houseX + 32, houseY + 32, 24, 24, 0);
     addEmissive({
       x: houseX + 32, y: houseY + 32, width: 24, height: 24,
       r: warmColor[0], g: warmColor[1], b: warmColor[2],
       intensity: windowGlow * 2.0,
     });
 
-    drawSprite(TEX_EMISSIVE_WARM, houseX + 128, houseY + 32, 24, 24, 0);
+    sprite(TEX_EMISSIVE_WARM, houseX + 128, houseY + 32, 24, 24, 0);
     addEmissive({
       x: houseX + 128, y: houseY + 32, width: 24, height: 24,
       r: warmColor[0], g: warmColor[1], b: warmColor[2],
@@ -246,7 +251,7 @@ function drawOutdoorScene(dt: number) {
   // Trees as occluders
   for (const treeX of [100, 250, 550, 650]) {
     for (let dy = 0; dy < 96; dy += 32) {
-      drawSprite(TEX_WALL, treeX, VPH - 64 - 96 + dy, 32, 32, -3);
+      sprite(TEX_WALL, treeX, VPH - 64 - 96 + dy, 32, 32, -3);
     }
     addOccluder({ x: treeX, y: VPH - 64 - 96, width: 32, height: 96 });
   }
@@ -259,7 +264,7 @@ function drawNeonScene(dt: number) {
 
   // Floor
   for (let x = 0; x < VPW; x += 32) {
-    drawSprite(TEX_FLOOR, x, VPH - 32, 32, 32, -10);
+    sprite(TEX_FLOOR, x, VPH - 32, 32, 32, -10);
   }
 
   // Neon signs
@@ -277,7 +282,7 @@ function drawNeonScene(dt: number) {
     const pulse = 0.7 + Math.sin(frameCount * 0.08 + i * 1.5) * 0.3;
     const color = neonColors[i];
 
-    drawSprite(neonTextures[i], nx, ny, 80, 20, 0);
+    sprite(neonTextures[i], nx, ny, 80, 20, 0);
     addEmissive({
       x: nx, y: ny, width: 80, height: 20,
       r: color[0], g: color[1], b: color[2],
@@ -290,8 +295,8 @@ function drawNeonScene(dt: number) {
   // Building walls with windows
   for (let bx = 0; bx < VPW; bx += 200) {
     for (let by = 200; by < VPH - 32; by += 32) {
-      drawSprite(TEX_WALL, bx, by, 32, 32, -5);
-      drawSprite(TEX_WALL, bx + 160, by, 32, 32, -5);
+      sprite(TEX_WALL, bx, by, 32, 32, -5);
+      sprite(TEX_WALL, bx + 160, by, 32, 32, -5);
       addOccluder({ x: bx, y: by, width: 32, height: 32 });
       addOccluder({ x: bx + 160, y: by, width: 32, height: 32 });
     }
@@ -306,25 +311,25 @@ function drawComparisonScene(dt: number) {
   const halfW = VPW / 2;
 
   // Divider line
-  drawSprite(TEX_EMISSIVE_WARM, halfW - 1, 0, 2, VPH, 10);
+  sprite(TEX_EMISSIVE_WARM, halfW - 1, 0, 2, VPH, 10);
 
   // Both sides: same dungeon layout
   for (const side of [0, halfW]) {
     // Floor
     for (let x = side; x < side + halfW; x += 32) {
-      drawSprite(TEX_FLOOR, x, VPH - 32, 32, 32, -10);
+      sprite(TEX_FLOOR, x, VPH - 32, 32, 32, -10);
     }
 
     // Walls
     for (let y = 0; y < VPH; y += 32) {
-      drawSprite(TEX_WALL, side, y, 32, 32, -5);
+      sprite(TEX_WALL, side, y, 32, 32, -5);
       addOccluder({ x: side, y, width: 32, height: 32 });
     }
 
     // Pillar
     const px = side + halfW / 2 - 16;
     for (let dy = 0; dy < 96; dy += 32) {
-      drawSprite(TEX_WALL, px, VPH / 2 - 48 + dy, 32, 32, -5);
+      sprite(TEX_WALL, px, VPH / 2 - 48 + dy, 32, 32, -5);
     }
     addOccluder({ x: px, y: VPH / 2 - 48, width: 32, height: 96 });
 
@@ -332,7 +337,7 @@ function drawComparisonScene(dt: number) {
     const torchX = side + 40;
     const flicker = 0.8 + Math.sin(frameCount * 0.1) * 0.2;
     const tc = colorTemp.torch;
-    drawSprite(TEX_EMISSIVE_WARM, torchX, 200, 12, 12, 0);
+    sprite(TEX_EMISSIVE_WARM, torchX, 200, 12, 12, 0);
     addPointLight(torchX + 6, 206, 120, tc[0], tc[1], tc[2], flicker);
 
     if (side === halfW) {
@@ -424,7 +429,7 @@ onFrame(() => {
   }
 
   // Draw player
-  drawSprite(TEX_PLAYER, playerX - 8, playerY - 8, 16, 16, 5);
+  sprite(TEX_PLAYER, playerX - 8, playerY - 8, 16, 16, 5);
 
   // Spot light following mouse
   const mouse = getMousePosition();
