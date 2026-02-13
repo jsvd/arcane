@@ -748,7 +748,130 @@ Scroll containers, drag-and-drop, and modal dialogs deferred to future phase.
 
 ---
 
-## Phase 17: Audio Polish
+## Phase 17: Agent Intelligence
+
+**Status: COMPLETE** :white_check_mark:
+
+Make Arcane the definitive agent-driven game development platform. Expose the engine via MCP, add snapshot-replay testing, and ship a property-based test framework. This is Arcane's primary competitive differentiator — no other engine offers this workflow.
+
+### Deliverables
+- [x] **MCP Server** (`core/src/agent/mcp.rs`, `runtime/agent/mcp.ts`)
+  - [x] Expose engine operations as MCP tools with typed parameters and return values
+  - [x] 10 tools: `get_state`, `describe_state`, `list_actions`, `execute_action`, `inspect_scene`, `capture_snapshot`, `hot_reload`, `run_tests`, `rewind`, `simulate_action`
+  - [x] Runs as sidecar server alongside `arcane dev` (reuse inspector infrastructure)
+  - [x] JSON-RPC 2.0 over HTTP (Streamable HTTP transport), `--mcp <port>` CLI flag
+  - [x] Any MCP-compatible LLM (Claude, GPT, etc.) can drive Arcane through standardized protocol
+- [x] **Snapshot-replay testing** (`runtime/testing/replay.ts`, `core/src/scripting/replay_ops.rs`)
+  - [x] Input recording: `startRecording()`, `stopRecording()` captures frame-by-frame inputs
+  - [x] State snapshots: `captureSnapshot()` serializes full game + physics state
+  - [x] Deterministic replay: `replay(recording, { assertFrame, expectedState })`
+  - [x] Physics world serialization (body positions, velocities, constraints) via replay_ops
+  - [x] Replay diffing: `diffReplays()` compares two replays and reports divergence point
+- [x] **Property-based testing** (`runtime/testing/property.ts`)
+  - [x] `checkProperty()` / `assertProperty()` — define invariants over game state
+  - [x] Random input sequence generation (seeded, reproducible via PRNG)
+  - [x] Shrinking: find minimal failing input on violation (3-phase: trim, remove, simplify)
+  - [x] Built-in generators: `randomKeys`, `randomClicks`, `randomActions`, `combineGenerators`
+  - [x] Integration with `arcane test` — PBT runs alongside unit tests in both Node and V8
+- [x] **Demo: Agent Testing Showcase** (`demos/agent-testing/`)
+  - [x] Record a gameplay session, replay it, assert final state
+  - [x] Property: "player health never exceeds max"
+  - [x] Property: "no entity leaves world bounds"
+  - [x] Property: "HP never negative", "score monotonic", "entity count stable"
+  - [x] MCP tool catalog demonstration
+  - [x] Agent protocol integration (register, actions, snapshots, rewind)
+
+### Success Criteria
+- [x] An MCP-compatible LLM can build, test, and iterate on a game through the MCP server
+- [x] Snapshot-replay produces identical results from identical inputs
+- [x] Property-based tests catch invariant violations with minimal failing input
+- [x] 96+ tests for MCP, replay, and PBT (28 replay + 19 property + 13 MCP + 18 demo + 12 Rust MCP + 6 Rust world)
+- [x] Headless build compiles without GPU deps
+
+---
+
+## Phase 18: Procedural Generation
+
+**Status: Planned**
+
+First-class procedural content generation with Wave Function Collapse. Agent-defined constraints make PCG a testable, iterative workflow — not a black box.
+
+### Deliverables
+- [ ] **WFC core** (`core/src/procgen/wfc.rs`, `runtime/procgen/wfc.ts`)
+  - [ ] Tile-based WFC with adjacency constraints
+  - [ ] TS API: `wfc.generate({ tileset, rules, constraints, seed })`
+  - [ ] Tileset definition from sprite sheets (auto-extract adjacency from examples)
+  - [ ] Manual adjacency rule specification
+  - [ ] Backtracking with configurable retry limit
+  - [ ] Seeded PRNG for reproducible generation
+- [ ] **Constraint system** (`runtime/procgen/constraints.ts`)
+  - [ ] `reachability()` — all walkable tiles connected
+  - [ ] `exactCount(tileId, n)` — exactly N of a given tile
+  - [ ] `minCount(tileId, n)` / `maxCount(tileId, n)` — bounded counts
+  - [ ] `border(tileId)` — force specific tiles on edges
+  - [ ] Custom constraint function: `(grid) => boolean`
+- [ ] **Generative testing loop** (`runtime/procgen/validate.ts`)
+  - [ ] `validateLevel(grid, constraints)` — check constraints post-generation
+  - [ ] `generateAndTest(config, testFn, iterations)` — generate N levels, run test on each
+  - [ ] Integration with A* pathfinding for reachability validation
+- [ ] **Demo: WFC Dungeon** (`demos/wfc-dungeon/`)
+  - [ ] Tileset with walls, floors, doors, decorations
+  - [ ] Reachability constraint (all rooms connected)
+  - [ ] Exactly one entrance and one exit
+  - [ ] Regenerate on keypress, visualize WFC solving step-by-step
+
+### Success Criteria
+- [ ] WFC generates valid tilemaps from adjacency rules
+- [ ] Constraints are respected (reachability, counts)
+- [ ] Generation is deterministic from seed
+- [ ] Agent can define constraints in TS and iterate on results
+- [ ] 50+ tests for WFC core and constraints
+- [ ] Headless build compiles without GPU deps
+
+---
+
+## Phase 19: Lighting 2.0
+
+**Status: Planned**
+
+Replace basic point-light uniforms with real-time 2D global illumination via Radiance Cascades. Massive visual upgrade — fully describable in code, deterministic, screenshot-testable.
+
+### Deliverables
+- [ ] **Radiance Cascades** (`core/src/renderer/radiance.rs`)
+  - [ ] wgpu compute shader implementation of Radiance Cascades algorithm
+  - [ ] Scene-agnostic: works with any sprite/tilemap scene
+  - [ ] Noise-free, deterministic output
+  - [ ] Configurable cascade levels and resolution
+- [ ] **Emissive surfaces** (`runtime/rendering/lighting.ts`)
+  - [ ] `setEmissive(spriteOptions)` — mark sprites as light-emitting
+  - [ ] Emissive color and intensity per sprite
+  - [ ] Emissive tilemaps (lava, glowing runes)
+- [ ] **Occluders** (`runtime/rendering/lighting.ts`)
+  - [ ] `addOccluder(shape)` — walls/objects that block light
+  - [ ] Auto-occluders from tilemap collision layers
+  - [ ] Dynamic occluders (moving objects cast shadows)
+- [ ] **Lighting API expansion** (`runtime/rendering/lighting.ts`)
+  - [ ] Directional lights (sun/moon)
+  - [ ] Spot lights (cone-shaped)
+  - [ ] Light color temperature presets (candlelight, moonlight, neon)
+  - [ ] Day/night cycle helper
+- [ ] **Demo: Lighting Showcase** (`demos/lighting-showcase/`)
+  - [ ] Dungeon with torch lighting and shadows
+  - [ ] Emissive lava tiles with GI bounce
+  - [ ] Day/night cycle with color temperature shift
+  - [ ] Toggle between old point-light and new GI system
+
+### Success Criteria
+- [ ] Global illumination runs at 60 FPS for typical 2D scenes
+- [ ] Light bounces off surfaces realistically (color bleeding)
+- [ ] Shadows are sharp and correct
+- [ ] Lighting is fully describable in TypeScript (no visual editor needed)
+- [ ] Existing point-light API remains as fast fallback
+- [ ] Headless build compiles without GPU deps
+
+---
+
+## Phase 20: Audio Polish
 
 **Status: Planned**
 
@@ -781,7 +904,7 @@ Complete the audio system with spatial audio, mixing, and effects.
 
 ---
 
-## Phase 18: Input Systems
+## Phase 21: Input Systems
 
 **Status: Planned**
 
@@ -817,7 +940,7 @@ Expand platform input beyond keyboard/mouse with gamepad, touch, and an action m
 
 ---
 
-## Phase 19: Community Building
+## Phase 22: Community Building
 
 **Status: Planned**
 
