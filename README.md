@@ -96,7 +96,7 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phases 14-16 complete (Tilemap Polish + Animation Polish + Interactive UI)!** 🎉
+**Phases 17-19 complete (Agent Intelligence + Procedural Generation + Lighting 2.0)!**
 
 All packages published and ready to use:
 - **npm**: [@arcane-engine/runtime@0.7.0](https://www.npmjs.com/package/@arcane-engine/runtime), [@arcane-engine/create@0.7.0](https://www.npmjs.com/package/@arcane-engine/create)
@@ -116,13 +116,19 @@ All packages published and ready to use:
 - ✅ Save/load: serialization, schema migrations, auto-save, file I/O ops
 - ✅ Recipe framework with 4 recipes (turn-based combat, inventory, grid movement, fog of war)
 - ✅ Agent protocol (HTTP inspector, describe/inspect commands)
+- ✅ MCP server: JSON-RPC 2.0 with 10 tools for AI agent interaction
+- ✅ Snapshot-replay testing: deterministic physics recording, world snapshots, replay diffing
+- ✅ Property-based testing: generators, shrinking, configurable iterations
+- ✅ Procedural generation: Wave Function Collapse with constraints (reachability, count, border)
+- ✅ Radiance Cascades 2D global illumination: emissives, occluders, spot lights, HDR scene texture
+- ✅ MSDF text rendering: resolution-independent text with outline and shadow support
 - ✅ Standalone install: `cargo install arcane-cli` just works
 - ✅ Built-in asset discovery: 25 free CC0 packs with search, download, and extraction
-- ✅ 1243 TS tests + 203 Rust tests passing
+- ✅ 1481 TS (Node) + 2600 (V8) + 231 Rust tests passing
 - ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
-- ✅ Example projects (Sokoban, Breakout, Tower Defense, BFRPG RPG, Physics Playground, Menu Flow, Asteroids, Parallax Scroller, Tilemap Showcase, Character Controller, UI Showcase, Isometric Dungeon)
+- ✅ 16 example projects (Sokoban, Breakout, Tower Defense, BFRPG RPG, Physics Playground, Menu Flow, Asteroids, Parallax Scroller, Tilemap Showcase, Character Controller, UI Showcase, Isometric Dungeon, Lighting Showcase, Roguelike, Platformer, Juice Showcase)
 
-**Next:** Phase 17 (Audio Polish).
+**Next:** Phase 20 (Audio Polish).
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 

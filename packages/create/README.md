@@ -73,7 +73,7 @@ arcane new my-game
 - [Getting Started Guide](https://github.com/anthropics/arcane/blob/main/docs/getting-started.md)
 - [Tutorials](https://github.com/anthropics/arcane/blob/main/docs/)
 - [API Reference](https://github.com/anthropics/arcane/blob/main/docs/api-reference.md)
-- [Examples](https://github.com/anthropics/arcane/tree/main/examples/)
+- [Demos](https://github.com/anthropics/arcane/tree/main/demos/)
 
 ## License
 
