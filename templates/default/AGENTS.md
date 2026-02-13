@@ -66,6 +66,26 @@ setCamera(player.x, player.y, 2.0);  // follow player, 2x zoom
 
 If you skip `setCamera()`, the camera stays at (0, 0) = screen center, and you must offset all positions by `-viewport/2` to fill the screen. **Always call `setCamera()` early in your frame.**
 
+## Common Mistakes
+
+Before writing rendering code, check this list. These are the most frequent bugs when agents generate Arcane code.
+
+**1. Forgetting `setCamera()`** — Without it, camera is at (0,0) = screen center. Sprites at positive coordinates appear bottom-right of center. Fix: call `setCamera(VPW/2, VPH/2)` at the start of every frame for web-like coordinates.
+
+**2. Hardcoding viewport size** — Never use `800`, `600`, or any fixed number. Always `const { width: VPW, height: VPH } = getViewportSize();`. The viewport adapts to the window.
+
+**3. Drawing HUD in world space** — Health bars, score text, and menus should use `screenSpace: true`. Without it, HUD elements move with the camera. `drawText("HP: 10", 10, 10, { screenSpace: true })` stays pinned to the top-left. `drawSprite` does NOT support `screenSpace` — use `drawRect`/`drawText`/`drawBar`/`drawLabel` for HUD elements.
+
+**4. Missing `clearSprites()` / re-drawing every frame** — Draw calls are NOT persisted. You must redraw everything inside `onFrame()`. If sprites disappear, you forgot to draw them this frame.
+
+**5. Wrong layer ordering** — Lower layer numbers draw behind higher ones. Ground tiles at layer 0, sprites at layer 1, UI at layer 90+, text at layer 100+. If something is invisible, it may be drawn behind something else.
+
+**6. Forgetting `dt` for movement** — `player.x += speed` moves faster on faster machines. Always: `player.x += speed * dt`. The `dt` from `getDeltaTime()` is in seconds.
+
+**7. Using `"Space"` instead of `" "`** — Key names match the browser `KeyboardEvent.key` spec. Space is `" "` (a space character), not `"Space"`. Arrow keys are `"ArrowLeft"`, `"ArrowRight"`, `"ArrowUp"`, `"ArrowDown"`.
+
+**8. Importing from wrong module** — State logic goes in `game.ts` with no rendering imports. Visual code goes in `visual.ts`. If you need a type in both, define it in `game.ts` and import it in `visual.ts`.
+
 ## The Game Loop
 
 `onFrame()` registers a callback that runs every frame. Draw calls are **not persisted** — you must redraw everything each frame. `getDeltaTime()` returns seconds since last frame.

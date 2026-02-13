@@ -4,6 +4,7 @@ import { createSolidTexture } from "../rendering/texture.ts";
 import { drawText, measureText } from "../rendering/text.ts";
 import { getCamera } from "../rendering/camera.ts";
 import { getViewportSize } from "../rendering/input.ts";
+import { _logDrawCall } from "../testing/visual.ts";
 
 const hasRenderOps =
   typeof (globalThis as any).Deno !== "undefined" &&
@@ -76,6 +77,12 @@ export function drawRect(
   h: number,
   options?: RectOptions,
 ): void {
+  _logDrawCall({
+    type: "rect",
+    x, y, w, h,
+    layer: options?.layer ?? 90,
+    screenSpace: options?.screenSpace ?? false,
+  });
   if (!hasRenderOps) return;
   const color = options?.color ?? WHITE;
   const layer = options?.layer ?? 90;
@@ -115,6 +122,13 @@ export function drawPanel(
   h: number,
   options?: PanelOptions,
 ): void {
+  _logDrawCall({
+    type: "panel",
+    x, y, w, h,
+    layer: options?.layer ?? 90,
+    screenSpace: options?.screenSpace ?? false,
+    borderWidth: options?.borderWidth ?? 2,
+  });
   if (!hasRenderOps) return;
   const fillColor = options?.fillColor ?? DARK;
   const borderColor = options?.borderColor ?? GRAY;
@@ -185,6 +199,13 @@ export function drawBar(
   fillRatio: number,
   options?: BarOptions,
 ): void {
+  _logDrawCall({
+    type: "bar",
+    x, y, w, h,
+    fillRatio: Math.max(0, Math.min(1, fillRatio)),
+    layer: options?.layer ?? 90,
+    screenSpace: options?.screenSpace ?? false,
+  });
   if (!hasRenderOps) return;
   const ratio = Math.max(0, Math.min(1, fillRatio));
   const bgColor = options?.bgColor ?? RED;
@@ -262,6 +283,14 @@ export function drawLabel(
   y: number,
   options?: LabelOptions,
 ): void {
+  _logDrawCall({
+    type: "label",
+    content: text,
+    x, y,
+    scale: options?.scale ?? 1,
+    layer: options?.layer ?? 90,
+    screenSpace: options?.screenSpace ?? false,
+  });
   if (!hasRenderOps) return;
   const padding = options?.padding ?? 4;
   const scale = options?.scale ?? 1;

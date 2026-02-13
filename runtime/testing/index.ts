@@ -72,3 +72,30 @@ export type {
   RunResult,
   PropertyResult,
 } from "./property.ts";
+
+// Draw call capture & visual assertions
+export {
+  enableDrawCallCapture,
+  disableDrawCallCapture,
+  getDrawCalls,
+  clearDrawCalls,
+  findDrawCalls,
+  assertSpriteDrawn,
+  assertTextDrawn,
+  assertDrawCallCount,
+  assertNothingDrawnAt,
+  assertLayerHasDrawCalls,
+  assertScreenSpaceDrawn,
+  getDrawCallSummary,
+} from "./visual.ts";
+export type {
+  DrawCall,
+  SpriteDrawCall,
+  TextDrawCall,
+  RectDrawCall,
+  PanelDrawCall,
+  BarDrawCall,
+  LabelDrawCall,
+  TilemapDrawCall,
+  DrawCallFilter,
+} from "./visual.ts";

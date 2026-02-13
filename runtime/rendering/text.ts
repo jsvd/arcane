@@ -2,6 +2,7 @@ import type { TextureId } from "./types.ts";
 import { drawSprite } from "./sprites.ts";
 import { getCamera } from "./camera.ts";
 import { getViewportSize } from "./input.ts";
+import { _logDrawCall } from "../testing/visual.ts";
 
 // --- Types ---
 
@@ -527,6 +528,15 @@ export function drawText(
   y: number,
   options?: TextOptions,
 ): void {
+  _logDrawCall({
+    type: "text",
+    content: text,
+    x,
+    y,
+    scale: options?.scale ?? 1,
+    layer: options?.layer ?? 100,
+    screenSpace: options?.screenSpace ?? false,
+  });
   if (!hasRenderOps) return;
 
   // MSDF path

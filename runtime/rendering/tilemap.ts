@@ -1,4 +1,5 @@
 import type { TilemapId, TilemapOptions } from "./types.ts";
+import { _logDrawCall } from "../testing/visual.ts";
 
 const hasRenderOps =
   typeof (globalThis as any).Deno !== "undefined" &&
@@ -532,6 +533,7 @@ export function drawTilemap(
   y: number = 0,
   layer: number = 0,
 ): void {
+  _logDrawCall({ type: "tilemap", tilemapId: id, x, y, layer });
   if (!hasRenderOps) return;
   (globalThis as any).Deno.core.ops.op_draw_tilemap(id, x, y, layer);
 }

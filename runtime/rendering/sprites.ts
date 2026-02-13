@@ -1,4 +1,5 @@
 import type { SpriteOptions } from "./types.ts";
+import { _logDrawCall } from "../testing/visual.ts";
 
 // Detect if we're running inside the Arcane renderer (V8 with render ops).
 const hasRenderOps =
@@ -32,6 +33,21 @@ const hasRenderOps =
  * });
  */
 export function drawSprite(opts: SpriteOptions): void {
+  _logDrawCall({
+    type: "sprite",
+    textureId: opts.textureId,
+    x: opts.x,
+    y: opts.y,
+    w: opts.w,
+    h: opts.h,
+    layer: opts.layer ?? 0,
+    rotation: opts.rotation ?? 0,
+    flipX: opts.flipX ?? false,
+    flipY: opts.flipY ?? false,
+    opacity: opts.opacity ?? 1,
+    blendMode: opts.blendMode ?? "alpha",
+    shaderId: opts.shaderId ?? 0,
+  });
   if (!hasRenderOps) return;
 
   const uv = opts.uv ?? { x: 0, y: 0, w: 1, h: 1 };
