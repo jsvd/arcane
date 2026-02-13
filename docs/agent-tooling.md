@@ -1,14 +1,14 @@
 # Agent Tooling
 
-How Claude Code develops Arcane: the agents, skills, and MCP tools needed, and the process for evolving them.
+How Claude Code develops Arcane: the agents, CLI tools, and MCP server that support development.
 
 ## Philosophy
 
 Arcane is built by AI agents. The tooling for building Arcane should itself be agent-native. This means:
 
-1. **Specialized agents** for distinct domains (Rust core, TS runtime, game design)
-2. **Skills** for common workflows (test, build, create recipe, etc.)
-3. **MCP tools** for engine-specific operations (inspect state, describe scene, run headless)
+1. **Specialized agents** for distinct domains (Rust core, TS runtime, testing, docs)
+2. **CLI tools** for engine operations (`arcane test`, `arcane dev`, `arcane describe`, etc.)
+3. **MCP server** for live game interaction (inspect state, execute actions, hot-reload)
 4. **Self-evolution** — the tooling set is reviewed and updated as the project matures
 
 ## Agent Capabilities and Limitations
@@ -32,16 +32,16 @@ Before proposing any feature that relies on agent capabilities, the agent MUST v
 ### What Works: Structured Data, Not Perception
 
 Agents excel at processing **structured data**:
-- ✅ JSON state exports
-- ✅ Text descriptions of game state
-- ✅ Render command logs (what was drawn, where, with what parameters)
-- ✅ Test assertions about game logic
-- ✅ API call traces
+- JSON state exports
+- Text descriptions of game state
+- Render command logs (what was drawn, where, with what parameters)
+- Test assertions about game logic
+- API call traces
 
 Agents fail at processing **perceptual output**:
-- ❌ Screenshots of rendered frames
-- ❌ Audio recordings
-- ❌ "Does this look right?" questions about visuals
+- Screenshots of rendered frames
+- Audio recordings
+- "Does this look right?" questions about visuals
 
 ### Feasibility Check Required
 
@@ -60,21 +60,13 @@ If uncertain whether a capability exists or works:
 3. **Document the limitation** if the capability doesn't exist
 4. **Propose alternatives** that don't rely on unverified capabilities
 
-### Example: Screenshot API (Failed Approach)
+### Lesson Learned: Screenshot API
 
 **Proposed**: Add `/screenshot` endpoint so Claude can "see" rendered game output and verify visual changes.
 
-**Why it failed**:
-- Agent claimed ability to process screenshots without verification
-- Implementation proceeded based on false premise
-- Feature was non-functional for its intended use case
-- Time wasted on a feature that couldn't achieve its goal
+**Why it failed**: Agent claimed ability to process screenshots without verification. The feature was non-functional for its intended use case.
 
-**Better approach**:
-- Export render commands as JSON: `{ "type": "sprite", "x": 100, "y": 200, "color": [1.0, 0, 0], ... }`
-- Agent validates commands match expectations
-- Human verifies visual output looks correct
-- Structured data is testable, visual output is not (for agents)
+**Better approach**: Export render commands as structured data (draw call capture) so agents can validate what was drawn without needing visual perception. Human verifies visual output looks correct.
 
 ## Agent Teams
 
@@ -82,13 +74,13 @@ Agent teams coordinate multiple Claude Code sessions working on the same reposit
 
 ### Mapping Agents to Teammates
 
-Each agent definition (e.g., `ts-runtime`, `arcane-test`) describes a role a teammate can fill. When the team lead spawns a teammate, the spawn prompt should include:
+Each agent definition describes a role a teammate can fill. When the team lead spawns a teammate, the spawn prompt should include:
 
 1. **Domain** — which agent role this teammate fills (e.g., "You are the ts-runtime agent")
 2. **File scope** — which files the teammate owns (from the agent's file scope)
 3. **Relevant knowledge** — key patterns, conventions, or context the teammate needs
 
-Teammates load `CLAUDE.md` automatically, so project-wide rules (The Three Laws, Phase 1 constraints, conventions) don't need to be repeated in spawn prompts.
+Teammates load `CLAUDE.md` automatically, so project-wide rules don't need to be repeated in spawn prompts.
 
 ### Task List Conventions
 
@@ -104,44 +96,43 @@ See [Development Workflow](development-workflow.md#agent-teams) for when to use 
 Agents are defined in `AGENTS.md` files. Each handles a specific domain.
 
 #### `rust-engine` — Rust Core Agent
-- **When**: Working on anything under `core/` — renderer, physics, audio, ECS, platform
-- **Tools**: Cargo build/test/clippy, wgpu docs, Rust analyzer
-- **Knowledge**: Rust idioms, wgpu API, deno_core FFI patterns, Bevy ecosystem reference
-- **File scope**: `core/**/*.rs`, `Cargo.toml`, `Cargo.lock`
+- **When**: Working on anything under `core/` — renderer, physics, audio, scripting ops, platform
+- **Tools**: `cargo build/test/clippy/check`, wgpu docs
+- **Knowledge**: Rust idioms, wgpu API, deno_core `#[op2]` patterns, feature gating (`renderer`)
+- **File scope**: `core/**/*.rs`, `cli/**/*.rs`, `Cargo.toml`, `Cargo.lock`
 
 #### `ts-runtime` — TypeScript Runtime Agent
-- **When**: Working on anything under `runtime/` — state, systems, world, entities, events
-- **Tools**: Node/Deno test runner, TypeScript compiler, npm
-- **Knowledge**: TypeScript patterns, functional state management, ECS in TS
+- **When**: Working on anything under `runtime/` — state, rendering, physics, UI, scenes, procgen, testing
+- **Tools**: `./run-tests.sh` (Node), `cargo run -- test` (V8)
+- **Knowledge**: TypeScript patterns, functional state management, zero-dependency constraint
 - **File scope**: `runtime/**/*.ts`, `package.json`, `tsconfig.json`
 
-#### `game-design` — Game Design Agent
-- **When**: Designing systems, recipes, world specs, or validating game logic against BFRPG rules
-- **Tools**: BFRPG rulebook reference, recipe template generator
-- **Knowledge**: BFRPG v4 rules, turn-based combat mechanics, RPG design patterns
-- **File scope**: `recipes/**/*`, `docs/**/*.md`
-
-#### `arcane-test` — Test Agent
+#### `test` — Test Agent
 - **When**: Writing or running tests for any layer
-- **Tools**: `arcane test` (headless TS), `cargo test` (Rust), integration test runner
-- **Knowledge**: Testing patterns for game logic, state-based testing, deterministic test seeds
-- **File scope**: `**/*.test.ts`, `**/tests/**`
+- **Tools**: `arcane test` (headless V8), `cargo test` (Rust), `./run-tests.sh` (Node)
+- **Knowledge**: Testing patterns for game logic, state-based testing, deterministic test seeds, property-based testing, snapshot-replay
+- **File scope**: `**/*.test.ts`, `core/**/tests/**`
 
-#### `docs-architect` — Documentation Agent
+#### `docs` — Documentation Agent
 - **When**: Updating design documents, ensuring cross-document consistency
-- **Tools**: Markdown linter, link checker, document structure validator
+- **Tools**: File search, cross-reference checking
 - **Knowledge**: ADR format, Arcane architecture, document cross-references
-- **File scope**: `docs/**/*.md`, `README.md`, `CLAUDE.md`
-
-## Skills (Slash Commands)
-
-Skills are invoked by the user as slash commands in Claude Code. Currently Arcane does not ship custom Claude Code skills — the CLI commands (`arcane test`, `arcane dev`, `arcane describe`, `arcane inspect`, `arcane assets`, `arcane add`) are used directly via the Bash tool. Custom skills may be added in future phases if repeated workflows emerge.
+- **File scope**: `docs/**/*.md`, `README.md`, `CLAUDE.md`, `CONTRIBUTING.md`
 
 ## CLI Tools
 
-Some operations that were originally planned as MCP tools are now built-in CLI commands (see ADR-014):
+All engine operations are available as CLI commands:
 
-- **`arcane assets list/search/download`** — Asset discovery and download. Ships in the binary, no config needed. See [Asset Management](asset-management.md).
+| Command | Description |
+|---|---|
+| `arcane dev <entry.ts>` | Run game with window, hot-reload, optional `--inspector <port>` and `--mcp <port>` |
+| `arcane test` | Discover and run `*.test.ts` files headless in V8 |
+| `arcane describe <entry.ts>` | Print text description of game state |
+| `arcane inspect <entry.ts> <path>` | Query specific state path |
+| `arcane add <recipe>` | Copy a recipe into the project |
+| `arcane assets list/search/download/inspect` | Discover and download game assets from catalog |
+
+No custom Claude Code slash commands are shipped. The CLI commands above are invoked directly via the Bash tool.
 
 ## MCP Server
 
@@ -219,60 +210,36 @@ registerAgent({
 
 ## Self-Evolution Process
 
-The agent/skill/MCP tool set is not static. It evolves as the project matures.
+The agent/CLI/MCP tool set is not static. It evolves as the project matures.
 
 ### Review Triggers
 
 Re-evaluate the tooling set when:
-1. **Phase transition** — entering a new roadmap phase
-2. **Pain point accumulation** — the same manual workflow is repeated 3+ times
-3. **Agent failure pattern** — an agent consistently struggles with a task type
-4. **New capability** — a new engine feature enables new tooling
-5. **Periodic review** — every 2 weeks during active development
+1. **Pain point accumulation** — the same manual workflow is repeated 3+ times
+2. **Agent failure pattern** — an agent consistently struggles with a task type
+3. **New capability** — a new engine feature enables new tooling
 
 ### Review Process
 
 At each review:
 
-1. **Audit current agents**: For each agent, ask:
-   - Is it being used? If not used in the last phase, consider removing.
-   - Is it effective? If it consistently needs human intervention, refine its scope or knowledge.
-   - Is it scoped correctly? Too broad = unfocused. Too narrow = overhead.
-
-2. **Audit current skills**: For each skill, ask:
-   - Is the workflow it automates still relevant?
-   - Has the workflow changed enough that the skill needs updating?
-   - Are there manual workflows that should become skills?
-
-3. **Audit current MCP tools**: For each tool, ask:
-   - Is it used by agents effectively?
-   - Does it expose the right granularity of operations?
-   - Are there engine capabilities not yet exposed as tools?
-
-4. **Identify gaps**:
-   - What tasks are agents doing manually that could be automated?
-   - What domain knowledge is missing from agent definitions?
-   - What new tools would the current phase benefit from?
-
-5. **Act**:
-   - Create new agents/skills/tools for identified gaps
-   - Retire unused or ineffective ones
-   - Update existing ones with new knowledge or scope changes
-   - Document changes in a changelog
+1. **Audit agents**: Is each one being used? Is it scoped correctly? Too broad = unfocused. Too narrow = overhead.
+2. **Audit MCP tools**: Does each tool expose the right granularity? Are there engine capabilities not yet exposed?
+3. **Identify gaps**: What tasks are agents doing manually that could be automated?
+4. **Act**: Create, retire, or update tools. Document changes.
 
 ### Evolution Log
 
-Track all tooling changes here:
-
-| Phase | Change | Reason |
-|---|---|---|
-| Phase 0 | Initial agent/skill/MCP tool definitions | Project bootstrap |
-| Phase 1.5 | Add agent teams guidance | Enable coordinated multi-session development |
-| Phase 9.5 | Replace asset MCP server with `arcane assets` CLI | Zero-config asset discovery (ADR-014) |
-| Phase 17 | MCP server implemented (10 tools, JSON-RPC 2.0) | Agent intelligence: live game interaction |
-| Phase 17 | Snapshot-replay + property-based testing | Determinism testing, automated regression |
-| Phase 18 | WFC procedural generation with constraints | Code-defined level generation |
-| Phase 19 | Radiance Cascades GI + advanced lighting | 2D global illumination, emissive surfaces |
+| Change | Reason |
+|---|---|
+| Initial agent definitions | Project bootstrap |
+| Add agent teams guidance | Enable coordinated multi-session development |
+| Replace asset MCP server with `arcane assets` CLI | Zero-config asset discovery (ADR-014) |
+| MCP server: 10 tools, JSON-RPC 2.0 | Live game interaction for AI agents |
+| Snapshot-replay + property-based testing | Determinism testing, automated regression |
+| WFC procedural generation with constraints | Code-defined level generation |
+| Radiance Cascades GI + advanced lighting | 2D global illumination, emissive surfaces |
+| Draw call capture + visual testing assertions | Structured rendering validation for headless tests |
 
 ### Creating New Agents
 
@@ -285,15 +252,6 @@ When a new agent is needed:
 5. Define its **file scope** — what files it can read/write
 6. Add it to `AGENTS.md`
 7. Test it on representative tasks before relying on it
-
-### Creating New Skills
-
-When a new skill is needed:
-
-1. Identify the **repeatable workflow** it automates
-2. Define the **inputs** (arguments) and **outputs** (what it produces)
-3. Implement as a slash command
-4. Document in this file and in `CLAUDE.md`
 
 ### Creating New MCP Tools
 
@@ -308,7 +266,7 @@ When a new MCP tool is needed:
 ## Guiding Principles
 
 1. **Agents should match the architecture.** The two-layer design (Rust + TS) maps to two primary agents. Don't fight the architecture.
-2. **Skills automate workflows, not tasks.** A skill should encode a *process* (build → test → report), not a single command.
+2. **CLI tools over custom skills.** Prefer `arcane <command>` over slash commands — CLI tools are testable, scriptable, and available outside Claude Code.
 3. **MCP tools expose capabilities, not UI.** Tools should be programmatic, composable, and queryable — not wrappers around CLI output parsing.
-4. **Retire aggressively.** An unused agent/skill/tool is worse than no agent/skill/tool — it's noise that slows down context loading.
+4. **Retire aggressively.** An unused agent/tool is worse than none — it's noise that slows down context loading.
 5. **Dog-food everything.** If building Arcane with these tools is painful, the tools are wrong. The development experience IS the product validation.
