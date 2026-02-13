@@ -321,8 +321,42 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
             if let Some(ref mut renderer) = state.renderer {
                 renderer.lighting.ambient = bridge.ambient_light;
                 renderer.lighting.lights = bridge.point_lights.drain(..).collect();
+
+                // Sync GI / radiance cascade state
+                renderer.radiance_state.enabled = bridge.gi_enabled;
+                renderer.radiance_state.gi_intensity = bridge.gi_intensity;
+
+                renderer.radiance_state.emissives = bridge.emissives.drain(..).map(|e| {
+                    arcane_engine::renderer::EmissiveSurface {
+                        x: e[0], y: e[1], width: e[2], height: e[3],
+                        r: e[4], g: e[5], b: e[6], intensity: e[7],
+                    }
+                }).collect();
+
+                renderer.radiance_state.occluders = bridge.occluders.drain(..).map(|o| {
+                    arcane_engine::renderer::Occluder {
+                        x: o[0], y: o[1], width: o[2], height: o[3],
+                    }
+                }).collect();
+
+                renderer.radiance_state.directional_lights = bridge.directional_lights.drain(..).map(|d| {
+                    arcane_engine::renderer::DirectionalLight {
+                        angle: d[0], r: d[1], g: d[2], b: d[3], intensity: d[4],
+                    }
+                }).collect();
+
+                renderer.radiance_state.spot_lights = bridge.spot_lights.drain(..).map(|s| {
+                    arcane_engine::renderer::SpotLight {
+                        x: s[0], y: s[1], angle: s[2], spread: s[3], range: s[4],
+                        r: s[5], g: s[6], b: s[7], intensity: s[8],
+                    }
+                }).collect();
             } else {
                 bridge.point_lights.clear();
+                bridge.emissives.clear();
+                bridge.occluders.clear();
+                bridge.directional_lights.clear();
+                bridge.spot_lights.clear();
             }
         }
 
@@ -540,6 +574,10 @@ fn reload_runtime(
         b.effect_param_queue.clear();
         b.effect_remove_queue.clear();
         b.effect_clear = true;
+        b.emissives.clear();
+        b.occluders.clear();
+        b.directional_lights.clear();
+        b.spot_lights.clear();
 
         // Clear solid texture cache so they can be recreated with new colors.
         // Keep file texture cache to avoid re-uploading large images.

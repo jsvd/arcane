@@ -82,6 +82,18 @@ pub struct RenderBridgeState {
     pub next_effect_id: u32,
     /// Camera bounds (world-space limits).
     pub camera_bounds: Option<CameraBounds>,
+    /// Whether global illumination (radiance cascades) is enabled.
+    pub gi_enabled: bool,
+    /// GI intensity multiplier.
+    pub gi_intensity: f32,
+    /// Emissive surfaces for GI: (x, y, w, h, r, g, b, intensity).
+    pub emissives: Vec<[f32; 8]>,
+    /// Occluders for GI: (x, y, w, h).
+    pub occluders: Vec<[f32; 4]>,
+    /// Directional lights: (angle, r, g, b, intensity).
+    pub directional_lights: Vec<[f32; 5]>,
+    /// Spot lights: (x, y, angle, spread, range, r, g, b, intensity).
+    pub spot_lights: Vec<[f32; 9]>,
 }
 
 impl RenderBridgeState {
@@ -122,6 +134,12 @@ impl RenderBridgeState {
             effect_clear: false,
             next_effect_id: 1,
             camera_bounds: None,
+            gi_enabled: false,
+            gi_intensity: 1.0,
+            emissives: Vec::new(),
+            occluders: Vec::new(),
+            directional_lights: Vec::new(),
+            spot_lights: Vec::new(),
         }
     }
 }
@@ -676,6 +694,124 @@ pub fn op_get_camera_bounds(state: &mut OpState) -> Vec<f64> {
     }
 }
 
+// --- Global Illumination ops ---
+
+/// Enable radiance cascades global illumination.
+#[deno_core::op2(fast)]
+pub fn op_enable_gi(state: &mut OpState) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().gi_enabled = true;
+}
+
+/// Disable radiance cascades global illumination.
+#[deno_core::op2(fast)]
+pub fn op_disable_gi(state: &mut OpState) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().gi_enabled = false;
+}
+
+/// Set the GI intensity multiplier.
+#[deno_core::op2(fast)]
+pub fn op_set_gi_intensity(state: &mut OpState, intensity: f64) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().gi_intensity = intensity as f32;
+}
+
+/// Add an emissive surface (light source) for GI.
+#[deno_core::op2(fast)]
+pub fn op_add_emissive(
+    state: &mut OpState,
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+    r: f64,
+    g: f64,
+    b: f64,
+    intensity: f64,
+) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().emissives.push([
+        x as f32,
+        y as f32,
+        w as f32,
+        h as f32,
+        r as f32,
+        g as f32,
+        b as f32,
+        intensity as f32,
+    ]);
+}
+
+/// Clear all emissive surfaces.
+#[deno_core::op2(fast)]
+pub fn op_clear_emissives(state: &mut OpState) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().emissives.clear();
+}
+
+/// Add a rectangular occluder that blocks light.
+#[deno_core::op2(fast)]
+pub fn op_add_occluder(state: &mut OpState, x: f64, y: f64, w: f64, h: f64) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().occluders.push([x as f32, y as f32, w as f32, h as f32]);
+}
+
+/// Clear all occluders.
+#[deno_core::op2(fast)]
+pub fn op_clear_occluders(state: &mut OpState) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().occluders.clear();
+}
+
+/// Add a directional light (infinite distance, parallel rays).
+#[deno_core::op2(fast)]
+pub fn op_add_directional_light(
+    state: &mut OpState,
+    angle: f64,
+    r: f64,
+    g: f64,
+    b: f64,
+    intensity: f64,
+) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().directional_lights.push([
+        angle as f32,
+        r as f32,
+        g as f32,
+        b as f32,
+        intensity as f32,
+    ]);
+}
+
+/// Add a spot light with position, direction, and spread.
+#[deno_core::op2(fast)]
+pub fn op_add_spot_light(
+    state: &mut OpState,
+    x: f64,
+    y: f64,
+    angle: f64,
+    spread: f64,
+    range: f64,
+    r: f64,
+    g: f64,
+    b: f64,
+    intensity: f64,
+) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().spot_lights.push([
+        x as f32,
+        y as f32,
+        angle as f32,
+        spread as f32,
+        range as f32,
+        r as f32,
+        g as f32,
+        b as f32,
+        intensity as f32,
+    ]);
+}
+
 deno_core::extension!(
     render_ext,
     ops = [
@@ -718,5 +854,14 @@ deno_core::extension!(
         op_set_camera_bounds,
         op_clear_camera_bounds,
         op_get_camera_bounds,
+        op_enable_gi,
+        op_disable_gi,
+        op_set_gi_intensity,
+        op_add_emissive,
+        op_clear_emissives,
+        op_add_occluder,
+        op_clear_occluders,
+        op_add_directional_light,
+        op_add_spot_light,
     ],
 );
