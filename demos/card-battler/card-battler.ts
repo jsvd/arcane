@@ -9,12 +9,8 @@
  * First to 0 HP loses.
  */
 
-import type { PRNGState } from "../../runtime/state/prng.ts";
-import { seed, shuffle, randomInt } from "../../runtime/state/prng.ts";
-import type { Mutation } from "../../runtime/state/transaction.ts";
-import { set, update } from "../../runtime/state/transaction.ts";
-import { createStore } from "../../runtime/state/store.ts";
-import type { GameStore } from "../../runtime/state/store.ts";
+import type { PRNGState, Mutation, GameStore } from "../../runtime/state/index.ts";
+import { seed, shuffle, set, update, createStore } from "../../runtime/state/index.ts";
 
 // --- Types ---
 

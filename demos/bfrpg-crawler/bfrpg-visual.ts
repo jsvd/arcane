@@ -11,8 +11,10 @@ import {
   createSolidTexture,
   drawText,
   getDefaultFont,
+  setAmbientLight,
+  addPointLight,
+  clearLights,
 } from "../../runtime/rendering/index.ts";
-import { setAmbientLight, addPointLight, clearLights } from "../../runtime/rendering/lighting.ts";
 import { drawBar, drawPanel, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 import type { AgentConfig } from "../../runtime/agent/index.ts";

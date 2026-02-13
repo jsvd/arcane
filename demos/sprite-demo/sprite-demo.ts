@@ -18,14 +18,13 @@ import {
   loadSound,
   playSound,
   drawText,
-} from "../../runtime/rendering/index.ts";
-import {
   createAnimation,
   playAnimation,
   updateAnimation,
   drawAnimatedSprite,
   resetAnimation,
 } from "../../runtime/rendering/index.ts";
+import type { AnimationState } from "../../runtime/rendering/index.ts";
 import { Colors } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 
@@ -35,7 +34,7 @@ type State = {
   y: number;
   dirX: number;     // -1, 0, or 1 (left, idle, right)
   dirY: number;     // -1, 0, or 1 (up, idle, down)
-  walkAnim: any;    // AnimationState
+  walkAnim: AnimationState;
   isWalking: boolean;
   assetsLoaded: boolean;
 };

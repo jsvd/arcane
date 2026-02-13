@@ -22,16 +22,14 @@ import {
   addFrameEvent,
   drawText,
   getDefaultFont,
-} from "../../runtime/rendering/index.ts";
-import {
   createAnimationFSM,
   getCurrentState,
   isBlending,
   getBlendProgress,
   updateFSM,
   drawFSMSprite,
-} from "../../runtime/rendering/animation-fsm.ts";
-import type { FSMState } from "../../runtime/rendering/animation-fsm.ts";
+} from "../../runtime/rendering/index.ts";
+import type { FSMState } from "../../runtime/rendering/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 
 // --- Constants ---

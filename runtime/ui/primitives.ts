@@ -3,19 +3,11 @@ import { drawSprite } from "../rendering/sprites.ts";
 import { createSolidTexture } from "../rendering/texture.ts";
 import { drawText, measureText } from "../rendering/text.ts";
 import { getCamera } from "../rendering/camera.ts";
+import { getViewportSize } from "../rendering/input.ts";
 
 const hasRenderOps =
   typeof (globalThis as any).Deno !== "undefined" &&
   typeof (globalThis as any).Deno?.core?.ops?.op_draw_sprite === "function";
-
-const hasViewportOp =
-  typeof (globalThis as any).Deno?.core?.ops?.op_get_viewport_size === "function";
-
-function getViewportSize(): [number, number] {
-  if (!hasViewportOp) return [800, 600];
-  const [w, h] = (globalThis as any).Deno.core.ops.op_get_viewport_size();
-  return [w, h];
-}
 
 /** Cache solid textures by color key to avoid re-creating them every frame. */
 const textureCache = new Map<string, number>();
@@ -51,7 +43,7 @@ function toWorld(
 ): { x: number; y: number; w: number; h: number } {
   if (!screenSpace) return { x: sx, y: sy, w: sw, h: sh };
   const cam = getCamera();
-  const [vpW, vpH] = getViewportSize();
+  const { width: vpW, height: vpH } = getViewportSize();
   return {
     x: sx / cam.zoom + cam.x - vpW / (2 * cam.zoom),
     y: sy / cam.zoom + cam.y - vpH / (2 * cam.zoom),

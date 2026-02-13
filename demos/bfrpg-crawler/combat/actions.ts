@@ -4,8 +4,8 @@
  * @source Basic Fantasy Role-Playing Game, 4th Edition
  */
 
-import type { PRNGState, DiceSpec } from "../../../runtime/state/prng.ts";
-import { rollDice, parseDice } from "../../../runtime/state/prng.ts";
+import type { PRNGState, DiceSpec } from "../../../runtime/state/index.ts";
+import { rollDice, parseDice } from "../../../runtime/state/index.ts";
 
 /**
  * Parse damage dice notation (e.g., "1d8", "2d6+3")

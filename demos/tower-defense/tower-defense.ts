@@ -1,8 +1,8 @@
-import { findPath } from "../../runtime/pathfinding/astar.ts";
-import type { PathGrid } from "../../runtime/pathfinding/types.ts";
-import type { Vec2 } from "../../runtime/state/types.ts";
-import { seed, randomInt } from "../../runtime/state/prng.ts";
-import type { PRNGState } from "../../runtime/state/prng.ts";
+import { findPath } from "../../runtime/pathfinding/index.ts";
+import type { PathGrid } from "../../runtime/pathfinding/index.ts";
+import type { Vec2 } from "../../runtime/state/index.ts";
+import { seed } from "../../runtime/state/index.ts";
+import type { PRNGState } from "../../runtime/state/index.ts";
 
 // --- Types ---
 

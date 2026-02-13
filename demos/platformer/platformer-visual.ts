@@ -1,16 +1,14 @@
 import {
   createPlatformerGame, stepPhysics, movePlayer, jump,
-  PLAYER_W, PLAYER_H, MOVE_SPEED,
+  PLAYER_W, PLAYER_H,
 } from "./platformer.ts";
 import type { PlatformerState } from "./platformer.ts";
 import {
-  onFrame, clearSprites, drawSprite, setCamera, followTarget,
+  onFrame, clearSprites, drawSprite, followTargetSmooth,
   isKeyDown, isKeyPressed, getDeltaTime, createSolidTexture,
-  createAnimation, playAnimation, updateAnimation, drawAnimatedSprite,
-  loadSound, playSound,
-  drawText, measureText,
+  drawText, getViewportSize,
 } from "../../runtime/rendering/index.ts";
-import { drawRect, drawBar, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
+import { drawBar, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 
 // --- Textures ---
@@ -52,7 +50,7 @@ registerAgent<PlatformerState>({
 });
 
 // --- Camera ---
-setCamera(400, 300, 1);
+// Initial camera set via getViewportSize in frame loop
 
 // --- Game loop ---
 onFrame(() => {
@@ -80,10 +78,12 @@ onFrame(() => {
     }
   }
 
-  // Camera follows player
-  followTarget(
-    Math.max(400, Math.min(state.playerX, 400)),
-    Math.max(300, Math.min(state.playerY, 300)),
+  // Camera follows player with smooth interpolation
+  const { width: vpW, height: vpH } = getViewportSize();
+  followTargetSmooth(
+    Math.max(vpW / 2, Math.min(state.playerX, vpW / 2)),
+    Math.max(vpH / 2, Math.min(state.playerY, vpH / 2)),
+    0.1,
   );
 
   // --- Render ---

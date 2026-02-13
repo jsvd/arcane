@@ -38,10 +38,9 @@ import {
   followTarget,
   followTargetSmooth,
   zoomTo,
+  drawParallaxSprite,
 } from "../../runtime/rendering/index.ts";
-import { drawParallaxSprite } from "../../runtime/rendering/parallax.ts";
-import { updateTweens } from "../../runtime/tweening/tween.ts";
-import { easeOutCubic } from "../../runtime/tweening/easing.ts";
+import { updateTweens, easeOutCubic } from "../../runtime/tweening/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 
 // --- Map constants ---

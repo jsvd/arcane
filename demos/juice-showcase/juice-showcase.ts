@@ -23,6 +23,7 @@ import {
   createSolidTexture,
   getMousePosition,
   getMouseWorldPosition,
+  getViewportSize,
   drawText,
 } from "../../runtime/rendering/index.ts";
 import { Colors, HUDLayout, drawPanel, drawLabel } from "../../runtime/ui/index.ts";
@@ -276,7 +277,8 @@ registerAgent<DemoState>({
 });
 
 // --- Camera Setup ---
-setCamera(400, 300, 1);
+const { width: VPW, height: VPH } = getViewportSize();
+setCamera(VPW / 2, VPH / 2, 1);
 
 // --- Game Loop ---
 onFrame(() => {
@@ -326,8 +328,8 @@ onFrame(() => {
   const camera = getCamera();
   const shakeOffset = getCameraShakeOffset();
   setCamera(
-    400 + shakeOffset.x,
-    300 + shakeOffset.y,
+    VPW / 2 + shakeOffset.x,
+    VPH / 2 + shakeOffset.y,
     camera.zoom
   );
 
@@ -335,7 +337,7 @@ onFrame(() => {
   clearSprites();
 
   // Background
-  drawSprite({ textureId: TEX_BG, x: 0, y: 0, w: 800, h: 600, layer: 0 });
+  drawSprite({ textureId: TEX_BG, x: 0, y: 0, w: VPW, h: VPH, layer: 0 });
 
   // Boxes (tween targets)
   for (const box of state.boxes) {
@@ -405,7 +407,7 @@ onFrame(() => {
   // Screen flash overlay
   const flash = getScreenFlash();
   if (flash) {
-    drawPanel(0, 0, 800, 600, {
+    drawPanel(0, 0, VPW, VPH, {
       fillColor: { ...flash, a: flash.opacity },
       borderWidth: 0,
       layer: 100,
@@ -442,7 +444,7 @@ onFrame(() => {
   });
 
   // Instructions at bottom
-  drawPanel(HUDLayout.BOTTOM_LEFT.x, HUDLayout.BOTTOM_LEFT.y - 40, 780, 30, {
+  drawPanel(HUDLayout.BOTTOM_LEFT.x, HUDLayout.BOTTOM_LEFT.y - 40, VPW - 20, 30, {
     fillColor: Colors.HUD_BG,
     borderColor: Colors.HUD_BG_LIGHT,
     borderWidth: 1,

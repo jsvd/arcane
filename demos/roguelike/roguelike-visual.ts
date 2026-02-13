@@ -4,11 +4,9 @@ import { WALL, FLOOR, CORRIDOR, STAIRS_DOWN } from "./dungeon.ts";
 import {
   onFrame, drawSprite, clearSprites, setCamera,
   isKeyPressed, createSolidTexture,
-  createTilemap, setTile, drawTilemap,
   setAmbientLight, addPointLight, clearLights,
   drawText,
 } from "../../runtime/rendering/index.ts";
-import type { TilemapId } from "../../runtime/rendering/index.ts";
 import { drawBar, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 

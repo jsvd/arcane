@@ -7,9 +7,9 @@
  * Uses solid-color placeholder textures (no art assets needed).
  */
 
-import { createSokobanGame, buildMove } from "./sokoban.ts";
+import { createSokobanGame } from "./sokoban.ts";
 import type { Direction, SokobanState } from "./sokoban.ts";
-import type { Vec2 } from "../../runtime/state/types.ts";
+import type { Vec2 } from "../../runtime/state/index.ts";
 import {
   onFrame,
   drawSprite,
@@ -18,6 +18,7 @@ import {
   isKeyPressed,
   createSolidTexture,
   drawText,
+  getViewportSize,
 } from "../../runtime/rendering/index.ts";
 import { drawBar, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
 
@@ -89,10 +90,9 @@ onFrame(() => {
   // Get fresh state after potential move
   const current = game.store.getState() as SokobanState;
 
-  // Center camera on the grid
-  const centerX = (current.width * TILE_SIZE) / 2;
-  const centerY = (current.height * TILE_SIZE) / 2;
-  setCamera(centerX, centerY, 1);
+  // Center camera on the grid using viewport size
+  const { width: vpW, height: vpH } = getViewportSize();
+  setCamera(vpW / 2, vpH / 2, 1);
 
   // Clear previous frame
   clearSprites();

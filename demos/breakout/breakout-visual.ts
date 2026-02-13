@@ -6,10 +6,10 @@
  * applied on top of the physics contacts.
  */
 import {
-  createBreakoutGame, movePaddle, launchBall, buildLevel,
+  createBreakoutGame, movePaddle, launchBall,
   PADDLE_W, PADDLE_H, PADDLE_SPEED, BALL_RADIUS, BALL_SPEED,
 } from "./breakout.ts";
-import type { BreakoutState, Brick } from "./breakout.ts";
+import type { BreakoutState } from "./breakout.ts";
 import {
   onFrame, drawSprite, clearSprites, setCamera,
   isKeyDown, isKeyPressed, getDeltaTime, createSolidTexture,
@@ -26,7 +26,6 @@ import {
   getBodyState,
   setBodyVelocity,
   setBodyPosition,
-  setKinematicVelocity,
   getContacts,
 } from "../../runtime/physics/index.ts";
 import type { BodyId } from "../../runtime/physics/index.ts";

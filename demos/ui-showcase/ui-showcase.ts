@@ -11,18 +11,21 @@
  * Run: cargo run -- dev demos/ui-showcase/ui-showcase.ts
  */
 
-import { onFrame, getDeltaTime } from "../../runtime/rendering/loop.ts";
 import {
+  onFrame,
+  getDeltaTime,
   setCamera,
   getViewportSize,
   isKeyPressed,
   isKeyDown,
   getMousePosition,
+  drawText,
 } from "../../runtime/rendering/index.ts";
-import { drawText } from "../../runtime/rendering/text.ts";
-import { drawRect, drawPanel } from "../../runtime/ui/primitives.ts";
-import { Colors, withAlpha } from "../../runtime/ui/colors.ts";
 import {
+  drawRect,
+  drawPanel,
+  Colors,
+  withAlpha,
   createButton,
   updateButton,
   drawButton,
@@ -43,8 +46,8 @@ import {
   updateFocus,
   verticalStack,
   anchorPosition,
-  type TextInputKeyEvent,
 } from "../../runtime/ui/index.ts";
+import type { TextInputKeyEvent } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 
 // ---- State ----

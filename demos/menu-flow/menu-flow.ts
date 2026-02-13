@@ -16,6 +16,7 @@ import {
 import type { SceneContext, TransitionConfig } from "../../runtime/scenes/index.ts";
 import {
   configureSaveSystem,
+  createFileStorage,
   saveGame,
   loadGame,
   hasSave,
@@ -23,14 +24,24 @@ import {
   disableAutoSave,
   updateAutoSave,
 } from "../../runtime/persistence/index.ts";
-import { createFileStorage } from "../../runtime/persistence/storage.ts";
 import {
-  setCamera, getViewportSize, isKeyPressed,
+  setCamera,
+  getViewportSize,
+  isKeyPressed,
+  isKeyDown,
   getMousePosition,
+  drawText,
 } from "../../runtime/rendering/index.ts";
-import { drawText } from "../../runtime/rendering/text.ts";
-import { drawRect, drawPanel } from "../../runtime/ui/primitives.ts";
-import { Colors, withAlpha } from "../../runtime/ui/index.ts";
+import {
+  drawRect,
+  drawPanel,
+  Colors,
+  withAlpha,
+  createButton,
+  updateButton,
+  drawButton,
+} from "../../runtime/ui/index.ts";
+import type { ButtonState } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 
 // --- Shared transition config ---
@@ -90,27 +101,75 @@ const TitleScene = createScene<TitleState>({
 // MENU SCENE
 // ===================================================================
 
-type MenuItem = { label: string; action: string };
-type MenuState = { items: MenuItem[]; selected: number };
+type MenuState = {
+  actions: string[];
+  buttons: ButtonState[];
+  selected: number;
+};
 
 const MenuScene = createScene<MenuState>({
   name: "menu",
   create: () => {
-    const items: MenuItem[] = [{ label: "New Game", action: "new" }];
-    if (hasSave("gameplay")) items.push({ label: "Continue", action: "continue" });
-    return { items, selected: 0 };
+    const vp = getViewportSize();
+    const actions: string[] = ["new"];
+    const baseY = vp.height / 2 - 20;
+    const btnX = vp.width / 2 - 70;
+    const buttons: ButtonState[] = [
+      createButton(btnX, baseY, 140, 30, "New Game", {
+        normalColor: withAlpha(Colors.DARK_GRAY, 0.5),
+        hoverColor: withAlpha(Colors.PRIMARY, 0.4),
+        pressedColor: withAlpha(Colors.PRIMARY, 0.6),
+        textColor: Colors.WHITE,
+        textScale: 1.5,
+        layer: 5,
+      }),
+    ];
+    if (hasSave("gameplay")) {
+      actions.push("continue");
+      buttons.push(createButton(btnX, baseY + 40, 140, 30, "Continue", {
+        normalColor: withAlpha(Colors.DARK_GRAY, 0.5),
+        hoverColor: withAlpha(Colors.PRIMARY, 0.4),
+        pressedColor: withAlpha(Colors.PRIMARY, 0.6),
+        textColor: Colors.WHITE,
+        textScale: 1.5,
+        layer: 5,
+      }));
+    }
+    buttons[0].focused = true;
+    return { actions, buttons, selected: 0 };
   },
   onUpdate: (state, dt, ctx) => {
     let sel = state.selected;
+    const count = state.buttons.length;
+
+    // Keyboard navigation
     if (isKeyPressed("ArrowUp") || isKeyPressed("w")) {
-      sel = (sel - 1 + state.items.length) % state.items.length;
+      sel = (sel - 1 + count) % count;
     }
     if (isKeyPressed("ArrowDown") || isKeyPressed("s")) {
-      sel = (sel + 1) % state.items.length;
+      sel = (sel + 1) % count;
     }
-    if (isKeyPressed("Space") || isKeyPressed("Enter")) {
-      activateMenuItem(state.items[sel].action, ctx);
+
+    // Update focus
+    for (let i = 0; i < state.buttons.length; i++) {
+      state.buttons[i].focused = i === sel;
     }
+
+    // Update buttons with mouse + keyboard
+    const mouse = getMousePosition();
+    const mouseDown = isKeyDown("MouseLeft");
+    const enterPressed = isKeyPressed("Space") || isKeyPressed("Enter");
+    for (let i = 0; i < state.buttons.length; i++) {
+      updateButton(state.buttons[i], mouse.x, mouse.y, mouseDown, enterPressed);
+      // If mouse clicked on a different button, update selection
+      if (state.buttons[i].hovered && mouseDown) {
+        sel = i;
+      }
+      if (state.buttons[i].clicked) {
+        activateMenuItem(state.actions[i], ctx);
+      }
+    }
+
     return { ...state, selected: sel };
   },
   onRender: (state) => {
@@ -122,19 +181,8 @@ const MenuScene = createScene<MenuState>({
     drawText("MAIN MENU", vp.width / 2 - 72, vp.height / 2 - 100, {
       scale: 2, tint: Colors.PRIMARY, layer: 10, screenSpace: true,
     });
-    const baseY = vp.height / 2 - 20;
-    for (let i = 0; i < state.items.length; i++) {
-      const iy = baseY + i * 40;
-      const ix = vp.width / 2 - 70;
-      const isSelected = i === state.selected;
-      const bgColor = isSelected
-        ? withAlpha(Colors.PRIMARY, 0.3)
-        : withAlpha(Colors.DARK_GRAY, 0.5);
-      drawRect(ix, iy, 140, 30, { color: bgColor, layer: 5, screenSpace: true });
-      const textColor = isSelected ? Colors.WHITE : Colors.LIGHT_GRAY;
-      drawText(state.items[i].label, ix + 12, iy + 8, {
-        scale: 1.5, tint: textColor, layer: 10, screenSpace: true,
-      });
+    for (const btn of state.buttons) {
+      drawButton(btn);
     }
     drawText("Arrow keys to select, ENTER to confirm", vp.width / 2 - 156, vp.height - 40, {
       scale: 1, tint: Colors.GRAY, layer: 10, screenSpace: true,
@@ -301,11 +349,39 @@ const GameplayScene = createScene<GameplayState>({
 // PAUSE SCENE
 // ===================================================================
 
-type PauseState = { selected: number };
+type PauseState = {
+  selected: number;
+  resumeBtn: ButtonState;
+  quitBtn: ButtonState;
+};
 
 const PauseScene = createScene<PauseState>({
   name: "pause",
-  create: () => ({ selected: 0 }),
+  create: () => {
+    const vp = getViewportSize();
+    const pw = 220;
+    const ph = 160;
+    const px = (vp.width - pw) / 2;
+    const py = (vp.height - ph) / 2;
+    const resumeBtn = createButton(px + 30, py + 60, pw - 60, 30, "Resume", {
+      normalColor: withAlpha(Colors.DARK_GRAY, 0.5),
+      hoverColor: withAlpha(Colors.PRIMARY, 0.4),
+      pressedColor: withAlpha(Colors.PRIMARY, 0.6),
+      textColor: Colors.WHITE,
+      textScale: 1.5,
+      layer: 115,
+    });
+    resumeBtn.focused = true;
+    const quitBtn = createButton(px + 30, py + 100, pw - 60, 30, "Quit to Menu", {
+      normalColor: withAlpha(Colors.DARK_GRAY, 0.5),
+      hoverColor: withAlpha(Colors.DANGER, 0.4),
+      pressedColor: withAlpha(Colors.DANGER, 0.6),
+      textColor: Colors.WHITE,
+      textScale: 1.5,
+      layer: 115,
+    });
+    return { selected: 0, resumeBtn, quitBtn };
+  },
   onUpdate: (state, _dt, ctx) => {
     let sel = state.selected;
     if (isKeyPressed("ArrowUp") || isKeyPressed("w")) sel = sel === 0 ? 1 : 0;
@@ -314,17 +390,32 @@ const PauseScene = createScene<PauseState>({
       ctx.pop({ type: "none" });
       return state;
     }
-    if (isKeyPressed("Space") || isKeyPressed("Enter")) {
-      if (sel === 0) {
-        ctx.pop({ type: "none" });
-      } else {
-        stopSceneManager();
-        startSceneManager(createSceneInstance(MenuScene), {
-          onUpdate: (dt) => { updateAutoSave(dt); },
-        });
-      }
+
+    // Update focus
+    state.resumeBtn.focused = sel === 0;
+    state.quitBtn.focused = sel === 1;
+
+    const mouse = getMousePosition();
+    const mouseDown = isKeyDown("MouseLeft");
+    const enterPressed = isKeyPressed("Space") || isKeyPressed("Enter");
+
+    updateButton(state.resumeBtn, mouse.x, mouse.y, mouseDown, enterPressed);
+    updateButton(state.quitBtn, mouse.x, mouse.y, mouseDown, enterPressed);
+
+    if (state.resumeBtn.hovered && mouseDown) sel = 0;
+    if (state.quitBtn.hovered && mouseDown) sel = 1;
+
+    if (state.resumeBtn.clicked) {
+      ctx.pop({ type: "none" });
     }
-    return { selected: sel };
+    if (state.quitBtn.clicked) {
+      stopSceneManager();
+      startSceneManager(createSceneInstance(MenuScene), {
+        onUpdate: (dt) => { updateAutoSave(dt); },
+      });
+    }
+
+    return { ...state, selected: sel };
   },
   onRender: (state) => {
     const vp = getViewportSize();
@@ -345,22 +436,8 @@ const PauseScene = createScene<PauseState>({
     drawText("PAUSED", px + pw / 2 - 48, py + 15, {
       scale: 2, tint: Colors.PAUSED, layer: 120, screenSpace: true,
     });
-    // Resume
-    const btnY1 = py + 60;
-    const bg1 = state.selected === 0 ? withAlpha(Colors.PRIMARY, 0.4) : withAlpha(Colors.DARK_GRAY, 0.5);
-    drawRect(px + 30, btnY1, pw - 60, 30, { color: bg1, layer: 115, screenSpace: true });
-    drawText("Resume", px + 65, btnY1 + 8, {
-      scale: 1.5, tint: state.selected === 0 ? Colors.WHITE : Colors.LIGHT_GRAY,
-      layer: 120, screenSpace: true,
-    });
-    // Quit
-    const btnY2 = py + 100;
-    const bg2 = state.selected === 1 ? withAlpha(Colors.DANGER, 0.4) : withAlpha(Colors.DARK_GRAY, 0.5);
-    drawRect(px + 30, btnY2, pw - 60, 30, { color: bg2, layer: 115, screenSpace: true });
-    drawText("Quit to Menu", px + 42, btnY2 + 8, {
-      scale: 1.5, tint: state.selected === 1 ? Colors.WHITE : Colors.LIGHT_GRAY,
-      layer: 120, screenSpace: true,
-    });
+    drawButton(state.resumeBtn);
+    drawButton(state.quitBtn);
   },
 });
 
@@ -368,30 +445,73 @@ const PauseScene = createScene<PauseState>({
 // GAME OVER SCENE
 // ===================================================================
 
-type GameOverState = { score: number; highScore: number; selected: number };
+type GameOverState = {
+  score: number;
+  highScore: number;
+  selected: number;
+  playAgainBtn: ButtonState;
+  menuBtn: ButtonState;
+};
 
 const GameOverScene = createScene<GameOverState>({
   name: "gameover",
-  create: () => ({ score: 0, highScore: 0, selected: 0 }),
+  create: () => {
+    const vp = getViewportSize();
+    const btnY1 = vp.height / 2 + 60;
+    const btnY2 = vp.height / 2 + 100;
+    const playAgainBtn = createButton(vp.width / 2 - 70, btnY1, 140, 30, "Play Again", {
+      normalColor: withAlpha(Colors.DARK_GRAY, 0.5),
+      hoverColor: withAlpha(Colors.SUCCESS, 0.4),
+      pressedColor: withAlpha(Colors.SUCCESS, 0.6),
+      textColor: Colors.WHITE,
+      textScale: 1.5,
+      layer: 5,
+    });
+    playAgainBtn.focused = true;
+    const menuBtn = createButton(vp.width / 2 - 70, btnY2, 140, 30, "Menu", {
+      normalColor: withAlpha(Colors.DARK_GRAY, 0.5),
+      hoverColor: withAlpha(Colors.PRIMARY, 0.4),
+      pressedColor: withAlpha(Colors.PRIMARY, 0.6),
+      textColor: Colors.WHITE,
+      textScale: 1.5,
+      layer: 5,
+    });
+    return { score: 0, highScore: 0, selected: 0, playAgainBtn, menuBtn };
+  },
   onEnter: (state, ctx) => {
     const data = ctx.getData<{ score: number; highScore: number }>();
     const score = data?.score ?? 0;
     const highScore = Math.max(data?.highScore ?? 0, score);
     saveGame({ highScore }, { slot: "highscore", label: "High Score" });
-    return { score, highScore, selected: 0 };
+    return { ...state, score, highScore, selected: 0 };
   },
   onUpdate: (state, _dt, ctx) => {
     let sel = state.selected;
     if (isKeyPressed("ArrowUp") || isKeyPressed("w")) sel = sel === 0 ? 1 : 0;
     if (isKeyPressed("ArrowDown") || isKeyPressed("s")) sel = sel === 0 ? 1 : 0;
-    if (isKeyPressed("Space") || isKeyPressed("Enter")) {
-      if (sel === 0) {
-        rngState = Date.now() & 0x7fffffff;
-        ctx.replace(createSceneInstance(GameplayScene), FADE);
-      } else {
-        ctx.replace(createSceneInstance(MenuScene), FADE);
-      }
+
+    // Update focus
+    state.playAgainBtn.focused = sel === 0;
+    state.menuBtn.focused = sel === 1;
+
+    const mouse = getMousePosition();
+    const mouseDown = isKeyDown("MouseLeft");
+    const enterPressed = isKeyPressed("Space") || isKeyPressed("Enter");
+
+    updateButton(state.playAgainBtn, mouse.x, mouse.y, mouseDown, enterPressed);
+    updateButton(state.menuBtn, mouse.x, mouse.y, mouseDown, enterPressed);
+
+    if (state.playAgainBtn.hovered && mouseDown) sel = 0;
+    if (state.menuBtn.hovered && mouseDown) sel = 1;
+
+    if (state.playAgainBtn.clicked) {
+      rngState = Date.now() & 0x7fffffff;
+      ctx.replace(createSceneInstance(GameplayScene), FADE);
     }
+    if (state.menuBtn.clicked) {
+      ctx.replace(createSceneInstance(MenuScene), FADE);
+    }
+
     return { ...state, selected: sel };
   },
   onRender: (state) => {
@@ -409,22 +529,8 @@ const GameOverScene = createScene<GameOverState>({
     drawText(`Best: ${state.highScore}`, vp.width / 2 - 40, vp.height / 2 + 10, {
       scale: 1.5, tint: Colors.SILVER, layer: 10, screenSpace: true,
     });
-    // Play Again
-    const btnY1 = vp.height / 2 + 60;
-    const bg1 = state.selected === 0 ? withAlpha(Colors.SUCCESS, 0.4) : withAlpha(Colors.DARK_GRAY, 0.5);
-    drawRect(vp.width / 2 - 70, btnY1, 140, 30, { color: bg1, layer: 5, screenSpace: true });
-    drawText("Play Again", vp.width / 2 - 40, btnY1 + 8, {
-      scale: 1.5, tint: state.selected === 0 ? Colors.WHITE : Colors.LIGHT_GRAY,
-      layer: 10, screenSpace: true,
-    });
-    // Menu
-    const btnY2 = vp.height / 2 + 100;
-    const bg2 = state.selected === 1 ? withAlpha(Colors.PRIMARY, 0.4) : withAlpha(Colors.DARK_GRAY, 0.5);
-    drawRect(vp.width / 2 - 70, btnY2, 140, 30, { color: bg2, layer: 5, screenSpace: true });
-    drawText("Menu", vp.width / 2 - 16, btnY2 + 8, {
-      scale: 1.5, tint: state.selected === 1 ? Colors.WHITE : Colors.LIGHT_GRAY,
-      layer: 10, screenSpace: true,
-    });
+    drawButton(state.playAgainBtn);
+    drawButton(state.menuBtn);
   },
 });
 

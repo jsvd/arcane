@@ -5,10 +5,10 @@ import {
 import type { TDState, TowerType } from "./tower-defense.ts";
 import {
   onFrame, clearSprites, drawSprite, setCamera,
-  isKeyDown, isKeyPressed, getDeltaTime, createSolidTexture,
+  isKeyPressed, getDeltaTime, createSolidTexture,
   getMouseWorldPosition, drawText,
 } from "../../runtime/rendering/index.ts";
-import { drawRect, drawBar, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
+import { drawBar, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 
 // --- Textures ---

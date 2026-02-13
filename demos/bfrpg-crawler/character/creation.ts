@@ -4,8 +4,8 @@
  * @source Basic Fantasy Role-Playing Game, 4th Edition
  */
 
-import type { PRNGState } from "../../../runtime/state/prng.ts";
-import { rollDice } from "../../../runtime/state/prng.ts";
+import type { PRNGState } from "../../../runtime/state/index.ts";
+import { rollDice } from "../../../runtime/state/index.ts";
 import type { AbilityScores, RaceName } from "./abilities.ts";
 import {
   abilityModifier,

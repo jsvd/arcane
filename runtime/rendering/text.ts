@@ -1,6 +1,7 @@
 import type { TextureId } from "./types.ts";
 import { drawSprite } from "./sprites.ts";
 import { getCamera } from "./camera.ts";
+import { getViewportSize } from "./input.ts";
 
 // --- Types ---
 
@@ -51,16 +52,6 @@ const hasRenderOps =
 const hasFontOp =
   typeof (globalThis as any).Deno?.core?.ops?.op_create_font_texture ===
   "function";
-
-const hasViewportOp =
-  typeof (globalThis as any).Deno?.core?.ops?.op_get_viewport_size ===
-  "function";
-
-function getViewportSize(): [number, number] {
-  if (!hasViewportOp) return [800, 600];
-  const [w, h] = (globalThis as any).Deno.core.ops.op_get_viewport_size();
-  return [w, h];
-}
 
 // --- Module state ---
 
@@ -204,7 +195,7 @@ export function drawText(
 
     if (screenSpace) {
       const cam = getCamera();
-      const [viewportW, viewportH] = getViewportSize();
+      const { width: viewportW, height: viewportH } = getViewportSize();
       worldX = drawX / cam.zoom + cam.x - viewportW / (2 * cam.zoom);
       worldY = y / cam.zoom + cam.y - viewportH / (2 * cam.zoom);
       spriteW = (font.glyphW * scale) / cam.zoom;

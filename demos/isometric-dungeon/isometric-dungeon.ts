@@ -27,10 +27,10 @@ import {
   getMouseWorldPosition,
   setBackgroundColor,
 } from "../../runtime/rendering/index.ts";
-import { findPath } from "../../runtime/pathfinding/astar.ts";
-import type { PathGrid } from "../../runtime/pathfinding/types.ts";
+import { findPath } from "../../runtime/pathfinding/index.ts";
+import type { PathGrid } from "../../runtime/pathfinding/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
-import { updateTweens } from "../../runtime/tweening/tween.ts";
+import { updateTweens } from "../../runtime/tweening/index.ts";
 
 // --- Isometric constants ---
 const TILE_W = 64; // Diamond width
