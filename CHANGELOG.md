@@ -2,7 +2,7 @@
 
 All notable changes to Arcane are documented here.
 
-## [0.9.0] - 2026-02-13
+## [0.8.1] - 2026-02-13
 
 ### Added
 - **Mouse Button Input API**
