@@ -358,6 +358,9 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
                 // Sync GI / radiance cascade state
                 renderer.radiance_state.enabled = bridge.gi_enabled;
                 renderer.radiance_state.gi_intensity = bridge.gi_intensity;
+                renderer.radiance_state.probe_spacing = bridge.gi_probe_spacing;
+                renderer.radiance_state.interval = bridge.gi_interval;
+                renderer.radiance_state.cascade_count = bridge.gi_cascade_count;
 
                 renderer.radiance_state.emissives = bridge.emissives.drain(..).map(|e| {
                     arcane_engine::renderer::EmissiveSurface {

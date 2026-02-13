@@ -87,6 +87,12 @@ pub struct RenderBridgeState {
     pub gi_enabled: bool,
     /// GI intensity multiplier.
     pub gi_intensity: f32,
+    /// GI probe spacing override (None = default 8).
+    pub gi_probe_spacing: Option<f32>,
+    /// GI interval override (None = default 4).
+    pub gi_interval: Option<f32>,
+    /// GI cascade count override (None = default 4).
+    pub gi_cascade_count: Option<u32>,
     /// Emissive surfaces for GI: (x, y, w, h, r, g, b, intensity).
     pub emissives: Vec<[f32; 8]>,
     /// Occluders for GI: (x, y, w, h).
@@ -145,6 +151,9 @@ impl RenderBridgeState {
             camera_bounds: None,
             gi_enabled: false,
             gi_intensity: 1.0,
+            gi_probe_spacing: None,
+            gi_interval: None,
+            gi_cascade_count: None,
             emissives: Vec::new(),
             occluders: Vec::new(),
             directional_lights: Vec::new(),
@@ -730,6 +739,23 @@ pub fn op_set_gi_intensity(state: &mut OpState, intensity: f64) {
     bridge.borrow_mut().gi_intensity = intensity as f32;
 }
 
+/// Set GI quality parameters (probe spacing, interval, cascade count).
+/// Pass 0 for any parameter to keep the current/default value.
+#[deno_core::op2(fast)]
+pub fn op_set_gi_quality(state: &mut OpState, probe_spacing: f64, interval: f64, cascade_count: f64) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let mut b = bridge.borrow_mut();
+    if probe_spacing > 0.0 {
+        b.gi_probe_spacing = Some(probe_spacing as f32);
+    }
+    if interval > 0.0 {
+        b.gi_interval = Some(interval as f32);
+    }
+    if cascade_count > 0.0 {
+        b.gi_cascade_count = Some(cascade_count as u32);
+    }
+}
+
 /// Add an emissive surface (light source) for GI.
 #[deno_core::op2(fast)]
 pub fn op_add_emissive(
@@ -1035,6 +1061,7 @@ deno_core::extension!(
         op_enable_gi,
         op_disable_gi,
         op_set_gi_intensity,
+        op_set_gi_quality,
         op_add_emissive,
         op_clear_emissives,
         op_add_occluder,

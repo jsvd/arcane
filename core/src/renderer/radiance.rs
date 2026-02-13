@@ -97,6 +97,12 @@ pub struct RadianceState {
     pub directional_lights: Vec<DirectionalLight>,
     pub spot_lights: Vec<SpotLight>,
     pub gi_intensity: f32,
+    /// Probe spacing in pixels (smaller = smoother but slower). Default: 8.
+    pub probe_spacing: Option<f32>,
+    /// Ray march interval length in pixels. Default: 4.
+    pub interval: Option<f32>,
+    /// Number of cascade levels (more = longer light reach). Default: 4.
+    pub cascade_count: Option<u32>,
 }
 
 impl Default for RadianceState {
@@ -114,6 +120,9 @@ impl RadianceState {
             directional_lights: Vec::new(),
             spot_lights: Vec::new(),
             gi_intensity: 1.0,
+            probe_spacing: None,
+            interval: None,
+            cascade_count: None,
         }
     }
 }
@@ -347,9 +356,11 @@ impl RadiancePipeline {
                     targets: &[Some(wgpu::ColorTargetState {
                         format: gpu.config.format,
                         blend: Some(wgpu::BlendState {
+                            // Additive: result = src * dst + dst * 1
+                            // = dst * (1 + src) — GI adds light without darkening
                             color: wgpu::BlendComponent {
                                 src_factor: wgpu::BlendFactor::Dst,
-                                dst_factor: wgpu::BlendFactor::Zero,
+                                dst_factor: wgpu::BlendFactor::One,
                                 operation: wgpu::BlendOperation::Add,
                             },
                             alpha: wgpu::BlendComponent::OVER,
@@ -420,7 +431,7 @@ impl RadiancePipeline {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8Unorm,
+            format: wgpu::TextureFormat::Rgba32Float,
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });
@@ -537,32 +548,30 @@ impl RadiancePipeline {
     ) -> Vec<u8> {
         let w = scene_w as usize;
         let h = scene_h as usize;
-        let mut data = vec![0u8; w * h * 4]; // RGBA8
+        // Rgba32Float: 4 channels × 4 bytes = 16 bytes per pixel
+        let mut pixels = vec![0.0f32; w * h * 4];
 
         // World-space origin for the scene texture (camera-centered)
         let world_left = camera_x - viewport_w / 2.0;
         let world_top = camera_y - viewport_h / 2.0;
 
-        // Rasterize emissive surfaces
+        // Rasterize emissive surfaces (HDR — intensity is preserved)
         for em in &radiance.emissives {
             let px0 = ((em.x - world_left) as i32).max(0) as usize;
             let py0 = ((em.y - world_top) as i32).max(0) as usize;
             let px1 = ((em.x + em.width - world_left) as i32).min(w as i32) as usize;
             let py1 = ((em.y + em.height - world_top) as i32).min(h as i32) as usize;
 
-            let er = (em.r * em.intensity * 255.0).min(255.0) as u8;
-            let eg = (em.g * em.intensity * 255.0).min(255.0) as u8;
-            let eb = (em.b * em.intensity * 255.0).min(255.0) as u8;
+            let er = em.r * em.intensity;
+            let eg = em.g * em.intensity;
+            let eb = em.b * em.intensity;
 
             for py in py0..py1 {
                 for px in px0..px1 {
                     let idx = (py * w + px) * 4;
-                    if idx + 3 < data.len() {
-                        data[idx] = data[idx].saturating_add(er);
-                        data[idx + 1] = data[idx + 1].saturating_add(eg);
-                        data[idx + 2] = data[idx + 2].saturating_add(eb);
-                        // A channel = 0 (not an occluder)
-                    }
+                    pixels[idx] += er;
+                    pixels[idx + 1] += eg;
+                    pixels[idx + 2] += eb;
                 }
             }
         }
@@ -571,11 +580,11 @@ impl RadiancePipeline {
         for light in &lighting.lights {
             let cx = (light.x - world_left) as i32;
             let cy = (light.y - world_top) as i32;
-            let r_px = (light.radius * 0.1).max(2.0) as i32; // small emissive core
+            let r_px = (light.radius * 0.1).max(2.0) as i32;
 
-            let er = (light.r * light.intensity * 255.0).min(255.0) as u8;
-            let eg = (light.g * light.intensity * 255.0).min(255.0) as u8;
-            let eb = (light.b * light.intensity * 255.0).min(255.0) as u8;
+            let er = light.r * light.intensity;
+            let eg = light.g * light.intensity;
+            let eb = light.b * light.intensity;
 
             for dy in -r_px..=r_px {
                 for dx in -r_px..=r_px {
@@ -584,9 +593,9 @@ impl RadiancePipeline {
                         let py = (cy + dy) as usize;
                         if px < w && py < h {
                             let idx = (py * w + px) * 4;
-                            data[idx] = data[idx].saturating_add(er);
-                            data[idx + 1] = data[idx + 1].saturating_add(eg);
-                            data[idx + 2] = data[idx + 2].saturating_add(eb);
+                            pixels[idx] += er;
+                            pixels[idx + 1] += eg;
+                            pixels[idx + 2] += eb;
                         }
                     }
                 }
@@ -599,9 +608,9 @@ impl RadiancePipeline {
             let cy = (spot.y - world_top) as i32;
             let r_px = 3i32;
 
-            let er = (spot.r * spot.intensity * 255.0).min(255.0) as u8;
-            let eg = (spot.g * spot.intensity * 255.0).min(255.0) as u8;
-            let eb = (spot.b * spot.intensity * 255.0).min(255.0) as u8;
+            let er = spot.r * spot.intensity;
+            let eg = spot.g * spot.intensity;
+            let eb = spot.b * spot.intensity;
 
             for dy in -r_px..=r_px {
                 for dx in -r_px..=r_px {
@@ -610,16 +619,16 @@ impl RadiancePipeline {
                         let py = (cy + dy) as usize;
                         if px < w && py < h {
                             let idx = (py * w + px) * 4;
-                            data[idx] = data[idx].saturating_add(er);
-                            data[idx + 1] = data[idx + 1].saturating_add(eg);
-                            data[idx + 2] = data[idx + 2].saturating_add(eb);
+                            pixels[idx] += er;
+                            pixels[idx + 1] += eg;
+                            pixels[idx + 2] += eb;
                         }
                     }
                 }
             }
         }
 
-        // Rasterize occluders
+        // Rasterize occluders (alpha = 1.0)
         for occ in &radiance.occluders {
             let px0 = ((occ.x - world_left) as i32).max(0) as usize;
             let py0 = ((occ.y - world_top) as i32).max(0) as usize;
@@ -629,14 +638,13 @@ impl RadiancePipeline {
             for py in py0..py1 {
                 for px in px0..px1 {
                     let idx = (py * w + px) * 4;
-                    if idx + 3 < data.len() {
-                        data[idx + 3] = 255; // occluder flag
-                    }
+                    pixels[idx + 3] = 1.0; // occluder flag
                 }
             }
         }
 
-        data
+        // Return as raw bytes (f32 → bytemuck cast)
+        bytemuck::cast_slice(&pixels).to_vec()
     }
 
     /// Execute the full radiance cascade pipeline for one frame.
@@ -654,6 +662,17 @@ impl RadiancePipeline {
     ) -> bool {
         if !radiance.enabled {
             return false;
+        }
+
+        // Apply quality overrides from game code
+        if let Some(ps) = radiance.probe_spacing {
+            self.probe_spacing = ps;
+        }
+        if let Some(iv) = radiance.interval {
+            self.interval = iv;
+        }
+        if let Some(cc) = radiance.cascade_count {
+            self.cascade_count = cc;
         }
 
         // Scene resolution is the viewport size (in logical pixels)
@@ -684,7 +703,7 @@ impl RadiancePipeline {
             &scene_data,
             wgpu::TexelCopyBufferLayout {
                 offset: 0,
-                bytes_per_row: Some(scene_w * 4),
+                bytes_per_row: Some(scene_w * 16), // Rgba32Float: 16 bytes per pixel
                 rows_per_image: Some(scene_h),
             },
             wgpu::Extent3d {
@@ -877,7 +896,9 @@ impl RadiancePipeline {
 
     /// Compose the light texture onto the sprite output.
     /// Call this after sprites have been rendered to the target view.
-    /// This applies multiplicative blending: sprite_color * light_color.
+    /// This applies additive blending: sprite_color + light_contribution.
+    /// The sprite shader already handles ambient + point lights via multiplication.
+    /// GI adds indirect illumination on top.
     pub fn compose(
         &self,
         encoder: &mut wgpu::CommandEncoder,

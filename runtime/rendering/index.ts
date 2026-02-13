@@ -114,6 +114,7 @@ export type {
   DirectionalLightOptions,
   SpotLightOptions,
   DayNightOptions,
+  GIQualityOptions,
 } from "./lighting.ts";
 export {
   setAmbientLight,
@@ -122,6 +123,7 @@ export {
   enableGlobalIllumination,
   disableGlobalIllumination,
   setGIIntensity,
+  setGIQuality,
   addEmissive,
   clearEmissives,
   addOccluder,

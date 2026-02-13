@@ -101,6 +101,36 @@ export function setGIIntensity(intensity: number): void {
   (globalThis as any).Deno.core.ops.op_set_gi_intensity(intensity);
 }
 
+/** Options for GI quality. */
+export interface GIQualityOptions {
+  /** Probe spacing in pixels. Smaller = smoother but slower. Default: 8. */
+  probeSpacing?: number;
+  /** Ray march interval in pixels. Default: 4. */
+  interval?: number;
+  /** Number of cascade levels. More = longer light reach. Default: 4. Max: 5. */
+  cascadeCount?: number;
+}
+
+/**
+ * Set GI quality parameters.
+ *
+ * Controls the resolution and reach of the radiance cascades algorithm.
+ * Smaller probeSpacing produces smoother light gradients but costs more GPU.
+ * Call once at startup (persists across frames).
+ *
+ * No-op in headless mode.
+ *
+ * @param options - Quality configuration.
+ */
+export function setGIQuality(options: GIQualityOptions): void {
+  if (!hasRenderOps) return;
+  (globalThis as any).Deno.core.ops.op_set_gi_quality(
+    options.probeSpacing ?? 0,
+    options.interval ?? 0,
+    options.cascadeCount ?? 0,
+  );
+}
+
 // --- Emissive Surfaces ---
 
 /** Options for an emissive surface. */

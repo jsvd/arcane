@@ -380,9 +380,8 @@ fn finalize(@builtin(global_invocation_id) gid: vec3<u32>) {
         total_radiance = total_radiance + probe_sum * w;
     }
 
-    // Add ambient light
-    let ambient = params.ambient.rgb;
-    let final_color = ambient + total_radiance * gi_intensity;
+    // GI radiance only (ambient is handled by sprite shader)
+    let final_color = total_radiance * gi_intensity;
 
     // Clamp to [0, 1]
     let clamped = clamp(final_color, vec3<f32>(0.0), vec3<f32>(1.0));

@@ -39,6 +39,7 @@ import {
   enableGlobalIllumination,
   disableGlobalIllumination,
   setGIIntensity,
+  setGIQuality,
   addEmissive,
   clearEmissives,
   addOccluder,
@@ -70,16 +71,17 @@ function sprite(textureId: number, x: number, y: number, w: number, h: number, l
 
 // --- State ---
 let giEnabled = true;
-let giIntensity = 1.0;
+let giIntensity = 0.5;
 let currentScene = 1; // 1-5
 let timeOfDay = 0.5; // noon
-let playerX = 400;
+let playerX = 200;
 let playerY = 300;
 let frameCount = 0;
 
-// Enable GI on start
+// Enable GI on start with finer probe resolution for smoother gradients
 enableGlobalIllumination();
-setGIIntensity(1.0);
+setGIIntensity(0.5 * 0.5); // matches giIntensity^2 curve
+setGIQuality({ probeSpacing: 4, cascadeCount: 5 });
 
 // --- Scene builders ---
 
@@ -88,10 +90,11 @@ function drawDungeonScene(dt: number) {
   setBackgroundColor(0.02, 0.02, 0.05);
   setAmbientLight(0.05, 0.05, 0.08);
 
-  // Floor
-  for (let x = 0; x < VPW; x += 32) {
-    sprite(TEX_FLOOR, x, VPH - 32, 32, 32, -10);
-    sprite(TEX_FLOOR, x, VPH - 64, 32, 32, -10);
+  // Floor (covers entire room behind everything)
+  for (let y = 0; y < VPH; y += 32) {
+    for (let x = 0; x < VPW; x += 32) {
+      sprite(TEX_FLOOR, x, y, 32, 32, -10);
+    }
   }
 
   // Walls on left and right
@@ -106,31 +109,32 @@ function drawDungeonScene(dt: number) {
     addOccluder({ x: VPW - 64, y, width: 64, height: 32 });
   }
 
-  // Central pillar
+  // Central pillar (free-standing — casts shadows)
   const pillarX = VPW / 2 - 32;
   const pillarY = VPH / 2 - 64;
-  for (let dy = 0; dy < 128; dy += 32) {
-    sprite(TEX_WALL, pillarX, pillarY + dy, 64, 32, -5);
+  const pillarH = 128;
+  for (let y = pillarY; y < pillarY + pillarH; y += 32) {
+    sprite(TEX_WALL, pillarX, y, 64, 32, -5);
   }
-  addOccluder({ x: pillarX, y: pillarY, width: 64, height: 128 });
+  addOccluder({ x: pillarX, y: pillarY, width: 64, height: pillarH });
 
   // Torch emissives on walls
   const torchColor = colorTemp.torch;
-  const flicker = 0.8 + Math.sin(frameCount * 0.1) * 0.2;
+  const flicker = 0.9 + Math.sin(frameCount * 0.1) * 0.1;
 
   // Left wall torches
   sprite(TEX_EMISSIVE_WARM, 64, 150, 16, 16, 0);
   addEmissive({
     x: 64, y: 150, width: 16, height: 16,
     r: torchColor[0], g: torchColor[1], b: torchColor[2],
-    intensity: 2.0 * flicker,
+    intensity: 3.0 * flicker,
   });
 
   sprite(TEX_EMISSIVE_WARM, 64, 400, 16, 16, 0);
   addEmissive({
     x: 64, y: 400, width: 16, height: 16,
     r: torchColor[0], g: torchColor[1], b: torchColor[2],
-    intensity: 2.0 * flicker,
+    intensity: 3.0 * flicker,
   });
 
   // Right wall torches
@@ -138,21 +142,21 @@ function drawDungeonScene(dt: number) {
   addEmissive({
     x: VPW - 80, y: 150, width: 16, height: 16,
     r: torchColor[0], g: torchColor[1], b: torchColor[2],
-    intensity: 2.0 * flicker,
+    intensity: 3.0 * flicker,
   });
 
   sprite(TEX_EMISSIVE_WARM, VPW - 80, 400, 16, 16, 0);
   addEmissive({
     x: VPW - 80, y: 400, width: 16, height: 16,
     r: torchColor[0], g: torchColor[1], b: torchColor[2],
-    intensity: 2.0 * flicker,
+    intensity: 3.0 * flicker,
   });
 
-  // Point lights as fallback
-  addPointLight(72, 158, 150, torchColor[0], torchColor[1], torchColor[2], flicker);
-  addPointLight(72, 408, 150, torchColor[0], torchColor[1], torchColor[2], flicker);
-  addPointLight(VPW - 72, 158, 150, torchColor[0], torchColor[1], torchColor[2], flicker);
-  addPointLight(VPW - 72, 408, 150, torchColor[0], torchColor[1], torchColor[2], flicker);
+  // Point lights (local torch glow, dim — GI handles the rest)
+  addPointLight(72, 158, 120, torchColor[0], torchColor[1], torchColor[2], flicker * 0.5);
+  addPointLight(72, 408, 120, torchColor[0], torchColor[1], torchColor[2], flicker * 0.5);
+  addPointLight(VPW - 72, 158, 120, torchColor[0], torchColor[1], torchColor[2], flicker * 0.5);
+  addPointLight(VPW - 72, 408, 120, torchColor[0], torchColor[1], torchColor[2], flicker * 0.5);
 }
 
 function drawLavaScene(dt: number) {
@@ -335,7 +339,7 @@ function drawComparisonScene(dt: number) {
 
     // Torches
     const torchX = side + 40;
-    const flicker = 0.8 + Math.sin(frameCount * 0.1) * 0.2;
+    const flicker = 0.9 + Math.sin(frameCount * 0.1) * 0.1;
     const tc = colorTemp.torch;
     sprite(TEX_EMISSIVE_WARM, torchX, 200, 12, 12, 0);
     addPointLight(torchX + 6, 206, 120, tc[0], tc[1], tc[2], flicker);
@@ -345,7 +349,7 @@ function drawComparisonScene(dt: number) {
       addEmissive({
         x: torchX, y: 200, width: 12, height: 12,
         r: tc[0], g: tc[1], b: tc[2],
-        intensity: 2.0 * flicker,
+        intensity: 3.0 * flicker,
       });
     }
   }
@@ -381,15 +385,14 @@ onFrame(() => {
     }
   }
 
-  // Adjust GI intensity
+  // Adjust GI intensity (exponential curve: displayed 0-5 maps to actual 0-25)
   if (isKeyDown("Equal") || isKeyDown("+")) {
     giIntensity = Math.min(giIntensity + dt * 2, 5.0);
-    setGIIntensity(giIntensity);
   }
   if (isKeyDown("Minus") || isKeyDown("-")) {
     giIntensity = Math.max(giIntensity - dt * 2, 0.0);
-    setGIIntensity(giIntensity);
   }
+  setGIIntensity(giIntensity * giIntensity);
 
   // Scene switching
   if (isKeyPressed("1")) currentScene = 1;
@@ -403,11 +406,49 @@ onFrame(() => {
     timeOfDay = (timeOfDay + 0.125) % 1.0;
   }
 
-  // Player movement
-  if (isKeyDown("ArrowLeft")) playerX -= 200 * dt;
-  if (isKeyDown("ArrowRight")) playerX += 200 * dt;
-  if (isKeyDown("ArrowUp")) playerY -= 200 * dt;
-  if (isKeyDown("ArrowDown")) playerY += 200 * dt;
+  // Player movement with collision
+  const speed = 200 * dt;
+  const { width: VPW2, height: VPH2 } = getViewportSize();
+  let newX = playerX;
+  let newY = playerY;
+  if (isKeyDown("ArrowLeft")) newX -= speed;
+  if (isKeyDown("ArrowRight")) newX += speed;
+  if (isKeyDown("ArrowUp")) newY -= speed;
+  if (isKeyDown("ArrowDown")) newY += speed;
+
+  // Player half-size (16x16 sprite)
+  const ph = 8;
+  // Wall thickness on each side
+  const wallW = 64;
+  // Pillar bounds (scene 1 only)
+  const pillarL = VPW2 / 2 - 32;
+  const pillarR = VPW2 / 2 + 32;
+  const pillarT = VPH2 / 2 - 64;
+  const pillarB = pillarT + 128;
+
+  // Clamp to walls
+  newX = Math.max(wallW + ph, Math.min(VPW2 - wallW - ph, newX));
+  newY = Math.max(ph, Math.min(VPH2 - ph, newY));
+
+  // Pillar collision (dungeon scene)
+  if (currentScene === 1) {
+    if (newX + ph > pillarL && newX - ph < pillarR &&
+        newY + ph > pillarT && newY - ph < pillarB) {
+      // Push out on the axis with least penetration
+      const overlapL = (newX + ph) - pillarL;
+      const overlapR = pillarR - (newX - ph);
+      const overlapT = (newY + ph) - pillarT;
+      const overlapB = pillarB - (newY - ph);
+      const minOverlap = Math.min(overlapL, overlapR, overlapT, overlapB);
+      if (minOverlap === overlapL) newX = pillarL - ph;
+      else if (minOverlap === overlapR) newX = pillarR + ph;
+      else if (minOverlap === overlapT) newY = pillarT - ph;
+      else newY = pillarB + ph;
+    }
+  }
+
+  playerX = newX;
+  playerY = newY;
 
   // Draw current scene
   switch (currentScene) {
@@ -428,10 +469,11 @@ onFrame(() => {
       break;
   }
 
-  // Draw player
+  // Draw player with lantern glow
   sprite(TEX_PLAYER, playerX - 8, playerY - 8, 16, 16, 5);
+  addPointLight(playerX, playerY, 80, 0.9, 0.8, 0.6, 0.5);
 
-  // Spot light following mouse
+  // Spot light following mouse (flashlight cone)
   const mouse = getMousePosition();
   if (mouse.x > 0 && mouse.y > 0) {
     const angle = Math.atan2(mouse.y - playerY, mouse.x - playerX);
@@ -439,12 +481,12 @@ onFrame(() => {
       x: playerX,
       y: playerY,
       angle,
-      spread: 0.4,
-      range: 250,
+      spread: 0.6,
+      range: 300,
       r: 0.9,
       g: 0.9,
       b: 1.0,
-      intensity: 0.8,
+      intensity: 0.6,
     });
   }
 
