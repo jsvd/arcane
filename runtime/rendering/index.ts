@@ -133,8 +133,8 @@ export {
 } from "./lighting.ts";
 
 // Text
-export type { BitmapFont, TextOptions, TextMeasurement } from "./text.ts";
-export { loadFont, getDefaultFont, measureText, drawText } from "./text.ts";
+export type { BitmapFont, TextOptions, TextMeasurement, TextOutline, TextShadow, MSDFFont, MSDFGlyph } from "./text.ts";
+export { loadFont, getDefaultFont, getDefaultMSDFFont, loadMSDFFont, measureText, drawText } from "./text.ts";
 
 // Animation
 export type { AnimationId, AnimationDef, AnimationState, FrameEvent, FrameEventCallback } from "./animation.ts";
