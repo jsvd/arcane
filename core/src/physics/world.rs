@@ -394,6 +394,21 @@ impl PhysicsWorld {
     pub fn get_contacts(&self) -> &[Contact] {
         &self.contacts
     }
+
+    /// Return all active (non-None) bodies.
+    pub fn all_bodies(&self) -> Vec<&RigidBody> {
+        self.bodies.iter().filter_map(|b| b.as_ref()).collect()
+    }
+
+    /// Return the world gravity.
+    pub fn gravity(&self) -> (f32, f32) {
+        self.gravity
+    }
+
+    /// Return the number of active bodies.
+    pub fn body_count(&self) -> usize {
+        self.bodies.iter().filter(|b| b.is_some()).count()
+    }
 }
 
 fn ray_vs_circle(

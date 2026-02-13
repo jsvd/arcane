@@ -2,6 +2,7 @@ mod module_loader;
 mod runtime;
 mod test_runner;
 pub mod physics_ops;
+pub mod replay_ops;
 
 #[cfg(feature = "renderer")]
 pub mod render_ops;
