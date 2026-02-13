@@ -1013,3 +1013,24 @@ The migration strategy preserves existing TS function signatures — game code n
 | Vision-capable agents close the gap | Medium | Medium | Text interaction will always be faster than visual |
 | Recipe ecosystem doesn't materialize | Medium | Medium | Build enough first-party recipes to be self-sufficient |
 | Scope creep into 3D | High | Medium | Resist. 2D only. The constraint is the feature. |
+
+---
+
+## Known Limitations & Backlog
+
+Items discovered during development that don't block current work but should be addressed.
+
+### MSDF Text: Per-Draw-Call Shader Params
+
+**Status:** Open
+**Discovered:** Phase 19 polish
+**Severity:** Medium — affects visual fidelity of MSDF outline/shadow effects
+
+All MSDF text in a frame shares a single shader uniform buffer (one shader ID). When multiple `drawText()` calls use different outline/shadow parameters, only the last call's params take effect for all MSDF glyphs. This means you cannot mix outline colors or shadow settings in the same frame.
+
+**Workaround:** Use the same outline/shadow params for all MSDF text in a frame, or use bitmap text for some lines.
+
+**Fix options (pick one):**
+1. **Per-instance params:** Encode outline/shadow in the sprite instance vertex data (extra floats per glyph). Most flexible, but increases instance stride.
+2. **Multi-shader:** Allocate a separate shader ID per unique param set. Adds draw calls but requires no vertex layout changes.
+3. **Instanced uniform index:** Add a uniform array index per instance and look up params in a uniform array. Minimal vertex overhead.

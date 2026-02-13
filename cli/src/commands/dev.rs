@@ -239,7 +239,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
             for (_font_id, tex_id) in pending_msdf_builtin {
                 let (pixels, width, height, _font) =
                     arcane_engine::renderer::msdf::generate_builtin_msdf_font();
-                renderer.textures.upload_raw(
+                renderer.textures.upload_raw_linear(
                     &renderer.gpu,
                     &renderer.sprites.texture_bind_group_layout,
                     tex_id,

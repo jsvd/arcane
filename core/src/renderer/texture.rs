@@ -300,6 +300,85 @@ impl TextureStore {
         );
     }
 
+    /// Upload raw RGBA pixels as a linear (non-sRGB) texture with bilinear filtering.
+    /// Use this for distance field atlases (MSDF, SDF) where values must be sampled linearly.
+    pub fn upload_raw_linear(
+        &mut self,
+        gpu: &GpuContext,
+        bind_group_layout: &wgpu::BindGroupLayout,
+        id: TextureId,
+        pixels: &[u8],
+        width: u32,
+        height: u32,
+    ) {
+        let texture = gpu.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some(&format!("raw_linear_texture_{id}")),
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+
+        gpu.queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture: &texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            pixels,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(4 * width),
+                rows_per_image: Some(height),
+            },
+            wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        );
+
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let sampler = gpu.device.create_sampler(&wgpu::SamplerDescriptor {
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            ..Default::default()
+        });
+
+        let bind_group = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some(&format!("raw_linear_texture_bind_group_{id}")),
+            layout: bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
+            ],
+        });
+
+        self.textures.insert(
+            id,
+            TextureEntry {
+                _texture: texture,
+                bind_group,
+                width,
+                height,
+            },
+        );
+    }
+
     /// Get the bind group for a texture handle.
     pub fn get_bind_group(&self, id: TextureId) -> Option<&wgpu::BindGroup> {
         self.textures.get(&id).map(|e| &e.bind_group)
