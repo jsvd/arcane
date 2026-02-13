@@ -105,13 +105,13 @@ describe("createRecording", () => {
       emptyFrame({ keysDown: ["ArrowRight"] }),
       emptyFrame({ keysPressed: ["Space"] }),
     ];
-    const rec = createRecording(frames);
+    const rec = createRecording<TestState>(frames);
     assert.equal(rec.frameCount, 2);
     assert.equal(rec.snapshots.length, 0);
   });
 
   it("uses custom default dt", () => {
-    const rec = createRecording([], 1 / 30);
+    const rec = createRecording<TestState>([], 1 / 30);
     assert.equal(rec.defaultDt, 1 / 30);
   });
 });
@@ -139,7 +139,7 @@ describe("emptyFrame", () => {
 
 describe("replay", () => {
   it("replays empty recording and returns initial state", () => {
-    const rec = createRecording([]);
+    const rec = createRecording<TestState>([]);
     const result = replay(rec, updateFn, initialState);
     assert.ok(result.ok);
     assert.deepEqual(result.finalState, initialState);
@@ -148,7 +148,7 @@ describe("replay", () => {
   });
 
   it("applies input frames deterministically", () => {
-    const rec = createRecording([
+    const rec = createRecording<TestState>([
       emptyFrame({ keysDown: ["ArrowRight"] }),
       emptyFrame({ keysDown: ["ArrowRight"] }),
       emptyFrame({ keysDown: ["ArrowDown"] }),
@@ -161,7 +161,7 @@ describe("replay", () => {
   });
 
   it("tracks key presses for jumps", () => {
-    const rec = createRecording([
+    const rec = createRecording<TestState>([
       emptyFrame({ keysPressed: ["Space"] }),
       emptyFrame(),
       emptyFrame({ keysPressed: ["Space"] }),
@@ -172,7 +172,7 @@ describe("replay", () => {
   });
 
   it("checks assertion at specific frame (pass)", () => {
-    const rec = createRecording([
+    const rec = createRecording<TestState>([
       emptyFrame({ keysDown: ["ArrowRight"] }),
       emptyFrame({ keysDown: ["ArrowRight"] }),
     ]);
@@ -183,7 +183,7 @@ describe("replay", () => {
   });
 
   it("checks assertion at specific frame (fail - returns false)", () => {
-    const rec = createRecording([
+    const rec = createRecording<TestState>([
       emptyFrame({ keysDown: ["ArrowRight"] }),
       emptyFrame({ keysDown: ["ArrowRight"] }),
     ]);
@@ -196,7 +196,7 @@ describe("replay", () => {
   });
 
   it("checks assertion at specific frame (fail - throws)", () => {
-    const rec = createRecording([
+    const rec = createRecording<TestState>([
       emptyFrame({ keysDown: ["ArrowRight"] }),
     ]);
     const result = replay(rec, updateFn, initialState, {
@@ -210,7 +210,7 @@ describe("replay", () => {
   });
 
   it("supports multiple assertions", () => {
-    const rec = createRecording([
+    const rec = createRecording<TestState>([
       emptyFrame({ keysDown: ["ArrowRight"] }),
       emptyFrame({ keysDown: ["ArrowRight"] }),
       emptyFrame({ keysDown: ["ArrowRight"] }),
@@ -225,7 +225,7 @@ describe("replay", () => {
   });
 
   it("reports first failing assertion among multiple", () => {
-    const rec = createRecording([
+    const rec = createRecording<TestState>([
       emptyFrame({ keysDown: ["ArrowRight"] }),
       emptyFrame({ keysDown: ["ArrowRight"] }),
       emptyFrame({ keysDown: ["ArrowRight"] }),
@@ -242,7 +242,7 @@ describe("replay", () => {
   });
 
   it("compares expected final state (pass)", () => {
-    const rec = createRecording([
+    const rec = createRecording<TestState>([
       emptyFrame({ keysDown: ["ArrowRight"] }),
     ]);
     const result = replay(rec, updateFn, initialState, {
@@ -252,7 +252,7 @@ describe("replay", () => {
   });
 
   it("compares expected final state (fail)", () => {
-    const rec = createRecording([
+    const rec = createRecording<TestState>([
       emptyFrame({ keysDown: ["ArrowRight"] }),
     ]);
     const result = replay(rec, updateFn, initialState, {
@@ -264,7 +264,7 @@ describe("replay", () => {
   });
 
   it("stops at specified frame", () => {
-    const rec = createRecording([
+    const rec = createRecording<TestState>([
       emptyFrame({ keysDown: ["ArrowRight"] }),
       emptyFrame({ keysDown: ["ArrowRight"] }),
       emptyFrame({ keysDown: ["ArrowRight"] }),
@@ -276,7 +276,7 @@ describe("replay", () => {
   });
 
   it("produces identical results from identical inputs (determinism)", () => {
-    const rec = createRecording([
+    const rec = createRecording<TestState>([
       emptyFrame({ keysDown: ["ArrowRight"] }),
       emptyFrame({ keysPressed: ["Space"] }),
       emptyFrame({ keysDown: ["ArrowDown", "ArrowRight"] }),
@@ -288,7 +288,7 @@ describe("replay", () => {
 
   it("does not mutate initial state", () => {
     const init = { x: 0, y: 0, jumps: 0 };
-    const rec = createRecording([
+    const rec = createRecording<TestState>([
       emptyFrame({ keysDown: ["ArrowRight"] }),
     ]);
     replay(rec, updateFn, init);
