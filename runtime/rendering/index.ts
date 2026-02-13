@@ -108,7 +108,29 @@ export {
 } from "./autotile.ts";
 
 // Lighting
-export { setAmbientLight, addPointLight, clearLights } from "./lighting.ts";
+export type {
+  EmissiveOptions,
+  OccluderOptions,
+  DirectionalLightOptions,
+  SpotLightOptions,
+  DayNightOptions,
+} from "./lighting.ts";
+export {
+  setAmbientLight,
+  addPointLight,
+  clearLights,
+  enableGlobalIllumination,
+  disableGlobalIllumination,
+  setGIIntensity,
+  addEmissive,
+  clearEmissives,
+  addOccluder,
+  clearOccluders,
+  addDirectionalLight,
+  addSpotLight,
+  colorTemp,
+  setDayNightCycle,
+} from "./lighting.ts";
 
 // Text
 export type { BitmapFont, TextOptions, TextMeasurement } from "./text.ts";
