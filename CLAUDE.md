@@ -39,6 +39,7 @@ arcane/
 │   │   │   ├── runtime.rs         — ArcaneRuntime: V8 + module loader + crypto polyfill
 │   │   │   ├── test_runner.rs     — V8 test runner with #[op2] result reporting
 │   │   │   ├── render_ops.rs      — #[op2] ops: sprites, camera, tilemap, lighting, input, audio, font, viewport
+│   │   │   ├── replay_ops.rs     — #[op2] ops: physics snapshot, recording, replay
 │   │   │   └── physics_ops.rs    — #[op2] ops: physics world, bodies, constraints, queries (NOT feature-gated)
 │   │   ├── physics/               — Homebrew rigid body physics (NOT feature-gated)
 │   │   │   ├── mod.rs             — Module declarations
@@ -58,9 +59,15 @@ arcane/
 │   │   │   ├── camera.rs          — Camera2D: position, zoom, view/proj matrix
 │   │   │   ├── tilemap.rs         — Tilemap + TilemapStore: tile data, atlas UV, camera culling
 │   │   │   ├── lighting.rs        — LightingState, PointLight, LightingUniform for GPU
+│   │   │   ├── msdf.rs              — MSDF font atlas, glyph metrics, SDF shader pipeline
+│   │   │   ├── radiance.rs          — Radiance Cascades 2D GI compute pipeline
+│   │   │   ├── shader.rs            — ShaderStore: custom WGSL fragment shaders, 16 vec4 uniforms
+│   │   │   ├── postprocess.rs       — PostProcessPipeline: offscreen targets, bloom/blur/vignette/CRT
 │   │   │   ├── font.rs            — CP437 8×8 bitmap font data, generate_builtin_font()
 │   │   │   └── shaders/
-│   │   │       └── sprite.wgsl    — Instanced sprite shader with lighting (3 bind groups)
+│   │   │       ├── sprite.wgsl    — Instanced sprite shader with lighting (3 bind groups)
+│   │   │       ├── radiance.wgsl    — GI compute shader (3-pass)
+│   │   │       └── msdf.wgsl        — MSDF distance field text fragment shader
 │   │   ├── platform/              — [feature = "renderer"]
 │   │   │   ├── mod.rs             — Platform public API
 │   │   │   ├── window.rs          — winit ApplicationHandler + event loop
@@ -87,7 +94,17 @@ arcane/
 │   └── catalog.json               — Kenney.nl asset catalog (25 packs + synonyms)
 ├── runtime/
 │   ├── testing/
-│   │   └── harness.ts             — Universal test harness (Node + V8)
+│   │   ├── harness.ts             — Universal test harness (Node + V8)
+│   │   ├── replay.ts              — startRecording, stopRecording, replay, diffReplays
+│   │   ├── snapshot.ts            — World snapshot capture/compare for determinism testing
+│   │   ├── property.ts            — checkProperty, assertProperty, shrinking, generators
+│   │   └── index.ts               — Testing barrel export
+│   ├── procgen/
+│   │   ├── types.ts               — TileId, WFCOptions, Constraint, WFCResult
+│   │   ├── wfc.ts                 — Wave Function Collapse algorithm
+│   │   ├── constraints.ts         — reachability, exactCount, minCount, maxCount, border
+│   │   ├── validate.ts            — validateLevel, generateAndTest
+│   │   └── index.ts               — Barrel export
 │   ├── state/
 │   │   ├── types.ts               — EntityId, Vec2, DeepReadonly
 │   │   ├── error.ts               — ArcaneError, createError()
@@ -117,7 +134,7 @@ arcane/
 │   │   ├── lighting.ts            — setAmbientLight(), addPointLight(), clearLights()
 │   │   ├── texture.ts             — loadTexture(), createSolidTexture()
 │   │   ├── loop.ts                — onFrame(), getDeltaTime()
-│   │   ├── text.ts                — drawText(), measureText(), loadFont(), getDefaultFont()
+│   │   ├── text.ts                — drawText(), measureText(), loadFont(), getDefaultFont(), MSDF font support
 │   │   ├── animation.ts           — createAnimation(), updateAnimation(), drawAnimatedSprite()
 │   │   ├── audio.ts               — loadSound(), playSound(), playMusic(), stopSound(), setVolume()
 │   │   └── index.ts               — Barrel export
@@ -153,24 +170,32 @@ arcane/
 │       ├── types.ts               — AgentConfig, ActionInfo, DescribeOptions, etc.
 │       ├── protocol.ts            — registerAgent(), AgentProtocol on globalThis
 │       ├── describe.ts            — Default text description renderer (minimal/normal/detailed)
+│       ├── mcp.ts                 — MCP tool definitions, request builders
 │       ├── index.ts               — Barrel export
 │       └── agent.test.ts          — Agent protocol tests (~37 tests)
 ├── demos/
-│   ├── sokoban/                   — Phase 1 demo: grid puzzle + Phase 2a visual demo
-│   ├── card-battler/              — Phase 1 demo: card game
-│   ├── breakout/                  — Phase 2b demo: real-time arcade (paddle, ball, bricks)
-│   ├── roguelike/                 — Phase 2b demo: procedural dungeon, FOV, fog of war
-│   ├── platformer/                — Phase 4 demo: gravity, platforms, coins, text HUD, UI bars
-│   ├── tower-defense/             — Phase 5 demo: tower placement, enemy waves, pathfinding
-│   ├── sprite-demo/               — Phase 5.5 demo: asset loading validation with sprite sheet + sound
+│   ├── agent-testing/             — Phase 17 demo: MCP tools, snapshot replay, property testing
+│   ├── asteroids/                 — Phase 8 demo: rotation, flip, opacity, blend modes, CRT post-processing
 │   ├── bfrpg-crawler/             — Phase 6 demo: BFRPG dungeon crawler with character creation, combat, AI
-│   ├── menu-flow/                 — Phase 10 demo: scene management, save/load, menu flow
-│   ├── physics-playground/        — Phase 11 demo: rigid body physics sandbox
-│   ├── parallax-scroller/        — Phase 13 demo: parallax scrolling + camera features
-│   ├── tilemap-showcase/         — Phase 14 demo: layers, auto-tiling, animated tiles
+│   ├── breakout/                  — Phase 2b demo: real-time arcade (paddle, ball, bricks)
+│   ├── card-battler/              — Phase 1 demo: card game
 │   ├── character-controller/     — Phase 15 demo: animation state machine + blending
+│   ├── hello-world/               — Minimal starter: sprite + text
+│   ├── isometric-dungeon/        — Isometric 2.5D: coordinate transforms, depth sorting, pathfinding
+│   ├── juice-showcase/            — Phase 9 demo: tweening, particles, camera shake
+│   ├── lighting-showcase/         — Phase 19 demo: point/directional/spot lights, GI, day/night
+│   ├── menu-flow/                 — Phase 10 demo: scene management, save/load, menu flow
+│   ├── msdf-text-showcase/        — MSDF text rendering: outlines, shadows, crisp scaling
+│   ├── parallax-scroller/        — Phase 13 demo: parallax scrolling + camera features
+│   ├── physics-playground/        — Phase 11 demo: rigid body physics sandbox
+│   ├── platformer/                — Phase 4 demo: gravity, platforms, coins, text HUD, UI bars
+│   ├── roguelike/                 — Phase 2b demo: procedural dungeon, FOV, fog of war
+│   ├── sokoban/                   — Phase 1 demo: grid puzzle + Phase 2a visual demo
+│   ├── sprite-demo/               — Phase 5.5 demo: asset loading validation with sprite sheet + sound
+│   ├── tilemap-showcase/         — Phase 14 demo: layers, auto-tiling, animated tiles
+│   ├── tower-defense/             — Phase 5 demo: tower placement, enemy waves, pathfinding
 │   ├── ui-showcase/              — Phase 16 demo: interactive UI widgets
-│   └── isometric-dungeon/        — Isometric 2.5D: coordinate transforms, depth sorting, pathfinding
+│   └── wfc-dungeon/               — Phase 18 demo: WFC procedural dungeon generation
 ├── recipes/
 │   ├── turn-based-combat/         — Initiative, attack/defend, victory detection
 │   ├── inventory-equipment/       — Items, stacking, weight, equipment slots, stat bonuses

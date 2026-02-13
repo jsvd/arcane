@@ -4,14 +4,12 @@ import {
   addFrameEvent,
   playAnimation,
   updateAnimationWithEvents,
-} from "../../runtime/rendering/animation.ts";
-import {
   createAnimationFSM,
   getCurrentState,
   isBlending,
   updateFSM,
-} from "../../runtime/rendering/animation-fsm.ts";
-import type { FSMConfig } from "../../runtime/rendering/animation-fsm.ts";
+} from "../../runtime/rendering/index.ts";
+import type { FSMConfig } from "../../runtime/rendering/index.ts";
 
 /**
  * Tests for the character controller demo's animation FSM configuration.
