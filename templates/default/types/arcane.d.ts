@@ -982,6 +982,27 @@ declare module "@arcane/runtime/rendering" {
    * @param intensity - GI brightness, 0.0+. Default: 1.0.
    */
   export declare function setGIIntensity(intensity: number): void;
+  /** Options for GI quality. */
+  export interface GIQualityOptions {
+      /** Probe spacing in pixels. Smaller = smoother but slower. Default: 8. */
+      probeSpacing?: number;
+      /** Ray march interval in pixels. Default: 4. */
+      interval?: number;
+      /** Number of cascade levels. More = longer light reach. Default: 4. Max: 5. */
+      cascadeCount?: number;
+  }
+  /**
+   * Set GI quality parameters.
+   *
+   * Controls the resolution and reach of the radiance cascades algorithm.
+   * Smaller probeSpacing produces smoother light gradients but costs more GPU.
+   * Call once at startup (persists across frames).
+   *
+   * No-op in headless mode.
+   *
+   * @param options - Quality configuration.
+   */
+  export declare function setGIQuality(options: GIQualityOptions): void;
   /** Options for an emissive surface. */
   export interface EmissiveOptions {
       /** World X position. */
