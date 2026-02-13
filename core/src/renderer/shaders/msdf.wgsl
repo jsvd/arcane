@@ -1,149 +1,61 @@
-// MSDF (Multi-channel Signed Distance Field) text shader.
+// MSDF (Multi-channel Signed Distance Field) text fragment shader.
 //
-// Uses the same vertex shader, camera, texture, and lighting bind groups as sprite.wgsl.
+// This is a standalone fragment shader intended for use with the custom shader system
+// (ShaderStore). The standard preamble (camera, texture, lighting, vertex shader) and
+// ShaderParams uniform are prepended automatically by ShaderStore::create().
+//
 // The fragment shader computes median(R, G, B) from the MSDF atlas, then uses
 // smoothstep for crisp anti-aliased edges at any scale.
 //
+// Uniform slots (shader_params.values[]):
+//   [0]: [distance_range, font_size_px, screen_px_range, _pad]
+//   [1]: outline [width, r, g, b]
+//   [2]: outline [a, _, _, _]
+//   [3]: shadow [offset_x, offset_y, softness, _]
+//   [4]: shadow [r, g, b, a]
+//
 // Supports:
 // - Resolution-independent text rendering
-// - Configurable outline (width + color via uniform)
-// - Configurable shadow (offset + color + softness via uniform)
-//
-// Bind groups:
-// @group(0) — Camera uniform (vertex)
-// @group(1) — MSDF atlas texture + sampler (fragment)
-// @group(2) — Lighting uniform (fragment) — same as sprite
-// @group(3) — MSDF params uniform (fragment)
-
-struct CameraUniform {
-    view_proj: mat4x4<f32>,
-};
-
-@group(0) @binding(0)
-var<uniform> camera: CameraUniform;
-
-@group(1) @binding(0)
-var t_msdf: texture_2d<f32>;
-
-@group(1) @binding(1)
-var s_msdf: sampler;
-
-struct LightData {
-    pos_radius: vec4<f32>,
-    color_intensity: vec4<f32>,
-};
-
-struct LightingUniform {
-    ambient: vec3<f32>,
-    light_count: u32,
-    lights: array<LightData, 8>,
-};
-
-@group(2) @binding(0)
-var<uniform> lighting: LightingUniform;
-
-// MSDF rendering parameters.
-// Slot 0: [distance_range, font_size_px, screen_px_range, _pad]
-// Slot 1: outline [width, r, g, b]
-// Slot 2: outline [a, _, _, _]
-// Slot 3: shadow [offset_x, offset_y, softness, _]
-// Slot 4: shadow [r, g, b, a]
-struct MsdfParams {
-    values: array<vec4<f32>, 16>,
-};
-
-@group(3) @binding(0)
-var<uniform> msdf_params: MsdfParams;
-
-struct VertexInput {
-    @location(0) position: vec2<f32>,
-    @location(1) uv: vec2<f32>,
-};
-
-struct InstanceInput {
-    @location(2) world_pos: vec2<f32>,
-    @location(3) size: vec2<f32>,
-    @location(4) uv_offset: vec2<f32>,
-    @location(5) uv_size: vec2<f32>,
-    @location(6) tint: vec4<f32>,
-    @location(7) rotation_origin: vec4<f32>,
-};
-
-struct VertexOutput {
-    @builtin(position) clip_position: vec4<f32>,
-    @location(0) tex_coords: vec2<f32>,
-    @location(1) tint: vec4<f32>,
-    @location(2) world_position: vec2<f32>,
-};
-
-@vertex
-fn vs_main(vertex: VertexInput, instance: InstanceInput) -> VertexOutput {
-    var out: VertexOutput;
-
-    let rotation = instance.rotation_origin.x;
-    let origin = vec2<f32>(instance.rotation_origin.y, instance.rotation_origin.z);
-
-    var pos = vertex.position * instance.size;
-
-    let pivot = origin * instance.size;
-    pos = pos - pivot;
-
-    let cos_r = cos(rotation);
-    let sin_r = sin(rotation);
-    let rotated = vec2<f32>(
-        pos.x * cos_r - pos.y * sin_r,
-        pos.x * sin_r + pos.y * cos_r,
-    );
-
-    pos = rotated + pivot;
-
-    let world_xy = pos + instance.world_pos;
-    let world = vec4<f32>(world_xy.x, world_xy.y, 0.0, 1.0);
-    out.clip_position = camera.view_proj * world;
-    out.tex_coords = instance.uv_offset + vertex.uv * instance.uv_size;
-    out.tint = instance.tint;
-    out.world_position = world_xy;
-
-    return out;
-}
+// - Configurable outline (width + color)
+// - Configurable shadow (offset + color + softness)
 
 /// Compute median of three values (the core MSDF operation).
-fn median(r: f32, g: f32, b: f32) -> f32 {
+fn median3(r: f32, g: f32, b: f32) -> f32 {
     return max(min(r, g), min(max(r, g), b));
 }
 
-/// Sample the MSDF and return the screen-space distance.
-fn msdf_distance(uv: vec2<f32>, screen_px_range: f32) -> f32 {
-    let msd = textureSample(t_msdf, s_msdf, uv);
-    let sd = median(msd.r, msd.g, msd.b);
+/// Sample the MSDF atlas and return the screen-space distance.
+fn msdf_sample_distance(uv: vec2<f32>, screen_px_range: f32) -> f32 {
+    let msd = textureSample(t_diffuse, s_diffuse, uv);
+    let sd = median3(msd.r, msd.g, msd.b);
     return (sd - 0.5) * screen_px_range;
 }
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let screen_px_range = msdf_params.values[0].z;
+    let screen_px_range = shader_params.values[0].z;
 
     // --- Shadow pass ---
-    let shadow_offset = msdf_params.values[3].xy;
-    let shadow_softness = msdf_params.values[3].z;
-    let shadow_color = msdf_params.values[4];
+    let shadow_offset = shader_params.values[3].xy;
+    let shadow_softness = shader_params.values[3].z;
+    let shadow_color = shader_params.values[4];
     var shadow_alpha = 0.0;
 
     if (shadow_color.a > 0.0) {
         // Compute texel size from atlas dimensions for shadow offset
-        let tex_size = vec2<f32>(textureDimensions(t_msdf, 0));
+        let tex_size = vec2<f32>(textureDimensions(t_diffuse, 0));
         let shadow_uv = in.tex_coords + shadow_offset / tex_size;
-        let shadow_dist = msdf_distance(shadow_uv, screen_px_range);
+        let shadow_dist = msdf_sample_distance(shadow_uv, screen_px_range);
         let softness_factor = max(shadow_softness, 1.0);
         shadow_alpha = smoothstep(-softness_factor, softness_factor, shadow_dist) * shadow_color.a;
     }
 
     // --- Outline pass ---
-    let outline_width = msdf_params.values[1].x;
-    let outline_rgb = msdf_params.values[1].yzw;
-    let outline_a = msdf_params.values[2].x;
+    let outline_width = shader_params.values[1].x;
+    let outline_rgb = shader_params.values[1].yzw;
+    let outline_a = shader_params.values[2].x;
 
-    let dist = msdf_distance(in.tex_coords, screen_px_range);
+    let dist = msdf_sample_distance(in.tex_coords, screen_px_range);
 
     var outline_alpha = 0.0;
     if (outline_width > 0.0 && outline_a > 0.0) {

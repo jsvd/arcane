@@ -8,6 +8,7 @@ use crate::renderer::SpriteCommand;
 use crate::renderer::TilemapStore;
 use crate::renderer::PointLight;
 use crate::renderer::camera::CameraBounds;
+use crate::renderer::msdf::MsdfFontStore;
 
 /// Audio command queued from TS ops, drained by the frame callback.
 #[derive(Clone, Debug)]
@@ -94,6 +95,14 @@ pub struct RenderBridgeState {
     pub directional_lights: Vec<[f32; 5]>,
     /// Spot lights: (x, y, angle, spread, range, r, g, b, intensity).
     pub spot_lights: Vec<[f32; 9]>,
+    /// MSDF font storage.
+    pub msdf_fonts: MsdfFontStore,
+    /// Queue for creating built-in MSDF font: (font_id, texture_id).
+    pub msdf_builtin_queue: Vec<(u32, u32)>,
+    /// Queue for creating MSDF shader: (shader_id, wgsl_source).
+    pub msdf_shader_queue: Vec<(u32, String)>,
+    /// MSDF shader ID (assigned once, reused for all MSDF text).
+    pub msdf_shader_id: Option<u32>,
 }
 
 impl RenderBridgeState {
@@ -140,6 +149,10 @@ impl RenderBridgeState {
             occluders: Vec::new(),
             directional_lights: Vec::new(),
             spot_lights: Vec::new(),
+            msdf_fonts: MsdfFontStore::new(),
+            msdf_builtin_queue: Vec::new(),
+            msdf_shader_queue: Vec::new(),
+            msdf_shader_id: None,
         }
     }
 }
@@ -812,6 +825,171 @@ pub fn op_add_spot_light(
     ]);
 }
 
+// --- MSDF text ops ---
+
+/// Create the built-in MSDF font (from CP437 bitmap data converted to SDF).
+/// Returns a JSON string: { "fontId": N, "textureId": M, "shaderId": S }
+#[deno_core::op2]
+#[string]
+pub fn op_create_msdf_builtin_font(state: &mut OpState) -> String {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let mut b = bridge.borrow_mut();
+
+    // Check if already created
+    let key = "__msdf_builtin__".to_string();
+    if let Some(&tex_id) = b.texture_path_to_id.get(&key) {
+        // Already created — find the font ID
+        // The font was registered with the texture_id as the lookup key
+        let font_id_key = format!("__msdf_font_{tex_id}__");
+        if let Some(&font_id) = b.texture_path_to_id.get(&font_id_key) {
+            let shader_id = b.msdf_shader_id.unwrap_or(0);
+            return format!(
+                "{{\"fontId\":{},\"textureId\":{},\"shaderId\":{}}}",
+                font_id, tex_id, shader_id
+            );
+        }
+    }
+
+    // Assign texture ID
+    let tex_id = b.next_texture_id;
+    b.next_texture_id += 1;
+    b.texture_path_to_id.insert(key, tex_id);
+
+    // Generate MSDF atlas data and register font
+    let (_pixels, _width, _height, mut font) =
+        crate::renderer::msdf::generate_builtin_msdf_font();
+    font.texture_id = tex_id;
+
+    // Register font in the store
+    let font_id = b.msdf_fonts.register(font);
+    b.texture_path_to_id
+        .insert(format!("__msdf_font_{tex_id}__"), font_id);
+
+    // Queue the texture for GPU upload.
+    // dev.rs will call generate_builtin_msdf_font() again and upload pixels.
+    b.msdf_builtin_queue.push((font_id, tex_id));
+
+    // Ensure MSDF shader exists
+    let shader_id = ensure_msdf_shader(&mut b);
+
+    format!(
+        "{{\"fontId\":{},\"textureId\":{},\"shaderId\":{}}}",
+        font_id, tex_id, shader_id
+    )
+}
+
+/// Get MSDF glyph metrics for a text string. Returns JSON array of glyph info.
+/// Each glyph: { "uv": [x, y, w, h], "advance": N, "width": N, "height": N, "offsetX": N, "offsetY": N }
+#[deno_core::op2]
+#[string]
+pub fn op_get_msdf_glyphs(
+    state: &mut OpState,
+    font_id: u32,
+    #[string] text: &str,
+) -> String {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let b = bridge.borrow();
+
+    let font = match b.msdf_fonts.get(font_id) {
+        Some(f) => f,
+        None => return "[]".to_string(),
+    };
+
+    let mut entries = Vec::new();
+    for ch in text.chars() {
+        if let Some(glyph) = font.get_glyph(ch) {
+            entries.push(format!(
+                "{{\"char\":{},\"uv\":[{},{},{},{}],\"advance\":{},\"width\":{},\"height\":{},\"offsetX\":{},\"offsetY\":{}}}",
+                ch as u32,
+                glyph.uv_x, glyph.uv_y, glyph.uv_w, glyph.uv_h,
+                glyph.advance, glyph.width, glyph.height,
+                glyph.offset_x, glyph.offset_y,
+            ));
+        }
+    }
+
+    format!("[{}]", entries.join(","))
+}
+
+/// Get MSDF font info. Returns JSON: { "fontSize": N, "lineHeight": N, "distanceRange": N, "textureId": N }
+#[deno_core::op2]
+#[string]
+pub fn op_get_msdf_font_info(state: &mut OpState, font_id: u32) -> String {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let b = bridge.borrow();
+
+    match b.msdf_fonts.get(font_id) {
+        Some(font) => format!(
+            "{{\"fontSize\":{},\"lineHeight\":{},\"distanceRange\":{},\"textureId\":{}}}",
+            font.font_size, font.line_height, font.distance_range, font.texture_id,
+        ),
+        None => "null".to_string(),
+    }
+}
+
+/// Load an MSDF font from an atlas image path + metrics JSON string.
+/// Returns a JSON string: { "fontId": N, "textureId": M, "shaderId": S }
+#[deno_core::op2]
+#[string]
+pub fn op_load_msdf_font(
+    state: &mut OpState,
+    #[string] atlas_path: &str,
+    #[string] metrics_json: &str,
+) -> String {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let mut b = bridge.borrow_mut();
+
+    // Resolve atlas path
+    let resolved = if std::path::Path::new(atlas_path).is_absolute() {
+        atlas_path.to_string()
+    } else {
+        b.base_dir.join(atlas_path).to_string_lossy().to_string()
+    };
+
+    // Load atlas texture (reuse existing if already loaded)
+    let tex_id = if let Some(&id) = b.texture_path_to_id.get(&resolved) {
+        id
+    } else {
+        let id = b.next_texture_id;
+        b.next_texture_id += 1;
+        b.texture_path_to_id.insert(resolved.clone(), id);
+        b.texture_load_queue.push((resolved, id));
+        id
+    };
+
+    // Parse metrics
+    let font = match crate::renderer::msdf::parse_msdf_metrics(metrics_json, tex_id) {
+        Ok(f) => f,
+        Err(e) => {
+            return format!("{{\"error\":\"{}\"}}", e);
+        }
+    };
+
+    let font_id = b.msdf_fonts.register(font);
+    let shader_id = ensure_msdf_shader(&mut b);
+
+    format!(
+        "{{\"fontId\":{},\"textureId\":{},\"shaderId\":{}}}",
+        font_id, tex_id, shader_id
+    )
+}
+
+/// Ensure the MSDF shader exists in the bridge state. Returns the shader ID.
+fn ensure_msdf_shader(b: &mut RenderBridgeState) -> u32 {
+    if let Some(id) = b.msdf_shader_id {
+        return id;
+    }
+
+    let id = b.next_shader_id;
+    b.next_shader_id += 1;
+    b.msdf_shader_id = Some(id);
+
+    let source = crate::renderer::msdf::MSDF_FRAGMENT_SOURCE.to_string();
+    b.msdf_shader_queue.push((id, source));
+
+    id
+}
+
 deno_core::extension!(
     render_ext,
     ops = [
@@ -863,5 +1041,9 @@ deno_core::extension!(
         op_clear_occluders,
         op_add_directional_light,
         op_add_spot_light,
+        op_create_msdf_builtin_font,
+        op_get_msdf_glyphs,
+        op_get_msdf_font_info,
+        op_load_msdf_font,
     ],
 );

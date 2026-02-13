@@ -71,6 +71,7 @@ impl MsdfFont {
 }
 
 /// MSDF font storage, keyed by a font ID.
+#[derive(Clone)]
 pub struct MsdfFontStore {
     fonts: HashMap<u32, MsdfFont>,
     next_id: u32,
@@ -105,6 +106,11 @@ impl MsdfFontStore {
         self.fonts.get(&id)
     }
 }
+
+/// The MSDF fragment shader source (used with ShaderStore::create).
+/// This is the fragment portion only; the standard vertex preamble and
+/// ShaderParams uniform are prepended by the ShaderStore automatically.
+pub const MSDF_FRAGMENT_SOURCE: &str = include_str!("shaders/msdf.wgsl");
 
 // ============================================================================
 // Built-in MSDF font generation from CP437 bitmap data

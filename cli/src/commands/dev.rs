@@ -229,6 +229,39 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
             }
         }
 
+        // Process MSDF builtin font texture creation requests
+        let pending_msdf_builtin: Vec<(u32, u32)> = {
+            let mut bridge = bridge_for_loop.borrow_mut();
+            std::mem::take(&mut bridge.msdf_builtin_queue)
+        };
+
+        if let Some(ref mut renderer) = state.renderer {
+            for (_font_id, tex_id) in pending_msdf_builtin {
+                let (pixels, width, height, _font) =
+                    arcane_engine::renderer::msdf::generate_builtin_msdf_font();
+                renderer.textures.upload_raw(
+                    &renderer.gpu,
+                    &renderer.sprites.texture_bind_group_layout,
+                    tex_id,
+                    &pixels,
+                    width,
+                    height,
+                );
+            }
+        }
+
+        // Process MSDF shader creation requests
+        let pending_msdf_shaders: Vec<(u32, String)> = {
+            let mut bridge = bridge_for_loop.borrow_mut();
+            std::mem::take(&mut bridge.msdf_shader_queue)
+        };
+
+        if let Some(ref mut renderer) = state.renderer {
+            for (id, source) in pending_msdf_shaders {
+                renderer.shaders.create(&renderer.gpu, id, "msdf", &source);
+            }
+        }
+
         // Process custom shader creation requests
         let pending_shaders: Vec<(u32, String, String)> = {
             let mut bridge = bridge_for_loop.borrow_mut();
@@ -578,6 +611,8 @@ fn reload_runtime(
         b.occluders.clear();
         b.directional_lights.clear();
         b.spot_lights.clear();
+        b.msdf_builtin_queue.clear();
+        b.msdf_shader_queue.clear();
 
         // Clear solid texture cache so they can be recreated with new colors.
         // Keep file texture cache to avoid re-uploading large images.
