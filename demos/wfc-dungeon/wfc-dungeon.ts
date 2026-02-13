@@ -2,13 +2,11 @@
  * WFC Dungeon Demo — Phase 18: Procedural Generation
  *
  * Demonstrates Wave Function Collapse procedural dungeon generation:
- * - Tileset: walls, floors, doors, decorations (solid color textures)
- * - Reachability constraint (all walkable tiles connected)
- * - Exactly one entrance and one exit
- * - Border constraint (walls on all edges)
+ * - WFC generates wall/floor layout with adjacency rules
+ * - Post-processing places entrance, exit, decorations on floor tiles
+ * - Reachability constraint ensures all walkable tiles are connected
+ * - Border constraint forces walls on all edges
  * - Regenerate on R keypress
- * - Visualize as tilemap grid
- * - Show constraint satisfaction status
  *
  * Controls:
  * - R: Regenerate dungeon
@@ -31,17 +29,14 @@ import {
 } from "../../runtime/rendering/index.ts";
 import {
   generate,
-  reachability,
-  exactCount,
-  border,
   countTile,
-  findTile,
 } from "../../runtime/procgen/index.ts";
 import type { TileSet, WFCGrid, WFCResult } from "../../runtime/procgen/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
+import { seed as prngSeed, randomInt } from "../../runtime/state/prng.ts";
 
 // ---------------------------------------------------------------------------
-// Tile IDs
+// Tile IDs (for display — WFC only uses WALL=0, FLOOR=1)
 // ---------------------------------------------------------------------------
 
 const WALL = 0;
@@ -51,40 +46,108 @@ const EXIT = 3;
 const DECORATION = 4;
 
 // ---------------------------------------------------------------------------
-// Tileset definition
+// Tileset definition — WFC only places walls and floors
 // ---------------------------------------------------------------------------
 
-// Walls can neighbor anything. Floors can neighbor anything.
-// Entrance/exit/decoration act like floor for adjacency.
-const allTiles = [WALL, FLOOR, ENTRANCE, EXIT, DECORATION];
-
+// Floors prefer to cluster: floors neighbor floors or walls.
+// Walls can neighbor anything.
 const tileset: TileSet = {
   tiles: {
-    [WALL]: { north: allTiles, east: allTiles, south: allTiles, west: allTiles },
-    [FLOOR]: { north: allTiles, east: allTiles, south: allTiles, west: allTiles },
-    [ENTRANCE]: { north: allTiles, east: allTiles, south: allTiles, west: allTiles },
-    [EXIT]: { north: allTiles, east: allTiles, south: allTiles, west: allTiles },
-    [DECORATION]: { north: allTiles, east: allTiles, south: allTiles, west: allTiles },
+    [WALL]: { north: [WALL, FLOOR], east: [WALL, FLOOR], south: [WALL, FLOOR], west: [WALL, FLOOR] },
+    [FLOOR]: { north: [WALL, FLOOR], east: [WALL, FLOOR], south: [WALL, FLOOR], west: [WALL, FLOOR] },
   },
   weights: {
-    [WALL]: 4,
-    [FLOOR]: 8,
-    [ENTRANCE]: 1,
-    [EXIT]: 1,
-    [DECORATION]: 2,
+    [WALL]: 3,
+    [FLOOR]: 5,
   },
 };
 
 // ---------------------------------------------------------------------------
-// Constraints
+// Post-processing: enforce border, keep largest region, place features
 // ---------------------------------------------------------------------------
 
-const constraints = [
-  border(WALL),
-  exactCount(ENTRANCE, 1),
-  exactCount(EXIT, 1),
-  reachability((id) => id !== WALL),
-];
+function postProcess(grid: WFCGrid, placementSeed: number): WFCGrid {
+  const { width: w, height: h, tiles } = grid;
+
+  // 1. Force border to walls
+  for (let x = 0; x < w; x++) {
+    tiles[0][x] = WALL;
+    tiles[h - 1][x] = WALL;
+  }
+  for (let y = 0; y < h; y++) {
+    tiles[y][0] = WALL;
+    tiles[y][w - 1] = WALL;
+  }
+
+  // 2. Flood-fill to find connected floor regions, keep only the largest
+  const visited = Array.from({ length: h }, () => new Array(w).fill(false));
+  const regions: { x: number; y: number }[][] = [];
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (tiles[y][x] === FLOOR && !visited[y][x]) {
+        const region: { x: number; y: number }[] = [];
+        const stack = [{ x, y }];
+        while (stack.length > 0) {
+          const p = stack.pop()!;
+          if (p.x < 0 || p.x >= w || p.y < 0 || p.y >= h) continue;
+          if (visited[p.y][p.x] || tiles[p.y][p.x] !== FLOOR) continue;
+          visited[p.y][p.x] = true;
+          region.push(p);
+          stack.push({ x: p.x + 1, y: p.y }, { x: p.x - 1, y: p.y });
+          stack.push({ x: p.x, y: p.y + 1 }, { x: p.x, y: p.y - 1 });
+        }
+        regions.push(region);
+      }
+    }
+  }
+
+  // Keep only the largest region, fill smaller ones with walls
+  if (regions.length > 1) {
+    regions.sort((a, b) => b.length - a.length);
+    for (let i = 1; i < regions.length; i++) {
+      for (const p of regions[i]) {
+        tiles[p.y][p.x] = WALL;
+      }
+    }
+  }
+
+  const floors = regions.length > 0 ? [...regions[0]] : [];
+  if (floors.length < 3) return grid;
+
+  // 3. Place entrance, exit, decorations using seeded PRNG
+  let rng = prngSeed(placementSeed);
+
+  // Entrance — random floor tile
+  let idx: number;
+  [idx, rng] = randomInt(rng, 0, floors.length - 1);
+  const entrance = floors[idx];
+  tiles[entrance.y][entrance.x] = ENTRANCE;
+  floors.splice(idx, 1);
+
+  // Exit — far from entrance
+  floors.sort((a, b) => {
+    const da = Math.abs(a.x - entrance.x) + Math.abs(a.y - entrance.y);
+    const db = Math.abs(b.x - entrance.x) + Math.abs(b.y - entrance.y);
+    return db - da;
+  });
+  const farPool = Math.max(1, Math.floor(floors.length * 0.2));
+  [idx, rng] = randomInt(rng, 0, farPool - 1);
+  const exit = floors[idx];
+  tiles[exit.y][exit.x] = EXIT;
+  floors.splice(idx, 1);
+
+  // Decorations — 10% of remaining floors
+  const decoCount = Math.max(1, Math.floor(floors.length * 0.1));
+  for (let i = 0; i < decoCount && floors.length > 0; i++) {
+    [idx, rng] = randomInt(rng, 0, floors.length - 1);
+    const deco = floors[idx];
+    tiles[deco.y][deco.x] = DECORATION;
+    floors.splice(idx, 1);
+  }
+
+  return grid;
+}
 
 // ---------------------------------------------------------------------------
 // Generation state
@@ -105,25 +168,21 @@ function generateDungeon(): void {
     width: GRID_W,
     height: GRID_H,
     seed: currentSeed,
-    constraints,
-    maxRetries: 500,
-    maxBacktracks: 5000,
   });
-  currentResult = result;
 
   if (result.success && result.grid) {
-    const entrances = findTile(result.grid, ENTRANCE);
-    const exits = findTile(result.grid, EXIT);
+    // Post-process: place entrance, exit, decorations
+    postProcess(result.grid, currentSeed * 7 + 13);
+    currentResult = result;
     const floorCount = countTile(result.grid, FLOOR);
     statusText =
       `Seed: ${currentSeed} | ` +
       `${result.elapsed}ms | ` +
       `Retries: ${result.retries} | ` +
-      `Floors: ${floorCount} | ` +
-      `Entrance: (${entrances[0]?.x},${entrances[0]?.y}) | ` +
-      `Exit: (${exits[0]?.x},${exits[0]?.y})`;
+      `Floors: ${floorCount}`;
   } else {
-    statusText = `Generation FAILED (seed ${currentSeed}, ${result.retries} retries, ${result.elapsed}ms)`;
+    currentResult = result;
+    statusText = `FAILED (seed ${currentSeed}, ${result.retries} retries, ${result.elapsed}ms)`;
   }
 }
 
@@ -138,11 +197,11 @@ let texExit = 0;
 let texDecoration = 0;
 
 function initTextures(): void {
-  texWall = createSolidTexture(40, 40, 50, 255);       // dark gray
-  texFloor = createSolidTexture(180, 170, 140, 255);    // tan
-  texEntrance = createSolidTexture(80, 200, 80, 255);   // green
-  texExit = createSolidTexture(200, 80, 80, 255);       // red
-  texDecoration = createSolidTexture(100, 80, 160, 255); // purple
+  texWall = createSolidTexture("wall", 40, 40, 50, 255);
+  texFloor = createSolidTexture("floor", 180, 170, 140, 255);
+  texEntrance = createSolidTexture("entrance", 80, 200, 80, 255);
+  texExit = createSolidTexture("exit", 200, 80, 80, 255);
+  texDecoration = createSolidTexture("decoration", 100, 80, 160, 255);
 }
 
 function tileTexture(tileId: number): number {
@@ -166,8 +225,8 @@ onFrame(() => {
   if (!initialized) {
     initTextures();
     generateDungeon();
-    const { width: vpw, height: vph } = getViewportSize();
-    setCamera(vpw / 2, vph / 2);
+    const vp = getViewportSize();
+    setCamera(vp.width / 2, vp.height / 2);
     initialized = true;
   }
 
@@ -175,7 +234,7 @@ onFrame(() => {
   clearSprites();
 
   // Input: regenerate
-  if (isKeyPressed("KeyR")) {
+  if (isKeyPressed("r")) {
     currentSeed++;
     generateDungeon();
   }
@@ -192,26 +251,28 @@ onFrame(() => {
 
   // Input: zoom
   let zoom = cam.zoom;
-  if (isKeyDown("KeyZ")) zoom = Math.min(zoom + dt, 3);
-  if (isKeyDown("KeyX")) zoom = Math.max(zoom - dt, 0.5);
+  if (isKeyDown("z")) zoom = Math.min(zoom + dt, 3);
+  if (isKeyDown("x")) zoom = Math.max(zoom - dt, 0.5);
   setCamera(camX, camY, zoom);
 
   // Draw dungeon grid
   if (currentResult?.grid) {
     const grid = currentResult.grid;
-    const { width: vpw, height: vph } = getViewportSize();
-    const offsetX = (vpw - GRID_W * TILE_SIZE) / 2;
-    const offsetY = (vph - GRID_H * TILE_SIZE) / 2 + 20;
+    const vp = getViewportSize();
+    const offsetX = (vp.width - GRID_W * TILE_SIZE) / 2;
+    const offsetY = (vp.height - GRID_H * TILE_SIZE) / 2 + 20;
 
-    for (let y = 0; y < grid.height; y++) {
-      for (let x = 0; x < grid.width; x++) {
-        const tileId = grid.tiles[y][x];
-        drawSprite(
-          tileTexture(tileId),
-          offsetX + x * TILE_SIZE + TILE_SIZE / 2,
-          offsetY + y * TILE_SIZE + TILE_SIZE / 2,
-          { layer: 0, scaleX: TILE_SIZE, scaleY: TILE_SIZE },
-        );
+    for (let gy = 0; gy < grid.height; gy++) {
+      for (let gx = 0; gx < grid.width; gx++) {
+        const tileId = grid.tiles[gy][gx];
+        drawSprite({
+          textureId: tileTexture(tileId),
+          x: offsetX + gx * TILE_SIZE,
+          y: offsetY + gy * TILE_SIZE,
+          w: TILE_SIZE,
+          h: TILE_SIZE,
+          layer: 0,
+        });
       }
     }
   }
@@ -221,19 +282,19 @@ onFrame(() => {
   drawText("R: Regenerate | Arrows: Pan | Z/X: Zoom", 10, 26, { layer: 100 });
 
   // Draw legend
-  const { width: vpw } = getViewportSize();
-  const legendX = vpw - 160;
+  const vp2 = getViewportSize();
+  const legendX = vp2.width - 160;
   drawText("Legend:", legendX, 10, { layer: 100 });
-  drawSprite(texWall, legendX + 8, 30, { layer: 100, scaleX: 12, scaleY: 12 });
-  drawText("Wall", legendX + 20, 26, { layer: 100 });
-  drawSprite(texFloor, legendX + 8, 46, { layer: 100, scaleX: 12, scaleY: 12 });
-  drawText("Floor", legendX + 20, 42, { layer: 100 });
-  drawSprite(texEntrance, legendX + 8, 62, { layer: 100, scaleX: 12, scaleY: 12 });
-  drawText("Entrance", legendX + 20, 58, { layer: 100 });
-  drawSprite(texExit, legendX + 8, 78, { layer: 100, scaleX: 12, scaleY: 12 });
-  drawText("Exit", legendX + 20, 74, { layer: 100 });
-  drawSprite(texDecoration, legendX + 8, 94, { layer: 100, scaleX: 12, scaleY: 12 });
-  drawText("Decor", legendX + 20, 90, { layer: 100 });
+  drawSprite({ textureId: texWall, x: legendX, y: 26, w: 12, h: 12, layer: 100 });
+  drawText("Wall", legendX + 16, 26, { layer: 100 });
+  drawSprite({ textureId: texFloor, x: legendX, y: 42, w: 12, h: 12, layer: 100 });
+  drawText("Floor", legendX + 16, 42, { layer: 100 });
+  drawSprite({ textureId: texEntrance, x: legendX, y: 58, w: 12, h: 12, layer: 100 });
+  drawText("Entrance", legendX + 16, 58, { layer: 100 });
+  drawSprite({ textureId: texExit, x: legendX, y: 74, w: 12, h: 12, layer: 100 });
+  drawText("Exit", legendX + 16, 74, { layer: 100 });
+  drawSprite({ textureId: texDecoration, x: legendX, y: 90, w: 12, h: 12, layer: 100 });
+  drawText("Decor", legendX + 16, 90, { layer: 100 });
 });
 
 // ---------------------------------------------------------------------------
@@ -243,6 +304,13 @@ onFrame(() => {
 registerAgent({
   name: "wfc-dungeon",
   version: "1.0.0",
+  getState: () => ({
+    seed: currentSeed,
+    success: currentResult?.success ?? false,
+    grid: currentResult?.grid
+      ? { width: currentResult.grid.width, height: currentResult.grid.height }
+      : null,
+  }),
   actions: {
     regenerate: {
       description: "Generate a new dungeon with the next seed",

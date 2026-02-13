@@ -792,7 +792,7 @@ Make Arcane the definitive agent-driven game development platform. Expose the en
 
 ## Phase 18: Procedural Generation
 
-**Status: Planned**
+**Status: COMPLETE** ✅
 
 First-class procedural content generation with Wave Function Collapse. Agent-defined constraints make PCG a testable, iterative workflow — not a black box.
 
@@ -832,7 +832,7 @@ First-class procedural content generation with Wave Function Collapse. Agent-def
 
 ## Phase 19: Lighting 2.0
 
-**Status: Planned**
+**Status: COMPLETE** ✅
 
 Replace basic point-light uniforms with real-time 2D global illumination via Radiance Cascades. Massive visual upgrade — fully describable in code, deterministic, screenshot-testable.
 
