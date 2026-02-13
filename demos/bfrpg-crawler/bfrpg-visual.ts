@@ -14,6 +14,7 @@ import {
   setAmbientLight,
   addPointLight,
   clearLights,
+  getViewportSize,
 } from "../../runtime/rendering/index.ts";
 import { drawBar, drawPanel, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
@@ -31,7 +32,7 @@ import type { BFRPGState } from "./types.ts";
 
 const TILE_SIZE = 16.0;
 const SEED = 12345;
-const TEXT_SCALE = HUDLayout.TEXT_SCALE;
+const TEXT_SCALE = 1.5; // Reduced from HUDLayout.TEXT_SCALE (2) for better readability
 
 // Textures
 const TEX_WALL = createSolidTexture("wall", 60, 60, 80);
@@ -140,7 +141,7 @@ onFrame(() => {
   setCamera(
     state.character.pos.x * TILE_SIZE + TILE_SIZE / 2.0,
     state.character.pos.y * TILE_SIZE + TILE_SIZE / 2.0,
-    8.0, // Zoom level: higher = bigger on screen
+    1.0, // Zoom level: 1.0 = normal scale, higher = bigger on screen
   );
 
   // Lighting
@@ -199,8 +200,9 @@ function handleInput() {
 
   // Combat actions (when in combat phase)
   if (state.phase === "combat" && state.combat) {
-    // TODO: Implement combat UI actions (A/D/S keys)
-    // For now, just note that combat is active
+    // TODO: Implement actual combat logic with BFRPGCombat system
+    // For now, combat auto-resolves on next movement
+    // Future: 1 = Attack, 2 = Dodge, 3 = Spell, etc.
   }
 }
 
@@ -287,6 +289,7 @@ function renderHUD() {
   const { character, dungeon, log } = state;
 
   const font = getDefaultFont();
+  const viewport = getViewportSize();
 
   // Character info panel (top-left, screen-space)
   const panelX = 10.0;
@@ -371,8 +374,8 @@ function renderHUD() {
 
   // Message log (bottom panel, screen-space)
   const logPanelX = 10.0;
-  const logPanelY = 550.0;
-  const logPanelW = 780.0;
+  const logPanelY = viewport.height - 50.0; // 40px panel height + 10px margin
+  const logPanelW = viewport.width - 20.0;
   const logPanelH = 40.0;
 
   drawPanel(logPanelX, logPanelY, logPanelW, logPanelH, {
@@ -388,14 +391,41 @@ function renderHUD() {
   for (let i = 0; i < recentLogs.length; i++) {
     drawText(recentLogs[i].message, logPanelX + 10.0, logPanelY + 10.0 + i * 12.0, { font, scale: TEXT_SCALE, layer: 11, screenSpace: true });
   }
+
+  // Controls help panel (bottom-right)
+  const helpPanelW = 160.0;
+  const helpPanelH = 90.0;
+  const helpPanelX = viewport.width - helpPanelW - 10.0;
+  const helpPanelY = viewport.height - helpPanelH - 10.0;
+
+  drawPanel(helpPanelX, helpPanelY, helpPanelW, helpPanelH, {
+    fillColor: Colors.HUD_BG,
+    borderColor: Colors.HUD_BG_LIGHT,
+    borderWidth: 2.0,
+    layer: 10,
+    screenSpace: true,
+  });
+
+  drawText("Controls:", helpPanelX + 10.0, helpPanelY + 10.0, { font, scale: TEXT_SCALE, layer: 11, screenSpace: true });
+  drawText("WASD - Move", helpPanelX + 10.0, helpPanelY + 25.0, { font, scale: TEXT_SCALE * 0.8, layer: 11, screenSpace: true });
+  drawText("R - Rest", helpPanelX + 10.0, helpPanelY + 38.0, { font, scale: TEXT_SCALE * 0.8, layer: 11, screenSpace: true });
+  drawText("> - Stairs", helpPanelX + 10.0, helpPanelY + 51.0, { font, scale: TEXT_SCALE * 0.8, layer: 11, screenSpace: true });
+  drawText("1/2 - Combat", helpPanelX + 10.0, helpPanelY + 64.0, { font, scale: TEXT_SCALE * 0.8, layer: 11, screenSpace: true });
 }
 
 function renderCombatUI() {
   // TODO: Implement combat UI
   // For now, just show a simple indicator
   const font = getDefaultFont();
+  const viewport = getViewportSize();
 
-  drawPanel(600.0, 10.0, 190.0, 80.0, {
+  // Position panel on right side
+  const panelW = 190.0;
+  const panelH = 80.0;
+  const panelX = viewport.width - panelW - 10.0;
+  const panelY = 10.0;
+
+  drawPanel(panelX, panelY, panelW, panelH, {
     fillColor: Colors.HUD_BG,
     borderColor: Colors.DANGER,
     borderWidth: 3.0,
@@ -403,18 +433,19 @@ function renderCombatUI() {
     screenSpace: true,
   });
 
-  drawText("COMBAT!", 620.0, 20.0, { font, scale: TEXT_SCALE, layer: 11, screenSpace: true });
+  drawText("COMBAT!", panelX + 20.0, panelY + 10.0, { font, scale: TEXT_SCALE, layer: 11, screenSpace: true });
 
-  drawText("A - Attack", 620.0, 40.0, { font, scale: TEXT_SCALE, layer: 11, screenSpace: true });
+  drawText("1 - Attack", panelX + 20.0, panelY + 30.0, { font, scale: TEXT_SCALE, layer: 11, screenSpace: true });
 
-  drawText("D - Dodge", 620.0, 55.0, { font, scale: TEXT_SCALE, layer: 11, screenSpace: true });
+  drawText("2 - Dodge", panelX + 20.0, panelY + 45.0, { font, scale: TEXT_SCALE, layer: 11, screenSpace: true });
 }
 
 function renderDeathScreen() {
   const font = getDefaultFont();
+  const viewport = getViewportSize();
 
   // Darken overlay
-  drawPanel(0.0, 0.0, 800.0, 600.0, {
+  drawPanel(0.0, 0.0, viewport.width, viewport.height, {
     fillColor: { r: 0.0, g: 0.0, b: 0.0, a: 0.8 },
     borderColor: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
     borderWidth: 0.0,
@@ -422,29 +453,33 @@ function renderDeathScreen() {
     screenSpace: true,
   });
 
-  // Death message
-  drawText("YOU DIED", 320.0, 250.0, { font, scale: TEXT_SCALE, tint: Colors.LOSE, layer: 21, screenSpace: true });
+  // Death message (centered)
+  const centerX = viewport.width / 2.0;
+  const centerY = viewport.height / 2.0;
+
+  drawText("YOU DIED", centerX - 70.0, centerY - 30.0, { font, scale: TEXT_SCALE, tint: Colors.LOSE, layer: 21, screenSpace: true });
 
   drawText(
     `Floor reached: ${state.dungeon.floor}`,
-    280.0,
-    280.0,
+    centerX - 90.0,
+    centerY,
     { font, scale: TEXT_SCALE, layer: 21, screenSpace: true }
   );
 
   drawText(
     `Monsters slain: ${state.character.kills}`,
-    270.0,
-    300.0,
+    centerX - 95.0,
+    centerY + 20.0,
     { font, scale: TEXT_SCALE, layer: 21, screenSpace: true }
   );
 }
 
 function renderVictoryScreen() {
   const font = getDefaultFont();
+  const viewport = getViewportSize();
 
   // Victory overlay
-  drawPanel(0.0, 0.0, 800.0, 600.0, {
+  drawPanel(0.0, 0.0, viewport.width, viewport.height, {
     fillColor: { r: 20/255, g: 30/255, b: 20/255, a: 0.9 },
     borderColor: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
     borderWidth: 0.0,
@@ -452,27 +487,30 @@ function renderVictoryScreen() {
     screenSpace: true,
   });
 
-  // Victory message
-  drawText("VICTORY!", 320.0, 250.0, { font, scale: TEXT_SCALE, tint: Colors.WIN, layer: 21, screenSpace: true });
+  // Victory message (centered)
+  const centerX = viewport.width / 2.0;
+  const centerY = viewport.height / 2.0;
+
+  drawText("VICTORY!", centerX - 65.0, centerY - 30.0, { font, scale: TEXT_SCALE, tint: Colors.WIN, layer: 21, screenSpace: true });
 
   drawText(
     `You conquered ${state.dungeon.floor} floors!`,
-    240.0,
-    280.0,
+    centerX - 130.0,
+    centerY,
     { font, scale: TEXT_SCALE, layer: 21, screenSpace: true }
   );
 
   drawText(
     `Final level: ${state.character.level}`,
-    280.0,
-    300.0,
+    centerX - 85.0,
+    centerY + 20.0,
     { font, scale: TEXT_SCALE, layer: 21, screenSpace: true }
   );
 
   drawText(
     `Total kills: ${state.character.kills}`,
-    280.0,
-    320.0,
+    centerX - 80.0,
+    centerY + 40.0,
     { font, scale: TEXT_SCALE, layer: 21, screenSpace: true }
   );
 }
