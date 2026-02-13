@@ -19,6 +19,7 @@ import {
   isKeyPressed,
   isKeyDown,
   getMousePosition,
+  isMouseButtonDown,
   drawText,
 } from "../../runtime/rendering/index.ts";
 import {
@@ -149,7 +150,7 @@ onFrame(() => {
   setCamera(vp.width / 2, vp.height / 2);
 
   const mouse = getMousePosition();
-  const mouseDown = isKeyDown("mouse0");
+  const mouseDown = isMouseButtonDown(0); // Left mouse button
   const tabPressed = isKeyPressed("Tab");
   const shiftDown = isKeyDown("Shift");
   const enterPressed = isKeyPressed("Enter");

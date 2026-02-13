@@ -104,8 +104,13 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
             bridge.viewport_width = renderer.camera.viewport_size[0];
             bridge.viewport_height = renderer.camera.viewport_size[1];
             bridge.scale_factor = renderer.scale_factor;
-            bridge.camera_x = renderer.camera.x;
-            bridge.camera_y = renderer.camera.y;
+            // Only sync clamped camera back if TS hasn't called setCamera() since last frame.
+            // Without this guard, a setCamera() during module init gets clobbered by the
+            // renderer's default (0, 0) before the renderer ever reads the TS value.
+            if !bridge.camera_dirty {
+                bridge.camera_x = renderer.camera.x;
+                bridge.camera_y = renderer.camera.y;
+            }
             // Sync clear color from bridge → renderer (TS can set it via op)
             renderer.clear_color = bridge.clear_color;
         }
@@ -136,6 +141,8 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
             bridge.keys_pressed = state.input.keys_pressed.clone();
             bridge.mouse_x = state.input.mouse_x;
             bridge.mouse_y = state.input.mouse_y;
+            bridge.mouse_buttons_down = state.input.mouse_buttons.clone();
+            bridge.mouse_buttons_pressed = state.input.mouse_buttons_pressed.clone();
             bridge.delta_time = state.delta_time;
         }
 
@@ -378,6 +385,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
             state.camera_y = bridge.camera_y;
             state.camera_zoom = bridge.camera_zoom;
             state.camera_bounds = bridge.camera_bounds;
+            bridge.camera_dirty = false;
 
             // Sync lighting state to renderer
             if let Some(ref mut renderer) = state.renderer {

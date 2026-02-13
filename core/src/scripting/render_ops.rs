@@ -28,12 +28,16 @@ pub struct RenderBridgeState {
     pub camera_x: f32,
     pub camera_y: f32,
     pub camera_zoom: f32,
+    /// True when TS called setCamera() this frame (prevents sync-back from overwriting it).
+    pub camera_dirty: bool,
     pub delta_time: f64,
     /// Input state snapshot (updated each frame by the event loop).
     pub keys_down: std::collections::HashSet<String>,
     pub keys_pressed: std::collections::HashSet<String>,
     pub mouse_x: f32,
     pub mouse_y: f32,
+    pub mouse_buttons_down: std::collections::HashSet<u8>,
+    pub mouse_buttons_pressed: std::collections::HashSet<u8>,
     /// Pending texture load requests (path → result channel).
     pub texture_load_queue: Vec<(String, u32)>,
     /// Base directory for resolving relative texture paths.
@@ -121,11 +125,14 @@ impl RenderBridgeState {
             camera_x: 0.0,
             camera_y: 0.0,
             camera_zoom: 1.0,
+            camera_dirty: false,
             delta_time: 0.0,
             keys_down: std::collections::HashSet::new(),
             keys_pressed: std::collections::HashSet::new(),
             mouse_x: 0.0,
             mouse_y: 0.0,
+            mouse_buttons_down: std::collections::HashSet::new(),
+            mouse_buttons_pressed: std::collections::HashSet::new(),
             texture_load_queue: Vec::new(),
             base_dir,
             next_texture_id: 1,
@@ -240,6 +247,7 @@ pub fn op_set_camera(state: &mut OpState, x: f64, y: f64, zoom: f64) {
     b.camera_x = x as f32;
     b.camera_y = y as f32;
     b.camera_zoom = zoom as f32;
+    b.camera_dirty = true;
 }
 
 /// Get camera state as [x, y, zoom].
@@ -298,6 +306,22 @@ pub fn op_get_mouse_position(state: &mut OpState) -> Vec<f64> {
     let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
     let b = bridge.borrow();
     vec![b.mouse_x as f64, b.mouse_y as f64]
+}
+
+/// Check if a mouse button is currently held down.
+/// Button 0 = left, 1 = right, 2 = middle.
+#[deno_core::op2(fast)]
+pub fn op_is_mouse_button_down(state: &mut OpState, button: u8) -> bool {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow().mouse_buttons_down.contains(&button)
+}
+
+/// Check if a mouse button was pressed this frame.
+/// Button 0 = left, 1 = right, 2 = middle.
+#[deno_core::op2(fast)]
+pub fn op_is_mouse_button_pressed(state: &mut OpState, button: u8) -> bool {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow().mouse_buttons_pressed.contains(&button)
 }
 
 /// Get the delta time (seconds since last frame).
@@ -1043,6 +1067,8 @@ deno_core::extension!(
         op_is_key_down,
         op_is_key_pressed,
         op_get_mouse_position,
+        op_is_mouse_button_down,
+        op_is_mouse_button_pressed,
         op_get_delta_time,
         op_create_solid_texture,
         op_create_tilemap,

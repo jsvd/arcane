@@ -68,6 +68,51 @@ export function getMousePosition(): MousePosition {
 }
 
 /**
+ * Check if a mouse button is currently held down (returns true every frame while held).
+ * Returns false in headless mode.
+ *
+ * Button numbers:
+ * - 0 = Left mouse button
+ * - 1 = Right mouse button
+ * - 2 = Middle mouse button (wheel click)
+ *
+ * @param button - Mouse button number (0 = left, 1 = right, 2 = middle).
+ * @returns true if the button is currently held down, false otherwise.
+ *
+ * @example
+ * if (isMouseButtonDown(0)) {
+ *   // Left mouse button is held
+ * }
+ */
+export function isMouseButtonDown(button: number): boolean {
+  if (!hasRenderOps) return false;
+  return (globalThis as any).Deno.core.ops.op_is_mouse_button_down(button);
+}
+
+/**
+ * Check if a mouse button was pressed this frame (transitioned from up to down).
+ * Unlike {@link isMouseButtonDown}, this returns true only on the first frame the button is pressed.
+ * Returns false in headless mode.
+ *
+ * Button numbers:
+ * - 0 = Left mouse button
+ * - 1 = Right mouse button
+ * - 2 = Middle mouse button (wheel click)
+ *
+ * @param button - Mouse button number (0 = left, 1 = right, 2 = middle).
+ * @returns true if the button was just pressed this frame, false otherwise.
+ *
+ * @example
+ * if (isMouseButtonPressed(0)) {
+ *   // Left mouse button was just clicked
+ * }
+ */
+export function isMouseButtonPressed(button: number): boolean {
+  if (!hasRenderOps) return false;
+  return (globalThis as any).Deno.core.ops.op_is_mouse_button_pressed(button);
+}
+
+/**
  * Get the current viewport size in logical pixels (DPI-independent).
  * On a 2x Retina display with an 800x600 window, this returns `{ width: 800, height: 600 }`,
  * not the physical pixel dimensions.

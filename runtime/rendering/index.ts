@@ -29,6 +29,8 @@ export {
   isKeyDown,
   isKeyPressed,
   getMousePosition,
+  isMouseButtonDown,
+  isMouseButtonPressed,
   getViewportSize,
   getScaleFactor,
   setBackgroundColor,

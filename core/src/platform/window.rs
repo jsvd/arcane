@@ -160,8 +160,8 @@ impl ApplicationHandler for AppState {
                 };
                 match button_state {
                     ElementState::Pressed => {
-                        state.input.mouse_buttons.insert(button_id);
-                        // Also add to keys_pressed so isKeyPressed works
+                        state.input.mouse_button_down(button_id);
+                        // Also add to keys_pressed so isKeyPressed works (for backward compat)
                         let key_name = match button_id {
                             0 => "MouseLeft",
                             1 => "MouseRight",
@@ -171,7 +171,7 @@ impl ApplicationHandler for AppState {
                         state.input.key_down(key_name);
                     }
                     ElementState::Released => {
-                        state.input.mouse_buttons.remove(&button_id);
+                        state.input.mouse_button_up(button_id);
                         let key_name = match button_id {
                             0 => "MouseLeft",
                             1 => "MouseRight",

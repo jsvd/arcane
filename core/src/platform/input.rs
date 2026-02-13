@@ -14,6 +14,10 @@ pub struct InputState {
     pub mouse_y: f32,
     /// Mouse buttons currently held.
     pub mouse_buttons: HashSet<u8>,
+    /// Mouse buttons pressed this frame.
+    pub mouse_buttons_pressed: HashSet<u8>,
+    /// Mouse buttons released this frame.
+    pub mouse_buttons_released: HashSet<u8>,
 }
 
 impl InputState {
@@ -21,6 +25,8 @@ impl InputState {
     pub fn begin_frame(&mut self) {
         self.keys_pressed.clear();
         self.keys_released.clear();
+        self.mouse_buttons_pressed.clear();
+        self.mouse_buttons_released.clear();
     }
 
     /// Record a key press event.
@@ -41,6 +47,20 @@ impl InputState {
     pub fn mouse_move(&mut self, x: f32, y: f32) {
         self.mouse_x = x;
         self.mouse_y = y;
+    }
+
+    /// Record a mouse button press event.
+    pub fn mouse_button_down(&mut self, button: u8) {
+        if self.mouse_buttons.insert(button) {
+            self.mouse_buttons_pressed.insert(button);
+        }
+    }
+
+    /// Record a mouse button release event.
+    pub fn mouse_button_up(&mut self, button: u8) {
+        if self.mouse_buttons.remove(&button) {
+            self.mouse_buttons_released.insert(button);
+        }
     }
 
     /// Check if a key is currently held.
