@@ -287,10 +287,10 @@ Main agent: Compare results, decide, implement
 
 Don't serialize research. Parallelize it with subagents, then synthesize.
 
-## Checklist: Before Starting Phase 1
+## Checklist: Before Starting a New Phase
 
-- [ ] Create worktree for TS runtime: `git worktree add ../arcane-ts feature/ts-runtime`
-- [ ] Create worktree for Rust skeleton: `git worktree add ../arcane-rust feature/rust-skeleton`
-- [ ] Design core interfaces first (sequential, Opus): state tree types, transaction API, query API
-- [ ] Then fork: TS implementation in one worktree, Rust scaffolding in another
-- [ ] Define CI pipeline early so every commit is verified
+- [ ] Review roadmap deliverables and success criteria for the phase
+- [ ] Identify independent workstreams (what can be parallelized)
+- [ ] Design core interfaces first (sequential, Opus) before forking into parallel work
+- [ ] Create worktrees or agent team as appropriate for the parallelism level
+- [ ] Ensure CI passes before starting

@@ -86,11 +86,10 @@ This happens because:
 
 **The Solution:** Three layers of protection:
 
-1. **Mock Renderer** (Testing)
-   - Test visual code without GPU using `runtime/testing/mock-renderer.ts`
-   - Validates API signatures, parameter types, value ranges
-   - Catches errors like wrong function signatures, invalid colors, NaN values
-   - Example: `mockRenderer.assertNoErrors()` fails if rendering code is broken
+1. **Headless No-ops** (Testing)
+   - All rendering API calls are safe no-ops in headless mode — tests import rendering modules without a GPU
+   - Test game logic separately from visual output (pure functions in `game.ts`, rendering in `visual.ts`)
+   - V8 test runner (`arcane test`) validates that rendering calls don't throw
 
 2. **Runtime Validation** (Development)
    - Add validation calls before rendering: `validateRectParams(x, y, w, h, opts)`
@@ -109,31 +108,24 @@ This happens because:
 **Architecture Pattern:**
 
 ```typescript
-// game-logic.ts (100% tested, no rendering)
-export function createGameEngine() {
-  return {
-    handleCommand,
-    getState,
-  };
+// game.ts (100% tested, no rendering)
+export function takeDamage(state: GameState, amount: number): GameState {
+  return { ...state, hp: Math.max(0, state.hp - amount) };
 }
 
-// game-visual.ts (thin layer, validated)
-import { mockRenderer } from "arcane/testing/mock-renderer.ts";
+// visual.ts (thin layer, uses rendering API)
+import { drawSprite, drawText, setCamera } from "@arcane/runtime/rendering";
+import { takeDamage } from "./game.ts";
 
-function renderState(state) {
-  drawRect(0.0, 0.0, 800.0, 600.0, { color: { r: 0.0, g: 0.0, b: 0.0 } });
-  drawText(`HP: ${state.player.health}`, { x: 10.0, y: 10.0, size: 16.0 });
-}
+// game.test.ts (headless — rendering imports are safe no-ops)
+import { describe, it, assert } from "@arcane/runtime/testing";
+import { takeDamage } from "./game.ts";
 
-// game-visual.test.ts
-describe("Visual Layer", () => {
-  it("should render without errors", () => {
-    mockRenderer.reset();
-    installMockRenderer();
-
-    renderState({ player: { health: 100 } });
-
-    mockRenderer.assertNoErrors(); // ✅ Validates all rendering calls
+describe("combat", () => {
+  it("clamps HP to zero", () => {
+    const state = { hp: 5, maxHp: 20 };
+    const next = takeDamage(state, 10);
+    assert.equal(next.hp, 0);
   });
 });
 ```

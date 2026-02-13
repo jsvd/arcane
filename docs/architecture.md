@@ -18,7 +18,7 @@ The Rust core owns everything performance-critical and platform-specific:
 - Tile-based rendering with multiple layers, autotiling, animated tiles
 - Sprite system with atlases, animation state machines, blend trees
 - Custom shaders in WGSL, hot-reloadable, with typed parameter binding
-- Post-processing: bloom, chromatic aberration, screen shake, palette effects
+- Post-processing: bloom, blur, vignette, CRT scanlines
 - MSDF text rendering for resolution-independent text with outlines and shadows
 
 #### Lighting System
@@ -68,24 +68,14 @@ MSDF (Multi-channel Signed Distance Field) text uses a custom fragment shader fo
 - Looping, per-sound volume, master volume
 - Runs on a dedicated background thread
 
-### ECS (`core/ecs/`)
-- Entity storage, component arrays, archetype queries
-- The Rust side of entity management (TS side has the game-facing API)
-
-### Spatial (`core/spatial/`)
-- Spatial indexing (grid, quadtree)
-- Pathfinding: A*, flow fields
-- Range queries, line-of-sight
-
 ### Scripting (`core/scripting/`)
 - V8 embedding via deno_core
-- Script hot-reload with state preservation
+- Script hot-reload (creates fresh V8 isolate on file change)
 - FFI bridge between TS game logic and Rust systems
 
 ### Platform (`core/platform/`)
 - Windowing (winit)
-- Input handling, gamepad support (gilrs)
-- File I/O per platform
+- Input handling (keyboard, mouse)
 
 ## TypeScript Runtime
 
@@ -105,19 +95,6 @@ The TypeScript runtime is where games are built. It runs in two modes:
 - Composable recipes
 - The `extend` pattern for customization
 
-### World (`runtime/world/`)
-- Code-defined scenes and rooms
-- World/dungeon specifications as data
-- Tilemap authoring
-
-### Entities (`runtime/entities/`)
-- Entity archetypes and component schemas
-- Character, monster, item, interactable definitions
-
-### Events (`runtime/events/`)
-- Event bus
-- Observers and listeners
-
 ### Rendering Bridge (`runtime/rendering/`)
 - Sprite control from game logic
 - Visual effect triggers
@@ -126,13 +103,13 @@ The TypeScript runtime is where games are built. It runs in two modes:
 
 The bridge translates high-level TypeScript commands into renderer instructions:
 
-```typescript
-// Game logic says what to show (TS)
-setSprite(entity, 'warrior_attack', { frame: 3 })
-addParticleEffect('slash', { position: entity.position })
-
-// Engine core handles how to show it (Rust)
-// Batched draw calls, GPU upload, shader execution — all invisible to game logic
+```
+TypeScript                          Rust
+─────────                          ────
+drawSprite({...})           →      Batch sprite draw
+setCamera(x, y, zoom)      →      Update view matrix
+addPointLight(x, y, ...)   →      Update light uniform
+drawText(str, x, y, opts)  →      Emit text command
 ```
 
 ### Procedural Generation (`runtime/procgen/`)
@@ -229,10 +206,10 @@ Game logic never talks to the GPU directly. Instead, it issues high-level render
 ```
 TypeScript                          Rust
 ─────────                          ────
-setSprite(id, 'warrior')    →      Batch sprite draw
-moveCamera(5, 3)            →      Update view matrix
-addLight(pos, radius)       →      Update light uniform
-showDamageNumber(7, pos)    →      Spawn UI element
+drawSprite({...})           →      Batch sprite draw
+setCamera(x, y, zoom)      →      Update view matrix
+addPointLight(x, y, ...)   →      Update light uniform
+drawText(str, x, y, opts)  →      Emit text command
 ```
 
 This separation means:
@@ -245,20 +222,19 @@ This separation means:
 The critical design constraint: **everything the agent writes must be testable headless**, without the Rust engine running.
 
 ```typescript
-import { createGame, step, query } from '@arcane/runtime'
-import { TacticalCombat } from './systems/combat'
+import { createStore } from '@arcane/runtime/state'
+import { seed, rollDice } from '@arcane/runtime/state'
 
 // No engine. No GPU. No window. Just logic.
-const game = createGame({
-  systems: [TacticalCombat],
-  state: {
-    party: [createCharacter({ class: 'fighter', level: 3 })],
-    dungeon: loadDungeon('crypt_of_the_goblin_king'),
-  },
+const store = createStore({
+  player: { hp: 20, maxHp: 20, x: 5, y: 5 },
+  rng: seed(42),
 })
 
-const next = step(game, { action: 'move', direction: 'north' })
-const enemies = query(next, 'entities.hostile.alive')
+// Pure function: state in, state out
+function takeDamage(state: typeof store.state, amount: number) {
+  return { ...state, player: { ...state.player, hp: Math.max(0, state.player.hp - amount) } }
+}
 ```
 
 Game logic is pure functions over state. The engine core provides performance, not correctness.

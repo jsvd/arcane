@@ -2,6 +2,8 @@
 
 ## Code-Defined Scenes
 
+> **Note:** The scene, room, and world APIs shown in the first half of this document are **design patterns** — aspirational code showing how Arcane's code-defined world authoring is intended to work. The actual implemented APIs today are the tilemap system (`createTilemap`, `setTile`, `drawTilemap` from `@arcane/runtime/rendering`), the scene manager (`createScene`, `pushScene`, `popScene` from `@arcane/runtime/scenes`), and the procedural generation system (WFC, documented in the second half of this document).
+
 Arcane has no visual scene editor. No `.tscn` files. No drag-and-drop. Scenes are TypeScript code:
 
 ```typescript

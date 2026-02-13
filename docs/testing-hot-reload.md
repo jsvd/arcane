@@ -38,13 +38,11 @@ let frameCount = 0;
 onFrame((dt) => {
   frameCount++;
   const font = getDefaultFont();
-  drawText(
-    `Hot reload test - VERSION 1`,
-    10,
-    10,
+  drawText(`Hot reload test - VERSION 1`, 10, 10, {
     font,
-    { r: 0, g: 255, b: 0, a: 255 },
-  );
+    color: { r: 0, g: 1, b: 0, a: 1 },
+    screenSpace: true,
+  });
 });
 ```
 

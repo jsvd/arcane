@@ -26,7 +26,11 @@ arcane/
 │   ├── development-workflow.md    — Parallel dev, model selection, worktrees
 │   ├── roadmap.md                 — Phased development plan
 │   ├── technical-decisions.md     — ADR-style decision log
-│   └── documentation-refresh.md   — Checklist for auditing and refreshing all docs
+│   ├── documentation-refresh.md   — Checklist for auditing and refreshing all docs
+│   ├── asset-management.md        — `arcane assets` CLI docs (search, download, catalog)
+│   ├── publishing-guide.md        — npm/crates.io release process and checklist
+│   ├── recipe-guide.md            — Building reusable game systems with system()/rule()
+│   └── testing-hot-reload.md      — Hot-reload implementation details and debugging
 ├── core/                          — arcane-core lib crate
 │   ├── Cargo.toml                 — Feature-gated: `renderer` (default on)
 │   ├── src/
@@ -199,6 +203,13 @@ arcane/
 │   ├── inventory-equipment/       — Items, stacking, weight, equipment slots, stat bonuses
 │   ├── grid-movement/             — Grid entity movement, pathfinding integration
 │   └── fog-of-war/                — 8-octant shadowcasting FOV, visibility states
+├── packages/
+│   ├── runtime/                   — @arcane-engine/runtime npm package (symlink to runtime/)
+│   └── create/                    — @arcane-engine/create npm scaffolding tool
+├── templates/
+│   └── default/                   — Scaffolded project template (AGENTS.md, COOKBOOK.md, types/)
+├── scripts/
+│   └── generate-declarations.sh   — Generates arcane.d.ts from runtime source JSDoc
 ```
 
 ## Conventions
