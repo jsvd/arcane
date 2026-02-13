@@ -103,8 +103,6 @@ See [Development Workflow](development-workflow.md#agent-teams) for when to use 
 
 Agents are defined in `AGENTS.md` files. Each handles a specific domain.
 
-### Phase 1 Agents (Design + Early Implementation)
-
 #### `rust-engine` — Rust Core Agent
 - **When**: Working on anything under `core/` — renderer, physics, audio, ECS, platform
 - **Tools**: Cargo build/test/clippy, wgpu docs, Rust analyzer
@@ -135,61 +133,9 @@ Agents are defined in `AGENTS.md` files. Each handles a specific domain.
 - **Knowledge**: ADR format, Arcane architecture, document cross-references
 - **File scope**: `docs/**/*.md`, `README.md`, `CLAUDE.md`
 
-### Phase 3+ Agents (When Agent Protocol Exists)
-
-#### `agent-protocol` — Agent Protocol Agent
-- **When**: Working on the agent protocol, CLI commands, HTTP inspector API
-- **Tools**: HTTP client for testing inspector API, `arcane describe`/`arcane inspect`
-- **Knowledge**: REST API design, text rendering, game state serialization
-- **File scope**: `cli/agent.rs`, `runtime/testing/describe.ts`, agent protocol tests
-
-#### `recipe-builder` — Recipe Builder Agent
-- **When**: Creating or extending game system recipes
-- **Tools**: Recipe template scaffolder, recipe test harness, `arcane add` CLI
-- **Knowledge**: System/rule patterns, the `extend` API, state wiring, recipe publishing
-- **File scope**: `recipes/**/*`
-
-### Phase 6+ Agents (When Building Showcase Game)
-
-#### `showcase-game` — Showcase Game Agent
-- **When**: Building the BFRPG showcase game on top of Arcane
-- **Tools**: All Arcane CLI tools, agent protocol, recipe system
-- **Knowledge**: BFRPG rules, dungeon design, game balancing
-- **File scope**: `showcase/**/*`
-
 ## Skills (Slash Commands)
 
-Skills are repeatable workflows invoked with `/command`.
-
-### Phase 1 Skills
-
-| Skill | Description |
-|---|---|
-| `/arcane-test` | Run all tests (Rust + TS) and report results |
-| `/arcane-build` | Build the full project (Rust core + TS runtime) |
-| `/arcane-check` | Type-check TS, clippy Rust, lint everything |
-| `/doc-consistency` | Verify cross-references and consistency across all design docs |
-
-### Phase 2+ Skills
-
-| Skill | Description |
-|---|---|
-| `/arcane-dev` | Start dev server with hot reload |
-| `/arcane-describe` | Get text description of current game state |
-| `/arcane-inspect <path>` | Inspect a specific state path |
-| `/new-recipe <name>` | Scaffold a new recipe with template files and tests |
-| `/new-system <name>` | Scaffold a new system definition |
-| `/new-world <name>` | Scaffold a new world/dungeon spec |
-| `/run-headless <scenario>` | Run a game scenario headless and report results |
-
-### Phase 5+ Skills
-
-| Skill | Description |
-|---|---|
-| `/playtest <dungeon>` | Run automated playtest of a dungeon, generate report |
-| `/record-session` | Start recording a play session for replay/test generation |
-| `/generate-tests <session>` | Generate regression tests from a recorded session |
-| `/publish-recipe <name>` | Package and publish a recipe to npm |
+Skills are invoked by the user as slash commands in Claude Code. Currently Arcane does not ship custom Claude Code skills — the CLI commands (`arcane test`, `arcane dev`, `arcane describe`, `arcane inspect`, `arcane assets`, `arcane add`) are used directly via the Bash tool. Custom skills may be added in future phases if repeated workflows emerge.
 
 ## CLI Tools
 
@@ -318,7 +264,7 @@ At each review:
 
 Track all tooling changes here:
 
-| Date | Change | Reason |
+| Phase | Change | Reason |
 |---|---|---|
 | Phase 0 | Initial agent/skill/MCP tool definitions | Project bootstrap |
 | Phase 1.5 | Add agent teams guidance | Enable coordinated multi-session development |

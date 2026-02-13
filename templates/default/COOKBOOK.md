@@ -583,3 +583,87 @@ describe("combat math", () => {
   });
 });
 ```
+
+## Visual Testing (Draw Call Capture)
+
+Test rendering output without a GPU. Captures draw call intent as structured data — works in headless mode.
+
+```typescript
+import { describe, it, assert } from "@arcane/runtime/testing";
+import {
+  enableDrawCallCapture, disableDrawCallCapture,
+  getDrawCalls, clearDrawCalls, findDrawCalls,
+  assertSpriteDrawn, assertTextDrawn, assertDrawCallCount,
+  assertNothingDrawnAt, assertLayerHasDrawCalls, assertScreenSpaceDrawn,
+  getDrawCallSummary,
+} from "@arcane/runtime/testing";
+import { drawSprite, drawText } from "@arcane/runtime/rendering";
+import { drawRect, drawBar } from "@arcane/runtime/ui";
+
+// Enable capture before running game frame code
+enableDrawCallCapture();
+
+// Simulate a frame — these work even in headless mode
+drawSprite({ textureId: 1, x: 100, y: 200, w: 32, h: 32, layer: 1 });
+drawSprite({ textureId: 2, x: 150, y: 200, w: 32, h: 32, layer: 1 });
+drawText("HP: 10", 10, 10, { screenSpace: true });
+drawBar(10, 30, 200, 20, 0.75, { screenSpace: true });
+
+// Inspect what was drawn
+const calls = getDrawCalls();        // all draw calls this frame
+const summary = getDrawCallSummary(); // { total: 4, sprite: 2, text: 1, bar: 1 }
+
+// Find specific draw calls
+const sprites = findDrawCalls({ type: "sprite" });
+const hudText = findDrawCalls({ type: "text", screenSpace: true });
+const atPos = findDrawCalls({ x: 100, y: 200 });
+
+// Assertions — throw with descriptive errors on failure
+assertSpriteDrawn({ textureId: 1 });                // at least one sprite with this texture
+assertTextDrawn("HP: 10");                           // text containing substring
+assertDrawCallCount("sprite", 2);                    // exact count
+assertNothingDrawnAt(500, 500);                      // no sprites overlap this point
+assertLayerHasDrawCalls(1);                          // layer has content
+assertScreenSpaceDrawn("text");                      // HUD text exists
+
+// Between frames: clear and redraw
+clearDrawCalls();
+
+// When done testing
+disableDrawCallCapture();
+```
+
+**In tests:**
+
+```typescript
+describe("HUD rendering", () => {
+  it("shows health bar when player is damaged", () => {
+    enableDrawCallCapture();
+
+    const state = { hp: 5, maxHp: 10 };
+    renderHUD(state);  // your game's HUD function
+
+    assertTextDrawn("HP");
+    const bars = findDrawCalls({ type: "bar" });
+    assert.equal(bars.length, 1);
+    if (bars[0].type === "bar") {
+      assert.equal(bars[0].fillRatio, 0.5);  // 5/10
+    }
+
+    disableDrawCallCapture();
+  });
+
+  it("does not render debug overlay in release mode", () => {
+    enableDrawCallCapture();
+
+    renderFrame({ debug: false });
+
+    const debugText = findDrawCalls({ content: "FPS:", type: "text" });
+    assert.equal(debugText.length, 0);
+
+    disableDrawCallCapture();
+  });
+});
+```
+
+**Diagnosing issues:** When a visual assertion fails, the error message tells you what was actually drawn. Use `getDrawCallSummary()` or `getDrawCalls()` to dump the full frame for inspection.
