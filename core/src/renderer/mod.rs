@@ -7,6 +7,7 @@ mod lighting;
 pub mod font;
 pub mod shader;
 pub mod postprocess;
+pub mod radiance;
 
 pub use gpu::GpuContext;
 pub use sprite::{SpriteCommand, SpritePipeline};
@@ -16,6 +17,7 @@ pub use tilemap::{Tilemap, TilemapStore};
 pub use lighting::{LightingState, LightingUniform, PointLight, LightData, MAX_LIGHTS};
 pub use shader::ShaderStore;
 pub use postprocess::PostProcessPipeline;
+pub use radiance::{RadiancePipeline, RadianceState, EmissiveSurface, Occluder, DirectionalLight, SpotLight};
 
 use anyhow::Result;
 
@@ -28,6 +30,8 @@ pub struct Renderer {
     pub textures: TextureStore,
     pub camera: Camera2D,
     pub lighting: LightingState,
+    pub radiance: RadiancePipeline,
+    pub radiance_state: RadianceState,
     /// Sprite commands queued for the current frame.
     pub frame_commands: Vec<SpriteCommand>,
     /// Display scale factor (e.g. 2.0 on Retina). Used to convert physical → logical pixels.
@@ -44,6 +48,7 @@ impl Renderer {
         let sprites = SpritePipeline::new(&gpu);
         let shaders = ShaderStore::new(&gpu);
         let postprocess = PostProcessPipeline::new(&gpu);
+        let radiance_pipeline = RadiancePipeline::new(&gpu);
         let textures = TextureStore::new();
         // Set camera viewport to logical pixels so world units are DPI-independent
         let logical_w = gpu.config.width as f32 / scale_factor;
@@ -57,6 +62,8 @@ impl Renderer {
             sprites,
             shaders,
             postprocess,
+            radiance: radiance_pipeline,
+            radiance_state: RadianceState::new(),
             textures,
             camera,
             lighting: LightingState::default(),
@@ -95,20 +102,39 @@ impl Renderer {
             a: self.clear_color[3] as f64,
         };
 
+        // Run radiance cascade GI compute pass (if enabled)
+        let gi_active = self.radiance.compute(
+            &self.gpu,
+            &mut encoder,
+            &self.radiance_state,
+            &self.lighting,
+            self.camera.x,
+            self.camera.y,
+            self.camera.viewport_size[0],
+            self.camera.viewport_size[1],
+        );
+
         if self.postprocess.has_effects() {
             // Render sprites to offscreen target, then apply effects to surface
-            let sprite_target = self.postprocess.sprite_target(&self.gpu);
-            self.sprites.render(
-                &self.gpu,
-                &self.textures,
-                &self.shaders,
-                &self.camera,
-                &lighting_uniform,
-                &self.frame_commands,
-                sprite_target,
-                &mut encoder,
-                clear_color,
-            );
+            {
+                let sprite_target = self.postprocess.sprite_target(&self.gpu);
+                self.sprites.render(
+                    &self.gpu,
+                    &self.textures,
+                    &self.shaders,
+                    &self.camera,
+                    &lighting_uniform,
+                    &self.frame_commands,
+                    sprite_target,
+                    &mut encoder,
+                    clear_color,
+                );
+            }
+            // Apply GI light texture to the offscreen target before post-processing
+            if gi_active {
+                let sprite_target = self.postprocess.sprite_target(&self.gpu);
+                self.radiance.compose(&mut encoder, sprite_target);
+            }
             self.postprocess.apply(&self.gpu, &mut encoder, &view);
         } else {
             // No effects — render directly to surface
@@ -123,6 +149,10 @@ impl Renderer {
                 &mut encoder,
                 clear_color,
             );
+            // Apply GI light texture to the surface
+            if gi_active {
+                self.radiance.compose(&mut encoder, &view);
+            }
         }
 
         self.gpu.queue.submit(std::iter::once(encoder.finish()));
