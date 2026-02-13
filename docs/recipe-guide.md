@@ -387,8 +387,7 @@ See `recipes/turn-based-combat/` for a complete example featuring:
 ## Next Steps
 
 - Browse existing recipes in `recipes/` for inspiration
-- Read [Systems & Recipes](systems-and-recipes.md) for the theoretical foundation
-- Check out [API Reference](api-reference.md) for the full systems API
+- Check the generated API declarations in `templates/default/types/arcane.d.ts` for the full systems API
 
 ---
 

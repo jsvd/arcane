@@ -10,14 +10,13 @@ assignees: ''
 
 **Location:** Which document or section needs improvement?
 - [ ] README.md
-- [ ] API Reference (`docs/api-reference.md`)
-- [ ] Tutorial (`docs/tutorial-*.md`)
-- [ ] Getting Started Guide (`docs/getting-started.md`)
+- [ ] Architecture (`docs/architecture.md`)
 - [ ] Recipe Guide (`docs/recipe-guide.md`)
+- [ ] Agent Tooling (`docs/agent-tooling.md`)
 - [ ] Engineering Philosophy (`docs/engineering-philosophy.md`)
 - [ ] Other: ___________
 
-**Specific section/function:** (e.g., "drawSprite API in api-reference.md")
+**Specific section/function:** (e.g., "drawSprite API in architecture.md")
 
 ## Problem
 

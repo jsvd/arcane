@@ -61,6 +61,6 @@ curl http://localhost:4321/describe
 
 ## Learn More
 
-- [Getting Started Guide](https://github.com/anthropics/arcane/blob/main/docs/getting-started.md)
-- [API Reference](https://github.com/anthropics/arcane/blob/main/docs/api-reference.md)
+- [Architecture](https://github.com/anthropics/arcane/blob/main/docs/architecture.md)
 - [Recipe Guide](https://github.com/anthropics/arcane/blob/main/docs/recipe-guide.md)
+- [Demos](https://github.com/anthropics/arcane/tree/main/demos/)

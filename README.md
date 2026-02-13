@@ -32,7 +32,7 @@ Arcane asks: *"How does an intelligence that thinks in text, operates at superhu
 │  Runs headless for testing. No rendering.   │
 ├─────────────────────────────────────────────┤
 │           ENGINE CORE                       │
-│              (Rust)                          │
+│              (Rust)                         │
 │                                             │
 │  What the ENGINE provides. Performance.     │
 │  Renderer, physics, audio, ECS, spatial,    │
@@ -273,9 +273,6 @@ cargo run --release -- inspect demos/roguelike/roguelike-visual.ts "dungeon.tile
 - [API Design](docs/api-design.md) — LLM-friendly API rules, error design, naming conventions
 - [Glossary](docs/glossary.md) — Canonical definitions for all project terminology
 - [Architecture](docs/architecture.md) — Two-layer design, Rust core, TypeScript runtime
-- [Agent Protocol](docs/agent-protocol.md) — How AI agents interact with the engine
-- [Game State](docs/game-state.md) — State management, transactions, queries
-- [Systems & Recipes](docs/systems-and-recipes.md) — Declarative game systems framework
 - [World Authoring](docs/world-authoring.md) — Code-defined scenes, worlds, tilemaps
 - [Agent Tooling](docs/agent-tooling.md) — Claude Code agents, skills, and MCP tools for development
 - [Roadmap](docs/roadmap.md) — Phased development plan

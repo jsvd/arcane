@@ -259,7 +259,7 @@ Validate that real asset loading works end-to-end with actual sprite sheets and 
 
 ### Deliverables
 - [x] `demos/sprite-demo/` — Character with walk animation and sound effect
-- [x] `docs/assets.md` — Asset workflow documentation
+- [x] `docs/asset-management.md` — Asset workflow documentation
 - [x] Example of loading PNG sprite sheets
 - [x] Example of loading audio files
 - [x] Fallback to placeholders when assets missing

@@ -29,9 +29,8 @@ onFrame(() => {
 
 ## Documentation
 
-- [Getting Started](https://github.com/anthropics/arcane/blob/main/docs/getting-started.md)
-- [API Reference](https://github.com/anthropics/arcane/blob/main/docs/api-reference.md)
-- [Examples](https://github.com/anthropics/arcane/tree/main/examples)
+- [Architecture](https://github.com/anthropics/arcane/blob/main/docs/architecture.md)
+- [Demos](https://github.com/anthropics/arcane/tree/main/demos)
 
 ## License
 

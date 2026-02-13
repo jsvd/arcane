@@ -28,10 +28,10 @@ Running the TypeScript runtime inside the Rust engine, with full rendering and p
 ## Game Logic
 
 **State (State Tree)**
-The single, typed data structure containing all game data. One tree, one source of truth. Queryable, observable, transactional. See [game-state.md](game-state.md).
+The single, typed data structure containing all game data. One tree, one source of truth. Queryable, observable, transactional.
 
 **Transaction**
-An atomic batch of state mutations. Either all mutations succeed or none do. Produces a diff describing what changed. See [game-state.md](game-state.md).
+An atomic batch of state mutations. Either all mutations succeed or none do. Produces a diff describing what changed.
 
 **Diff**
 The delta between two states. Records exactly what changed and the before/after values. Produced by every transaction.
@@ -56,7 +56,7 @@ A template for creating entities with a predefined set of components. A "goblin"
 ## Systems
 
 **System**
-A named collection of rules, state, and queries that governs a domain of game behavior (e.g., combat, inventory, fog of war). See [systems-and-recipes.md](systems-and-recipes.md).
+A named collection of rules, state, and queries that governs a domain of game behavior (e.g., combat, inventory, fog of war). See [recipe-guide.md](recipe-guide.md).
 
 **Rule**
 A named, conditional behavior within a system. Has preconditions (`when`) and effects (`then`). Rules are independently testable.
@@ -94,7 +94,7 @@ A game event placed in a room — combat, trap, NPC interaction, treasure. Has t
 ## Agent Protocol
 
 **Agent Protocol**
-The built-in system for AI agent interaction. Includes CLI commands, HTTP API, text description renderer, and headless execution. See [agent-protocol.md](agent-protocol.md).
+The built-in system for AI agent interaction. Includes CLI commands (`arcane describe`, `arcane inspect`), HTTP inspector, MCP server (JSON-RPC 2.0), text description renderer, and headless execution. See [agent-tooling.md](agent-tooling.md).
 
 **Text Description Renderer**
 A renderer that outputs natural language instead of pixels. Describes game state in text so agents can "see" without vision. The primary way agents perceive the game.

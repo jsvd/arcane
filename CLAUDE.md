@@ -21,9 +21,6 @@ arcane/
 │   ├── api-design.md              — LLM-friendly API rules, error design, naming
 │   ├── glossary.md                — Canonical definitions for all terms
 │   ├── architecture.md            — Two-layer design (Rust + TypeScript)
-│   ├── agent-protocol.md          — How AI agents interact with the engine
-│   ├── game-state.md              — State management, transactions, queries
-│   ├── systems-and-recipes.md     — Declarative game systems framework
 │   ├── world-authoring.md         — Code-defined scenes, worlds, tilemaps
 │   ├── agent-tooling.md           — Claude Code agents, skills, MCP tools
 │   ├── development-workflow.md    — Parallel dev, model selection, worktrees

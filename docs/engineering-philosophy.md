@@ -138,7 +138,7 @@ describe("Visual Layer", () => {
 });
 ```
 
-**The Principle:** Visual code is code. Code needs tests. Rendering APIs are contracts that can be validated. Separate game logic (pure, tested) from rendering (thin, validated). See `docs/visual-testing.md` for complete guide.
+**The Principle:** Visual code is code. Code needs tests. Rendering APIs are contracts that can be validated. Separate game logic (pure, tested) from rendering (thin, validated).
 
 ### Definition of Done
 
