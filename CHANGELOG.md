@@ -2,6 +2,20 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.9.0] - 2026-02-13
+
+### Added
+- **Mouse Button Input API**
+  - `isMouseButtonDown(button)` — check if mouse button is currently held (0=left, 1=right, 2=middle)
+  - `isMouseButtonPressed(button)` — check if mouse button was just clicked this frame
+  - New Rust ops: `op_is_mouse_button_down`, `op_is_mouse_button_pressed`
+  - InputState now tracks `mouse_buttons_pressed` and `mouse_buttons_released` (similar to keyboard)
+
+### Fixed
+- **BFRPG Crawler UI** — camera zoom reduced from 8.0 to 1.0, text scale reduced to 1.5, all UI panels now responsive using `getViewportSize()`, combat controls changed from A/D to 1/2 (no conflict with WASD movement), added controls help panel
+- **Tilemap Showcase HUD** — text rendering now uses `screenSpace: true` instead of complex world-space offset calculations, fixes garbled/overlapping text
+- **UI Showcase** — mouse clicks now register correctly using new `isMouseButtonDown(0)` API instead of non-existent `isKeyDown("mouse0")`
+
 ## [0.8.0] - 2026-02-13
 
 ### Added
