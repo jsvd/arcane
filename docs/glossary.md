@@ -106,7 +106,52 @@ The HTTP API exposed on localhost during dev mode. Allows querying state, execut
 An automatic capture of full game state when an error occurs. Includes the state tree, triggering action, stack trace, and text description. Gives agents everything needed to reproduce bugs.
 
 **Hot Reload**
-Reloading TypeScript code in sub-second with game state preserved. Not a restart — the exact state carries over.
+Reloading TypeScript code in sub-second when source files change. Creates a fresh V8 isolate — game state resets, but the window and GPU context persist. Feels near-instant because there's no cold start of the Rust engine.
+
+---
+
+## Rendering
+
+**MSDF Text**
+Multi-channel Signed Distance Field text rendering. Stores glyph outlines as distance fields in an atlas texture, enabling resolution-independent crisp text with GPU-accelerated outline, shadow, and glow effects via a specialized fragment shader.
+
+**Radiance Cascades**
+A 2D global illumination algorithm. Propagates light through the scene in a multi-pass compute shader, allowing emissive surfaces to cast colored light and occluders to cast soft shadows. See `core/src/renderer/radiance.rs`.
+
+**Global Illumination (GI)**
+Indirect lighting computed from emissive surfaces in the scene. In Arcane, implemented via Radiance Cascades as a 3-pass GPU compute pipeline. Controlled via `setGIEnabled()` and `setGIQuality()`.
+
+**Emissive**
+A sprite or surface that emits light into the GI system. Set via the `emissive` property in `SpriteOptions` — the sprite's color contributes to indirect lighting in the scene.
+
+**Occluder**
+A sprite or surface that blocks light propagation in the GI system. Set via the `occluder` property in `SpriteOptions`.
+
+**Post-Processing**
+GPU effects applied after the scene renders: bloom, blur, vignette, CRT scanlines. Managed via `addPostProcessEffect()` / `setEffectParam()`. Each effect is a separate pass on an offscreen render target.
+
+---
+
+## Procedural Generation
+
+**Wave Function Collapse (WFC)**
+A constraint-based procedural generation algorithm. Starts with every tile in superposition (all options possible), then iteratively collapses tiles to single values while propagating adjacency constraints. Used for dungeon/level generation. See `runtime/procgen/wfc.ts`.
+
+**Constraint** (in WFC context)
+A rule that the generated output must satisfy. Built-in constraints: `reachability` (all floor tiles connected), `exactCount` / `minCount` / `maxCount` (tile frequency), `border` (forced edge tiles). See `runtime/procgen/constraints.ts`.
+
+---
+
+## Testing
+
+**Property-Based Testing**
+Testing with randomly generated inputs to verify invariants hold across many cases. The `checkProperty()` / `assertProperty()` API generates test cases, runs assertions, and automatically shrinks failing inputs to minimal reproductions. See `runtime/testing/property.ts`.
+
+**Replay Testing**
+Recording physics simulation states frame-by-frame, then replaying to verify determinism. `startRecording()` / `stopRecording()` capture state; `replay()` re-runs; `diffReplays()` compares recordings. See `runtime/testing/replay.ts`.
+
+**Snapshot Testing**
+Capturing a physics world's full state (bodies, positions, velocities) at a point in time for comparison. Used with replay testing to detect non-determinism in simulation.
 
 ---
 
@@ -119,7 +164,7 @@ A specialized Claude Code sub-agent with a defined domain, file scope, and knowl
 A repeatable workflow invoked as a slash command (`/arcane-test`, `/new-recipe`). Encodes a process, not a single command.
 
 **MCP Tool**
-A Model Context Protocol tool that gives Claude Code programmatic access to engine functionality (state inspection, test execution, etc.).
+A Model Context Protocol tool that gives Claude Code programmatic access to engine functionality (state inspection, test execution, etc.). Arcane's MCP server (`core/src/agent/mcp.rs`) exposes 10 tools over JSON-RPC 2.0 via stdio transport.
 
 ---
 
