@@ -71,7 +71,7 @@ fn main() {
     let stamp = format!("{}", hasher.finish());
     fs::write(out_dir.join("template_stamp.txt"), stamp).unwrap();
 
-    println!("cargo:rerun-if-changed=../templates/default");
-    println!("cargo:rerun-if-changed=../assets");
-    println!("cargo:rerun-if-changed=data");
+    // Don't emit cargo:rerun-if-changed — let build.rs always re-run.
+    // This ensures the OUT_DIR is always clean and the template_stamp.txt
+    // is always fresh, preventing stale include_dir! data from being cached.
 }

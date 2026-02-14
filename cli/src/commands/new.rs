@@ -110,18 +110,27 @@ pub(crate) fn copy_template_embedded(
     fs::create_dir_all(dst)?;
 
     for file in dir.files() {
-        let dst_path = dst.join(file.path());
+        let file_path = file.path();
+        // Skip files under a stale "default/" prefix (build cache artifact)
+        if file_path.starts_with("default") {
+            continue;
+        }
+        let dst_path = dst.join(file_path);
         if let Some(parent) = dst_path.parent() {
             fs::create_dir_all(parent)?;
         }
         let content = file
             .contents_utf8()
-            .with_context(|| format!("Template file not valid UTF-8: {:?}", file.path()))?;
+            .with_context(|| format!("Template file not valid UTF-8: {:?}", file_path))?;
         let processed = content.replace("{{PROJECT_NAME}}", project_name);
         fs::write(&dst_path, processed)?;
     }
 
     for subdir in dir.dirs() {
+        // Skip a stale "default" subdirectory (build cache artifact from include_dir)
+        if subdir.path() == Path::new("default") {
+            continue;
+        }
         copy_template_embedded(subdir, dst, project_name)?;
     }
 

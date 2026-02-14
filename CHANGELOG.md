@@ -2,12 +2,12 @@
 
 All notable changes to Arcane are documented here.
 
-## [0.9.2] - 2026-02-14
+## [0.9.3] - 2026-02-14
 
 ### Fixed
-- `arcane new` scaffold duplication: stale embedded templates caused a nested `default/` subdirectory and missing dotfiles in scaffolded projects. build.rs now cleans OUT_DIR before copying and writes a content hash stamp to force recompilation when templates change.
-- `arcane --version` flag: added `#[command(version)]` to clap derive so `arcane --version` prints the current version
-- MCP server version string: now uses `env!("CARGO_PKG_VERSION")` instead of a hardcoded string
+- `arcane new` scaffold duplication: stale build cache caused a nested `default/` subdirectory and missing dotfiles. Three-layer fix: (1) build.rs cleans OUT_DIR before copying, (2) build.rs always re-runs (removed restrictive rerun-if-changed), (3) copy_template_embedded skips stale "default/" artifacts as defense-in-depth.
+- `arcane --version` flag works
+- MCP server version uses `env!("CARGO_PKG_VERSION")` instead of hardcoded string
 
 ## [0.9.0] - 2026-02-14
 
