@@ -59,6 +59,20 @@ export type SpriteOptions = {
   blendMode?: "alpha" | "additive" | "multiply" | "screen";
   /** Custom shader handle from createShaderFromSource(). Default: 0 (built-in shader). */
   shaderId?: number;
+  /**
+   * Simple 2D shadow: draws a squashed, tinted duplicate beneath the sprite.
+   * No GPU changes — pure sprite duplication with transform.
+   */
+  shadow?: {
+    /** Horizontal shadow offset in world units. Default: 2. */
+    offsetX?: number;
+    /** Vertical shadow offset in world units. Default: 4. */
+    offsetY?: number;
+    /** Shadow tint color. Default: black with 0.3 alpha. */
+    color?: { r: number; g: number; b: number; a: number };
+    /** Vertical scale for the shadow (0.5 = squashed). Default: 0.5. */
+    scaleY?: number;
+  };
 };
 
 /** Camera state returned by {@link getCamera}. */

@@ -33,6 +33,38 @@ const hasRenderOps =
  * });
  */
 export function drawSprite(opts: SpriteOptions): void {
+  // Draw shadow first (behind the main sprite) if requested
+  if (opts.shadow) {
+    const s = opts.shadow;
+    const shadowOffsetX = s.offsetX ?? 2;
+    const shadowOffsetY = s.offsetY ?? 4;
+    const shadowColor = s.color ?? { r: 0, g: 0, b: 0, a: 0.3 };
+    const shadowScaleY = s.scaleY ?? 0.5;
+    const shadowLayer = (opts.layer ?? 0) - 1;
+    const shadowH = opts.h * shadowScaleY;
+    const shadowY = opts.y + opts.h - shadowH + shadowOffsetY;
+
+    // Recursively call drawSprite without shadow to avoid infinite loop
+    drawSprite({
+      textureId: opts.textureId,
+      x: opts.x + shadowOffsetX,
+      y: shadowY,
+      w: opts.w,
+      h: shadowH,
+      layer: shadowLayer,
+      uv: opts.uv,
+      tint: shadowColor,
+      rotation: opts.rotation,
+      originX: opts.originX,
+      originY: opts.originY,
+      flipX: opts.flipX,
+      flipY: opts.flipY,
+      opacity: shadowColor.a,
+      blendMode: opts.blendMode,
+      shaderId: opts.shaderId,
+    });
+  }
+
   _logDrawCall({
     type: "sprite",
     textureId: opts.textureId,
