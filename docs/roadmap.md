@@ -1055,42 +1055,59 @@ Consumes Phase 22 primitives and turns them into high-level "one call, big payof
 
 ---
 
-## Phase 24: Atmosphere
+## Phase 24: Isometric & Hex Grids
 
 **Status: Planned**
 
-Managed subsystem features — the engine owns a particle emitter or post-process pass, the caller gets a one-liner. Lower priority than juice (genre-specific rather than universal) but compounds beautifully. Sidescrollers, RPGs, and overworlds benefit most.
+First-class isometric and hexagonal grid support. Formalizes the coordinate transforms prototyped in `demos/isometric-dungeon/` into a reusable API, and adds hex grids from scratch. Unlocks strategy games, tactics RPGs, city builders, and overworld maps.
 
 ### Deliverables
-- [ ] **Weather system** (`runtime/rendering/weather.ts`)
-  - [ ] `setWeather(type, { intensity, wind, color })` — rain, snow, fog, leaves
-  - [ ] Internally: managed particle emitter + optional ambient light shift + optional post-process overlay
-  - [ ] `clearWeather()` — fade out current weather
-  - [ ] Integrates with camera (particles move with/against camera)
-  - [ ] Exposable as MCP tool for agent-driven atmosphere iteration
-- [ ] **Water / reflection strip** (`runtime/rendering/water.ts`, `core/src/renderer/postprocess.rs`)
-  - [ ] `drawReflection(waterY, { distortion, opacity, tint })` — horizontal reflection below waterline
-  - [ ] Post-process: sample upper half, flip vertically, apply sine-wave UV distortion
-  - [ ] Optional animated distortion (wave speed/amplitude)
-  - [ ] Source parameter designed to accept GI buffer later (forward-compatible with Radiance Cascades)
-- [ ] **Sprite stacking** (`runtime/rendering/stacking.ts`)
-  - [ ] `drawStackedSprite(slices, x, y, { angle, elevation, spacing })` — fake 3D from stacked horizontal slices
-  - [ ] Rotation applies per-layer offset for convincing pseudo-3D effect
-  - [ ] Most niche feature but visually dramatic — great for demos and marketing
-  - [ ] Self-contained, no dependencies on other Phase 24 features
-- [ ] **Demo: Atmosphere Showcase** (`demos/atmosphere/`)
-  - [ ] Rainy village scene with puddle reflections
-  - [ ] Snowy forest with fog overlay
-  - [ ] Sprite-stacked buildings/props rotating on mouse
-  - [ ] Day/night cycle (Phase 19 lighting) + weather transitions
+- [ ] **Isometric coordinate system** (`runtime/rendering/isometric.ts`)
+  - [ ] `isoToWorld(gx, gy, { tileW, tileH })` / `worldToIso(wx, wy, { tileW, tileH })` — diamond projection
+  - [ ] `screenToIso(sx, sy, camera)` — mouse picking in isometric space
+  - [ ] `isoDepthLayer(gy)` — automatic depth sorting for sprite layer assignment
+  - [ ] Configurable tile dimensions (diamond width/height)
+  - [ ] Staggered isometric variant (offset rows) for rectangular maps
+- [ ] **Isometric tilemap renderer** (`runtime/rendering/iso-tilemap.ts`)
+  - [ ] `createIsoTilemap(width, height, { tileW, tileH })` — diamond grid tilemap
+  - [ ] `drawIsoTilemap(tilemap, camera)` — render with correct depth sorting and camera culling
+  - [ ] Per-tile elevation (tiles drawn higher with shadow below)
+  - [ ] Integrates with existing `setTile()` / `getTile()` patterns
+  - [ ] Auto-tiling support (4-bit iso-aware neighbor bitmask)
+- [ ] **Hex coordinate system** (`runtime/rendering/hex.ts`)
+  - [ ] Cube coordinates (`{ q, r, s }`) as canonical representation
+  - [ ] Offset coordinates (odd-r, even-r, odd-q, even-q) for storage
+  - [ ] `hexToWorld()` / `worldToHex()` — pointy-top and flat-top orientations
+  - [ ] `screenToHex(sx, sy, camera)` — mouse picking in hex space
+  - [ ] `hexNeighbors(q, r)` — 6 cardinal directions
+  - [ ] `hexDistance(a, b)` — Manhattan distance in cube coords
+  - [ ] `hexRing(center, radius)` / `hexSpiral(center, radius)` — ring and spiral iterators
+  - [ ] `hexLineDraw(a, b)` — line of sight / line drawing between hexes
+- [ ] **Hex tilemap renderer** (`runtime/rendering/hex-tilemap.ts`)
+  - [ ] `createHexTilemap(width, height, { hexSize, orientation })` — hex grid tilemap
+  - [ ] `drawHexTilemap(tilemap, camera)` — render with camera culling
+  - [ ] Pointy-top and flat-top orientations
+  - [ ] Hex auto-tiling (6-neighbor bitmask, 64 tile variants)
+- [ ] **Hex pathfinding** (`runtime/pathfinding/hex.ts`)
+  - [ ] `findHexPath(grid, start, goal, options)` — A* with hex neighbors
+  - [ ] Cost-aware (terrain types affect movement cost)
+  - [ ] Movement range: `hexReachable(start, movement, grid)` — flood-fill within budget
+- [ ] **Demo: Hex Strategy** (`demos/hex-strategy/`)
+  - [ ] Hex grid with terrain types (grass, forest, mountain, water)
+  - [ ] Click-to-select unit, show movement range highlight
+  - [ ] Click-to-move with hex pathfinding
+  - [ ] Terrain cost affecting movement
+  - [ ] Camera pan/zoom, agent protocol
 
 ### Success Criteria
-- [ ] Weather effects don't impact performance (< 1ms per frame at max intensity)
-- [ ] Reflection strip looks convincing with animated distortion
-- [ ] Sprite stacking produces dramatic pseudo-3D from simple slice sprites
-- [ ] Weather + lighting compose naturally (rain darkens ambient, torch flicker in fog)
-- [ ] 40+ tests for atmosphere features
-- [ ] Demo showcases weather/reflection/stacking in an integrated scene
+- [ ] Isometric coordinate transforms match `demos/isometric-dungeon/` output exactly
+- [ ] Isometric tilemap renders with correct depth sorting (no z-fighting)
+- [ ] Hex mouse picking is pixel-perfect (no dead zones between hexes)
+- [ ] Hex pathfinding produces optimal paths with terrain costs
+- [ ] Movement range highlight is correct for all terrain configurations
+- [ ] Both pointy-top and flat-top hex orientations work
+- [ ] 80+ tests (iso coords, hex coords, hex math, hex pathfinding, hex auto-tile)
+- [ ] Demo showcases hex strategy gameplay end-to-end
 
 ---
 
@@ -1130,7 +1147,46 @@ Expand platform input beyond keyboard/mouse with gamepad, touch, and an action m
 
 ---
 
-## Phase 26: Community Building
+## Phase 26: Atmosphere
+
+**Status: Planned**
+
+Managed subsystem features — the engine owns a particle emitter or post-process pass, the caller gets a one-liner. Lower priority than juice (genre-specific rather than universal) but compounds beautifully. Sidescrollers, RPGs, and overworlds benefit most.
+
+### Deliverables
+- [ ] **Weather system** (`runtime/rendering/weather.ts`)
+  - [ ] `setWeather(type, { intensity, wind, color })` — rain, snow, fog, leaves
+  - [ ] Internally: managed particle emitter + optional ambient light shift + optional post-process overlay
+  - [ ] `clearWeather()` — fade out current weather
+  - [ ] Integrates with camera (particles move with/against camera)
+  - [ ] Exposable as MCP tool for agent-driven atmosphere iteration
+- [ ] **Water / reflection strip** (`runtime/rendering/water.ts`, `core/src/renderer/postprocess.rs`)
+  - [ ] `drawReflection(waterY, { distortion, opacity, tint })` — horizontal reflection below waterline
+  - [ ] Post-process: sample upper half, flip vertically, apply sine-wave UV distortion
+  - [ ] Optional animated distortion (wave speed/amplitude)
+  - [ ] Source parameter designed to accept GI buffer later (forward-compatible with Radiance Cascades)
+- [ ] **Sprite stacking** (`runtime/rendering/stacking.ts`)
+  - [ ] `drawStackedSprite(slices, x, y, { angle, elevation, spacing })` — fake 3D from stacked horizontal slices
+  - [ ] Rotation applies per-layer offset for convincing pseudo-3D effect
+  - [ ] Most niche feature but visually dramatic — great for demos and marketing
+  - [ ] Self-contained, no dependencies on other Phase 26 features
+- [ ] **Demo: Atmosphere Showcase** (`demos/atmosphere/`)
+  - [ ] Rainy village scene with puddle reflections
+  - [ ] Snowy forest with fog overlay
+  - [ ] Sprite-stacked buildings/props rotating on mouse
+  - [ ] Day/night cycle (Phase 19 lighting) + weather transitions
+
+### Success Criteria
+- [ ] Weather effects don't impact performance (< 1ms per frame at max intensity)
+- [ ] Reflection strip looks convincing with animated distortion
+- [ ] Sprite stacking produces dramatic pseudo-3D from simple slice sprites
+- [ ] Weather + lighting compose naturally (rain darkens ambient, torch flicker in fog)
+- [ ] 40+ tests for atmosphere features
+- [ ] Demo showcases weather/reflection/stacking in an integrated scene
+
+---
+
+## Phase 27: Community Building
 
 **Status: Planned**
 
