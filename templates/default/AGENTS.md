@@ -14,7 +14,7 @@ Two-file pattern:
 Hot-reload: saving any file restarts the game loop (~200ms). State resets to initial.
 
 Imports use `@arcane/runtime/{module}`:
-`state`, `rendering`, `ui`, `physics`, `pathfinding`, `tweening`, `particles`, `systems`, `scenes`, `persistence`, `agent`, `testing`
+`state`, `rendering`, `ui`, `physics`, `pathfinding`, `tweening`, `particles`, `systems`, `scenes`, `persistence`, `input`, `agent`, `testing`
 
 ## Coordinate System
 
@@ -82,9 +82,13 @@ Before writing rendering code, check this list. These are the most frequent bugs
 
 **6. Forgetting `dt` for movement** — `player.x += speed` moves faster on faster machines. Always: `player.x += speed * dt`. The `dt` from `getDeltaTime()` is in seconds.
 
-**7. Using `"Space"` instead of `" "`** — Key names match the browser `KeyboardEvent.key` spec. Space is `" "` (a space character), not `"Space"`. Arrow keys are `"ArrowLeft"`, `"ArrowRight"`, `"ArrowUp"`, `"ArrowDown"`.
+**7. Using wrong key names** — Arcane uses the `KeyName` type, not raw browser `KeyboardEvent.key` values. Space is `"Space"` (not `" "`), Enter is `"Enter"` (not `"Return"`). Arrow keys are `"ArrowLeft"`, `"ArrowRight"`, `"ArrowUp"`, `"ArrowDown"`. Letter keys are lowercase: `"a"`, `"b"`, `"c"`.
 
 **8. Importing from wrong module** — State logic goes in `game.ts` with no rendering imports. Visual code goes in `visual.ts`. If you need a type in both, define it in `game.ts` and import it in `visual.ts`.
+
+**9. Using wrong key names with KeyName type** — Arcane uses `KeyName` type for compile-time key validation. Use `"Space"` not `" "`, `"ArrowLeft"` not `"Left"`, `"Enter"` not `"Return"`. Letter keys are lowercase: `"a"`, `"b"`, `"c"`. Check `types/arcane.d.ts` for the full list of valid KeyName values.
+
+**10. Forgetting gamepad deadzone** — `getGamepadAxis()` returns raw values including noise near zero. Always apply a deadzone threshold (~0.15): `const raw = getGamepadAxis("LeftStickX"); const move = Math.abs(raw) > 0.15 ? raw : 0;`
 
 ## The Game Loop
 
@@ -392,6 +396,54 @@ for (const p of getAllParticles()) {
 }
 ```
 
+**Isometric coordinates** — convert between grid and world:
+```typescript
+import { isoToWorld, worldToGrid, isoDepthLayer, IsoConfig } from "@arcane/runtime/rendering";
+const ISO: IsoConfig = { tileW: 64, tileH: 32 };
+const world = isoToWorld(gx, gy, ISO);
+drawSprite({ textureId: TEX, x: world.x, y: world.y - 16, w: 64, h: 48, layer: isoDepthLayer(gy) });
+```
+
+**Hex coordinates** — cube coords with q + r + s = 0:
+```typescript
+import { hex, hexToWorld, hexNeighbors, hexDistance, HexConfig } from "@arcane/runtime/rendering";
+const HEX: HexConfig = { hexSize: 24, orientation: "pointy" };
+const pos = hexToWorld(hex(2, -1), HEX);
+const neighbors = hexNeighbors(2, -1); // 6 adjacent cells
+```
+
+**Gamepad movement** with deadzone:
+```typescript
+import { getGamepadAxis, isGamepadButtonPressed } from "@arcane/runtime/rendering";
+const rawX = getGamepadAxis("LeftStickX");
+const rawY = getGamepadAxis("LeftStickY");
+const dx = Math.abs(rawX) > 0.15 ? rawX : 0;
+const dy = Math.abs(rawY) > 0.15 ? rawY : 0;
+player.x += dx * speed * dt;
+player.y += dy * speed * dt;
+if (isGamepadButtonPressed("A")) jump();
+```
+
+**Touch-to-world** for mobile games:
+```typescript
+import { isTouchActive, getTouchWorldPosition } from "@arcane/runtime/rendering";
+if (isTouchActive()) {
+  const pos = getTouchWorldPosition(0);
+  if (pos) moveToward(player, pos.x, pos.y, speed * dt);
+}
+```
+
+**Input actions** — the preferred abstraction for multi-input games:
+```typescript
+import { createInputMap, isActionPressed, getActionValue } from "@arcane/runtime/input";
+const input = createInputMap({
+  jump: ["Space", "GamepadA"],
+  moveX: [{ type: "gamepadAxis", axis: "LeftStickX", direction: 1 }],
+});
+if (isActionPressed("jump", input)) jump();
+player.x += getActionValue("moveX", input) * speed * dt;
+```
+
 ## Resolution-Adaptive Design
 
 **Never hardcode pixel dimensions.** The window is resizable, so always use `getViewportSize()`:
@@ -463,7 +515,7 @@ File organization: `src/game.ts` (logic), `src/visual.ts` (rendering), `src/*.te
 
 Read `types/arcane.d.ts` for the complete API with JSDoc documentation. Always check it before using an unfamiliar function.
 
-All module imports: `@arcane/runtime/state`, `@arcane/runtime/rendering`, `@arcane/runtime/ui`, `@arcane/runtime/physics`, `@arcane/runtime/pathfinding`, `@arcane/runtime/tweening`, `@arcane/runtime/particles`, `@arcane/runtime/systems`, `@arcane/runtime/scenes`, `@arcane/runtime/persistence`, `@arcane/runtime/procgen`, `@arcane/runtime/agent`, `@arcane/runtime/testing`.
+All module imports: `@arcane/runtime/state`, `@arcane/runtime/rendering`, `@arcane/runtime/ui`, `@arcane/runtime/physics`, `@arcane/runtime/pathfinding`, `@arcane/runtime/tweening`, `@arcane/runtime/particles`, `@arcane/runtime/systems`, `@arcane/runtime/scenes`, `@arcane/runtime/persistence`, `@arcane/runtime/input`, `@arcane/runtime/procgen`, `@arcane/runtime/agent`, `@arcane/runtime/testing`.
 
 ## Procedural Generation
 
@@ -675,6 +727,216 @@ describe("sorting", () => {
     assert.ok(result.passed, result.failureMessage);
   });
 });
+```
+
+## Isometric & Hex Grids
+
+Arcane supports isometric (diamond projection) and hex (cube coordinates) grids. Both import from `@arcane/runtime/rendering`.
+
+**Isometric** — diamond projection maps (gx, gy) grid coords to world pixel positions:
+```typescript
+import {
+  isoToWorld, worldToGrid, isoDepthLayer, isoNeighbors,
+  createIsoTilemap, setIsoTile, drawIsoTilemap,
+  type IsoConfig,
+} from "@arcane/runtime/rendering";
+
+const ISO: IsoConfig = { tileW: 64, tileH: 32 };
+
+// Grid -> world position
+const world = isoToWorld(gx, gy, ISO);
+
+// World -> grid (e.g., for mouse picking)
+const grid = worldToGrid(mouseWorldX, mouseWorldY, ISO);
+
+// Depth sorting: higher gy = closer to camera = higher layer
+drawSprite({ textureId: TEX, x: world.x, y: world.y - 16, w: 64, h: 48, layer: isoDepthLayer(gy) });
+```
+
+Common mistake: forgetting to offset sprite Y by tile height for objects that sit "above" the ground (e.g., `y: world.y - 16` for a 48px sprite on a 32px-high tile).
+
+**Hex** — cube coordinates where q + r + s = 0 (s is derived automatically):
+```typescript
+import {
+  hex, hexToWorld, worldToHex, hexNeighbors, hexDistance,
+  hexRing, hexLineDraw,
+  createHexTilemap, setHexTile, drawHexTilemap,
+  type HexConfig,
+} from "@arcane/runtime/rendering";
+
+const HEX: HexConfig = { hexSize: 24, orientation: "pointy" };
+
+// Create a hex coord (s = -q - r is automatic)
+const cell = hex(2, -1);
+
+// Hex -> world pixel position
+const pos = hexToWorld(cell, HEX);
+
+// World -> hex (for mouse picking)
+const picked = worldToHex(mouseWorldX, mouseWorldY, HEX);
+
+// Neighbors, distance, rings
+const adj = hexNeighbors(2, -1);           // 6 adjacent cells
+const dist = hexDistance(hex(0, 0), hex(3, -1)); // Manhattan distance
+const ring = hexRing(hex(0, 0), 2);        // all cells at distance 2
+```
+
+Hex pathfinding is in `@arcane/runtime/pathfinding`:
+```typescript
+import { findHexPath, hexReachable } from "@arcane/runtime/pathfinding";
+const path = findHexPath(startHex, goalHex, (h) => isPassable(h));
+const reachable = hexReachable(startHex, 3, (h) => isPassable(h)); // flood-fill within 3 steps
+```
+
+## Gamepad & Touch Input
+
+Gamepad and touch functions import from `@arcane/runtime/rendering`.
+
+**Gamepad** — analog sticks, buttons, and triggers:
+```typescript
+import {
+  isGamepadConnected, isGamepadButtonDown, isGamepadButtonPressed,
+  getGamepadAxis, getGamepadCount,
+} from "@arcane/runtime/rendering";
+
+if (isGamepadConnected(0)) {
+  // Analog sticks (apply deadzone!)
+  const rawX = getGamepadAxis("LeftStickX");
+  const rawY = getGamepadAxis("LeftStickY");
+  const dx = Math.abs(rawX) > 0.15 ? rawX : 0;
+  const dy = Math.abs(rawY) > 0.15 ? rawY : 0;
+  player.x += dx * speed * dt;
+  player.y += dy * speed * dt;
+
+  // Buttons (Xbox layout: A/B/X/Y, bumpers, triggers, d-pad)
+  if (isGamepadButtonPressed("A")) jump();
+  if (isGamepadButtonDown("RightTrigger")) fire();
+}
+```
+
+**Touch** — tap, position, and world-space conversion:
+```typescript
+import { isTouchActive, getTouchPosition, getTouchWorldPosition, getTouchCount } from "@arcane/runtime/rendering";
+
+if (isTouchActive()) {
+  const screenPos = getTouchPosition(0);      // screen pixels
+  const worldPos = getTouchWorldPosition(0);  // world coordinates (camera-aware)
+  if (worldPos) moveToward(player, worldPos.x, worldPos.y, speed * dt);
+}
+```
+
+**Multi-input fallback** — check keyboard first, then gamepad, then touch:
+```typescript
+let dx = 0;
+if (isKeyDown("ArrowRight")) dx = 1;
+else if (isKeyDown("ArrowLeft")) dx = -1;
+else {
+  const raw = getGamepadAxis("LeftStickX");
+  dx = Math.abs(raw) > 0.15 ? raw : 0;
+}
+```
+
+Or use the Input Actions system for cleaner multi-input handling (see below).
+
+## Game Feel / Juice
+
+Import juice functions from `@arcane/runtime/rendering`.
+
+**Impact** — orchestrates shake + hitstop + flash + particles in one call:
+```typescript
+import { impact, impactLight, impactHeavy, consumeHitstopFrame, isHitstopActive } from "@arcane/runtime/rendering";
+
+// On hit: trigger a medium impact at the hit position
+impact(hitX, hitY, {
+  shake: { intensity: 8, duration: 0.15 },
+  hitstop: 3,  // freeze for 3 frames
+  flash: { color: { r: 1, g: 1, b: 1 }, duration: 0.1 },
+});
+
+// Presets for common scenarios
+impactLight(hitX, hitY);  // subtle bump
+impactHeavy(hitX, hitY);  // big slam
+
+// In your update loop: skip game updates during hitstop
+if (isHitstopActive()) {
+  consumeHitstopFrame();
+  return; // skip game logic this frame, but still render
+}
+```
+
+**Floating text** — damage numbers, pickups, status effects:
+```typescript
+import { spawnFloatingText, updateFloatingTexts, drawFloatingTexts } from "@arcane/runtime/rendering";
+
+spawnFloatingText(enemyX, enemyY, "-25", { color: { r: 1, g: 0.2, b: 0.2 }, scale: 1.5 });
+spawnFloatingText(playerX, playerY, "+1 Gold", { color: { r: 1, g: 0.9, b: 0.2 } });
+
+// In onFrame:
+updateFloatingTexts(dt);
+drawFloatingTexts();
+```
+
+**Typewriter** — progressive text reveal for dialogue:
+```typescript
+import { createTypewriter, updateTypewriter, drawTypewriter, isTypewriterComplete } from "@arcane/runtime/rendering";
+
+const tw = createTypewriter("The dragon approaches...", { charsPerSecond: 30 });
+
+// In onFrame:
+updateTypewriter(tw, dt);
+drawTypewriter(tw, 50, 400, { screenSpace: true, layer: 100 });
+if (isTypewriterComplete(tw) && isKeyPressed("Space")) nextDialogue();
+```
+
+## Input Actions
+
+The input action system provides a higher-level abstraction over raw keyboard/gamepad/touch input. Import from `@arcane/runtime/input`.
+
+```typescript
+import {
+  createInputMap, isActionDown, isActionPressed, getActionValue,
+  setActionBindings,
+} from "@arcane/runtime/input";
+
+// Define actions with multiple bindings (keyboard + gamepad + touch)
+const input = createInputMap({
+  jump: ["Space", "GamepadA"],
+  attack: ["x", "GamepadX"],
+  moveX: {
+    bindings: [
+      { type: "key", key: "d" },
+      { type: "key", key: "ArrowRight" },
+      { type: "gamepadAxis", axis: "LeftStickX", direction: 1 },
+    ],
+    analog: true,
+  },
+});
+
+// In onFrame:
+if (isActionPressed("jump", input)) jump();
+if (isActionDown("attack", input)) chargingAttack = true;
+const moveX = getActionValue("moveX", input);
+player.x += moveX * speed * dt;
+
+// Rebinding: let players customize controls
+setActionBindings(input, "jump", ["w", "GamepadB"]); // remap jump
+```
+
+String shorthands: `"Space"`, `"a"`-`"z"`, `"ArrowLeft"`, `"GamepadA"`, `"GamepadLB"`, `"GamepadDPadUp"`, `"MouseLeft"`. Or use full `InputSource` objects for analog axes.
+
+**Input buffering and combos:**
+```typescript
+import { createInputBuffer, updateInputBuffer, checkCombo, consumeCombo } from "@arcane/runtime/input";
+
+const buffer = createInputBuffer(1.0); // 1s window
+const fireball = { sequence: ["down", "right", "attack"], window: 0.5 };
+
+// In onFrame:
+updateInputBuffer(buffer, input, totalTime);
+if (checkCombo(buffer, fireball, totalTime)) {
+  consumeCombo(buffer, fireball);
+  castFireball();
+}
 ```
 
 ## Tips

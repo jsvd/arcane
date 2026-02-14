@@ -642,6 +642,478 @@ describe("combat math", () => {
 });
 ```
 
+## Screen Transitions
+
+Visual effects for scene changes. Five built-in patterns: fade, wipe, circleIris, diamond, pixelate. At the midpoint of the transition, the actual scene swap happens (hidden behind the overlay).
+
+```typescript
+import {
+  startScreenTransition, updateScreenTransition,
+  drawScreenTransition, isScreenTransitionActive,
+} from "@arcane/runtime/rendering";
+import { getDeltaTime, onFrame } from "@arcane/runtime/rendering";
+
+let currentScene = "menu";
+
+// Start a circle-iris transition lasting 0.6 seconds
+startScreenTransition("circleIris", 0.6, { color: { r: 0, g: 0, b: 0 } }, () => {
+  // This runs at the midpoint — swap scene here
+  currentScene = "gameplay";
+}, () => {
+  // This runs when the transition finishes
+  console.log("Transition complete");
+});
+
+onFrame(() => {
+  const dt = getDeltaTime();
+
+  // Update and render your current scene
+  if (currentScene === "menu") renderMenu();
+  else renderGameplay();
+
+  // Always update + draw the transition overlay (no-op if inactive)
+  updateScreenTransition(dt);
+  drawScreenTransition();
+});
+```
+
+All five types: `"fade"`, `"wipe"`, `"circleIris"`, `"diamond"`, `"pixelate"`. The `isScreenTransitionActive()` function returns true while a transition is in progress.
+
+## Nine-Slice Panels
+
+Draw a texture as a scalable UI panel. Corners stay fixed size, edges stretch in one axis, and the center fills the remainder. Useful for dialogue boxes, inventory panels, and buttons.
+
+```typescript
+import { drawNineSlice } from "@arcane/runtime/rendering";
+import { loadTexture } from "@arcane/runtime/rendering";
+
+const panelTex = loadTexture("panel.png");
+
+// Uniform 16px border on all sides (texture is 64x64)
+drawNineSlice(panelTex, 50, 50, 300, 200, {
+  border: 16,
+  textureWidth: 64,
+  textureHeight: 64,
+  layer: 10,
+});
+
+// Per-edge borders for asymmetric panels
+drawNineSlice(panelTex, 400, 50, 200, 150, {
+  border: { top: 12, bottom: 16, left: 8, right: 8 },
+  textureWidth: 64,
+  textureHeight: 64,
+  screenSpace: true,
+  opacity: 0.9,
+});
+```
+
+The `border` field accepts either a uniform number or a `{ top, bottom, left, right }` object. Set `textureWidth`/`textureHeight` to your source texture dimensions for correct UV calculation.
+
+## Trail / Ribbon Effects
+
+A ribbon that follows a moving point. Points are added each frame and old ones fade out. Useful for sword swipes, projectile trails, and mouse cursors.
+
+```typescript
+import { createTrail, updateTrail, drawTrail, clearTrail } from "@arcane/runtime/rendering";
+import { onFrame, getDeltaTime, getMouseWorldPosition } from "@arcane/runtime/rendering";
+
+// Sword swipe: orange trail that fades to transparent
+const swordTrail = createTrail({
+  maxLength: 20,
+  width: 12,
+  color: { r: 1, g: 0.6, b: 0.1, a: 1 },
+  endColor: { r: 1, g: 0.2, b: 0, a: 0 },
+  maxAge: 0.3,
+  layer: 5,
+  blendMode: "additive",
+});
+
+// Projectile trail: white, narrow, longer lifespan
+const bulletTrail = createTrail({
+  maxLength: 40,
+  width: 3,
+  color: { r: 1, g: 1, b: 1, a: 0.8 },
+  maxAge: 0.5,
+  layer: 3,
+});
+
+onFrame(() => {
+  const dt = getDeltaTime();
+
+  // Feed current position each frame
+  updateTrail(swordTrail, swordTipX, swordTipY, dt);
+  drawTrail(swordTrail);
+
+  updateTrail(bulletTrail, bullet.x, bullet.y, dt);
+  drawTrail(bulletTrail);
+
+  // Clear trail on teleport or scene change
+  if (teleported) clearTrail(swordTrail);
+});
+```
+
+## Impact Juice
+
+One-call combinators that orchestrate camera shake, hitstop (frame freeze), screen flash, and particle burst together. The `consumeHitstopFrame()` pattern lets you freeze gameplay while keeping rendering active.
+
+```typescript
+import {
+  impact, impactLight, impactHeavy, consumeHitstopFrame,
+} from "@arcane/runtime/rendering";
+import { onFrame, getDeltaTime } from "@arcane/runtime/rendering";
+import { updateTweens } from "@arcane/runtime/tweening";
+import { updateParticles } from "@arcane/runtime/particles";
+
+// Full custom impact on enemy hit
+impact(enemy.x, enemy.y, {
+  shake: { intensity: 8, duration: 0.2 },
+  hitstop: 3,                    // freeze gameplay for 3 frames
+  flash: { r: 1, g: 1, b: 1, duration: 0.1, opacity: 0.6 },
+  particles: { count: 20, color: { r: 1, g: 0.5, b: 0, a: 1 } },
+});
+
+// Or use presets:
+impactLight(enemy.x, enemy.y);   // small shake + brief flash
+impactHeavy(boss.x, boss.y);    // big shake + long flash + particles
+
+// Frame loop with hitstop support:
+onFrame(() => {
+  const dt = getDeltaTime();
+
+  if (!consumeHitstopFrame()) {
+    // Normal gameplay update (skipped during hitstop)
+    updateGameplay(dt);
+  }
+
+  // These always run, even during hitstop
+  updateTweens(dt);
+  updateParticles(dt);
+  renderGame();
+});
+```
+
+## Floating Text
+
+Auto-animating text that rises and fades. Used for damage numbers, XP gains, gold pickups, and status messages.
+
+```typescript
+import {
+  spawnFloatingText, updateFloatingTexts, drawFloatingTexts,
+} from "@arcane/runtime/rendering";
+import { onFrame, getDeltaTime } from "@arcane/runtime/rendering";
+
+// Red damage number with pop effect
+spawnFloatingText(enemy.x, enemy.y - 16, "-25", {
+  color: { r: 1, g: 0.2, b: 0.2, a: 1 },
+  rise: 40,
+  duration: 0.8,
+  scale: 1.5,
+  pop: true,           // brief scale-up at spawn
+});
+
+// Gold pickup — green, drifts right
+spawnFloatingText(chest.x, chest.y, "+50 gold", {
+  color: { r: 0.2, g: 1, b: 0.3, a: 1 },
+  rise: 25,
+  duration: 1.0,
+  driftX: 20,
+});
+
+// Heal — gentle white, slower rise
+spawnFloatingText(player.x, player.y - 8, "+10 HP", {
+  color: { r: 0.5, g: 1, b: 0.5, a: 1 },
+  rise: 20,
+  duration: 1.2,
+});
+
+// In game loop:
+onFrame(() => {
+  const dt = getDeltaTime();
+  updateFloatingTexts(dt);
+  drawFloatingTexts();
+});
+```
+
+## Typewriter Dialogue
+
+Progressive character-by-character text reveal. Supports configurable speed, punctuation pauses, and skip-ahead.
+
+```typescript
+import {
+  createTypewriter, updateTypewriter, drawTypewriter,
+  skipTypewriter, resetTypewriter, isTypewriterComplete,
+} from "@arcane/runtime/rendering";
+import { onFrame, getDeltaTime, isKeyPressed } from "@arcane/runtime/rendering";
+import { drawNineSlice } from "@arcane/runtime/rendering";
+
+const dialogues = [
+  "The dragon approaches... Are you ready?",
+  "Take this sword. It belonged to your father.",
+];
+let dialogueIndex = 0;
+
+const tw = createTypewriter(dialogues[0], {
+  speed: 30,                       // characters per second
+  punctuationPause: 0.15,         // extra pause on . , ! ?
+  onComplete: () => {
+    // Dialogue line finished revealing
+  },
+});
+
+onFrame(() => {
+  const dt = getDeltaTime();
+
+  // Skip or advance on key press
+  if (isKeyPressed("Space") || isKeyPressed("Enter")) {
+    if (isTypewriterComplete(tw)) {
+      // Advance to next line
+      dialogueIndex++;
+      if (dialogueIndex < dialogues.length) {
+        resetTypewriter(tw, dialogues[dialogueIndex]);
+      }
+    } else {
+      // Skip to end of current line
+      skipTypewriter(tw);
+    }
+  }
+
+  updateTypewriter(tw, dt);
+
+  // Draw dialogue box background (nine-slice panel) + text
+  drawNineSlice(panelTex, 50, 400, 700, 100, {
+    border: 16, textureWidth: 64, textureHeight: 64,
+    screenSpace: true, layer: 99,
+  });
+  drawTypewriter(tw, 70, 420, {
+    scale: 1,
+    tint: { r: 1, g: 1, b: 1, a: 1 },
+    layer: 100,
+    screenSpace: true,
+  });
+});
+```
+
+## Isometric Grids
+
+Diamond-projection coordinate transforms for isometric 2.5D games. Convert between grid, world, and screen space.
+
+```typescript
+import {
+  isoToWorld, worldToGrid, screenToIso,
+  isoDepthLayer, isoMapBounds, IsoConfig,
+  createIsoTilemap, setIsoTile, drawIsoTilemap,
+} from "@arcane/runtime/rendering";
+import { getCamera, getViewportSize, setCameraBounds } from "@arcane/runtime/rendering";
+
+const ISO: IsoConfig = { tileW: 64, tileH: 32 };
+
+// Convert grid cell to world pixel position
+const worldPos = isoToWorld(3, 5, ISO);
+// worldPos = { x: (3-5)*32, y: (3+5)*16 } = { x: -64, y: 128 }
+
+// Click handling: screen coords -> grid cell
+const cam = getCamera();
+const { width: VPW, height: VPH } = getViewportSize();
+const cell = screenToIso(mouseScreenX, mouseScreenY, cam, ISO, VPW, VPH);
+// cell = { x: gridX, y: gridY }
+
+// Depth sorting: use isoDepthLayer(gy) as the sprite layer
+const layer = isoDepthLayer(cell.y); // gy * 10, leaves room for sub-layers
+
+// Camera bounds for an isometric map
+const bounds = isoMapBounds(20, 20, ISO);
+setCameraBounds(bounds);
+
+// Iso tilemap: create, populate, and draw
+const map = createIsoTilemap({
+  width: 20, height: 20,
+  config: ISO,
+  textureId: tileAtlas,
+  atlasColumns: 8, atlasRows: 8,
+  tileSize: 64,
+});
+setIsoTile(map, 3, 5, 1);  // place tile ID 1 at grid (3, 5)
+drawIsoTilemap(map, cam.x, cam.y, VPW, VPH);
+```
+
+## Hex Grids
+
+Cube-coordinate hex system (q + r + s = 0). Supports both pointy-top and flat-top orientations with neighbors, distance, pathfinding, and rendering.
+
+```typescript
+import {
+  hex, hexNeighbors, hexDistance, hexToWorld, worldToHex,
+  screenToHex, hexRange, HexConfig,
+} from "@arcane/runtime/rendering";
+import { getCamera, getViewportSize } from "@arcane/runtime/rendering";
+
+const HEX: HexConfig = { hexSize: 24, orientation: "pointy" };
+
+// Create a hex coordinate (s is computed automatically)
+const origin = hex(0, 0);    // { q: 0, r: 0, s: 0 }
+const target = hex(3, -1);   // { q: 3, r: -1, s: -2 }
+
+// Get all 6 neighbors
+const neighbors = hexNeighbors(0, 0);  // array of 6 HexCoord
+
+// Distance (minimum hex steps)
+const dist = hexDistance(origin, target);  // 3
+
+// Convert hex to world pixels for drawing
+const worldPos = hexToWorld(target, HEX);
+
+// Click handling: screen -> hex
+const cam = getCamera();
+const { width: VPW, height: VPH } = getViewportSize();
+const clicked = screenToHex(mouseX, mouseY, cam, HEX, VPW, VPH);
+
+// Get all hexes within 3 steps of origin
+const area = hexRange(origin, 3);  // array of HexCoord
+```
+
+**Hex pathfinding** — A* and flood-fill reachability on hex grids:
+
+```typescript
+import { findHexPath, hexReachable, reachableToArray } from "@arcane/runtime/pathfinding";
+import { hex } from "@arcane/runtime/rendering";
+
+const grid = {
+  isWalkable: (q: number, r: number) => getTerrain(q, r) !== "water",
+  cost: (q: number, r: number) => getTerrain(q, r) === "forest" ? 2 : 1,
+};
+
+// Find shortest path
+const result = findHexPath(grid, hex(0, 0), hex(5, -3));
+if (result.found) {
+  for (const step of result.path) {
+    // step.q, step.r — hex coordinates along the path
+  }
+}
+
+// Movement range: all cells reachable within 4 movement points
+const reachable = hexReachable(grid, hex(0, 0), 4);
+const cells = reachableToArray(reachable);
+// Highlight reachable cells on the map
+```
+
+## Gamepad Input
+
+Read gamepad buttons and analog sticks. Uses Xbox layout as the canonical button/axis names.
+
+```typescript
+import {
+  isGamepadButtonDown, isGamepadButtonPressed,
+  getGamepadAxis, getGamepadCount,
+} from "@arcane/runtime/rendering";
+
+// Check if a gamepad is connected
+if (getGamepadCount() > 0) {
+  // Face buttons
+  if (isGamepadButtonPressed("A")) jump();
+  if (isGamepadButtonDown("X")) attack();
+
+  // D-Pad
+  if (isGamepadButtonDown("DPadLeft")) moveLeft();
+
+  // Analog sticks: -1 to 1
+  const lx = getGamepadAxis("LeftStickX");
+  const ly = getGamepadAxis("LeftStickY");
+
+  // Apply deadzone to avoid drift
+  const DEADZONE = 0.15;
+  const moveX = Math.abs(lx) > DEADZONE ? lx : 0;
+  const moveY = Math.abs(ly) > DEADZONE ? ly : 0;
+
+  player.x += moveX * speed * dt;
+  player.y += moveY * speed * dt;
+
+  // Triggers: 0 to 1
+  const rightTrigger = getGamepadAxis("RightTrigger");
+  if (rightTrigger > 0.5) fireBow();
+}
+```
+
+Button names: `"A"`, `"B"`, `"X"`, `"Y"`, `"LeftBumper"`, `"RightBumper"`, `"LeftTrigger"`, `"RightTrigger"`, `"DPadUp"`, `"DPadDown"`, `"DPadLeft"`, `"DPadRight"`, `"Select"`, `"Start"`, `"LeftStick"`, `"RightStick"`, `"Guide"`.
+
+Axis names: `"LeftStickX"`, `"LeftStickY"`, `"RightStickX"`, `"RightStickY"`, `"LeftTrigger"`, `"RightTrigger"`.
+
+## Touch Input
+
+Multi-touch support for mobile and tablet devices. Touch positions are available in both screen and world coordinates.
+
+```typescript
+import {
+  getTouchCount, isTouchActive, getTouchPosition, getTouchWorldPosition,
+} from "@arcane/runtime/rendering";
+
+// Check if any touch is active
+if (isTouchActive()) {
+  // Primary touch (index 0) in screen pixels
+  const screenPos = getTouchPosition(0);
+
+  // Primary touch in world coordinates (camera-adjusted)
+  const worldPos = getTouchWorldPosition(0);
+
+  // Tap-to-move pattern
+  player.targetX = worldPos.x;
+  player.targetY = worldPos.y;
+}
+
+// Multi-touch: check touch count
+const touchCount = getTouchCount();
+if (touchCount >= 2) {
+  const pos1 = getTouchPosition(0);
+  const pos2 = getTouchPosition(1);
+  // Use for pinch-to-zoom, two-finger gestures, etc.
+}
+```
+
+## Input Action Mapping
+
+Map named actions to physical inputs (keyboard, gamepad, mouse, touch). Abstracts away the specific input device so your game logic works with any controller.
+
+```typescript
+import {
+  createInputMap, isActionDown, isActionPressed,
+  getActionValue, setActionBindings,
+} from "@arcane/runtime/input";
+
+// Define action bindings — strings are shorthand for common inputs
+const map = createInputMap({
+  jump: ["Space", "GamepadA"],
+  attack: ["x", "GamepadX", "MouseLeft"],
+  moveRight: [
+    { type: "key", key: "d" },
+    { type: "key", key: "ArrowRight" },
+    { type: "gamepadAxis", axis: "LeftStickX", direction: 1 },
+    "GamepadDPadRight",
+  ],
+  moveLeft: [
+    { type: "key", key: "a" },
+    { type: "key", key: "ArrowLeft" },
+    { type: "gamepadAxis", axis: "LeftStickX", direction: -1 },
+    "GamepadDPadLeft",
+  ],
+});
+
+// In frame loop — works with keyboard OR gamepad automatically:
+if (isActionPressed("jump", map)) {
+  player.vy = -300;
+}
+if (isActionDown("attack", map)) {
+  swingSword();
+}
+
+// Analog value: 0 or 1 for digital inputs, -1 to 1 for analog sticks
+const moveX = getActionValue("moveRight", map) - getActionValue("moveLeft", map);
+player.x += moveX * speed * dt;
+
+// Remapping at runtime (e.g., from a settings menu)
+setActionBindings(map, "jump", ["w", "GamepadB"]);
+```
+
+Shorthand strings: keyboard keys use their name directly (`"Space"`, `"a"`, `"ArrowUp"`). Gamepad buttons use `"GamepadA"`, `"GamepadB"`, `"GamepadX"`, `"GamepadY"`, `"GamepadLB"`, `"GamepadRB"`, `"GamepadDPadUp"`, etc. Mouse buttons use `"MouseLeft"`, `"MouseRight"`, `"MouseMiddle"`.
+
 ## Visual Testing (Draw Call Capture)
 
 Test rendering output without a GPU. Captures draw call intent as structured data — works in headless mode.

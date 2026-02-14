@@ -96,11 +96,11 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phase 20 complete (Audio Polish)!**
+**v0.9.0 — Phases 21-25 complete!**
 
 All packages published and ready to use:
-- **npm**: [@arcane-engine/runtime@0.8.0](https://www.npmjs.com/package/@arcane-engine/runtime), [@arcane-engine/create@0.8.0](https://www.npmjs.com/package/@arcane-engine/create)
-- **crates.io**: [arcane-engine@0.8.0](https://crates.io/crates/arcane-engine), [arcane-cli@0.8.0](https://crates.io/crates/arcane-cli)
+- **npm**: [@arcane-engine/runtime@0.9.0](https://www.npmjs.com/package/@arcane-engine/runtime), [@arcane-engine/create@0.9.0](https://www.npmjs.com/package/@arcane-engine/create)
+- **crates.io**: [arcane-engine@0.9.0](https://crates.io/crates/arcane-engine), [arcane-cli@0.9.0](https://crates.io/crates/arcane-cli)
 
 **Current features:**
 - ✅ Core engine: rendering, audio, text, UI, animation, pathfinding, tweening, particles
@@ -123,13 +123,19 @@ All packages published and ready to use:
 - ✅ Audio polish: instance-based playback, spatial audio, bus mixing, crossfade, sound pooling, pitch variation
 - ✅ Radiance Cascades 2D global illumination: emissives, occluders, spot lights, HDR scene texture
 - ✅ MSDF text rendering: resolution-independent text with outline and shadow support
+- ✅ Screen transitions: fade, wipe, circle iris, diamond, pixelate with mid-transition callbacks
+- ✅ Visual polish: nine-slice sprites, trail/ribbon renderer, sprite shadows
+- ✅ Game feel / juice: impact combinator (hitstop + shake + flash), floating text / damage numbers, typewriter text
+- ✅ Isometric & hex grids: coordinate systems, tilemaps, depth sorting, hex pathfinding
+- ✅ Input systems: gamepad support (gilrs), multi-touch, action mapping with remapping & buffering
+- ✅ MCP-first DX: zero-config MCP auto-discovery for Claude Code, Cursor, VS Code
 - ✅ Standalone install: `cargo install arcane-cli` just works
 - ✅ Built-in asset discovery: 25 free CC0 packs with search, download, and extraction
-- ✅ 1553 TS (Node) + 1556 (V8) + 246 Rust tests passing
+- ✅ 1920 TS (Node) + 1923 (V8) + 277 Rust tests passing
 - ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
-- ✅ 23 example projects (Hello World, Card Battler, Sokoban, Breakout, Roguelike, Platformer, Tower Defense, Sprite Demo, BFRPG RPG, Asteroids, Juice Showcase, Menu Flow, Physics Playground, Parallax Scroller, Tilemap Showcase, Character Controller, UI Showcase, Agent Testing, WFC Dungeon, Lighting Showcase, MSDF Text Showcase, Isometric Dungeon, Audio Showcase)
+- ✅ 27 example projects (Hello World, Card Battler, Sokoban, Breakout, Roguelike, Platformer, Tower Defense, Sprite Demo, BFRPG RPG, Asteroids, Juice Showcase, Menu Flow, Physics Playground, Parallax Scroller, Tilemap Showcase, Character Controller, UI Showcase, Agent Testing, WFC Dungeon, Lighting Showcase, MSDF Text Showcase, Isometric Dungeon, Audio Showcase, Visual Polish, Hex Strategy, Gamepad Platformer)
 
-**Next:** Phase 21 (Input Systems).
+**Next:** Phase 26 (Atmosphere).
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 

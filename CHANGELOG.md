@@ -2,6 +2,27 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.9.0] - 2026-02-14
+
+### Added
+- **Phase 20: Audio Polish** — instance-based playback, spatial audio, bus mixing, crossfade, sound pooling, pitch variation
+- **Phase 21: MCP-First DX** — zero-config MCP auto-discovery (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`), stdio MCP bridge, import maps for `procgen`/`input` subpaths
+- **Phase 22: Visual Polish** — screen transitions (5 types: fade, wipe, circleIris, diamond, pixelate), nine-slice sprite panels, trail/ribbon renderer
+- **Phase 23: Juice & Game Feel** — impact combinator (shake + hitstop + flash + particles), floating text/damage numbers, typewriter text reveal
+- **Phase 24: Isometric & Hex Grids** — diamond/staggered-iso coordinate transforms, iso tilemaps with depth sorting, hex cube coordinates (q + r + s = 0), hex tilemaps, hex A* pathfinding, hex flood-fill reachable
+- **Phase 25: Input Systems** — gamepad support (gilrs), multi-touch input, input action mapping with remapping + buffering + combos, `KeyName` type for compile-time key validation
+- `/release` skill for automated version bumping
+- 4 new demos: visual-polish, hex-strategy, gamepad-platformer, audio-showcase
+- Updated COOKBOOK.md with 11 new recipe sections (transitions, nine-slice, trails, juice, floating text, typewriter, iso grids, hex grids, gamepad, touch, input actions)
+- Updated AGENTS.md with iso/hex, gamepad/touch, juice, and input action sections
+
+### Fixed
+- visual-polish demo: removed hallucinated `drawParticles()`, fixed key codes, dialog box layout
+- physics-playground demo: mouse click handling
+- CI: install `libudev-dev` for gilrs gamepad support on Linux
+- `KeyName` type added for compile-time key validation (prevents typos like `"space"` vs `"Space"`)
+- Import guards added to demos to catch invalid imports early
+
 ## [0.8.1] - 2026-02-13
 
 ### Added
