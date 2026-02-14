@@ -15,11 +15,13 @@ use crate::renderer::Renderer;
 use crate::renderer::camera::CameraBounds;
 
 use super::input::InputState;
+use super::touch::{TouchState, TouchPhase};
 
 /// Shared render state accessible from both the event loop and scripting ops.
 pub struct RenderState {
     pub renderer: Option<Renderer>,
     pub input: InputState,
+    pub touch: TouchState,
     pub sprite_commands: Vec<crate::renderer::SpriteCommand>,
     pub camera_x: f32,
     pub camera_y: f32,
@@ -33,6 +35,7 @@ impl RenderState {
         Self {
             renderer: None,
             input: InputState::default(),
+            touch: TouchState::default(),
             sprite_commands: Vec::new(),
             camera_x: 0.0,
             camera_y: 0.0,
@@ -183,6 +186,20 @@ impl ApplicationHandler for AppState {
                 }
             }
 
+            WindowEvent::Touch(touch) => {
+                let logical_x = touch.location.x as f32 / self.scale_factor as f32;
+                let logical_y = touch.location.y as f32 / self.scale_factor as f32;
+                let phase = match touch.phase {
+                    winit::event::TouchPhase::Started => TouchPhase::Start,
+                    winit::event::TouchPhase::Moved => TouchPhase::Move,
+                    winit::event::TouchPhase::Ended => TouchPhase::End,
+                    winit::event::TouchPhase::Cancelled => TouchPhase::Cancel,
+                };
+                let now = self.last_frame.elapsed().as_secs_f64();
+                let mut state = self.render_state.borrow_mut();
+                state.touch.touch_event(touch.id, logical_x, logical_y, phase, now);
+            }
+
             WindowEvent::RedrawRequested => {
                 let now = Instant::now();
                 let dt = now.duration_since(self.last_frame).as_secs_f64();
@@ -205,6 +222,7 @@ impl ApplicationHandler for AppState {
                 {
                     let mut state = self.render_state.borrow_mut();
                     state.input.begin_frame();
+                    state.touch.begin_frame();
                 }
 
                 // Transfer sprite commands and camera to renderer, then render

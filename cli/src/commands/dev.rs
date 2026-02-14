@@ -85,6 +85,9 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
     let reload_flag = Arc::new(AtomicBool::new(false));
     let _watcher = start_file_watcher(&base_dir, &entry_path, reload_flag.clone());
 
+    // Initialize gamepad manager (gilrs)
+    let mut gamepad_manager = arcane_engine::platform::GamepadManager::new();
+
     // Create the render state for the window
     let render_state = Rc::new(RefCell::new(RenderState::new()));
 
@@ -144,6 +147,53 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
             bridge.mouse_buttons_down = state.input.mouse_buttons.clone();
             bridge.mouse_buttons_pressed = state.input.mouse_buttons_pressed.clone();
             bridge.delta_time = state.delta_time;
+        }
+
+        // Poll gamepad state and sync to bridge
+        if let Some(ref mut gpm) = gamepad_manager {
+            gpm.begin_frame();
+            gpm.update();
+
+            let mut bridge = bridge_for_loop.borrow_mut();
+            bridge.gamepad_count = gpm.connected_count;
+
+            // Sync primary gamepad state
+            let primary = gpm.primary();
+            bridge.gamepad_name = primary.name.clone();
+            bridge.gamepad_buttons_down.clear();
+            bridge.gamepad_buttons_pressed.clear();
+            for btn in &primary.buttons_down {
+                bridge.gamepad_buttons_down.insert(btn.as_str().to_string());
+            }
+            for btn in &primary.buttons_pressed {
+                bridge.gamepad_buttons_pressed.insert(btn.as_str().to_string());
+            }
+            bridge.gamepad_axes.clear();
+            use arcane_engine::platform::GamepadAxis;
+            let axes = [
+                (GamepadAxis::LeftStickX, "LeftStickX"),
+                (GamepadAxis::LeftStickY, "LeftStickY"),
+                (GamepadAxis::RightStickX, "RightStickX"),
+                (GamepadAxis::RightStickY, "RightStickY"),
+                (GamepadAxis::LeftTrigger, "LeftTrigger"),
+                (GamepadAxis::RightTrigger, "RightTrigger"),
+            ];
+            for (axis, name) in axes {
+                let val = primary.get_axis(axis);
+                if val.abs() > 0.001 {
+                    bridge.gamepad_axes.insert(name.to_string(), val);
+                }
+            }
+        }
+
+        // Sync touch state to bridge
+        {
+            let mut bridge = bridge_for_loop.borrow_mut();
+            bridge.touch_count = state.touch.count() as u32;
+            bridge.touch_points.clear();
+            for point in &state.touch.points {
+                bridge.touch_points.push((point.id, point.x, point.y));
+            }
         }
 
         // Call the TS frame callback
