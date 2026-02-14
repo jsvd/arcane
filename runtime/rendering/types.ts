@@ -85,6 +85,32 @@ export type CameraState = {
   zoom: number;
 };
 
+/**
+ * Valid key name for {@link isKeyDown} and {@link isKeyPressed}.
+ *
+ * Arcane uses winit's logical key representation, NOT DOM KeyboardEvent.code.
+ * - Letters are **lowercase single characters**: `"a"`, `"b"`, ..., `"z"`
+ * - Digits are **single characters**: `"0"`, `"1"`, ..., `"9"`
+ * - Named keys: `"Space"`, `"Enter"`, `"Escape"`, `"ArrowUp"`, etc.
+ *
+ * **Common mistake:** Do NOT use DOM-style codes like `"KeyA"`, `"Digit1"`, `"KeyT"`.
+ * Use `"a"`, `"1"`, `"t"` instead.
+ */
+export type KeyName =
+  | "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m"
+  | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z"
+  | "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M"
+  | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z"
+  | "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+  | "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight"
+  | "Space" | "Enter" | "Escape" | "Backspace" | "Tab"
+  | "Shift" | "Control" | "Alt"
+  | "Delete" | "Home" | "End" | "PageUp" | "PageDown"
+  | "F1" | "F2" | "F3" | "F4" | "F5" | "F6" | "F7" | "F8" | "F9" | "F10" | "F11" | "F12"
+  | " " | "," | "." | "/" | ";" | "'" | "[" | "]" | "\\" | "-" | "=" | "`"
+  | ">" | "<" | "?" | ":" | "\"" | "{" | "}" | "|" | "+" | "_" | "~"
+  | "!" | "@" | "#" | "$" | "%" | "^" | "&" | "*" | "(" | ")";
+
 /** Mouse position in screen or world coordinates. */
 export type MousePosition = {
   /** X position in pixels (screen) or world units (world). */

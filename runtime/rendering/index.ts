@@ -4,6 +4,7 @@ export type {
   SpriteOptions,
   CameraState,
   MousePosition,
+  KeyName,
 } from "./types.ts";
 
 // Sprites

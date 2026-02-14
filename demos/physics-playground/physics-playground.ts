@@ -22,6 +22,7 @@ import {
   setCamera,
   isKeyPressed,
   isKeyDown,
+  isMouseButtonPressed,
   getDeltaTime,
   createSolidTexture,
   getMouseWorldPosition,
@@ -299,7 +300,7 @@ onFrame(() => {
 
   // Click to spawn
   const mouse = getMouseWorldPosition();
-  if (isKeyPressed("MouseLeft")) {
+  if (isMouseButtonPressed(0)) {
     const mx = mouse.x;
     const my = mouse.y;
     switch (spawnMode) {

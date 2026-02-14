@@ -1,4 +1,4 @@
-import type { MousePosition } from "./types.ts";
+import type { MousePosition, KeyName } from "./types.ts";
 import { getCamera } from "./camera.ts";
 
 const hasRenderOps =
@@ -13,24 +13,24 @@ const hasViewportOp =
  * Check if a key is currently held down (returns true every frame while held).
  * Returns false in headless mode.
  *
- * Key names follow web KeyboardEvent.key standards:
+ * Key names use winit's logical key representation (NOT DOM KeyboardEvent.code):
+ * - Letters: `"a"` - `"z"` (lowercase single characters, NOT `"KeyA"`)
+ * - Digits: `"0"` - `"9"` (single characters, NOT `"Digit1"`)
  * - Arrow keys: `"ArrowUp"`, `"ArrowDown"`, `"ArrowLeft"`, `"ArrowRight"`
- * - Letters: `"a"` - `"z"` (lowercase)
- * - Digits: `"0"` - `"9"`
  * - Function keys: `"F1"` - `"F12"`
  * - Whitespace: `"Space"`, `"Tab"`, `"Enter"`
  * - Modifiers: `"Shift"`, `"Control"`, `"Alt"`
  * - Navigation: `"Escape"`, `"Backspace"`, `"Delete"`, `"Home"`, `"End"`, `"PageUp"`, `"PageDown"`
  *
- * @param key - Key name string (case-sensitive, web standard).
+ * @param key - Key name (see {@link KeyName} for valid values).
  * @returns true if the key is currently held down, false otherwise.
  *
  * @example
- * if (isKeyDown("ArrowRight")) {
+ * if (isKeyDown("ArrowRight") || isKeyDown("d")) {
  *   player.x += speed * dt;
  * }
  */
-export function isKeyDown(key: string): boolean {
+export function isKeyDown(key: KeyName): boolean {
   if (!hasRenderOps) return false;
   return (globalThis as any).Deno.core.ops.op_is_key_down(key);
 }
@@ -48,7 +48,7 @@ export function isKeyDown(key: string): boolean {
  * @param key - Key name string (case-sensitive, web standard).
  * @returns true if the key was just pressed this frame, false otherwise.
  */
-export function isKeyPressed(key: string): boolean {
+export function isKeyPressed(key: KeyName): boolean {
   if (!hasRenderOps) return false;
   return (globalThis as any).Deno.core.ops.op_is_key_pressed(key);
 }

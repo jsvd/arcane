@@ -48,9 +48,6 @@ import {
 } from "../../runtime/rendering/transition.ts";
 import type { ScreenTransitionType } from "../../runtime/rendering/transition.ts";
 import {
-  drawNineSlice,
-} from "../../runtime/rendering/nineslice.ts";
-import {
   createTrail,
   updateTrail,
   drawTrail,
@@ -125,7 +122,7 @@ const sceneColors = [
   { r: 0.05, g: 0.1, b: 0.05 },
 ];
 
-setBackgroundColor(20, 20, 40);
+setBackgroundColor(0.08, 0.08, 0.16);
 
 onFrame(() => {
   const dt = getDeltaTime();
@@ -145,16 +142,12 @@ onFrame(() => {
   // Transition keys 1-5
   const transTypes: ScreenTransitionType[] = ["fade", "wipe", "circleIris", "diamond", "pixelate"];
   for (let i = 0; i < 5; i++) {
-    if (isKeyPressed(`Digit${i + 1}`) && !isScreenTransitionActive()) {
+    if (isKeyPressed(`${i + 1}`) && !isScreenTransitionActive()) {
       const type = transTypes[i];
       sceneIndex = (sceneIndex + 1) % sceneColors.length;
       const nextColor = sceneColors[sceneIndex];
       startScreenTransition(type, 0.6, { color: { r: 0, g: 0, b: 0 } }, () => {
-        setBackgroundColor(
-          Math.round(nextColor.r * 255),
-          Math.round(nextColor.g * 255),
-          Math.round(nextColor.b * 255),
-        );
+        setBackgroundColor(nextColor.r, nextColor.g, nextColor.b);
       });
     }
   }
@@ -202,7 +195,7 @@ onFrame(() => {
   }
 
   // T = typewriter
-  if (isKeyPressed("KeyT")) {
+  if (isKeyPressed("t")) {
     if (isTypewriterComplete(typewriter)) {
       currentLine = (currentLine + 1) % dialogueLines.length;
       resetTypewriter(typewriter, dialogueLines[currentLine]);
@@ -212,7 +205,7 @@ onFrame(() => {
   }
 
   // R = reset
-  if (isKeyPressed("KeyR")) {
+  if (isKeyPressed("r")) {
     target.hp = 100;
     hitCount = 0;
   }
@@ -284,13 +277,15 @@ onFrame(() => {
   // Trail
   drawTrail(trail);
 
-  // Nine-slice dialogue box
-  drawNineSlice(panelTex, 50, vpH - 160, vpW - 100, 70, {
-    border: 8,
+  // Dialogue box background (solid color panel)
+  drawSprite({
+    textureId: panelTex,
+    x: 50,
+    y: vpH - 160,
+    w: vpW - 100,
+    h: 70,
     layer: 80,
-    tint: { r: 0.15, g: 0.15, b: 0.25, a: 0.95 },
-    textureWidth: 1,
-    textureHeight: 1,
+    tint: { r: 0.6, g: 0.6, b: 0.8, a: 0.95 },
   });
 
   // Typewriter text inside dialogue box
