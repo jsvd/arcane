@@ -109,6 +109,18 @@ declare module "@arcane/runtime/rendering" {
       /** Zoom level. 1.0 = default, >1.0 = zoomed in, <1.0 = zoomed out. */
       zoom: number;
   };
+  /**
+   * Valid key name for {@link isKeyDown} and {@link isKeyPressed}.
+   *
+   * Arcane uses winit's logical key representation, NOT DOM KeyboardEvent.code.
+   * - Letters are **lowercase single characters**: `"a"`, `"b"`, ..., `"z"`
+   * - Digits are **single characters**: `"0"`, `"1"`, ..., `"9"`
+   * - Named keys: `"Space"`, `"Enter"`, `"Escape"`, `"ArrowUp"`, etc.
+   *
+   * **Common mistake:** Do NOT use DOM-style codes like `"KeyA"`, `"Digit1"`, `"KeyT"`.
+   * Use `"a"`, `"1"`, `"t"` instead.
+   */
+  export type KeyName = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z" | "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z" | "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight" | "Space" | "Enter" | "Escape" | "Backspace" | "Tab" | "Shift" | "Control" | "Alt" | "Delete" | "Home" | "End" | "PageUp" | "PageDown" | "F1" | "F2" | "F3" | "F4" | "F5" | "F6" | "F7" | "F8" | "F9" | "F10" | "F11" | "F12" | " " | "," | "." | "/" | ";" | "'" | "[" | "]" | "\\" | "-" | "=" | "`" | ">" | "<" | "?" | ":" | "\"" | "{" | "}" | "|" | "+" | "_" | "~" | "!" | "@" | "#" | "$" | "%" | "^" | "&" | "*" | "(" | ")";
   /** Mouse position in screen or world coordinates. */
   export type MousePosition = {
       /** X position in pixels (screen) or world units (world). */
@@ -1413,24 +1425,24 @@ declare module "@arcane/runtime/rendering" {
    * Check if a key is currently held down (returns true every frame while held).
    * Returns false in headless mode.
    *
-   * Key names follow web KeyboardEvent.key standards:
+   * Key names use winit's logical key representation (NOT DOM KeyboardEvent.code):
+   * - Letters: `"a"` - `"z"` (lowercase single characters, NOT `"KeyA"`)
+   * - Digits: `"0"` - `"9"` (single characters, NOT `"Digit1"`)
    * - Arrow keys: `"ArrowUp"`, `"ArrowDown"`, `"ArrowLeft"`, `"ArrowRight"`
-   * - Letters: `"a"` - `"z"` (lowercase)
-   * - Digits: `"0"` - `"9"`
    * - Function keys: `"F1"` - `"F12"`
    * - Whitespace: `"Space"`, `"Tab"`, `"Enter"`
    * - Modifiers: `"Shift"`, `"Control"`, `"Alt"`
    * - Navigation: `"Escape"`, `"Backspace"`, `"Delete"`, `"Home"`, `"End"`, `"PageUp"`, `"PageDown"`
    *
-   * @param key - Key name string (case-sensitive, web standard).
+   * @param key - Key name (see {@link KeyName} for valid values).
    * @returns true if the key is currently held down, false otherwise.
    *
    * @example
-   * if (isKeyDown("ArrowRight")) {
+   * if (isKeyDown("ArrowRight") || isKeyDown("d")) {
    *   player.x += speed * dt;
    * }
    */
-  export declare function isKeyDown(key: string): boolean;
+  export declare function isKeyDown(key: KeyName): boolean;
   /**
    * Check if a key was pressed this frame (transitioned from up to down).
    * Unlike {@link isKeyDown}, this returns true only on the first frame the key is pressed.
@@ -1444,7 +1456,7 @@ declare module "@arcane/runtime/rendering" {
    * @param key - Key name string (case-sensitive, web standard).
    * @returns true if the key was just pressed this frame, false otherwise.
    */
-  export declare function isKeyPressed(key: string): boolean;
+  export declare function isKeyPressed(key: KeyName): boolean;
   /**
    * Get the current mouse position in screen/window coordinates (pixels).
    * (0, 0) is the top-left corner of the window.
