@@ -130,20 +130,20 @@ describe("screenToIso", () => {
     x: 0,
     y: 0,
     zoom: 1,
-    viewportWidth: 800,
-    viewportHeight: 600,
   };
+  const vpW = 800;
+  const vpH = 600;
 
   it("screen center with camera at origin returns grid near (0,0)", () => {
-    const g = screenToIso(400, 300, cam, STD);
+    const g = screenToIso(400, 300, cam, STD, vpW, vpH);
     assert.equal(g.x, 0);
     assert.equal(g.y, 0);
   });
 
   it("offset camera shifts the result", () => {
     const offsetCam: CameraState = { ...cam, x: 100, y: 50 };
-    const g1 = screenToIso(400, 300, cam, STD);
-    const g2 = screenToIso(400, 300, offsetCam, STD);
+    const g1 = screenToIso(400, 300, cam, STD, vpW, vpH);
+    const g2 = screenToIso(400, 300, offsetCam, STD, vpW, vpH);
     // They should differ due to camera offset
     assert.ok(g1.x !== g2.x || g1.y !== g2.y);
   });
@@ -151,7 +151,7 @@ describe("screenToIso", () => {
   it("zoom affects the conversion", () => {
     const zoomed: CameraState = { ...cam, zoom: 2 };
     // At zoom 2, the same screen pixel covers half the world distance
-    const g = screenToIso(400, 300, zoomed, STD);
+    const g = screenToIso(400, 300, zoomed, STD, vpW, vpH);
     assert.equal(g.x, 0);
     assert.equal(g.y, 0);
   });
@@ -257,12 +257,12 @@ describe("screenToStaggeredIso", () => {
     x: 0,
     y: 0,
     zoom: 1,
-    viewportWidth: 800,
-    viewportHeight: 600,
   };
+  const vpW = 800;
+  const vpH = 600;
 
   it("screen center maps to grid near origin", () => {
-    const g = screenToStaggeredIso(400, 300, cam, cfg);
+    const g = screenToStaggeredIso(400, 300, cam, cfg, vpW, vpH);
     // Camera at (0,0) means screen center shows world (0,0)
     assert.equal(g.x, 0);
     assert.equal(g.y, 0);

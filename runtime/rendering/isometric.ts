@@ -103,8 +103,10 @@ export function worldToGrid(wx: number, wy: number, config: IsoConfig): { x: num
  *
  * @param sx - Screen X position.
  * @param sy - Screen Y position.
- * @param camera - Current camera state (position, zoom, viewport).
+ * @param camera - Current camera state (position, zoom).
  * @param config - Tile dimensions.
+ * @param viewportWidth - Viewport width in pixels. Use getViewportSize().width.
+ * @param viewportHeight - Viewport height in pixels. Use getViewportSize().height.
  * @returns Integer grid cell { x, y }.
  */
 export function screenToIso(
@@ -112,11 +114,13 @@ export function screenToIso(
   sy: number,
   camera: CameraState,
   config: IsoConfig,
+  viewportWidth: number,
+  viewportHeight: number,
 ): { x: number; y: number } {
   // Unproject screen to world: screen center = camera position
   const scale = 1 / camera.zoom;
-  const wx = camera.x + (sx - camera.viewportWidth / 2) * scale;
-  const wy = camera.y + (sy - camera.viewportHeight / 2) * scale;
+  const wx = camera.x + (sx - viewportWidth / 2) * scale;
+  const wy = camera.y + (sy - viewportHeight / 2) * scale;
   return worldToGrid(wx, wy, config);
 }
 
@@ -198,6 +202,8 @@ export function worldToStaggeredIso(
  * @param sy - Screen Y position.
  * @param camera - Current camera state.
  * @param config - Staggered iso configuration.
+ * @param viewportWidth - Viewport width in pixels. Use getViewportSize().width.
+ * @param viewportHeight - Viewport height in pixels. Use getViewportSize().height.
  * @returns Integer grid cell { x, y }.
  */
 export function screenToStaggeredIso(
@@ -205,10 +211,12 @@ export function screenToStaggeredIso(
   sy: number,
   camera: CameraState,
   config: StaggeredIsoConfig,
+  viewportWidth: number,
+  viewportHeight: number,
 ): { x: number; y: number } {
   const scale = 1 / camera.zoom;
-  const wx = camera.x + (sx - camera.viewportWidth / 2) * scale;
-  const wy = camera.y + (sy - camera.viewportHeight / 2) * scale;
+  const wx = camera.x + (sx - viewportWidth / 2) * scale;
+  const wy = camera.y + (sy - viewportHeight / 2) * scale;
   return worldToStaggeredIso(wx, wy, config);
 }
 

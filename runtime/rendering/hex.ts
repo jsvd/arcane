@@ -330,6 +330,8 @@ export function worldToHex(wx: number, wy: number, config: HexConfig): HexCoord 
  * @param sy - Screen Y position.
  * @param camera - Current camera state.
  * @param config - Hex layout configuration.
+ * @param viewportWidth - Viewport width in pixels. Use getViewportSize().width.
+ * @param viewportHeight - Viewport height in pixels. Use getViewportSize().height.
  * @returns Nearest hex cube coordinate.
  */
 export function screenToHex(
@@ -337,10 +339,12 @@ export function screenToHex(
   sy: number,
   camera: CameraState,
   config: HexConfig,
+  viewportWidth: number,
+  viewportHeight: number,
 ): HexCoord {
   const scale = 1 / camera.zoom;
-  const wx = camera.x + (sx - camera.viewportWidth / 2) * scale;
-  const wy = camera.y + (sy - camera.viewportHeight / 2) * scale;
+  const wx = camera.x + (sx - viewportWidth / 2) * scale;
+  const wy = camera.y + (sy - viewportHeight / 2) * scale;
   return worldToHex(wx, wy, config);
 }
 

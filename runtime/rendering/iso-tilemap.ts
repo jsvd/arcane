@@ -9,6 +9,7 @@
 import { drawSprite } from "./sprites.ts";
 import { _logDrawCall } from "../testing/visual.ts";
 import { isoToWorld, isoDepthLayer } from "./isometric.ts";
+import { getViewportSize } from "./input.ts";
 import type { IsoConfig } from "./isometric.ts";
 import type { CameraState } from "./types.ts";
 
@@ -211,7 +212,7 @@ export function drawIsoTilemap(
   offsetX: number = 0,
   offsetY: number = 0,
 ): void {
-  _logDrawCall({ type: "iso-tilemap", width: tilemap.width, height: tilemap.height, baseLayer });
+  _logDrawCall({ type: "tilemap", tilemapId: 0, x: offsetX, y: offsetY, layer: baseLayer } as any);
 
   const { width, height, config, tiles, textureMap } = tilemap;
   const halfW = config.tileW / 2;
@@ -224,9 +225,10 @@ export function drawIsoTilemap(
   let cullMaxY = Infinity;
 
   if (camera) {
+    const vp = getViewportSize();
     const scale = 1 / camera.zoom;
-    const hw = (camera.viewportWidth / 2) * scale;
-    const hh = (camera.viewportHeight / 2) * scale;
+    const hw = (vp.width / 2) * scale;
+    const hh = (vp.height / 2) * scale;
     // Add margin for tile dimensions
     const margin = Math.max(config.tileW, config.tileH) * 2;
     cullMinX = camera.x - hw - margin;

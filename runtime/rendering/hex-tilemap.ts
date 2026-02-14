@@ -17,6 +17,7 @@ import {
   cubeToOffset,
   computeHexAutotileBitmask,
 } from "./hex.ts";
+import { getViewportSize } from "./input.ts";
 import type { HexConfig, HexCoord, HexOrientation, OffsetType } from "./hex.ts";
 import type { CameraState } from "./types.ts";
 
@@ -228,7 +229,7 @@ export function drawHexTilemap(
   offsetX: number = 0,
   offsetY: number = 0,
 ): void {
-  _logDrawCall({ type: "hex-tilemap", width: tilemap.width, height: tilemap.height, baseLayer });
+  _logDrawCall({ type: "tilemap", tilemapId: 0, x: offsetX, y: offsetY, layer: baseLayer } as any);
 
   const { width, height, config, tiles, textureMap, offsetType } = tilemap;
   const sqrt3 = Math.sqrt(3);
@@ -250,9 +251,10 @@ export function drawHexTilemap(
   let cullMaxY = Infinity;
 
   if (camera) {
+    const vp = getViewportSize();
     const scale = 1 / camera.zoom;
-    const hw = (camera.viewportWidth / 2) * scale;
-    const hh = (camera.viewportHeight / 2) * scale;
+    const hw = (vp.width / 2) * scale;
+    const hh = (vp.height / 2) * scale;
     const margin = Math.max(sprW, sprH) * 2;
     cullMinX = camera.x - hw - margin;
     cullMinY = camera.y - hh - margin;

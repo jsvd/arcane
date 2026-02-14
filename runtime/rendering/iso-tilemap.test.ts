@@ -170,7 +170,7 @@ describe("drawIsoTilemap", () => {
     setIsoTile(tm, 0, 0, 1);
     setIsoTileTexture(tm, 1, 42);
     const cam: CameraState = {
-      x: 0, y: 0, zoom: 1, viewportWidth: 800, viewportHeight: 600,
+      x: 0, y: 0, zoom: 1,
     };
     drawIsoTilemap(tm, cam);
   });
