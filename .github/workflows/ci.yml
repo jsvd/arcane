@@ -29,8 +29,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: v1-rust
-      - name: Install ALSA development libraries
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+      - name: Install system dependencies (ALSA + udev)
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
       - run: cargo test --workspace
 
   ts-tests-v8:
@@ -45,8 +45,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: v1-rust
-      - name: Install ALSA development libraries
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+      - name: Install system dependencies (ALSA + udev)
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
       - run: npm install
       - run: cargo run -- test
 
@@ -90,6 +90,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: v1-rust
-      - name: Install ALSA development libraries
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+      - name: Install system dependencies (ALSA + udev)
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
       - run: cargo check --workspace
