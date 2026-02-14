@@ -15,6 +15,7 @@
 
 import {
   onFrame,
+  getDeltaTime,
   getViewportSize,
   setCamera,
   drawText,
@@ -36,6 +37,7 @@ import {
   crossfadeMusic,
   setBusVolume,
   getBusVolume,
+  stopAll,
   setPoolConfig,
   type InstanceId,
 } from "@arcane/runtime/rendering";
@@ -69,9 +71,12 @@ const soundSources: SoundSource[] = [];
 let listenerPos = { x: 400, y: 300 };
 const LISTENER_SPEED = 200;
 
-// Load a dummy sound — will log "[audio] Failed to read sound file" if file doesn't exist,
-// but the demo works visually regardless. Place a real .wav/.ogg file here to hear audio.
-const dummySound = loadSound("sound.wav");
+// Load sounds — each button gets a distinct sound
+const spatialSound = loadSound("sound.ogg");
+const sfxSound = loadSound("sfx.ogg");
+const musicSound = loadSound("zone1.ogg");
+const ambientSound = loadSound("ambient.ogg");
+const voiceSound = loadSound("voice.ogg");
 
 function initScene1() {
   soundSources.length = 0;
@@ -81,19 +86,19 @@ function initScene1() {
   soundSources.push({
     x: 200,
     y: 150,
-    instanceId: playSoundAt(dummySound, { x: 200, y: 150, loop: true, volume: 0.8 }),
+    instanceId: playSoundAt(spatialSound, { x: 200, y: 150, loop: true, volume: 0.8 }),
     color: redTexture,
   });
   soundSources.push({
     x: 600,
     y: 150,
-    instanceId: playSoundAt(dummySound, { x: 600, y: 150, loop: true, volume: 0.8 }),
+    instanceId: playSoundAt(spatialSound, { x: 600, y: 150, loop: true, volume: 0.8 }),
     color: greenTexture,
   });
   soundSources.push({
     x: 400,
     y: 450,
-    instanceId: playSoundAt(dummySound, { x: 400, y: 450, loop: true, volume: 0.8 }),
+    instanceId: playSoundAt(spatialSound, { x: 400, y: 450, loop: true, volume: 0.8 }),
     color: blueTexture,
   });
 }
@@ -122,7 +127,7 @@ function updateScene1(dt: number) {
     soundSources.push({
       x: mouse.x,
       y: mouse.y,
-      instanceId: playSoundAt(dummySound, { x: mouse.x, y: mouse.y, loop: true, volume: 0.8 }),
+      instanceId: playSoundAt(spatialSound, { x: mouse.x, y: mouse.y, loop: true, volume: 0.8 }),
       color,
     });
   }
@@ -336,18 +341,23 @@ function updateScene3() {
   setBusVolume("ambient", ambientSlider.value);
   setBusVolume("voice", voiceSlider.value);
 
-  // Update buttons (need clicked state for press detection)
-  if (updateButton(testSfxButton, mouse.x, mouse.y, clicked)) {
-    playSound(dummySound, { bus: "sfx", pitchVariation: 0.2 });
+  // Update buttons (pass held state for press/release detection)
+  updateButton(testSfxButton, mouse.x, mouse.y, held);
+  updateButton(testMusicButton, mouse.x, mouse.y, held);
+  updateButton(testAmbientButton, mouse.x, mouse.y, held);
+  updateButton(testVoiceButton, mouse.x, mouse.y, held);
+
+  if (testSfxButton.clicked) {
+    playSound(sfxSound, { bus: "sfx", pitchVariation: 0.2 });
   }
-  if (updateButton(testMusicButton, mouse.x, mouse.y, clicked)) {
-    playSound(dummySound, { bus: "music", loop: true });
+  if (testMusicButton.clicked) {
+    playSound(musicSound, { bus: "music", loop: true });
   }
-  if (updateButton(testAmbientButton, mouse.x, mouse.y, clicked)) {
-    playSound(dummySound, { bus: "ambient", loop: true });
+  if (testAmbientButton.clicked) {
+    playSound(ambientSound, { bus: "ambient", loop: true });
   }
-  if (updateButton(testVoiceButton, mouse.x, mouse.y, clicked)) {
-    playSound(dummySound, { bus: "voice" });
+  if (testVoiceButton.clicked) {
+    playSound(voiceSound, { bus: "voice" });
   }
 }
 
@@ -389,17 +399,21 @@ function drawScene3() {
 // Initialize first scene
 initScene1();
 
-onFrame((dt: number) => {
+onFrame(() => {
+  const dt = getDeltaTime();
   setBackgroundColor(30 / 255, 30 / 255, 40 / 255);
 
   // Scene switching
-  if (isKeyPressed("1")) {
+  if (isKeyPressed("1") && currentScene !== 1) {
+    stopAll();
     currentScene = 1;
     initScene1();
-  } else if (isKeyPressed("2")) {
+  } else if (isKeyPressed("2") && currentScene !== 2) {
+    stopAll();
     currentScene = 2;
     initScene2();
-  } else if (isKeyPressed("3")) {
+  } else if (isKeyPressed("3") && currentScene !== 3) {
+    stopAll();
     currentScene = 3;
     initScene3();
   }

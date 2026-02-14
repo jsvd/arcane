@@ -86,6 +86,12 @@ struct InstanceMetadata {
     is_spatial: bool,
 }
 
+/// Scale factor to convert game pixel coordinates to audio-space coordinates.
+/// rodio's SpatialSink uses inverse-distance attenuation, so game distances
+/// of 100s of pixels would produce near-zero volume without scaling.
+/// With SPATIAL_SCALE = 0.01, 100 game pixels = 1.0 audio unit.
+const SPATIAL_SCALE: f32 = 0.01;
+
 /// Spawn the audio thread. It owns the rodio OutputStream and processes commands.
 pub fn start_audio_thread(rx: AudioReceiver) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
@@ -282,13 +288,18 @@ pub fn start_audio_thread(rx: AudioReceiver) -> std::thread::JoinHandle<()> {
                     listener_y,
                 } => {
                     if let Some(data) = sounds.get(&sound_id) {
+                        // Scale game pixel coords to audio-space coords
+                        let sx = source_x * SPATIAL_SCALE;
+                        let sy = source_y * SPATIAL_SCALE;
+                        let lx = listener_x * SPATIAL_SCALE;
+                        let ly = listener_y * SPATIAL_SCALE;
+
                         // SpatialSink constructor: try_new(handle, emitter_pos, left_ear, right_ear)
-                        // For 2D audio, we use the same listener position for both ears
                         match rodio::SpatialSink::try_new(
                             &stream_handle,
-                            [source_x, source_y, 0.0],
-                            [listener_x - 1.0, listener_y, 0.0], // Left ear (slightly offset)
-                            [listener_x + 1.0, listener_y, 0.0], // Right ear (slightly offset)
+                            [sx, sy, 0.0],
+                            [lx - 0.1, ly, 0.0], // Left ear
+                            [lx + 0.1, ly, 0.0], // Right ear
                         ) {
                             Ok(sink) => {
                                 let cursor = Cursor::new((**data).clone());
@@ -366,11 +377,13 @@ pub fn start_audio_thread(rx: AudioReceiver) -> std::thread::JoinHandle<()> {
                 }
 
                 AudioCommand::UpdateSpatialPositions { updates, listener_x, listener_y } => {
+                    let lx = listener_x * SPATIAL_SCALE;
+                    let ly = listener_y * SPATIAL_SCALE;
                     for (instance_id, source_x, source_y) in updates {
                         if let Some(sink) = spatial_sinks.get(&instance_id) {
-                            sink.set_emitter_position([source_x, source_y, 0.0]);
-                            sink.set_left_ear_position([listener_x - 1.0, listener_y, 0.0]);
-                            sink.set_right_ear_position([listener_x + 1.0, listener_y, 0.0]);
+                            sink.set_emitter_position([source_x * SPATIAL_SCALE, source_y * SPATIAL_SCALE, 0.0]);
+                            sink.set_left_ear_position([lx - 0.1, ly, 0.0]);
+                            sink.set_right_ear_position([lx + 0.1, ly, 0.0]);
                         }
                     }
                 }

@@ -95,19 +95,28 @@ fn walk_dir(dir: &PathBuf, files: &mut Vec<PathBuf>) -> anyhow::Result<()> {
         let entry = entry?;
         let path = entry.path();
 
-        // Skip target/, node_modules/, .git/
+        // Skip target/, node_modules/, .git/, packages/ (contains symlinks back to runtime/)
         if path.is_dir() {
+            // Never follow symlinks — avoids cycles and double-counting
+            if path.is_symlink() {
+                continue;
+            }
             let name = entry.file_name();
             let name = name.to_string_lossy();
             if name == "target"
                 || name == "node_modules"
                 || name == "templates"
+                || name == "packages"
                 || name.starts_with('.')
             {
                 continue;
             }
             walk_dir(&path, files)?;
         } else if path.to_string_lossy().ends_with(".test.ts") {
+            // Skip symlinked test files too
+            if path.is_symlink() {
+                continue;
+            }
             files.push(path);
         }
     }
