@@ -296,16 +296,18 @@ function drawScene2() {
 // Scene 3: Mixer Panel
 //=============================================================================
 
-const masterSlider = createSlider({ x: 100, y: 100, width: 200, value: 1.0 });
-const sfxSlider = createSlider({ x: 100, y: 160, width: 200, value: 1.0 });
-const musicSlider = createSlider({ x: 100, y: 220, width: 200, value: 1.0 });
-const ambientSlider = createSlider({ x: 100, y: 280, width: 200, value: 1.0 });
-const voiceSlider = createSlider({ x: 100, y: 340, width: 200, value: 1.0 });
+// createSlider(x, y, w, min, max, value, label?)
+const masterSlider = createSlider(100, 100, 200, 0, 1, 1.0, "Master");
+const sfxSlider = createSlider(100, 160, 200, 0, 1, 1.0, "SFX");
+const musicSlider = createSlider(100, 220, 200, 0, 1, 1.0, "Music");
+const ambientSlider = createSlider(100, 280, 200, 0, 1, 1.0, "Ambient");
+const voiceSlider = createSlider(100, 340, 200, 0, 1, 1.0, "Voice");
 
-const testSfxButton = createButton({ x: 450, y: 160, width: 120, height: 30, label: "Test SFX" });
-const testMusicButton = createButton({ x: 450, y: 220, width: 120, height: 30, label: "Test Music" });
-const testAmbientButton = createButton({ x: 450, y: 280, width: 120, height: 30, label: "Test Ambient" });
-const testVoiceButton = createButton({ x: 450, y: 340, width: 120, height: 30, label: "Test Voice" });
+// createButton(x, y, w, h, label)
+const testSfxButton = createButton(450, 160, 120, 30, "Test SFX");
+const testMusicButton = createButton(450, 220, 120, 30, "Test Music");
+const testAmbientButton = createButton(450, 280, 120, 30, "Test Ambient");
+const testVoiceButton = createButton(450, 340, 120, 30, "Test Voice");
 
 function initScene3() {
   // Reset all sliders
@@ -357,19 +359,12 @@ function drawScene3() {
   drawText("Scene 3: Mixer Panel", 10, 10, { size: 16, screenSpace: true });
   drawText("Adjust bus volumes and test sounds", 10, 30, { size: 12, screenSpace: true });
 
-  // Slider labels
-  drawText("Master Volume:", 100, 85, { size: 12, screenSpace: true });
-  drawText("SFX Bus:", 100, 145, { size: 12, screenSpace: true });
-  drawText("Music Bus:", 100, 205, { size: 12, screenSpace: true });
-  drawText("Ambient Bus:", 100, 265, { size: 12, screenSpace: true });
-  drawText("Voice Bus:", 100, 325, { size: 12, screenSpace: true });
-
-  // Slider values
-  drawText(`${Math.floor(masterSlider.value * 100)}%`, 320, 100, { size: 12, screenSpace: true });
-  drawText(`${Math.floor(sfxSlider.value * 100)}%`, 320, 160, { size: 12, screenSpace: true });
-  drawText(`${Math.floor(musicSlider.value * 100)}%`, 320, 220, { size: 12, screenSpace: true });
-  drawText(`${Math.floor(ambientSlider.value * 100)}%`, 320, 280, { size: 12, screenSpace: true });
-  drawText(`${Math.floor(voiceSlider.value * 100)}%`, 320, 340, { size: 12, screenSpace: true });
+  // Slider values (labels are built into the sliders via createSlider)
+  drawText(`${Math.floor(masterSlider.value * 100)}%`, 320, 105, { size: 12, screenSpace: true });
+  drawText(`${Math.floor(sfxSlider.value * 100)}%`, 320, 165, { size: 12, screenSpace: true });
+  drawText(`${Math.floor(musicSlider.value * 100)}%`, 320, 225, { size: 12, screenSpace: true });
+  drawText(`${Math.floor(ambientSlider.value * 100)}%`, 320, 285, { size: 12, screenSpace: true });
+  drawText(`${Math.floor(voiceSlider.value * 100)}%`, 320, 345, { size: 12, screenSpace: true });
 
   // Draw sliders
   drawSlider(masterSlider);
