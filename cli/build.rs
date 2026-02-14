@@ -1,15 +1,21 @@
+use std::collections::hash_map::DefaultHasher;
 use std::fs;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 
-fn copy_dir_recursive(src: &Path, dst: &Path) {
+fn copy_dir_recursive(src: &Path, dst: &Path, hasher: &mut DefaultHasher) {
     fs::create_dir_all(dst).unwrap();
-    for entry in fs::read_dir(src).unwrap() {
-        let entry = entry.unwrap();
+    let mut entries: Vec<_> = fs::read_dir(src).unwrap().map(|e| e.unwrap()).collect();
+    entries.sort_by_key(|e| e.file_name());
+    for entry in entries {
         let src_path = entry.path();
         let dst_path = dst.join(entry.file_name());
         if src_path.is_dir() {
-            copy_dir_recursive(&src_path, &dst_path);
+            copy_dir_recursive(&src_path, &dst_path, hasher);
         } else {
+            let content = fs::read(&src_path).unwrap();
+            content.len().hash(hasher);
+            src_path.to_string_lossy().hash(hasher);
             fs::copy(&src_path, &dst_path).unwrap();
         }
     }
@@ -46,17 +52,24 @@ fn clean_dir(dir: &Path) {
 
 fn main() {
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    let mut hasher = DefaultHasher::new();
 
     // Clean before copying to prevent stale artifacts from prior builds
     let templates_dst = out_dir.join("templates");
     clean_dir(&templates_dst);
     let templates_src = find_dir("templates/default");
-    copy_dir_recursive(&templates_src, &templates_dst.join("default"));
+    copy_dir_recursive(&templates_src, &templates_dst.join("default"), &mut hasher);
 
     let assets_dst = out_dir.join("assets");
     clean_dir(&assets_dst);
     let assets_src = find_dir("assets");
-    copy_dir_recursive(&assets_src, &assets_dst);
+    copy_dir_recursive(&assets_src, &assets_dst, &mut hasher);
+
+    // Write a stamp file that new.rs includes via include_str!().
+    // When template contents change, this hash changes, forcing cargo
+    // to recompile new.rs (which contains the include_dir! macro).
+    let stamp = format!("{}", hasher.finish());
+    fs::write(out_dir.join("template_stamp.txt"), stamp).unwrap();
 
     println!("cargo:rerun-if-changed=../templates/default");
     println!("cargo:rerun-if-changed=../assets");

@@ -6,6 +6,9 @@ use std::path::{Path, PathBuf};
 pub(crate) static TEMPLATE_DIR: Dir<'static> =
     include_dir!("$OUT_DIR/templates/default");
 
+// Force recompilation when template contents change (build.rs writes this stamp)
+const _TEMPLATE_STAMP: &str = include_str!(concat!(env!("OUT_DIR"), "/template_stamp.txt"));
+
 /// Create a new Arcane project from template
 pub fn run(name: &str) -> Result<()> {
     let project_dir = PathBuf::from(name);
