@@ -215,3 +215,84 @@ export {
   removeEffect,
   clearEffects,
 } from "./postprocess.ts";
+
+// Isometric coordinates
+export type { IsoConfig, StaggeredIsoConfig } from "./isometric.ts";
+export {
+  isoToWorld,
+  worldToIso,
+  worldToGrid,
+  screenToIso,
+  isoDepthLayer,
+  staggeredIsoToWorld,
+  worldToStaggeredIso,
+  screenToStaggeredIso,
+  isoMapBounds,
+  isoIterateBackToFront,
+  isoNeighbors,
+  isoDistance,
+} from "./isometric.ts";
+
+// Isometric tilemap
+export type { IsoTile, IsoTilemapConfig, IsoTilemap } from "./iso-tilemap.ts";
+export {
+  createIsoTilemap,
+  setIsoTile,
+  getIsoTile,
+  getIsoTileId,
+  setIsoTileElevation,
+  fillIsoTiles,
+  setIsoTileTexture,
+  drawIsoTilemap,
+  computeIsoAutotile4,
+} from "./iso-tilemap.ts";
+
+// Hex coordinates
+export type { HexCoord, HexOrientation, OffsetType, HexConfig } from "./hex.ts";
+export {
+  hex,
+  hexFromCube,
+  hexEqual,
+  hexAdd,
+  hexSubtract,
+  hexScale,
+  hexDirection,
+  hexNeighbor,
+  hexNeighbors,
+  hexDistance,
+  hexRing,
+  hexSpiral,
+  hexRound,
+  hexLineDraw,
+  hexToWorld,
+  worldToHex,
+  screenToHex,
+  cubeToOffset,
+  offsetToCube,
+  hexRange,
+  hexArea,
+  computeHexAutotileBitmask,
+  HEX_DIR_E,
+  HEX_DIR_NE,
+  HEX_DIR_NW,
+  HEX_DIR_W,
+  HEX_DIR_SW,
+  HEX_DIR_SE,
+} from "./hex.ts";
+
+// Hex tilemap
+export type { HexTile, HexTilemapConfig, HexTilemap } from "./hex-tilemap.ts";
+export {
+  createHexTilemap,
+  setHexTile,
+  getHexTile,
+  getHexTileId,
+  fillHexTiles,
+  setHexTileTexture,
+  drawHexTilemap,
+  hexTilemapToCube,
+  hexTilemapFromCube,
+  getHexTileAtCube,
+  setHexTileAtCube,
+  computeHexTilemapAutotile,
+} from "./hex-tilemap.ts";
