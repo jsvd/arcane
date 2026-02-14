@@ -50,6 +50,8 @@ pub fn run() -> Result<()> {
     println!("  arcane test             # Run tests");
     println!("  arcane add --list       # See available recipes");
     println!();
+    println!("MCP auto-configured for Claude Code, Cursor, and VS Code.");
+    println!("AI tools will discover your game engine automatically.");    println!();
     println!("Read AGENTS.md for LLM development guide.");
     println!("Full API reference in types/arcane.d.ts.");
 

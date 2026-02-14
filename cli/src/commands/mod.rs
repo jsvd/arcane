@@ -8,7 +8,7 @@ pub mod assets_oga;
 pub mod type_check;
 pub mod new;
 pub mod init;
-
+pub mod mcp_bridge;
 use std::path::Path;
 use arcane_engine::scripting::ImportMap;
 
