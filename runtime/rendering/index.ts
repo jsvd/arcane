@@ -36,6 +36,18 @@ export {
   setBackgroundColor,
   screenToWorld,
   getMouseWorldPosition,
+  // Gamepad
+  getGamepadCount,
+  isGamepadConnected,
+  getGamepadName,
+  isGamepadButtonDown,
+  isGamepadButtonPressed,
+  getGamepadAxis,
+  // Touch
+  getTouchCount,
+  isTouchActive,
+  getTouchPosition,
+  getTouchWorldPosition,
 } from "./input.ts";
 
 // Textures
@@ -296,3 +308,74 @@ export {
   setHexTileAtCube,
   computeHexTilemapAutotile,
 } from "./hex-tilemap.ts";
+
+// Screen Transitions
+export type { ScreenTransitionType, ScreenTransitionConfig } from "./transition.ts";
+export {
+  startScreenTransition,
+  updateScreenTransition,
+  drawScreenTransition,
+  isScreenTransitionActive,
+  getScreenTransitionProgress,
+  _resetScreenTransition,
+} from "./transition.ts";
+
+// Nine-Slice Sprites
+export type { NineSliceBorder, NineSliceOptions } from "./nineslice.ts";
+export { drawNineSlice, getNineSliceSpriteCount } from "./nineslice.ts";
+
+// Trail / Ribbon
+export type { TrailPoint, TrailConfig, Trail } from "./trail.ts";
+export {
+  createTrail,
+  updateTrail,
+  drawTrail,
+  clearTrail,
+  pauseTrail,
+  resumeTrail,
+  getTrailPointCount,
+} from "./trail.ts";
+
+// Juice & Game Feel
+export type {
+  ImpactShake,
+  ImpactFlash,
+  ImpactParticles,
+  ImpactSound,
+  ImpactConfig,
+} from "./juice.ts";
+export {
+  impact,
+  impactLight,
+  impactHeavy,
+  hitstop,
+  isHitstopActive,
+  getHitstopFrames,
+  consumeHitstopFrame,
+  _resetJuice,
+} from "./juice.ts";
+
+// Floating Text (damage numbers)
+export type { FloatingTextOptions } from "./floatingtext.ts";
+export {
+  spawnFloatingText,
+  updateFloatingTexts,
+  drawFloatingTexts,
+  getFloatingTextCount,
+  clearFloatingTexts,
+  _resetFloatingTexts,
+} from "./floatingtext.ts";
+
+// Typewriter Text
+export type { TypewriterConfig, TypewriterDrawOptions, Typewriter } from "./typewriter.ts";
+export {
+  createTypewriter,
+  updateTypewriter,
+  drawTypewriter,
+  skipTypewriter,
+  pauseTypewriter,
+  resumeTypewriter,
+  resetTypewriter,
+  getVisibleText,
+  isTypewriterComplete,
+} from "./typewriter.ts";
