@@ -38,14 +38,25 @@ fn find_dir(name: &str) -> PathBuf {
     );
 }
 
+fn clean_dir(dir: &Path) {
+    if dir.exists() {
+        fs::remove_dir_all(dir).unwrap();
+    }
+}
+
 fn main() {
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
 
+    // Clean before copying to prevent stale artifacts from prior builds
+    let templates_dst = out_dir.join("templates");
+    clean_dir(&templates_dst);
     let templates_src = find_dir("templates/default");
-    copy_dir_recursive(&templates_src, &out_dir.join("templates").join("default"));
+    copy_dir_recursive(&templates_src, &templates_dst.join("default"));
 
+    let assets_dst = out_dir.join("assets");
+    clean_dir(&assets_dst);
     let assets_src = find_dir("assets");
-    copy_dir_recursive(&assets_src, &out_dir.join("assets"));
+    copy_dir_recursive(&assets_src, &assets_dst);
 
     println!("cargo:rerun-if-changed=../templates/default");
     println!("cargo:rerun-if-changed=../assets");

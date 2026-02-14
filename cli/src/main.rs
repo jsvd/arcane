@@ -3,7 +3,7 @@ mod commands;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "arcane", about = "Arcane 2D game engine CLI")]
+#[command(name = "arcane", version, about = "Arcane 2D game engine CLI")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,

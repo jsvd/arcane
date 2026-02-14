@@ -129,7 +129,7 @@ fn handle_jsonrpc(body: &str, request_tx: &RequestSender) -> String {
     match rpc_method.as_str() {
         "initialize" => {
             format!(
-                r#"{{"jsonrpc":"2.0","result":{{"protocolVersion":"2025-03-26","capabilities":{{"tools":{{}}}},"serverInfo":{{"name":"arcane-mcp","version":"0.7.0"}}}},"id":{rpc_id}}}"#,
+                r#"{{"jsonrpc":"2.0","result":{{"protocolVersion":"2025-03-26","capabilities":{{"tools":{{}}}},"serverInfo":{{"name":"arcane-mcp","version":"0.9.1"}}}},"id":{rpc_id}}}"#,
             )
         }
         "notifications/initialized" => {

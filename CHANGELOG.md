@@ -2,6 +2,13 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.9.1] - 2026-02-14
+
+### Fixed
+- `arcane new` scaffold duplication: stale build artifacts caused a nested `default/` subdirectory in scaffolded projects (build.rs now cleans OUT_DIR before copying)
+- `arcane --version` flag: added `#[command(version)]` to clap derive so `arcane --version` prints the current version
+- MCP server version string: was hardcoded as `0.7.0`, now reports the correct version
+
 ## [0.9.0] - 2026-02-14
 
 ### Added
