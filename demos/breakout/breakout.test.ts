@@ -1,3 +1,6 @@
+// Type-check guard: ensures the visual entry point compiles (catches broken imports)
+import "./breakout.ts";
+
 import { describe, it, assert } from "../../runtime/testing/harness.ts";
 import { aabbOverlap, circleAABBOverlap, circleAABBResolve } from "../../runtime/physics/aabb.ts";
 import {

@@ -36,7 +36,7 @@ import {
   drawLabel,
 } from "../../runtime/ui/primitives.ts";
 import { updateTweens } from "../../runtime/tweening/tween.ts";
-import { updateParticles, drawParticles } from "../../runtime/particles/emitter.ts";
+import { updateParticles, getAllParticles } from "../../runtime/particles/emitter.ts";
 import { getCameraShakeOffset } from "../../runtime/tweening/helpers.ts";
 
 // Phase 22 imports
@@ -304,7 +304,19 @@ onFrame(() => {
   drawFloatingTexts();
 
   // Particles
-  drawParticles();
+  for (const p of getAllParticles()) {
+    const size = 4 * p.scale;
+    drawSprite({
+      textureId: p.textureId,
+      x: p.x - size / 2,
+      y: p.y - size / 2,
+      w: size,
+      h: size,
+      layer: 6,
+      rotation: p.rotation,
+      tint: p.color,
+    });
+  }
 
   // HUD
   drawLabel(`HP: ${target.hp}/100  Hits: ${hitCount}`, 10, 10, {

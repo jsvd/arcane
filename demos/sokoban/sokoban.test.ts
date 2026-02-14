@@ -1,3 +1,6 @@
+// Type-check guard: ensures the visual entry point compiles (catches broken imports)
+import "./sokoban.ts";
+
 import { describe, it, assert } from "../../runtime/testing/harness.ts";
 import { parseLevel, buildMove, createSokobanGame } from "./sokoban.ts";
 

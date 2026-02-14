@@ -1,3 +1,6 @@
+// Type-check guard: ensures the visual entry point compiles (catches broken imports)
+import "./tower-defense.ts";
+
 import { describe, it, assert } from "../../runtime/testing/harness.ts";
 import {
   createTDGame, placeTower, sellTower, startWave, stepWave,

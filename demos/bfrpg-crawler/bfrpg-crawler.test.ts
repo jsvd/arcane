@@ -2,6 +2,9 @@
  * Tests for BFRPG movement and exploration
  */
 
+// Type-check guard: ensures the visual entry point compiles (catches broken imports)
+import "./bfrpg-crawler.ts";
+
 import { describe, it, assert } from "../../runtime/testing/harness.ts";
 import { seed } from "../../runtime/state/prng.ts";
 import {

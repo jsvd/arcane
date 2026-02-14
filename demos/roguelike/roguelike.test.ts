@@ -1,3 +1,6 @@
+// Type-check guard: ensures the visual entry point compiles (catches broken imports)
+import "./roguelike.ts";
+
 import { describe, it, assert } from "../../runtime/testing/harness.ts";
 import { seed } from "../../runtime/state/index.ts";
 import { generateDungeon, isWalkable, blocksVision, WALL, FLOOR, CORRIDOR, STAIRS_DOWN } from "./dungeon.ts";

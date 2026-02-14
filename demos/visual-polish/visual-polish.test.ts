@@ -3,6 +3,9 @@
  * Validates that all new APIs work correctly in headless mode.
  */
 
+// Type-check guard: ensures the visual entry point compiles (catches broken imports)
+import "./visual-polish.ts";
+
 import { describe, it, assert } from "../../runtime/testing/harness.ts";
 import {
   enableDrawCallCapture,
