@@ -607,6 +607,89 @@ fn process_audio_command(
         BridgeAudioCommand::SetMasterVolume { volume } => {
             let _ = audio_tx.send(AudioCommand::SetMasterVolume { volume });
         }
+
+        // Phase 20: New instance-based commands
+        BridgeAudioCommand::PlaySoundEx {
+            sound_id,
+            instance_id,
+            volume,
+            looping,
+            bus,
+            pan,
+            pitch,
+            low_pass_freq,
+            reverb_mix,
+            reverb_delay_ms,
+        } => {
+            if let Some(bus_enum) = arcane_engine::audio::AudioBus::from_u32(bus) {
+                let _ = audio_tx.send(AudioCommand::PlaySoundEx {
+                    sound_id,
+                    instance_id,
+                    volume,
+                    looping,
+                    bus: bus_enum,
+                    pan,
+                    pitch,
+                    low_pass_freq,
+                    reverb_mix,
+                    reverb_delay_ms,
+                });
+            }
+        }
+
+        BridgeAudioCommand::PlaySoundSpatial {
+            sound_id,
+            instance_id,
+            volume,
+            looping,
+            bus,
+            pitch,
+            source_x,
+            source_y,
+            listener_x,
+            listener_y,
+        } => {
+            if let Some(bus_enum) = arcane_engine::audio::AudioBus::from_u32(bus) {
+                let _ = audio_tx.send(AudioCommand::PlaySoundSpatial {
+                    sound_id,
+                    instance_id,
+                    volume,
+                    looping,
+                    bus: bus_enum,
+                    pitch,
+                    source_x,
+                    source_y,
+                    listener_x,
+                    listener_y,
+                });
+            }
+        }
+
+        BridgeAudioCommand::StopInstance { instance_id } => {
+            let _ = audio_tx.send(AudioCommand::StopInstance { instance_id });
+        }
+
+        BridgeAudioCommand::SetInstanceVolume { instance_id, volume } => {
+            let _ = audio_tx.send(AudioCommand::SetInstanceVolume { instance_id, volume });
+        }
+
+        BridgeAudioCommand::SetInstancePitch { instance_id, pitch } => {
+            let _ = audio_tx.send(AudioCommand::SetInstancePitch { instance_id, pitch });
+        }
+
+        BridgeAudioCommand::UpdateSpatialPositions { updates, listener_x, listener_y } => {
+            let _ = audio_tx.send(AudioCommand::UpdateSpatialPositions {
+                updates,
+                listener_x,
+                listener_y,
+            });
+        }
+
+        BridgeAudioCommand::SetBusVolume { bus, volume } => {
+            if let Some(bus_enum) = arcane_engine::audio::AudioBus::from_u32(bus) {
+                let _ = audio_tx.send(AudioCommand::SetBusVolume { bus: bus_enum, volume });
+            }
+        }
     }
     Ok(())
 }

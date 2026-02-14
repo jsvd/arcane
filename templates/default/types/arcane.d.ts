@@ -484,12 +484,57 @@ declare module "@arcane/runtime/rendering" {
    * A value of 0 means "no sound" (headless mode fallback).
    */
   export type SoundId = number;
+  /**
+   * Unique identifier for a sound instance. Each call to {@link playSound} or
+   * {@link playSoundAt} returns a new InstanceId.
+   */
+  export type InstanceId = number;
+  /**
+   * Audio bus identifier for grouping sounds.
+   * - "sfx" — Sound effects (default)
+   * - "music" — Background music
+   * - "ambient" — Ambient loops
+   * - "voice" — Dialog and voice-over
+   */
+  export type AudioBus = "sfx" | "music" | "ambient" | "voice";
   /** Options for {@link playSound}. */
   export type PlayOptions = {
       /** Playback volume, 0.0 (silent) to 1.0 (full). Default: 1.0. */
       volume?: number;
       /** If true, sound loops until stopped. Default: false. */
       loop?: boolean;
+      /** Audio bus to route this sound through. Default: "sfx". */
+      bus?: AudioBus;
+      /** Stereo panning: -1.0 (left) to 1.0 (right). Default: 0.0 (center). */
+      pan?: number;
+      /** Playback pitch multiplier. 1.0 = normal, 2.0 = double speed. Default: 1.0. */
+      pitch?: number;
+      /** Random pitch variation amount added/subtracted from pitch. Default: 0.0. */
+      pitchVariation?: number;
+      /** Low-pass filter cutoff frequency in Hz. 0 = disabled. Default: 0. */
+      lowPassFreq?: number;
+      /** Reverb mix amount, 0.0 (dry) to 1.0 (fully wet). Default: 0.0. */
+      reverb?: number;
+      /** Reverb delay in milliseconds. Default: 50. */
+      reverbDelay?: number;
+  };
+  /** Options for {@link playSoundAt} spatial audio. */
+  export type SpatialOptions = PlayOptions & {
+      /** World X coordinate of sound source. */
+      x: number;
+      /** World Y coordinate of sound source. */
+      y: number;
+      /** Maximum audible distance from listener. Default: 500. */
+      maxDistance?: number;
+      /** Reference distance for volume falloff. Default: 50. */
+      refDistance?: number;
+  };
+  /** Pool configuration for limiting concurrent instances of a sound. */
+  export type PoolConfig = {
+      /** Maximum concurrent instances. Default: unlimited. */
+      maxInstances?: number;
+      /** What to do when pool is full: "oldest" = stop oldest, "reject" = don't play new. Default: "oldest". */
+      policy?: "oldest" | "reject";
   };
   /**
    * Load a sound file (WAV, OGG, MP3). Returns an opaque sound handle.
@@ -501,23 +546,24 @@ declare module "@arcane/runtime/rendering" {
    */
   export declare function loadSound(path: string): SoundId;
   /**
-   * Play a loaded sound effect.
-   * No-op in headless mode.
+   * Play a loaded sound effect and return an instance ID for later control.
+   * No-op in headless mode (but still returns a unique InstanceId).
    *
    * @param id - Sound handle from loadSound().
-   * @param options - Volume and loop settings.
+   * @param options - Volume, loop, bus, pan, pitch, effects settings.
+   * @returns Unique instance ID for controlling this sound instance.
    */
-  export declare function playSound(id: SoundId, options?: PlayOptions): void;
+  export declare function playSound(id: SoundId, options?: PlayOptions): InstanceId;
   /**
    * Load and play a sound file as looping background music.
-   * Convenience function combining loadSound() + playSound() with loop: true.
+   * Convenience function combining loadSound() + playSound() with loop: true and bus: "music".
    * Returns 0 in headless mode.
    *
    * @param path - File path to an audio file.
    * @param volume - Playback volume, 0.0-1.0. Default: 1.0.
-   * @returns Sound handle for later stopping with stopSound().
+   * @returns Instance ID for controlling this music instance.
    */
-  export declare function playMusic(path: string, volume?: number): SoundId;
+  export declare function playMusic(path: string, volume?: number): InstanceId;
   /**
    * Stop a specific playing sound.
    * No-op in headless mode.
@@ -537,6 +583,82 @@ declare module "@arcane/runtime/rendering" {
    * @param volume - Master volume level, 0.0 (mute) to 1.0 (full). Values outside this range are not clamped.
    */
   export declare function setVolume(volume: number): void;
+  /**
+   * Play a sound at a specific world position with spatial audio.
+   * Volume automatically attenuates based on distance from listener.
+   * No-op in headless mode (but still returns a unique InstanceId).
+   *
+   * @param id - Sound handle from loadSound().
+   * @param options - Spatial position, volume, loop, and other settings.
+   * @returns Unique instance ID for controlling this sound instance.
+   */
+  export declare function playSoundAt(id: SoundId, options: SpatialOptions): InstanceId;
+  /**
+   * Crossfade from current music to a new track.
+   * Tweens the old music volume down and new music volume up over the specified duration.
+   * No-op in headless mode (but still returns a unique InstanceId).
+   *
+   * @param path - File path to the new music file.
+   * @param duration - Crossfade duration in milliseconds. Default: 2000.
+   * @param volume - Target volume for the new music. Default: 1.0.
+   * @returns Instance ID of the new music track.
+   */
+  export declare function crossfadeMusic(path: string, duration?: number, volume?: number): InstanceId;
+  /**
+   * Stop a specific sound instance.
+   * No-op in headless mode.
+   *
+   * @param instanceId - Instance ID from playSound() or playSoundAt().
+   */
+  export declare function stopInstance(instanceId: InstanceId): void;
+  /**
+   * Set the volume of a specific audio bus.
+   * Affects all sounds currently playing or that will play on this bus.
+   * No-op in headless mode (but still updates local state).
+   *
+   * @param bus - Audio bus identifier.
+   * @param volume - Bus volume level, 0.0 (mute) to 1.0 (full).
+   */
+  export declare function setBusVolume(bus: AudioBus, volume: number): void;
+  /**
+   * Get the current volume of a specific audio bus.
+   *
+   * @param bus - Audio bus identifier.
+   * @returns Current bus volume, 0.0 to 1.0.
+   */
+  export declare function getBusVolume(bus: AudioBus): number;
+  /**
+   * Set the listener position for spatial audio calculations.
+   * Typically this should match the camera position or player position.
+   * No-op in headless mode (but still updates local state).
+   *
+   * @param x - Listener X position in world coordinates.
+   * @param y - Listener Y position in world coordinates.
+   */
+  export declare function setListenerPosition(x: number, y: number): void;
+  /**
+   * Update spatial audio for all active spatial instances.
+   * Should be called once per frame (typically in onFrame callback) if using spatial audio.
+   * No-op in headless mode.
+   */
+  export declare function updateSpatialAudio(): void;
+  /**
+   * Configure pooling limits for a sound.
+   * When maxInstances is reached, either the oldest instance is stopped (policy: "oldest")
+   * or new play requests are rejected (policy: "reject").
+   *
+   * @param id - Sound handle from loadSound().
+   * @param config - Pool configuration.
+   */
+  export declare function setPoolConfig(id: SoundId, config: PoolConfig): void;
+  /**
+   * Set the volume of a specific sound instance.
+   * No-op in headless mode.
+   *
+   * @param instanceId - Instance ID from playSound() or playSoundAt().
+   * @param volume - Volume level, 0.0 (mute) to 1.0 (full).
+   */
+  export declare function setInstanceVolume(instanceId: InstanceId, volume: number): void;
 
   /**
    * Auto-tiling: bitmask-based automatic tile selection.

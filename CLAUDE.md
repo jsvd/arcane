@@ -4,7 +4,7 @@
 
 Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for performance, TypeScript scripting for game logic.
 
-**Current status: Phases 17-19 COMPLETE ✅ — Agent Intelligence (MCP server, snapshot-replay, property-based testing), Procedural Generation (WFC with constraints), Lighting 2.0 (Radiance Cascades GI). 1530 TS (Node) + 2698 (V8) + 221 Rust tests passing. Next: Phase 20 (Audio Polish).**
+**Current status: Phase 20 COMPLETE ✅ — Audio Polish (instance-based playback, spatial audio, bus mixing, crossfade, pooling, pitch variation, effects). 1553 TS (Node) + 2721 (V8) + 246 Rust tests passing. Next: Phase 21 (Input Systems).**
 
 ## Repository Structure
 
@@ -197,7 +197,8 @@ arcane/
 │   ├── tilemap-showcase/         — Phase 14 demo: layers, auto-tiling, animated tiles
 │   ├── tower-defense/             — Phase 5 demo: tower placement, enemy waves, pathfinding
 │   ├── ui-showcase/              — Phase 16 demo: interactive UI widgets
-│   └── wfc-dungeon/               — Phase 18 demo: WFC procedural dungeon generation
+│   ├── wfc-dungeon/               — Phase 18 demo: WFC procedural dungeon generation
+│   └── audio-showcase/            — Phase 20 demo: spatial audio, crossfade, mixer panel
 ├── recipes/
 │   ├── turn-based-combat/         — Initiative, attack/defend, victory detection
 │   ├── inventory-equipment/       — Items, stacking, weight, equipment slots, stat bonuses

@@ -18,6 +18,41 @@ pub enum BridgeAudioCommand {
     StopSound { id: u32 },
     StopAll,
     SetMasterVolume { volume: f32 },
+
+    // Phase 20: New instance-based commands
+    PlaySoundEx {
+        sound_id: u32,
+        instance_id: u64,
+        volume: f32,
+        looping: bool,
+        bus: u32,
+        pan: f32,
+        pitch: f32,
+        low_pass_freq: u32,
+        reverb_mix: f32,
+        reverb_delay_ms: u32,
+    },
+    PlaySoundSpatial {
+        sound_id: u32,
+        instance_id: u64,
+        volume: f32,
+        looping: bool,
+        bus: u32,
+        pitch: f32,
+        source_x: f32,
+        source_y: f32,
+        listener_x: f32,
+        listener_y: f32,
+    },
+    StopInstance { instance_id: u64 },
+    SetInstanceVolume { instance_id: u64, volume: f32 },
+    SetInstancePitch { instance_id: u64, pitch: f32 },
+    UpdateSpatialPositions {
+        updates: Vec<(u64, f32, f32)>, // (instance_id, source_x, source_y)
+        listener_x: f32,
+        listener_y: f32,
+    },
+    SetBusVolume { bus: u32, volume: f32 },
 }
 
 /// Shared state between render ops and the main loop.
@@ -878,6 +913,163 @@ pub fn op_add_spot_light(
     ]);
 }
 
+// --- Phase 20: New audio ops ---
+
+/// Play a sound with extended parameters (pan, pitch, effects, bus).
+/// Accepts f64 for all numeric params (deno_core convention), converts to f32/u32/u64 internally.
+#[deno_core::op2(fast)]
+pub fn op_play_sound_ex(
+    state: &mut OpState,
+    sound_id: u32,
+    instance_id: f64,
+    volume: f64,
+    looping: bool,
+    bus: u32,
+    pan: f64,
+    pitch: f64,
+    low_pass_freq: u32,
+    reverb_mix: f64,
+    reverb_delay_ms: u32,
+) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().audio_commands.push(BridgeAudioCommand::PlaySoundEx {
+        sound_id,
+        instance_id: instance_id as u64,
+        volume: volume as f32,
+        looping,
+        bus,
+        pan: pan as f32,
+        pitch: pitch as f32,
+        low_pass_freq,
+        reverb_mix: reverb_mix as f32,
+        reverb_delay_ms,
+    });
+}
+
+/// Play a sound with spatial audio (3D positioning).
+/// Accepts f64 for all numeric params (deno_core convention), converts to f32/u64 internally.
+#[deno_core::op2(fast)]
+pub fn op_play_sound_spatial(
+    state: &mut OpState,
+    sound_id: u32,
+    instance_id: f64,
+    volume: f64,
+    looping: bool,
+    bus: u32,
+    pitch: f64,
+    source_x: f64,
+    source_y: f64,
+    listener_x: f64,
+    listener_y: f64,
+) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().audio_commands.push(BridgeAudioCommand::PlaySoundSpatial {
+        sound_id,
+        instance_id: instance_id as u64,
+        volume: volume as f32,
+        looping,
+        bus,
+        pitch: pitch as f32,
+        source_x: source_x as f32,
+        source_y: source_y as f32,
+        listener_x: listener_x as f32,
+        listener_y: listener_y as f32,
+    });
+}
+
+/// Stop a specific audio instance.
+/// Accepts f64 (deno_core convention), converts to u64 internally.
+#[deno_core::op2(fast)]
+pub fn op_stop_instance(state: &mut OpState, instance_id: f64) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().audio_commands.push(BridgeAudioCommand::StopInstance {
+        instance_id: instance_id as u64,
+    });
+}
+
+/// Set the volume of a specific audio instance.
+/// Accepts f64 (deno_core convention), converts to u64/f32 internally.
+#[deno_core::op2(fast)]
+pub fn op_set_instance_volume(state: &mut OpState, instance_id: f64, volume: f64) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().audio_commands.push(BridgeAudioCommand::SetInstanceVolume {
+        instance_id: instance_id as u64,
+        volume: volume as f32,
+    });
+}
+
+/// Set the pitch of a specific audio instance.
+/// Accepts f64 (deno_core convention), converts to u64/f32 internally.
+#[deno_core::op2(fast)]
+pub fn op_set_instance_pitch(state: &mut OpState, instance_id: f64, pitch: f64) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().audio_commands.push(BridgeAudioCommand::SetInstancePitch {
+        instance_id: instance_id as u64,
+        pitch: pitch as f32,
+    });
+}
+
+/// Update positions for multiple spatial audio instances in a batch.
+/// Uses JSON string for variable-length data (simplest approach with deno_core 0.385.0).
+/// Format: {"instanceIds": [id1, id2, ...], "sourceXs": [x1, x2, ...], "sourceYs": [y1, y2, ...], "listenerX": x, "listenerY": y}
+#[deno_core::op2(fast)]
+pub fn op_update_spatial_positions(state: &mut OpState, #[string] data_json: &str, listener_x: f64, listener_y: f64) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+
+    // Parse JSON (simple ad-hoc parsing for array data)
+    // In production, we'd use serde_json, but for minimal dependencies, parse manually
+    let mut updates = Vec::new();
+
+    // Extract arrays from JSON manually (hacky but works for simple structure)
+    if let Some(ids_start) = data_json.find("\"instanceIds\":[") {
+        if let Some(xs_start) = data_json.find("\"sourceXs\":[") {
+            if let Some(ys_start) = data_json.find("\"sourceYs\":[") {
+                let ids_str = &data_json[ids_start + 15..];
+                let xs_str = &data_json[xs_start + 12..];
+                let ys_str = &data_json[ys_start + 12..];
+
+                let ids_end = ids_str.find(']').unwrap_or(0);
+                let xs_end = xs_str.find(']').unwrap_or(0);
+                let ys_end = ys_str.find(']').unwrap_or(0);
+
+                let ids: Vec<u64> = ids_str[..ids_end]
+                    .split(',')
+                    .filter_map(|s| s.trim().parse().ok())
+                    .collect();
+                let xs: Vec<f32> = xs_str[..xs_end]
+                    .split(',')
+                    .filter_map(|s| s.trim().parse().ok())
+                    .collect();
+                let ys: Vec<f32> = ys_str[..ys_end]
+                    .split(',')
+                    .filter_map(|s| s.trim().parse().ok())
+                    .collect();
+
+                for i in 0..ids.len().min(xs.len()).min(ys.len()) {
+                    updates.push((ids[i], xs[i], ys[i]));
+                }
+            }
+        }
+    }
+
+    bridge.borrow_mut().audio_commands.push(BridgeAudioCommand::UpdateSpatialPositions {
+        updates,
+        listener_x: listener_x as f32,
+        listener_y: listener_y as f32,
+    });
+}
+
+/// Set the volume for an audio bus (affects all sounds on that bus).
+/// Accepts f64 (deno_core convention), converts to f32 internally.
+#[deno_core::op2(fast)]
+pub fn op_set_bus_volume(state: &mut OpState, bus: u32, volume: f64) {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow_mut().audio_commands.push(BridgeAudioCommand::SetBusVolume {
+        bus,
+        volume: volume as f32,
+    });
+}
+
 // --- MSDF text ops ---
 
 /// Create the built-in MSDF font (from CP437 bitmap data converted to SDF).
@@ -1083,6 +1275,13 @@ deno_core::extension!(
         op_stop_sound,
         op_stop_all_sounds,
         op_set_master_volume,
+        op_play_sound_ex,
+        op_play_sound_spatial,
+        op_stop_instance,
+        op_set_instance_volume,
+        op_set_instance_pitch,
+        op_update_spatial_positions,
+        op_set_bus_volume,
         op_create_font_texture,
         op_get_viewport_size,
         op_get_scale_factor,
