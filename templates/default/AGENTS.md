@@ -328,13 +328,42 @@ drawSprite({ textureId: TEX_LAVA, x: 100, y: 200, w: 32, h: 32, emissive: true, 
 drawSprite({ textureId: TEX_WALL, x: 150, y: 200, w: 16, h: 64, occluder: true, layer: 1 });
 ```
 
-**Audio** — Load once, play in response to events:
+**Audio** — Instance-based playback with spatial audio and bus mixing:
 ```typescript
-const SFX_JUMP = loadSound("assets/jump.wav");
-const music = playMusic("assets/bgm.ogg", 0.5); // returns SoundId, loops
-// In game logic:
-playSound(SFX_JUMP);
-stopSound(music);
+// Audio — instance-based playback with spatial audio and bus mixing
+import {
+  loadSound, playSound, playMusic, stopSound, stopAll,
+  playSoundAt, crossfadeMusic, stopInstance,
+  setListenerPosition, updateSpatialAudio,
+  setBusVolume, getBusVolume, setPoolConfig,
+  setInstanceVolume, setInstancePitch,
+  type SoundId, type InstanceId, type AudioBus,
+} from "@arcane/runtime/rendering";
+
+// Load and play
+const sfx = loadSound("explosion.ogg");
+const id = playSound(sfx, { volume: 0.8, bus: "sfx", pitchVariation: 0.1 });
+
+// Spatial audio — stereo panning based on position
+const spatialId = playSoundAt(sfx, { x: 200, y: 100, loop: true, volume: 0.7 });
+setListenerPosition(playerX, playerY);
+updateSpatialAudio(); // call each frame
+
+// Music crossfade
+crossfadeMusic("new-track.ogg", 2000, 0.8); // 2s fade, 80% volume
+
+// Bus mixing — independent volume per category
+setBusVolume("sfx", 0.9);
+setBusVolume("music", 0.6);
+setBusVolume("ambient", 0.4);
+
+// Sound pooling — limit concurrent instances
+setPoolConfig(sfx, { maxInstances: 3, policy: "oldest" });
+
+// Instance control
+setInstanceVolume(id, 0.5);
+setInstancePitch(id, 1.2);
+stopInstance(id);
 ```
 
 **Tweening** — Animate values over time (mutates target object directly):

@@ -96,7 +96,7 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**Phases 17-19 complete (Agent Intelligence + Procedural Generation + Lighting 2.0)!**
+**Phase 20 complete (Audio Polish)!**
 
 All packages published and ready to use:
 - **npm**: [@arcane-engine/runtime@0.8.0](https://www.npmjs.com/package/@arcane-engine/runtime), [@arcane-engine/create@0.8.0](https://www.npmjs.com/package/@arcane-engine/create)
@@ -120,15 +120,16 @@ All packages published and ready to use:
 - ✅ Snapshot-replay testing: deterministic physics recording, world snapshots, replay diffing
 - ✅ Property-based testing: generators, shrinking, configurable iterations
 - ✅ Procedural generation: Wave Function Collapse with constraints (reachability, count, border)
+- ✅ Audio polish: instance-based playback, spatial audio, bus mixing, crossfade, sound pooling, pitch variation
 - ✅ Radiance Cascades 2D global illumination: emissives, occluders, spot lights, HDR scene texture
 - ✅ MSDF text rendering: resolution-independent text with outline and shadow support
 - ✅ Standalone install: `cargo install arcane-cli` just works
 - ✅ Built-in asset discovery: 25 free CC0 packs with search, download, and extraction
-- ✅ 1530 TS (Node) + 2698 (V8) + 221 Rust tests passing
+- ✅ 1553 TS (Node) + 1556 (V8) + 246 Rust tests passing
 - ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
-- ✅ 22 example projects (Hello World, Card Battler, Sokoban, Breakout, Roguelike, Platformer, Tower Defense, Sprite Demo, BFRPG RPG, Asteroids, Juice Showcase, Menu Flow, Physics Playground, Parallax Scroller, Tilemap Showcase, Character Controller, UI Showcase, Agent Testing, WFC Dungeon, Lighting Showcase, MSDF Text Showcase, Isometric Dungeon)
+- ✅ 23 example projects (Hello World, Card Battler, Sokoban, Breakout, Roguelike, Platformer, Tower Defense, Sprite Demo, BFRPG RPG, Asteroids, Juice Showcase, Menu Flow, Physics Playground, Parallax Scroller, Tilemap Showcase, Character Controller, UI Showcase, Agent Testing, WFC Dungeon, Lighting Showcase, MSDF Text Showcase, Isometric Dungeon, Audio Showcase)
 
-**Next:** Phase 20 (Audio Polish).
+**Next:** Phase 21 (Input Systems).
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 

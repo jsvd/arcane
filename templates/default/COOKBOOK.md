@@ -501,6 +501,64 @@ setAmbientLight(0.1 + 0.4 * brightness, 0.1 + 0.35 * brightness, 0.15 + 0.25 * b
 addDirectionalLight(sunAngle, 1.0, 0.9, 0.7, brightness * 0.6);
 ```
 
+## Audio
+
+### Spatial Audio Scene
+
+```typescript
+import { loadSound, playSoundAt, setListenerPosition, updateSpatialAudio } from "@arcane/runtime/rendering";
+import { onFrame, getDeltaTime, isKeyDown } from "@arcane/runtime/rendering";
+
+const ambientSound = loadSound("torch.ogg");
+// Place looping sound sources in the world
+const torch1 = playSoundAt(ambientSound, { x: 200, y: 100, loop: true, volume: 0.8 });
+const torch2 = playSoundAt(ambientSound, { x: 600, y: 300, loop: true, volume: 0.8 });
+
+let playerX = 400, playerY = 300;
+
+onFrame(() => {
+  const dt = getDeltaTime();
+  if (isKeyDown("w")) playerY -= 150 * dt;
+  if (isKeyDown("s")) playerY += 150 * dt;
+  if (isKeyDown("a")) playerX -= 150 * dt;
+  if (isKeyDown("d")) playerX += 150 * dt;
+
+  setListenerPosition(playerX, playerY);
+  updateSpatialAudio();
+});
+```
+
+### Music Crossfade Between Zones
+
+```typescript
+import { crossfadeMusic } from "@arcane/runtime/rendering";
+
+let currentZone = "forest";
+
+function onZoneChange(newZone: string) {
+  if (newZone === currentZone) return;
+  currentZone = newZone;
+  // Crossfade over 2 seconds at 80% volume
+  crossfadeMusic(`${newZone}-theme.ogg`, 2000, 0.8);
+}
+```
+
+### Audio Mixer with Bus Controls
+
+```typescript
+import { setBusVolume, getBusVolume, playSound, loadSound } from "@arcane/runtime/rendering";
+
+// Set per-category volumes (final = base × bus × master)
+setBusVolume("sfx", 0.9);
+setBusVolume("music", 0.6);
+setBusVolume("ambient", 0.3);
+setBusVolume("voice", 1.0);
+
+// Play sounds on specific buses
+const explosion = loadSound("boom.ogg");
+playSound(explosion, { bus: "sfx", pitchVariation: 0.15 });
+```
+
 ## Wave Function Collapse (Procedural Generation)
 
 Generate tile-based levels with adjacency and structural constraints.
