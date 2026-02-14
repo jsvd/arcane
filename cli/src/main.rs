@@ -23,9 +23,20 @@ enum Commands {
         /// Enable HTTP inspector on the given port (e.g. --inspector 4321)
         #[arg(long)]
         inspector: Option<u16>,
-        /// Enable MCP server on the given port (e.g. --mcp 4322)
+        /// MCP server port (default: 4322, use --no-mcp to disable)
+        #[arg(long, default_value = "4322")]
+        mcp_port: u16,
+        /// Disable the MCP server
         #[arg(long)]
-        mcp: Option<u16>,
+        no_mcp: bool,
+    },
+    /// Stdio bridge for MCP (JSON-RPC over stdin/stdout)
+    Mcp {
+        /// Path to the TypeScript entry file (defaults to src/visual.ts)
+        entry: Option<String>,
+        /// MCP HTTP server port to connect to (default: auto-discover via .arcane/mcp-port)
+        #[arg(long)]
+        port: Option<u16>,
     },
     /// Print a text description of game state (headless)
     Describe {
@@ -146,9 +157,14 @@ fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Test { path } => commands::test::run(path),
-        Commands::Dev { entry, inspector, mcp } => {
+        Commands::Dev { entry, inspector, mcp_port, no_mcp } => {
             let entry = entry.unwrap_or_else(|| "src/visual.ts".to_string());
+            let mcp = if no_mcp { None } else { Some(mcp_port) };
             commands::dev::run(entry, inspector, mcp)
+        },
+        Commands::Mcp { entry, port } => {
+            let entry = entry.unwrap_or_else(|| "src/visual.ts".to_string());
+            commands::mcp_bridge::run(entry, port)
         },
         Commands::Describe { entry, verbosity } => commands::describe::run(entry, verbosity),
         Commands::Inspect { entry, path } => commands::inspect::run(entry, path),

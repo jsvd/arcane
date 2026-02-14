@@ -66,6 +66,8 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
         let _handle = arcane_engine::agent::inspector::start_inspector(port, tx);
         // Leak the handle — inspector runs for the lifetime of the process
         std::mem::forget(_handle);
+        write_mcp_port_file(port);
+        eprintln!("[arcane] MCP server on http://localhost:{port}");
         rx
     });
 
@@ -74,6 +76,8 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
         let (tx, rx) = arcane_engine::agent::inspector_channel();
         let _handle = arcane_engine::agent::mcp::start_mcp_server(port, tx);
         std::mem::forget(_handle);
+        write_mcp_port_file(port);
+        eprintln!("[arcane] MCP server on http://localhost:{port}");
         rx
     });
 
@@ -84,6 +88,9 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
     // Hot-reload: file watcher sets a flag when .ts files change
     let reload_flag = Arc::new(AtomicBool::new(false));
     let _watcher = start_file_watcher(&base_dir, &entry_path, reload_flag.clone());
+
+    // Initialize gamepad manager (gilrs)
+    let mut gamepad_manager = arcane_engine::platform::GamepadManager::new();
 
     // Create the render state for the window
     let render_state = Rc::new(RefCell::new(RenderState::new()));
@@ -144,6 +151,53 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
             bridge.mouse_buttons_down = state.input.mouse_buttons.clone();
             bridge.mouse_buttons_pressed = state.input.mouse_buttons_pressed.clone();
             bridge.delta_time = state.delta_time;
+        }
+
+        // Poll gamepad state and sync to bridge
+        if let Some(ref mut gpm) = gamepad_manager {
+            gpm.begin_frame();
+            gpm.update();
+
+            let mut bridge = bridge_for_loop.borrow_mut();
+            bridge.gamepad_count = gpm.connected_count;
+
+            // Sync primary gamepad state
+            let primary = gpm.primary();
+            bridge.gamepad_name = primary.name.clone();
+            bridge.gamepad_buttons_down.clear();
+            bridge.gamepad_buttons_pressed.clear();
+            for btn in &primary.buttons_down {
+                bridge.gamepad_buttons_down.insert(btn.as_str().to_string());
+            }
+            for btn in &primary.buttons_pressed {
+                bridge.gamepad_buttons_pressed.insert(btn.as_str().to_string());
+            }
+            bridge.gamepad_axes.clear();
+            use arcane_engine::platform::GamepadAxis;
+            let axes = [
+                (GamepadAxis::LeftStickX, "LeftStickX"),
+                (GamepadAxis::LeftStickY, "LeftStickY"),
+                (GamepadAxis::RightStickX, "RightStickX"),
+                (GamepadAxis::RightStickY, "RightStickY"),
+                (GamepadAxis::LeftTrigger, "LeftTrigger"),
+                (GamepadAxis::RightTrigger, "RightTrigger"),
+            ];
+            for (axis, name) in axes {
+                let val = primary.get_axis(axis);
+                if val.abs() > 0.001 {
+                    bridge.gamepad_axes.insert(name.to_string(), val);
+                }
+            }
+        }
+
+        // Sync touch state to bridge
+        {
+            let mut bridge = bridge_for_loop.borrow_mut();
+            bridge.touch_count = state.touch.count() as u32;
+            bridge.touch_points.clear();
+            for point in &state.touch.points {
+                bridge.touch_points.push((point.id, point.x, point.y));
+            }
         }
 
         // Call the TS frame callback
@@ -455,6 +509,8 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
     // Run the winit event loop (blocks until window closes)
     arcane_engine::platform::run_event_loop(config, render_state, frame_callback)?;
 
+    // Clean up MCP port file on exit
+    cleanup_mcp_port_file();
     Ok(())
 }
 
@@ -694,6 +750,19 @@ fn process_audio_command(
     Ok(())
 }
 
+/// Write the MCP port to `.arcane/mcp-port` for discovery by the stdio bridge.
+fn write_mcp_port_file(port: u16) {
+    let dir = std::path::PathBuf::from(".arcane");
+    if std::fs::create_dir_all(&dir).is_err() {
+        return;
+    }
+    let _ = std::fs::write(dir.join("mcp-port"), port.to_string());
+}
+
+/// Remove the MCP port file on shutdown.
+fn cleanup_mcp_port_file() {
+    let _ = std::fs::remove_file(".arcane/mcp-port");
+}
 /// Reload the JS runtime: drop old V8 isolate first, then create a new one.
 ///
 /// V8 uses an enter/exit stack per thread. Creating isolate B while A is still entered

@@ -73,6 +73,20 @@ pub struct RenderBridgeState {
     pub mouse_y: f32,
     pub mouse_buttons_down: std::collections::HashSet<u8>,
     pub mouse_buttons_pressed: std::collections::HashSet<u8>,
+    /// Gamepad state: buttons down per button name string.
+    pub gamepad_buttons_down: std::collections::HashSet<String>,
+    /// Gamepad buttons pressed this frame.
+    pub gamepad_buttons_pressed: std::collections::HashSet<String>,
+    /// Gamepad axis values: axis name -> value.
+    pub gamepad_axes: std::collections::HashMap<String, f32>,
+    /// Number of connected gamepads.
+    pub gamepad_count: u32,
+    /// Name of the primary gamepad.
+    pub gamepad_name: String,
+    /// Touch state: active touch points as (id, x, y).
+    pub touch_points: Vec<(u64, f32, f32)>,
+    /// Number of active touches.
+    pub touch_count: u32,
     /// Pending texture load requests (path → result channel).
     pub texture_load_queue: Vec<(String, u32)>,
     /// Base directory for resolving relative texture paths.
@@ -168,6 +182,13 @@ impl RenderBridgeState {
             mouse_y: 0.0,
             mouse_buttons_down: std::collections::HashSet::new(),
             mouse_buttons_pressed: std::collections::HashSet::new(),
+            gamepad_buttons_down: std::collections::HashSet::new(),
+            gamepad_buttons_pressed: std::collections::HashSet::new(),
+            gamepad_axes: std::collections::HashMap::new(),
+            gamepad_count: 0,
+            gamepad_name: String::new(),
+            touch_points: Vec::new(),
+            touch_count: 0,
             texture_load_queue: Vec::new(),
             base_dir,
             next_texture_id: 1,
@@ -1248,6 +1269,75 @@ fn ensure_msdf_shader_pool(b: &mut RenderBridgeState) -> Vec<u32> {
     pool
 }
 
+// --- Gamepad ops ---
+
+/// Get the number of connected gamepads.
+#[deno_core::op2(fast)]
+pub fn op_get_gamepad_count(state: &mut OpState) -> u32 {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow().gamepad_count
+}
+
+/// Get the name of the primary gamepad.
+#[deno_core::op2]
+#[string]
+pub fn op_get_gamepad_name(state: &mut OpState) -> String {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow().gamepad_name.clone()
+}
+
+/// Check if a gamepad button is currently held down.
+/// Button name is the canonical string (e.g. "A", "B", "LeftBumper", "DPadUp").
+#[deno_core::op2(fast)]
+pub fn op_is_gamepad_button_down(state: &mut OpState, #[string] button: &str) -> bool {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow().gamepad_buttons_down.contains(button)
+}
+
+/// Check if a gamepad button was pressed this frame.
+#[deno_core::op2(fast)]
+pub fn op_is_gamepad_button_pressed(state: &mut OpState, #[string] button: &str) -> bool {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow().gamepad_buttons_pressed.contains(button)
+}
+
+/// Get a gamepad axis value (-1.0 to 1.0 for sticks, 0.0 to 1.0 for triggers).
+/// Axis name: "LeftStickX", "LeftStickY", "RightStickX", "RightStickY", "LeftTrigger", "RightTrigger".
+#[deno_core::op2(fast)]
+pub fn op_get_gamepad_axis(state: &mut OpState, #[string] axis: &str) -> f64 {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow().gamepad_axes.get(axis).copied().unwrap_or(0.0) as f64
+}
+
+// --- Touch ops ---
+
+/// Get the number of active touch points.
+#[deno_core::op2(fast)]
+pub fn op_get_touch_count(state: &mut OpState) -> u32 {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow().touch_count
+}
+
+/// Get a touch point position by index. Returns [x, y] or empty array if not found.
+#[deno_core::op2]
+#[serde]
+pub fn op_get_touch_position(state: &mut OpState, index: u32) -> Vec<f64> {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let b = bridge.borrow();
+    if let Some(&(_, x, y)) = b.touch_points.get(index as usize) {
+        vec![x as f64, y as f64]
+    } else {
+        vec![]
+    }
+}
+
+/// Check if any touch is currently active.
+#[deno_core::op2(fast)]
+pub fn op_is_touch_active(state: &mut OpState) -> bool {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    bridge.borrow().touch_count > 0
+}
+
 deno_core::extension!(
     render_ext,
     ops = [
@@ -1313,5 +1403,13 @@ deno_core::extension!(
         op_get_msdf_glyphs,
         op_get_msdf_font_info,
         op_load_msdf_font,
+        op_get_gamepad_count,
+        op_get_gamepad_name,
+        op_is_gamepad_button_down,
+        op_is_gamepad_button_pressed,
+        op_get_gamepad_axis,
+        op_get_touch_count,
+        op_get_touch_position,
+        op_is_touch_active,
     ],
 );

@@ -30,6 +30,8 @@ pub fn run(name: &str) -> Result<()> {
     println!("  npm install");
     println!("  arcane dev");
     println!();
+    println!("MCP auto-configured for Claude Code, Cursor, and VS Code.");
+    println!("AI tools will discover your game engine automatically.");    println!();
     println!("Read AGENTS.md for LLM development guide.");
     println!("Full API reference in types/arcane.d.ts.");
     println!();

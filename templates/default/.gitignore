@@ -5,7 +5,8 @@ node_modules/
 .arcane/
 
 # Editor
-.vscode/
+.vscode/*
+!.vscode/mcp.json
 .idea/
 *.swp
 *.swo
