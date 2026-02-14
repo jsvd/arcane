@@ -62,6 +62,8 @@ pub fn create_import_map(base_dir: &Path) -> ImportMap {
             "particles",
             "scenes",
             "persistence",
+            "procgen",
+            "input",
         ];
 
         // Register mappings for both @arcane/runtime and @arcane-engine/runtime

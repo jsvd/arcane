@@ -80,6 +80,25 @@ declare module "@arcane/runtime/rendering" {
       blendMode?: "alpha" | "additive" | "multiply" | "screen";
       /** Custom shader handle from createShaderFromSource(). Default: 0 (built-in shader). */
       shaderId?: number;
+      /**
+       * Simple 2D shadow: draws a squashed, tinted duplicate beneath the sprite.
+       * No GPU changes — pure sprite duplication with transform.
+       */
+      shadow?: {
+          /** Horizontal shadow offset in world units. Default: 2. */
+          offsetX?: number;
+          /** Vertical shadow offset in world units. Default: 4. */
+          offsetY?: number;
+          /** Shadow tint color. Default: black with 0.3 alpha. */
+          color?: {
+              r: number;
+              g: number;
+              b: number;
+              a: number;
+          };
+          /** Vertical scale for the shadow (0.5 = squashed). Default: 0.5. */
+          scaleY?: number;
+      };
   };
   /** Camera state returned by {@link getCamera}. */
   export type CameraState = {
@@ -962,6 +981,435 @@ declare module "@arcane/runtime/rendering" {
   export declare function zoomToPoint(targetZoom: number, worldX: number, worldY: number, duration: number, easing?: (t: number) => number): void;
 
   /**
+   * Floating text / damage numbers.
+   *
+   * Auto-animating text that rises and fades. Used for damage numbers, XP gains,
+   * status messages, item pickups. Internally manages a pool of active instances
+   * that auto-remove on completion.
+   *
+   * @example
+   * ```ts
+   * // Spawn a red damage number
+   * spawnFloatingText(enemy.x, enemy.y, "-25", {
+   *   color: { r: 1, g: 0.2, b: 0.2, a: 1 },
+   *   rise: 40,
+   *   duration: 0.8,
+   * });
+   *
+   * // In your game loop:
+   * updateFloatingTexts(dt);
+   * drawFloatingTexts();
+   * ```
+   */
+  /** Options for spawning floating text. */
+  export type FloatingTextOptions = {
+      /** Text color. Default: white. */
+      color?: {
+          r: number;
+          g: number;
+          b: number;
+          a: number;
+      };
+      /** Total rise distance in world units. Default: 30. */
+      rise?: number;
+      /** Animation duration in seconds. Default: 1.0. */
+      duration?: number;
+      /** Text scale multiplier. Default: 1. */
+      scale?: number;
+      /** Draw layer. Default: 150. */
+      layer?: number;
+      /** If true, coordinates are screen-space. Default: false. */
+      screenSpace?: boolean;
+      /** Initial horizontal velocity (drift) in units/sec. Default: 0. */
+      driftX?: number;
+      /** Easing for the fade: "linear" or "easeOut". Default: "easeOut". */
+      fadeEasing?: "linear" | "easeOut";
+      /** If true, text scales up briefly at spawn (pop effect). Default: false. */
+      pop?: boolean;
+  };
+  /**
+   * Spawn a floating text that rises and fades automatically.
+   *
+   * @param x - World X position (or screen X if screenSpace).
+   * @param y - World Y position (or screen Y if screenSpace).
+   * @param text - The text to display.
+   * @param options - Animation and styling options.
+   */
+  export declare function spawnFloatingText(x: number, y: number, text: string, options?: FloatingTextOptions): void;
+  /**
+   * Update all active floating texts. Call once per frame.
+   *
+   * @param dt - Delta time in seconds.
+   */
+  export declare function updateFloatingTexts(dt: number): void;
+  /**
+   * Draw all active floating texts. Call once per frame after update.
+   * No-op in headless mode (drawText is no-op).
+   */
+  export declare function drawFloatingTexts(): void;
+  /**
+   * Get the number of active floating text instances.
+   * @returns Active count.
+   */
+  export declare function getFloatingTextCount(): number;
+  /**
+   * Remove all active floating texts immediately.
+   */
+  export declare function clearFloatingTexts(): void;
+  /**
+   * Reset all state. For testing only.
+   */
+  export declare function _resetFloatingTexts(): void;
+
+  /**
+   * Hexagonal tilemap renderer.
+   *
+   * Creates and draws tilemaps using hex grids with either pointy-top
+   * or flat-top orientation. Supports camera culling and 6-neighbor auto-tiling.
+   * Tiles are stored in offset coordinates (odd-r for pointy-top, odd-q for flat-top).
+   */
+  /** A single hex tile. */
+  export type HexTile = {
+      /** Tile type identifier. 0 = empty. */
+      tileId: number;
+  };
+  /** Configuration for creating a hex tilemap. */
+  export type HexTilemapConfig = {
+      /** Grid width in columns. */
+      width: number;
+      /** Grid height in rows. */
+      height: number;
+      /** Hex cell size (center to corner). */
+      hexSize: number;
+      /** Hex orientation: "pointy" or "flat". */
+      orientation: HexOrientation;
+  };
+  /** A hex tilemap instance. */
+  export type HexTilemap = {
+      /** Grid width in columns (offset coords). */
+      width: number;
+      /** Grid height in rows (offset coords). */
+      height: number;
+      /** Hex layout config. */
+      config: HexConfig;
+      /** Offset coordinate type used for storage. */
+      offsetType: OffsetType;
+      /** Flat array of tiles, indexed as [row * width + col]. */
+      tiles: HexTile[];
+      /** Optional tile-to-textureId mapping for rendering. */
+      textureMap: Map<number, number>;
+  };
+  /**
+   * Create a hex tilemap with the given dimensions.
+   * All tiles start empty (tileId = 0).
+   *
+   * Uses odd-r offset for pointy-top, odd-q offset for flat-top.
+   *
+   * @param config - Grid dimensions and hex size/orientation.
+   * @returns A new HexTilemap.
+   */
+  export declare function createHexTilemap(config: HexTilemapConfig): HexTilemap;
+  /**
+   * Set the tile at offset position (col, row).
+   *
+   * @param tilemap - The hex tilemap.
+   * @param col - Column in offset grid.
+   * @param row - Row in offset grid.
+   * @param tileId - Tile type identifier. 0 = empty.
+   */
+  export declare function setHexTile(tilemap: HexTilemap, col: number, row: number, tileId: number): void;
+  /**
+   * Get the tile at offset position (col, row).
+   *
+   * @returns The tile, or undefined if out of bounds.
+   */
+  export declare function getHexTile(tilemap: HexTilemap, col: number, row: number): HexTile | undefined;
+  /**
+   * Get the tile ID at offset position (col, row).
+   *
+   * @returns Tile ID, or 0 if out of bounds/empty.
+   */
+  export declare function getHexTileId(tilemap: HexTilemap, col: number, row: number): number;
+  /**
+   * Fill a rectangular region of the hex tilemap (in offset coordinates).
+   */
+  export declare function fillHexTiles(tilemap: HexTilemap, startCol: number, startRow: number, endCol: number, endRow: number, tileId: number): void;
+  /**
+   * Map a tile ID to a texture ID for rendering.
+   */
+  export declare function setHexTileTexture(tilemap: HexTilemap, tileId: number, textureId: number): void;
+  /**
+   * Convert an offset position (col, row) in this tilemap to cube coordinates.
+   */
+  export declare function hexTilemapToCube(tilemap: HexTilemap, col: number, row: number): HexCoord;
+  /**
+   * Convert cube coordinates to offset position (col, row) in this tilemap.
+   */
+  export declare function hexTilemapFromCube(tilemap: HexTilemap, h: HexCoord): {
+      col: number;
+      row: number;
+  };
+  /**
+   * Get the tile ID at a cube coordinate position.
+   * Converts cube coords to offset coords, then looks up the tile.
+   *
+   * @returns Tile ID, or 0 if out of bounds/empty.
+   */
+  export declare function getHexTileAtCube(tilemap: HexTilemap, h: HexCoord): number;
+  /**
+   * Set a tile at cube coordinate position.
+   */
+  export declare function setHexTileAtCube(tilemap: HexTilemap, h: HexCoord, tileId: number): void;
+  /**
+   * Draw the hex tilemap with camera culling.
+   *
+   * Each tile is rendered as a sprite centered at its hex world position.
+   * Sprite size is 2 * hexSize wide, sqrt(3) * hexSize tall (pointy-top) or
+   * sqrt(3) * hexSize wide, 2 * hexSize tall (flat-top).
+   *
+   * @param tilemap - The hex tilemap to draw.
+   * @param camera - Current camera state for culling. If omitted, draws all tiles.
+   * @param baseLayer - Base draw layer. Default: 0.
+   * @param offsetX - World X offset. Default: 0.
+   * @param offsetY - World Y offset. Default: 0.
+   */
+  export declare function drawHexTilemap(tilemap: HexTilemap, camera?: CameraState, baseLayer?: number, offsetX?: number, offsetY?: number): void;
+  /**
+   * Compute a 6-bit auto-tile bitmask for a hex tile in offset coordinates.
+   * Converts to cube coordinates to check the 6 hex neighbors.
+   *
+   * @param tilemap - The hex tilemap.
+   * @param col - Offset column.
+   * @param row - Offset row.
+   * @param matchFn - Returns true if a neighbor tile is "same". Default: tileId > 0.
+   * @returns Bitmask 0-63. Bits: E=1, NE=2, NW=4, W=8, SW=16, SE=32.
+   */
+  export declare function computeHexTilemapAutotile(tilemap: HexTilemap, col: number, row: number, matchFn?: (tileId: number) => boolean): number;
+
+  /**
+   * Hexagonal coordinate system.
+   *
+   * Uses cube coordinates (q, r, s) as the canonical representation,
+   * with conversions to/from offset coordinates and world (pixel) space.
+   * Supports both pointy-top and flat-top orientations.
+   *
+   * Reference: Red Blob Games hex grid guide.
+   *
+   * Invariant: q + r + s = 0 always.
+   */
+  /** Cube coordinates for a hex cell. Invariant: q + r + s = 0. */
+  export type HexCoord = {
+      readonly q: number;
+      readonly r: number;
+      readonly s: number;
+  };
+  /** Hex grid orientation. */
+  export type HexOrientation = "pointy" | "flat";
+  /** Offset coordinate scheme for rectangular grid storage. */
+  export type OffsetType = "odd-r" | "even-r" | "odd-q" | "even-q";
+  /** Configuration for hex grid layout. */
+  export type HexConfig = {
+      /** Hex cell size (distance from center to corner). */
+      hexSize: number;
+      /** Orientation: "pointy" (pointy-top) or "flat" (flat-top). */
+      orientation: HexOrientation;
+  };
+  /**
+   * Create a hex cube coordinate. Computes s = -q - r automatically.
+   *
+   * @param q - Cube q coordinate.
+   * @param r - Cube r coordinate.
+   * @returns HexCoord with s = -q - r.
+   */
+  export declare function hex(q: number, r: number): HexCoord;
+  /**
+   * Create a hex coordinate from all three cube components.
+   * Validates the q + r + s = 0 constraint (allows small floating-point error).
+   *
+   * @param q - Cube q.
+   * @param r - Cube r.
+   * @param s - Cube s.
+   * @returns HexCoord.
+   * @throws If q + r + s is not approximately 0.
+   */
+  export declare function hexFromCube(q: number, r: number, s: number): HexCoord;
+  /**
+   * Check equality of two hex coordinates.
+   */
+  export declare function hexEqual(a: HexCoord, b: HexCoord): boolean;
+  /**
+   * Add two hex coordinates.
+   */
+  export declare function hexAdd(a: HexCoord, b: HexCoord): HexCoord;
+  /**
+   * Subtract hex coordinate b from a.
+   */
+  export declare function hexSubtract(a: HexCoord, b: HexCoord): HexCoord;
+  /**
+   * Multiply a hex coordinate by a scalar.
+   */
+  export declare function hexScale(h: HexCoord, k: number): HexCoord;
+  /**
+   * Get the hex direction vector for a direction index (0-5).
+   *
+   * Directions (pointy-top): 0=E, 1=NE, 2=NW, 3=W, 4=SW, 5=SE.
+   */
+  export declare function hexDirection(dir: number): HexCoord;
+  /**
+   * Get the neighbor of a hex in the given direction (0-5).
+   */
+  export declare function hexNeighbor(h: HexCoord, dir: number): HexCoord;
+  /**
+   * Get all 6 neighbors of a hex cell.
+   *
+   * @param q - Cube q coordinate.
+   * @param r - Cube r coordinate.
+   * @returns Array of 6 HexCoord neighbors.
+   */
+  export declare function hexNeighbors(q: number, r: number): HexCoord[];
+  /**
+   * Manhattan distance between two hex cells in cube coordinates.
+   * This equals the minimum number of hex steps to travel between them.
+   *
+   * @param a - First hex coordinate.
+   * @param b - Second hex coordinate.
+   * @returns Hex distance (non-negative integer for integer coords).
+   */
+  export declare function hexDistance(a: HexCoord, b: HexCoord): number;
+  /**
+   * Get all hex cells at exactly `radius` steps from center.
+   * Returns cells in ring order (clockwise starting from the east-northeast direction).
+   *
+   * @param center - Center hex.
+   * @param radius - Ring radius. Must be >= 0. Radius 0 returns [center].
+   * @returns Array of hex coordinates forming the ring.
+   */
+  export declare function hexRing(center: HexCoord, radius: number): HexCoord[];
+  /**
+   * Get all hex cells within `radius` steps from center (inclusive).
+   * Returns cells in spiral order: center first, then ring 1, ring 2, etc.
+   *
+   * @param center - Center hex.
+   * @param radius - Maximum ring radius. Must be >= 0.
+   * @returns Array of hex coordinates in spiral order.
+   */
+  export declare function hexSpiral(center: HexCoord, radius: number): HexCoord[];
+  /**
+   * Round fractional cube coordinates to the nearest hex cell.
+   * Uses the standard cube-rounding algorithm.
+   */
+  export declare function hexRound(q: number, r: number, s: number): HexCoord;
+  /**
+   * Draw a line between two hex cells using linear interpolation.
+   * Returns all hex cells the line passes through, in order from a to b.
+   *
+   * @param a - Starting hex.
+   * @param b - Ending hex.
+   * @returns Array of hex coordinates from a to b inclusive.
+   */
+  export declare function hexLineDraw(a: HexCoord, b: HexCoord): HexCoord[];
+  /**
+   * Convert hex cube coordinates to world (pixel) coordinates.
+   *
+   * For pointy-top:
+   *   x = size * (sqrt(3) * q + sqrt(3)/2 * r)
+   *   y = size * (3/2 * r)
+   *
+   * For flat-top:
+   *   x = size * (3/2 * q)
+   *   y = size * (sqrt(3)/2 * q + sqrt(3) * r)
+   *
+   * @param h - Hex coordinate.
+   * @param config - Hex layout configuration.
+   * @returns World position { x, y }.
+   */
+  export declare function hexToWorld(h: HexCoord, config: HexConfig): {
+      x: number;
+      y: number;
+  };
+  /**
+   * Convert world (pixel) coordinates to fractional hex cube coordinates,
+   * then round to the nearest hex cell.
+   *
+   * @param wx - World X position.
+   * @param wy - World Y position.
+   * @param config - Hex layout configuration.
+   * @returns Nearest hex cube coordinate.
+   */
+  export declare function worldToHex(wx: number, wy: number, config: HexConfig): HexCoord;
+  /**
+   * Convert screen coordinates to the nearest hex cell, accounting for camera.
+   *
+   * @param sx - Screen X position.
+   * @param sy - Screen Y position.
+   * @param camera - Current camera state.
+   * @param config - Hex layout configuration.
+   * @param viewportWidth - Viewport width in pixels. Use getViewportSize().width.
+   * @param viewportHeight - Viewport height in pixels. Use getViewportSize().height.
+   * @returns Nearest hex cube coordinate.
+   */
+  export declare function screenToHex(sx: number, sy: number, camera: CameraState, config: HexConfig, viewportWidth: number, viewportHeight: number): HexCoord;
+  /**
+   * Convert cube coordinates to offset coordinates.
+   *
+   * Offset types:
+   * - "odd-r": odd rows shifted right (pointy-top)
+   * - "even-r": even rows shifted right (pointy-top)
+   * - "odd-q": odd columns shifted down (flat-top)
+   * - "even-q": even columns shifted down (flat-top)
+   *
+   * @param h - Hex cube coordinate.
+   * @param type - Offset scheme.
+   * @returns Offset grid position { col, row }.
+   */
+  export declare function cubeToOffset(h: HexCoord, type: OffsetType): {
+      col: number;
+      row: number;
+  };
+  /**
+   * Convert offset coordinates to cube coordinates.
+   *
+   * @param col - Offset column.
+   * @param row - Offset row.
+   * @param type - Offset scheme.
+   * @returns Hex cube coordinate.
+   */
+  export declare function offsetToCube(col: number, row: number, type: OffsetType): HexCoord;
+  /**
+   * Get all hex cells within a given range from center (inclusive).
+   * Returns cells as an array (not in any particular order).
+   * This is equivalent to hexSpiral but generated differently.
+   *
+   * @param center - Center hex coordinate.
+   * @param range - Maximum distance from center.
+   * @returns Array of hex coordinates within range.
+   */
+  export declare function hexRange(center: HexCoord, range: number): HexCoord[];
+  /**
+   * Compute the area (number of cells) of a hex range with given radius.
+   * Formula: 3 * radius^2 + 3 * radius + 1
+   */
+  export declare function hexArea(radius: number): number;
+  /** 6-neighbor direction bits for hex auto-tiling. */
+  export declare const HEX_DIR_E = 1;
+  export declare const HEX_DIR_NE = 2;
+  export declare const HEX_DIR_NW = 4;
+  export declare const HEX_DIR_W = 8;
+  export declare const HEX_DIR_SW = 16;
+  export declare const HEX_DIR_SE = 32;
+  /**
+   * Compute a 6-bit auto-tile bitmask for a hex cell.
+   * Each bit represents one of the 6 hex neighbors (E, NE, NW, W, SW, SE).
+   * Results in 0-63 (64 possible tile variants).
+   *
+   * @param q - Cube q coordinate of the tile.
+   * @param r - Cube r coordinate of the tile.
+   * @param check - Returns true if a neighbor hex is "same" (connected).
+   * @returns Bitmask value 0-63.
+   */
+  export declare function computeHexAutotileBitmask(q: number, r: number, check: (q: number, r: number) => boolean): number;
+
+  /**
    * Check if a key is currently held down (returns true every frame while held).
    * Returns false in headless mode.
    *
@@ -1086,6 +1534,568 @@ declare module "@arcane/runtime/rendering" {
    * @returns Mouse position in world units.
    */
   export declare function getMouseWorldPosition(): MousePosition;
+  /**
+   * Get the number of connected gamepads.
+   * Returns 0 in headless mode.
+   */
+  export declare function getGamepadCount(): number;
+  /**
+   * Get the name of the primary (first connected) gamepad.
+   * Returns empty string if no gamepad connected or in headless mode.
+   */
+  export declare function getGamepadName(): string;
+  /**
+   * Check if a gamepad is connected.
+   * Returns false in headless mode.
+   */
+  export declare function isGamepadConnected(): boolean;
+  /**
+   * Check if a gamepad button is currently held down.
+   * Returns false in headless mode.
+   *
+   * Button names (Xbox layout as canonical):
+   * - Face buttons: `"A"`, `"B"`, `"X"`, `"Y"`
+   * - Bumpers: `"LeftBumper"`, `"RightBumper"`
+   * - Triggers: `"LeftTrigger"`, `"RightTrigger"`
+   * - Sticks: `"LeftStick"`, `"RightStick"`
+   * - D-Pad: `"DPadUp"`, `"DPadDown"`, `"DPadLeft"`, `"DPadRight"`
+   * - System: `"Select"`, `"Start"`, `"Guide"`
+   *
+   * @param button - Gamepad button name string.
+   * @returns true if the button is held down.
+   */
+  export declare function isGamepadButtonDown(button: string): boolean;
+  /**
+   * Check if a gamepad button was pressed this frame.
+   * Returns false in headless mode.
+   *
+   * @param button - Gamepad button name string (same as {@link isGamepadButtonDown}).
+   * @returns true if the button was just pressed this frame.
+   */
+  export declare function isGamepadButtonPressed(button: string): boolean;
+  /**
+   * Get a gamepad axis value.
+   * Returns 0 in headless mode.
+   *
+   * Axis names:
+   * - `"LeftStickX"` — Left stick horizontal (-1 = left, 1 = right)
+   * - `"LeftStickY"` — Left stick vertical (-1 = up, 1 = down)
+   * - `"RightStickX"` — Right stick horizontal
+   * - `"RightStickY"` — Right stick vertical
+   * - `"LeftTrigger"` — Left trigger (0 = released, 1 = fully pressed)
+   * - `"RightTrigger"` — Right trigger (0 = released, 1 = fully pressed)
+   *
+   * @param axis - Axis name string.
+   * @returns Axis value (-1.0 to 1.0 for sticks, 0.0 to 1.0 for triggers).
+   */
+  export declare function getGamepadAxis(axis: string): number;
+  /**
+   * Get the number of active touch points.
+   * Returns 0 in headless mode.
+   */
+  export declare function getTouchCount(): number;
+  /**
+   * Check if any touch input is currently active.
+   * Returns false in headless mode.
+   */
+  export declare function isTouchActive(): boolean;
+  /**
+   * Get the screen position of a touch point by index.
+   * Returns `{ x: 0, y: 0 }` if not found or in headless mode.
+   *
+   * @param index - Touch point index (0 for primary touch).
+   * @returns Touch position in screen pixels.
+   */
+  export declare function getTouchPosition(index?: number): MousePosition;
+  /**
+   * Get the world position of a touch point (accounting for camera transform).
+   * Convenience function combining {@link getTouchPosition} and {@link screenToWorld}.
+   *
+   * @param index - Touch point index (0 for primary touch).
+   * @returns Touch position in world units.
+   */
+  export declare function getTouchWorldPosition(index?: number): MousePosition;
+
+  /**
+   * Isometric tilemap renderer.
+   *
+   * Creates and draws tilemaps using diamond isometric projection.
+   * Renders with correct depth sorting (back-to-front), camera culling,
+   * per-tile elevation, and integrates with the existing tile API patterns.
+   */
+  /** A single tile in the isometric tilemap. */
+  export type IsoTile = {
+      /** Tile type / texture identifier. 0 = empty. */
+      tileId: number;
+      /** Elevation offset in pixels (tile drawn higher). Default: 0. */
+      elevation: number;
+  };
+  /** Configuration for creating an isometric tilemap. */
+  export type IsoTilemapConfig = {
+      /** Grid width in tiles. */
+      width: number;
+      /** Grid height in tiles. */
+      height: number;
+      /** Isometric tile dimensions. */
+      tileW: number;
+      /** Isometric tile height. */
+      tileH: number;
+  };
+  /** An isometric tilemap instance. */
+  export type IsoTilemap = {
+      /** Grid width in tiles. */
+      width: number;
+      /** Grid height in tiles. */
+      height: number;
+      /** Tile dimensions config. */
+      config: IsoConfig;
+      /** Flat array of tiles, indexed as [gy * width + gx]. */
+      tiles: IsoTile[];
+      /** Optional tile-to-textureId mapping for rendering. */
+      textureMap: Map<number, number>;
+  };
+  /**
+   * Create an isometric tilemap with the given dimensions.
+   * All tiles start empty (tileId = 0, elevation = 0).
+   *
+   * @param config - Grid dimensions and tile sizes.
+   * @returns A new IsoTilemap.
+   */
+  export declare function createIsoTilemap(config: IsoTilemapConfig): IsoTilemap;
+  /**
+   * Set the tile at grid position (gx, gy).
+   *
+   * @param tilemap - The isometric tilemap.
+   * @param gx - Grid X position.
+   * @param gy - Grid Y position.
+   * @param tileId - Tile type identifier. 0 = empty.
+   * @param elevation - Elevation offset in pixels. Default: 0.
+   */
+  export declare function setIsoTile(tilemap: IsoTilemap, gx: number, gy: number, tileId: number, elevation?: number): void;
+  /**
+   * Get the tile at grid position (gx, gy).
+   *
+   * @returns The tile, or undefined if out of bounds.
+   */
+  export declare function getIsoTile(tilemap: IsoTilemap, gx: number, gy: number): IsoTile | undefined;
+  /**
+   * Get the tile ID at grid position (gx, gy).
+   *
+   * @returns Tile ID, or 0 if out of bounds or empty.
+   */
+  export declare function getIsoTileId(tilemap: IsoTilemap, gx: number, gy: number): number;
+  /**
+   * Set the elevation for a specific tile.
+   */
+  export declare function setIsoTileElevation(tilemap: IsoTilemap, gx: number, gy: number, elevation: number): void;
+  /**
+   * Fill a rectangular region of the isometric tilemap.
+   *
+   * @param tilemap - The tilemap.
+   * @param startX - Start grid X.
+   * @param startY - Start grid Y.
+   * @param endX - End grid X (exclusive).
+   * @param endY - End grid Y (exclusive).
+   * @param tileId - Tile ID to fill.
+   * @param elevation - Elevation for filled tiles. Default: 0.
+   */
+  export declare function fillIsoTiles(tilemap: IsoTilemap, startX: number, startY: number, endX: number, endY: number, tileId: number, elevation?: number): void;
+  /**
+   * Map a tile ID to a texture ID for rendering.
+   * When drawIsoTilemap() encounters this tile ID, it uses the mapped texture.
+   *
+   * @param tilemap - The tilemap.
+   * @param tileId - The tile type identifier.
+   * @param textureId - The texture/sprite handle to render.
+   */
+  export declare function setIsoTileTexture(tilemap: IsoTilemap, tileId: number, textureId: number): void;
+  /**
+   * Draw the isometric tilemap with correct depth sorting and camera culling.
+   *
+   * Iterates tiles in back-to-front order (increasing gy, then gx).
+   * Skips tiles that are off-screen based on the camera viewport.
+   * Each tile is rendered as a sprite positioned at its isometric world coordinates,
+   * offset by elevation.
+   *
+   * @param tilemap - The isometric tilemap to draw.
+   * @param camera - Current camera state for culling. If omitted, draws all tiles.
+   * @param baseLayer - Base draw layer. Default: 0.
+   * @param offsetX - World X offset for the tilemap origin. Default: 0.
+   * @param offsetY - World Y offset for the tilemap origin. Default: 0.
+   */
+  export declare function drawIsoTilemap(tilemap: IsoTilemap, camera?: CameraState, baseLayer?: number, offsetX?: number, offsetY?: number): void;
+  /**
+   * Compute a 4-bit auto-tile bitmask for an isometric tile.
+   * Checks 4 cardinal neighbors in grid space (N=up, E=right, S=down, W=left).
+   *
+   * @param tilemap - The isometric tilemap.
+   * @param gx - Grid X.
+   * @param gy - Grid Y.
+   * @param matchFn - Returns true if the neighbor tile should be considered "same".
+   *                  Receives the tile ID of the neighbor. Default: tileId > 0.
+   * @returns Bitmask 0-15. Bit layout: N=1, E=2, S=4, W=8.
+   */
+  export declare function computeIsoAutotile4(tilemap: IsoTilemap, gx: number, gy: number, matchFn?: (tileId: number) => boolean): number;
+
+  /**
+   * Isometric coordinate system.
+   *
+   * Provides diamond-projection transforms between grid space,
+   * world/pixel space, and screen space. Configurable tile dimensions.
+   * Also supports staggered (offset-row) isometric for rectangular maps.
+   *
+   * Conventions:
+   * - Grid space: integer (gx, gy) tile coordinates.
+   * - World space: pixel coordinates where drawSprite() operates.
+   * - Screen space: viewport-relative pixel coordinates (before camera transform).
+   */
+  /** Configuration for isometric tile dimensions. */
+  export type IsoConfig = {
+      /** Diamond width in pixels (full tile width). */
+      tileW: number;
+      /** Diamond height in pixels (full tile height, typically tileW / 2). */
+      tileH: number;
+  };
+  /** Staggered isometric configuration (offset rows). */
+  export type StaggeredIsoConfig = {
+      /** Diamond width in pixels. */
+      tileW: number;
+      /** Diamond height in pixels. */
+      tileH: number;
+      /** Which rows are offset: "odd" or "even". Default: "odd". */
+      staggerIndex?: "odd" | "even";
+  };
+  /**
+   * Convert grid coordinates to world (pixel) coordinates using diamond projection.
+   *
+   * The diamond projection places tiles in a rotated-45-degree diamond pattern.
+   * Grid (0,0) maps to world (0,0). Moving +gx goes down-right, +gy goes down-left.
+   *
+   * @param gx - Grid X coordinate.
+   * @param gy - Grid Y coordinate.
+   * @param config - Tile dimensions.
+   * @returns World position { x, y }.
+   */
+  export declare function isoToWorld(gx: number, gy: number, config: IsoConfig): {
+      x: number;
+      y: number;
+  };
+  /**
+   * Convert world (pixel) coordinates to fractional grid coordinates.
+   *
+   * The inverse of isoToWorld. Returns fractional values — use Math.floor()
+   * on both x and y to get the grid cell, or Math.round() for nearest-tile snapping.
+   *
+   * @param wx - World X position in pixels.
+   * @param wy - World Y position in pixels.
+   * @param config - Tile dimensions.
+   * @returns Fractional grid position { x, y }.
+   */
+  export declare function worldToIso(wx: number, wy: number, config: IsoConfig): {
+      x: number;
+      y: number;
+  };
+  /**
+   * Convert world coordinates to an integer grid cell.
+   *
+   * Applies a half-tile-height offset before flooring so that clicking
+   * the center of a diamond tile returns that tile's coordinates.
+   *
+   * @param wx - World X position.
+   * @param wy - World Y position.
+   * @param config - Tile dimensions.
+   * @returns Integer grid cell { x, y }.
+   */
+  export declare function worldToGrid(wx: number, wy: number, config: IsoConfig): {
+      x: number;
+      y: number;
+  };
+  /**
+   * Convert screen-space coordinates to grid coordinates, accounting for camera.
+   *
+   * Screen space is viewport-relative (0,0 = top-left of screen).
+   * This unprojects through the camera to world space, then converts to grid.
+   *
+   * @param sx - Screen X position.
+   * @param sy - Screen Y position.
+   * @param camera - Current camera state (position, zoom).
+   * @param config - Tile dimensions.
+   * @param viewportWidth - Viewport width in pixels. Use getViewportSize().width.
+   * @param viewportHeight - Viewport height in pixels. Use getViewportSize().height.
+   * @returns Integer grid cell { x, y }.
+   */
+  export declare function screenToIso(sx: number, sy: number, camera: CameraState, config: IsoConfig, viewportWidth: number, viewportHeight: number): {
+      x: number;
+      y: number;
+  };
+  /**
+   * Compute a depth layer value for sprite sorting in isometric view.
+   *
+   * Tiles further down the screen (higher gy) should draw in front of tiles
+   * above them. Multiplies by 10 to leave room for sub-layers (e.g., floor,
+   * objects, walls within one tile row).
+   *
+   * @param gy - Grid Y coordinate.
+   * @returns Integer depth layer value.
+   */
+  export declare function isoDepthLayer(gy: number): number;
+  /**
+   * Convert grid coordinates to world coordinates for staggered isometric layout.
+   *
+   * Staggered iso places tiles in offset rows, creating a rectangular map
+   * that still looks isometric. Odd or even rows are offset by half a tile width.
+   *
+   * @param gx - Grid column.
+   * @param gy - Grid row.
+   * @param config - Staggered iso configuration.
+   * @returns World position { x, y }.
+   */
+  export declare function staggeredIsoToWorld(gx: number, gy: number, config: StaggeredIsoConfig): {
+      x: number;
+      y: number;
+  };
+  /**
+   * Convert world coordinates to grid cell for staggered isometric layout.
+   *
+   * Uses the standard approach: determine the row from Y, then adjust column
+   * based on whether the row is offset.
+   *
+   * @param wx - World X position.
+   * @param wy - World Y position.
+   * @param config - Staggered iso configuration.
+   * @returns Integer grid cell { x, y }.
+   */
+  export declare function worldToStaggeredIso(wx: number, wy: number, config: StaggeredIsoConfig): {
+      x: number;
+      y: number;
+  };
+  /**
+   * Convert screen coordinates to grid cell for staggered isometric layout.
+   *
+   * @param sx - Screen X position.
+   * @param sy - Screen Y position.
+   * @param camera - Current camera state.
+   * @param config - Staggered iso configuration.
+   * @param viewportWidth - Viewport width in pixels. Use getViewportSize().width.
+   * @param viewportHeight - Viewport height in pixels. Use getViewportSize().height.
+   * @returns Integer grid cell { x, y }.
+   */
+  export declare function screenToStaggeredIso(sx: number, sy: number, camera: CameraState, config: StaggeredIsoConfig, viewportWidth: number, viewportHeight: number): {
+      x: number;
+      y: number;
+  };
+  /**
+   * Get the bounding box of an isometric map in world coordinates.
+   * Useful for setting camera bounds.
+   *
+   * @param mapW - Map width in tiles.
+   * @param mapH - Map height in tiles.
+   * @param config - Tile dimensions.
+   * @returns Bounding box { minX, minY, maxX, maxY } in world coordinates.
+   */
+  export declare function isoMapBounds(mapW: number, mapH: number, config: IsoConfig): {
+      minX: number;
+      minY: number;
+      maxX: number;
+      maxY: number;
+  };
+  /**
+   * Iterate tiles in back-to-front order for correct isometric depth sorting.
+   * Calls the callback for each (gx, gy) in draw order.
+   *
+   * @param mapW - Map width in tiles.
+   * @param mapH - Map height in tiles.
+   * @param callback - Called with (gx, gy) for each tile.
+   */
+  export declare function isoIterateBackToFront(mapW: number, mapH: number, callback: (gx: number, gy: number) => void): void;
+  /**
+   * Get the four isometric neighbor positions for a grid cell.
+   *
+   * @param gx - Grid X.
+   * @param gy - Grid Y.
+   * @returns Array of 4 neighbor positions [right, down, left, up].
+   */
+  export declare function isoNeighbors(gx: number, gy: number): Array<{
+      x: number;
+      y: number;
+  }>;
+  /**
+   * Manhattan distance between two grid cells in isometric space.
+   *
+   * @param ax - First cell X.
+   * @param ay - First cell Y.
+   * @param bx - Second cell X.
+   * @param by - Second cell Y.
+   * @returns Manhattan distance.
+   */
+  export declare function isoDistance(ax: number, ay: number, bx: number, by: number): number;
+
+  /**
+   * Juice & game feel combinators.
+   *
+   * High-level APIs that orchestrate multiple subsystems (camera shake, screen
+   * flash, particles, audio, frame freeze) in a single call. These are the
+   * "one call, big payoff" functions that make a game *feel good*.
+   *
+   * @example
+   * ```ts
+   * // On enemy hit: shake + flash + particles + sound in one call
+   * impact(enemy.x, enemy.y, {
+   *   shake: { intensity: 6, duration: 0.2 },
+   *   flash: { r: 1, g: 1, b: 1, duration: 0.1 },
+   *   hitstop: 3,
+   * });
+   * ```
+   */
+  /** Camera shake options for impact(). */
+  export type ImpactShake = {
+      /** Shake intensity in pixels. Default: 8. */
+      intensity?: number;
+      /** Shake duration in seconds. Default: 0.15. */
+      duration?: number;
+  };
+  /** Screen flash options for impact(). */
+  export type ImpactFlash = {
+      /** Red component 0-1. Default: 1. */
+      r?: number;
+      /** Green component 0-1. Default: 1. */
+      g?: number;
+      /** Blue component 0-1. Default: 1. */
+      b?: number;
+      /** Flash duration in seconds. Default: 0.1. */
+      duration?: number;
+      /** Initial opacity 0-1. Default: 0.6. */
+      opacity?: number;
+  };
+  /** Particle burst options for impact(). */
+  export type ImpactParticles = {
+      /** Number of particles. Default: 15. */
+      count?: number;
+      /** Particle lifetime range [min, max] in seconds. Default: [0.2, 0.5]. */
+      lifetime?: [number, number];
+      /** Horizontal velocity range. Default: [-100, 100]. */
+      velocityX?: [number, number];
+      /** Vertical velocity range. Default: [-100, 100]. */
+      velocityY?: [number, number];
+      /** Particle color. Default: white. */
+      color?: {
+          r: number;
+          g: number;
+          b: number;
+          a: number;
+      };
+      /** End color for fade. Optional. */
+      endColor?: {
+          r: number;
+          g: number;
+          b: number;
+          a: number;
+      };
+      /** Particle size range. Default: [2, 6]. */
+      size?: [number, number];
+      /** Texture for particles. Uses solid white if not specified. */
+      textureId?: number;
+  };
+  /** Sound options for impact(). */
+  export type ImpactSound = {
+      /** Sound to play. The user should pass the sound ID from loadSound(). */
+      soundId: number;
+      /** Volume 0-1. Default: 1. */
+      volume?: number;
+  };
+  /** Full configuration for the impact() combinator. All fields optional. */
+  export type ImpactConfig = {
+      /** Camera shake. Pass true for defaults, or an ImpactShake for custom. */
+      shake?: boolean | ImpactShake;
+      /** Hitstop: freeze gameplay for N frames (60 FPS assumed). Default: 0. */
+      hitstop?: number;
+      /** Screen flash. Pass true for defaults, or an ImpactFlash for custom. */
+      flash?: boolean | ImpactFlash;
+      /** Particle burst at the impact point. Pass true for defaults, or config. */
+      particles?: boolean | ImpactParticles;
+      /** Sound to play. */
+      sound?: ImpactSound;
+  };
+  /**
+   * Check whether hitstop is active. When true, gameplay should freeze but
+   * UI and particles can continue updating.
+   *
+   * @returns True if hitstop is in effect.
+   */
+  export declare function isHitstopActive(): boolean;
+  /**
+   * Get remaining hitstop frames.
+   * @returns Number of frames remaining.
+   */
+  export declare function getHitstopFrames(): number;
+  /**
+   * Consume one hitstop frame. Call this once per game frame in your update loop.
+   * While hitstop is active, skip gameplay updates but continue rendering.
+   *
+   * @returns True if hitstop was active (frame was consumed), false if not.
+   *
+   * @example
+   * ```ts
+   * onFrame(() => {
+   *   if (!consumeHitstopFrame()) {
+   *     // Normal gameplay update
+   *     updateGameplay(dt);
+   *   }
+   *   // Always render (including during hitstop)
+   *   renderGame();
+   *   updateTweens(dt); // tweens run during hitstop
+   *   updateParticles(dt); // particles run during hitstop
+   * });
+   * ```
+   */
+  export declare function consumeHitstopFrame(): boolean;
+  /**
+   * Start a hitstop (frame freeze) for the specified number of frames.
+   * If a hitstop is already active, the larger value wins.
+   *
+   * @param frames - Number of frames to freeze. At 60 FPS, 3 frames = 50ms.
+   */
+  export declare function hitstop(frames: number): void;
+  /**
+   * Orchestrated "impact" juice: combine camera shake, hitstop, screen flash,
+   * particle burst, and sound in a single call. All parameters are optional —
+   * mix and match freely.
+   *
+   * @param x - World X position of the impact.
+   * @param y - World Y position of the impact.
+   * @param config - Which effects to trigger and their parameters.
+   *
+   * @example
+   * ```ts
+   * // Full juice on enemy death
+   * impact(enemy.x, enemy.y, {
+   *   shake: { intensity: 10, duration: 0.3 },
+   *   hitstop: 4,
+   *   flash: { r: 1, g: 0.8, b: 0.2, duration: 0.15 },
+   *   particles: { count: 25, color: { r: 1, g: 0.5, b: 0, a: 1 } },
+   * });
+   *
+   * // Minimal hit feedback
+   * impact(x, y, { shake: true, hitstop: 2 });
+   * ```
+   */
+  export declare function impact(x: number, y: number, config: ImpactConfig): void;
+  /**
+   * Light hit impact preset: small shake + brief flash.
+   * @param x - World X position.
+   * @param y - World Y position.
+   */
+  export declare function impactLight(x: number, y: number): void;
+  /**
+   * Heavy hit impact preset: big shake + long flash + particles.
+   * @param x - World X position.
+   * @param y - World Y position.
+   */
+  export declare function impactHeavy(x: number, y: number): void;
+  /**
+   * Reset juice state. For testing only.
+   */
+  export declare function _resetJuice(): void;
 
   /**
    * Set the ambient light color applied to all sprites.
@@ -1338,6 +2348,94 @@ declare module "@arcane/runtime/rendering" {
    * @returns Delta time in seconds (fractional).
    */
   export declare function getDeltaTime(): number;
+
+  /**
+   * Nine-slice sprite rendering.
+   *
+   * Draws a texture as a nine-slice panel: the four corners remain at fixed size,
+   * the four edges stretch in one dimension, and the center stretches in both.
+   * This allows scalable UI panels without corner distortion.
+   *
+   * ```
+   *  ┌────┬────────┬────┐
+   *  │ TL │  Top   │ TR │   Corners: fixed size
+   *  ├────┼────────┼────┤   Edges: stretch in one axis
+   *  │ L  │ Center │  R │   Center: stretches both axes
+   *  ├────┼────────┼────┤
+   *  │ BL │ Bottom │ BR │
+   *  └────┴────────┴────┘
+   * ```
+   *
+   * @example
+   * ```ts
+   * drawNineSlice(panelTex, 100, 50, 300, 200, { border: 16 });
+   * ```
+   */
+  /** Border inset configuration for nine-slice. */
+  export type NineSliceBorder = {
+      /** Top border inset in texture pixels. */
+      top: number;
+      /** Bottom border inset in texture pixels. */
+      bottom: number;
+      /** Left border inset in texture pixels. */
+      left: number;
+      /** Right border inset in texture pixels. */
+      right: number;
+  };
+  /** Options for drawNineSlice. */
+  export type NineSliceOptions = {
+      /**
+       * Border insets. Can be a single number (uniform on all sides)
+       * or a per-edge object.
+       */
+      border: number | NineSliceBorder;
+      /** Draw order layer. Default: 0. */
+      layer?: number;
+      /** Tint color. Default: white (no tint). */
+      tint?: {
+          r: number;
+          g: number;
+          b: number;
+          a: number;
+      };
+      /** Opacity 0-1. Default: 1. */
+      opacity?: number;
+      /** If true, x/y/w/h are in screen pixels. Default: false. */
+      screenSpace?: boolean;
+      /**
+       * Texture dimensions in pixels. Required for correct UV calculation.
+       * If not provided, assumes 1:1 mapping (UV border = border / 256).
+       */
+      textureWidth?: number;
+      /** Texture height in pixels. Default: 256. */
+      textureHeight?: number;
+  };
+  /**
+   * Draw a nine-slice panel from a texture.
+   *
+   * The texture is divided into a 3x3 grid based on `border` insets. Corners
+   * are drawn at fixed size, edges stretch, and the center fills the remainder.
+   *
+   * No-op in headless mode (drawSprite is a no-op).
+   *
+   * @param textureId - Texture handle from loadTexture().
+   * @param x - X position (world or screen-space).
+   * @param y - Y position (world or screen-space).
+   * @param w - Total width of the panel.
+   * @param h - Total height of the panel.
+   * @param options - Border insets, layer, tint, opacity, screenSpace.
+   */
+  export declare function drawNineSlice(textureId: TextureId, x: number, y: number, w: number, h: number, options: NineSliceOptions): void;
+  /**
+   * Compute how many drawSprite calls a nine-slice will emit (for testing).
+   * Depends on whether any slices have zero dimensions.
+   *
+   * @param w - Panel width.
+   * @param h - Panel height.
+   * @param border - Border insets.
+   * @returns Number of sprite draw calls that would be emitted.
+   */
+  export declare function getNineSliceSpriteCount(w: number, h: number, border: number | NineSliceBorder): number;
 
   /**
    * Parallax scrolling support.
@@ -2020,6 +3118,357 @@ declare module "@arcane/runtime/rendering" {
    * Fill a rectangular region of a layered tilemap with a single tile ID.
    */
   export declare function fillLayerTiles(tilemap: LayeredTilemap, layerName: string, startX: number, startY: number, endX: number, endY: number, tileId: number): void;
+
+  /**
+   * Trail / ribbon renderer.
+   *
+   * Creates a ribbon that follows a moving point. Internally stores a list of
+   * points. Each frame new points are added and old ones expire. The trail is
+   * rendered as a sequence of sprite quads connecting adjacent points, with
+   * configurable width, color fade, and opacity.
+   *
+   * This is a TS-only feature — no Rust/GPU changes needed. Each trail segment
+   * is drawn as a rotated sprite quad.
+   *
+   * @example
+   * ```ts
+   * const trail = createTrail({ maxLength: 20, width: 8, color: { r: 1, g: 0.5, b: 0, a: 1 } });
+   *
+   * onFrame(() => {
+   *   updateTrail(trail, mouseX, mouseY);
+   *   drawTrail(trail);
+   * });
+   * ```
+   */
+  /** A single point in the trail. */
+  export type TrailPoint = {
+      x: number;
+      y: number;
+      age: number;
+  };
+  /** Configuration for creating a trail. */
+  export type TrailConfig = {
+      /** Maximum number of points before oldest are removed. Default: 30. */
+      maxLength?: number;
+      /** Width of the ribbon in world units. Default: 8. */
+      width?: number;
+      /** RGBA color of the trail. Default: white. */
+      color?: {
+          r: number;
+          g: number;
+          b: number;
+          a: number;
+      };
+      /** End color (fades from color to endColor along the trail). Optional. */
+      endColor?: {
+          r: number;
+          g: number;
+          b: number;
+          a: number;
+      };
+      /** Maximum lifetime per point in seconds. Points older than this are removed. Default: 1.0. */
+      maxAge?: number;
+      /** Draw layer. Default: 0. */
+      layer?: number;
+      /** Optional texture for the trail segments. Uses solid color if not provided. */
+      textureId?: TextureId;
+      /** Blend mode for trail segments. Default: "alpha". */
+      blendMode?: "alpha" | "additive" | "multiply" | "screen";
+      /** Minimum distance between consecutive points. Default: 2. */
+      minDistance?: number;
+  };
+  /** A trail instance with state. */
+  export type Trail = {
+      config: Required<Omit<TrailConfig, "textureId" | "endColor">> & {
+          textureId: TextureId | null;
+          endColor: {
+              r: number;
+              g: number;
+              b: number;
+              a: number;
+          } | null;
+      };
+      points: TrailPoint[];
+      active: boolean;
+  };
+  /**
+   * Create a new trail instance.
+   *
+   * @param config - Trail configuration.
+   * @returns A new Trail ready for updateTrail/drawTrail.
+   */
+  export declare function createTrail(config?: TrailConfig): Trail;
+  /**
+   * Add a new point to the trail head and age existing points.
+   * Points that exceed maxAge or when the trail exceeds maxLength are removed.
+   *
+   * @param trail - The trail instance.
+   * @param x - World X position.
+   * @param y - World Y position.
+   * @param dt - Delta time in seconds (for aging points). Default: 1/60.
+   */
+  export declare function updateTrail(trail: Trail, x: number, y: number, dt?: number): void;
+  /**
+   * Draw the trail as a series of rotated sprite quads connecting adjacent points.
+   * No-op in headless mode (drawSprite is no-op).
+   *
+   * @param trail - The trail instance.
+   */
+  export declare function drawTrail(trail: Trail): void;
+  /**
+   * Clear all points from a trail.
+   *
+   * @param trail - The trail instance.
+   */
+  export declare function clearTrail(trail: Trail): void;
+  /**
+   * Pause a trail — stops adding new points but keeps rendering existing ones.
+   *
+   * @param trail - The trail instance.
+   */
+  export declare function pauseTrail(trail: Trail): void;
+  /**
+   * Resume a paused trail.
+   *
+   * @param trail - The trail instance.
+   */
+  export declare function resumeTrail(trail: Trail): void;
+  /**
+   * Get the number of points currently in the trail.
+   *
+   * @param trail - The trail instance.
+   * @returns Point count.
+   */
+  export declare function getTrailPointCount(trail: Trail): number;
+
+  /**
+   * Screen transitions: visual effects applied during scene changes.
+   *
+   * Transitions work as a timed overlay that covers the screen. At the midpoint
+   * the actual scene swap happens (hidden behind the overlay). Each transition
+   * type uses a different visual pattern to reveal/conceal.
+   *
+   * Built-in types:
+   * - **fade** — simple alpha fade to/from a solid color
+   * - **wipe** — horizontal sweep from left to right
+   * - **circleIris** — expanding/contracting circle from center
+   * - **diamond** — diamond-shaped iris
+   * - **pixelate** — increasing pixel size that obscures the image
+   *
+   * Integrates with the scene manager: pass a {@link ScreenTransitionConfig} to
+   * `pushScene()`, `popScene()`, or `replaceScene()` and the transition renders
+   * automatically via {@link updateScreenTransition} / {@link drawScreenTransition}.
+   *
+   * @example
+   * ```ts
+   * import { startScreenTransition, updateScreenTransition, drawScreenTransition } from "./transition.ts";
+   *
+   * startScreenTransition("circleIris", 0.6, { color: { r: 0, g: 0, b: 0 } }, () => {
+   *   // swap scene at midpoint
+   * });
+   * ```
+   */
+  /** Available screen transition visual patterns. */
+  export type ScreenTransitionType = "fade" | "wipe" | "circleIris" | "diamond" | "pixelate";
+  /** Configuration for a screen transition. */
+  export type ScreenTransitionConfig = {
+      /** Transition visual pattern. Default: "fade". */
+      type?: ScreenTransitionType;
+      /** Total duration in seconds. Default: 0.5. */
+      duration?: number;
+      /** Overlay color. Default: black. */
+      color?: {
+          r: number;
+          g: number;
+          b: number;
+      };
+      /** Draw layer for the overlay. Default: 250. */
+      layer?: number;
+  };
+  /**
+   * Start a screen transition. At the midpoint (half duration), `onMidpoint`
+   * is called — this is where you swap scenes. The transition then plays in
+   * reverse to reveal the new scene.
+   *
+   * @param type - Visual pattern.
+   * @param dur - Duration in seconds.
+   * @param config - Color and layer overrides.
+   * @param onMidpoint - Callback executed at the midpoint (scene swap).
+   * @param onComplete - Callback executed when the transition finishes.
+   */
+  export declare function startScreenTransition(type: ScreenTransitionType, dur: number, config?: {
+      color?: {
+          r: number;
+          g: number;
+          b: number;
+      };
+      layer?: number;
+  }, onMidpoint?: () => void, onComplete?: () => void): void;
+  /**
+   * Advance the transition timer. Call once per frame.
+   *
+   * @param dt - Delta time in seconds.
+   */
+  export declare function updateScreenTransition(dt: number): void;
+  /**
+   * Draw the transition overlay. Call after scene rendering each frame.
+   * No-op when no transition is active.
+   */
+  export declare function drawScreenTransition(): void;
+  /**
+   * Check whether a screen transition is currently active.
+   * @returns True if transitioning.
+   */
+  export declare function isScreenTransitionActive(): boolean;
+  /**
+   * Get the current transition progress (0-1). During "out" phase, 0->1.
+   * During "in" phase, 1->0. Returns 0 when no transition is active.
+   */
+  export declare function getScreenTransitionProgress(): number;
+  /**
+   * Reset transition state. For testing only.
+   */
+  export declare function _resetScreenTransition(): void;
+
+  /**
+   * Typewriter text: progressive character-by-character text reveal.
+   *
+   * Used for dialogue, tutorials, and narrative sequences. Characters appear
+   * one at a time with configurable speed, punctuation pauses, and skip-ahead.
+   *
+   * @example
+   * ```ts
+   * const tw = createTypewriter("The dragon approaches...", {
+   *   speed: 30,
+   *   onChar: () => playSound(typeSound),
+   * });
+   *
+   * // In game loop:
+   * updateTypewriter(tw, dt);
+   * drawTypewriter(tw, 50, 300, { scale: 1, layer: 100 });
+   * ```
+   */
+  /** Configuration for creating a typewriter. */
+  export type TypewriterConfig = {
+      /** Characters revealed per second. Default: 30. */
+      speed?: number;
+      /** Extra pause duration in seconds on punctuation marks (. , ! ? ...). Default: 0.15. */
+      punctuationPause?: number;
+      /** Characters that trigger punctuation pause. Default: ".!?,;:". */
+      punctuationChars?: string;
+      /** Called for each character revealed. Use for sound effects. */
+      onChar?: (char: string, index: number) => void;
+      /** Called when all text has been fully revealed. */
+      onComplete?: () => void;
+  };
+  /** Draw options for rendering typewriter text. */
+  export type TypewriterDrawOptions = {
+      /** Text scale. Default: 1. */
+      scale?: number;
+      /** Text color. Default: white. */
+      tint?: {
+          r: number;
+          g: number;
+          b: number;
+          a: number;
+      };
+      /** Draw layer. Default: 100. */
+      layer?: number;
+      /** Screen-space coordinates. Default: false. */
+      screenSpace?: boolean;
+  };
+  /** A typewriter instance. */
+  export type Typewriter = {
+      /** Full text to reveal. */
+      fullText: string;
+      /** Number of characters currently visible. */
+      visibleChars: number;
+      /** Whether the full text has been revealed. */
+      complete: boolean;
+      /** Whether the typewriter is paused. */
+      paused: boolean;
+      /** Characters per second. */
+      speed: number;
+      /** Punctuation pause duration in seconds. */
+      punctuationPause: number;
+      /** Characters that trigger punctuation pause. */
+      punctuationChars: string;
+      /** Internal accumulator for character timing. */
+      _accumulator: number;
+      /** Internal: whether we're in a punctuation pause. */
+      _inPause: boolean;
+      /** Internal: remaining pause time. */
+      _pauseRemaining: number;
+      /** Callbacks. */
+      _onChar: ((char: string, index: number) => void) | null;
+      _onComplete: (() => void) | null;
+  };
+  /**
+   * Create a new typewriter instance.
+   *
+   * @param text - The full text to progressively reveal.
+   * @param config - Speed, punctuation pause, and callback options.
+   * @returns A Typewriter instance to pass to updateTypewriter/drawTypewriter.
+   */
+  export declare function createTypewriter(text: string, config?: TypewriterConfig): Typewriter;
+  /**
+   * Advance the typewriter by dt seconds. Reveals characters according to speed.
+   * Applies punctuation pauses and fires callbacks.
+   *
+   * @param tw - The typewriter instance.
+   * @param dt - Delta time in seconds.
+   */
+  export declare function updateTypewriter(tw: Typewriter, dt: number): void;
+  /**
+   * Draw the typewriter's currently visible text.
+   * No-op in headless mode (drawText is no-op).
+   *
+   * @param tw - The typewriter instance.
+   * @param x - X position.
+   * @param y - Y position.
+   * @param options - Scale, tint, layer, screenSpace.
+   */
+  export declare function drawTypewriter(tw: Typewriter, x: number, y: number, options?: TypewriterDrawOptions): void;
+  /**
+   * Skip ahead: immediately reveal all remaining text.
+   * Fires onComplete if not already complete.
+   *
+   * @param tw - The typewriter instance.
+   */
+  export declare function skipTypewriter(tw: Typewriter): void;
+  /**
+   * Pause the typewriter. No characters will be revealed until resumed.
+   *
+   * @param tw - The typewriter instance.
+   */
+  export declare function pauseTypewriter(tw: Typewriter): void;
+  /**
+   * Resume a paused typewriter.
+   *
+   * @param tw - The typewriter instance.
+   */
+  export declare function resumeTypewriter(tw: Typewriter): void;
+  /**
+   * Reset the typewriter to the beginning with optional new text.
+   *
+   * @param tw - The typewriter instance.
+   * @param newText - Optional new text. If not provided, replays the same text.
+   */
+  export declare function resetTypewriter(tw: Typewriter, newText?: string): void;
+  /**
+   * Get the currently visible text string.
+   *
+   * @param tw - The typewriter instance.
+   * @returns The substring of fullText that is currently visible.
+   */
+  export declare function getVisibleText(tw: Typewriter): string;
+  /**
+   * Check whether the typewriter has finished revealing all text.
+   *
+   * @param tw - The typewriter instance.
+   * @returns True if all text is visible.
+   */
+  export declare function isTypewriterComplete(tw: Typewriter): boolean;
 
 }
 
@@ -4722,6 +6171,94 @@ declare module "@arcane/runtime/pathfinding" {
    * ```
    */
   export declare function findPath(grid: PathGrid, start: Vec2, goal: Vec2, options?: PathOptions): PathResult;
+
+  /**
+   * Hex pathfinding — A* and flood-fill reachability on hex grids.
+   *
+   * Uses cube coordinates (q, r, s) throughout.
+   * Reuses the binary min-heap pattern from astar.ts but adapted for hex neighbors.
+   */
+  /** Grid abstraction for hex pathfinding. */
+  export type HexPathGrid = {
+      /**
+       * Returns whether a hex cell is walkable.
+       * @param q - Cube q coordinate.
+       * @param r - Cube r coordinate.
+       */
+      isWalkable: (q: number, r: number) => boolean;
+      /**
+       * Optional movement cost for entering a hex cell.
+       * If omitted, all moves cost 1.
+       * @param q - Cube q coordinate.
+       * @param r - Cube r coordinate.
+       * @returns Movement cost. Must be > 0.
+       */
+      cost?: (q: number, r: number) => number;
+  };
+  /** Options for hex pathfinding. */
+  export type HexPathOptions = {
+      /** Maximum iterations before giving up. Default: 10000. */
+      maxIterations?: number;
+  };
+  /** Result of a hex pathfinding search. */
+  export type HexPathResult = {
+      /** Whether a path was found. */
+      found: boolean;
+      /** Ordered array of hex coordinates from start to goal (inclusive). */
+      path: HexCoord[];
+      /** Total movement cost of the path. */
+      cost: number;
+      /** Number of cells explored during search. */
+      explored: number;
+  };
+  /**
+   * Find the shortest path between two hex cells using A* with hex distance heuristic.
+   *
+   * Uses the standard hex cube-coordinate distance as an admissible heuristic.
+   *
+   * @param grid - Hex pathfinding grid (walkability + optional cost).
+   * @param start - Starting hex coordinate.
+   * @param goal - Goal hex coordinate.
+   * @param options - Optional max iterations.
+   * @returns HexPathResult with found, path, cost, and explored count.
+   *
+   * @example
+   * ```ts
+   * const grid: HexPathGrid = {
+   *   isWalkable: (q, r) => terrain.get(`${q},${r}`) !== "water",
+   *   cost: (q, r) => terrain.get(`${q},${r}`) === "forest" ? 2 : 1,
+   * };
+   * const result = findHexPath(grid, hex(0, 0), hex(5, -3));
+   * ```
+   */
+  export declare function findHexPath(grid: HexPathGrid, start: HexCoord, goal: HexCoord, options?: HexPathOptions): HexPathResult;
+  /**
+   * Find all hex cells reachable from a starting position within a movement budget.
+   * Uses breadth-first flood-fill, respecting movement costs.
+   *
+   * @param grid - Hex pathfinding grid.
+   * @param start - Starting hex coordinate.
+   * @param movement - Maximum movement budget.
+   * @returns Map from hex key ("q,r") to remaining movement at that cell.
+   *          Includes the start cell (with full movement budget).
+   *
+   * @example
+   * ```ts
+   * const reachable = hexReachable(grid, hex(0, 0), 3);
+   * for (const [key, remaining] of reachable) {
+   *   const [q, r] = key.split(",").map(Number);
+   *   highlightHex(q, r, remaining / 3); // opacity = remaining/max
+   * }
+   * ```
+   */
+  export declare function hexReachable(grid: HexPathGrid, start: HexCoord, movement: number): Map<string, number>;
+  /**
+   * Convert a reachable map (from hexReachable) to an array of HexCoord.
+   *
+   * @param reachable - Map from hexReachable().
+   * @returns Array of reachable hex coordinates.
+   */
+  export declare function reachableToArray(reachable: Map<string, number>): HexCoord[];
 
 }
 
