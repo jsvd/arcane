@@ -916,7 +916,185 @@ Complete the audio system with spatial audio, mixing, and effects.
 
 ---
 
-## Phase 21: Input Systems
+## Phase 21: MCP-First Developer Experience
+
+**Status: Planned**
+
+Zero-config MCP integration. After scaffolding, AI tools (Claude Code, Cursor, VS Code Copilot) auto-discover the game engine and can read state, execute actions, and hot-reload — no manual wiring. This is the "it just works" phase for Arcane's core differentiator.
+
+### Deliverables
+- [ ] **MCP always-on in `arcane dev`** (`cli/src/main.rs`, `cli/src/commands/dev.rs`)
+  - [ ] Default MCP HTTP server on port 4322 (no `--mcp` flag needed)
+  - [ ] `--no-mcp` to disable, `--mcp-port <port>` to change
+  - [ ] Write active port to `.arcane/mcp-port` for discovery
+  - [ ] Startup log: `[arcane] MCP server on http://localhost:4322`
+- [ ] **`arcane mcp` stdio bridge** (`cli/src/commands/mcp_bridge.rs`)
+  - [ ] New CLI subcommand speaking MCP JSON-RPC over stdin/stdout
+  - [ ] Auto-discovers running `arcane dev` via `.arcane/mcp-port` or default port
+  - [ ] Auto-launches `arcane dev <entry>` if no instance running (child process with window)
+  - [ ] Proxies JSON-RPC: stdin → HTTP POST localhost → stdout
+  - [ ] Health check with retry/timeout on startup
+  - [ ] Clean shutdown: kill child `arcane dev` on stdin close
+- [ ] **Template MCP configs** (`templates/default/`)
+  - [ ] `.mcp.json` — Claude Code auto-discovery
+  - [ ] `.cursor/mcp.json` — Cursor auto-discovery
+  - [ ] `.vscode/mcp.json` — VS Code Copilot auto-discovery
+  - [ ] All contain: `{ "mcpServers": { "{{PROJECT_NAME}}": { "command": "arcane", "args": ["mcp", "src/visual.ts"] } } }`
+- [ ] **Scaffold updates**
+  - [ ] `.arcane/` added to `.gitignore` template
+  - [ ] `arcane new` output updated with MCP integration message
+  - [ ] Drop non-existent `arcane-assets-mcp` from template
+- [ ] **Tests**
+  - [ ] Port file write/read/cleanup
+  - [ ] Stdio bridge JSON-RPC passthrough
+  - [ ] Template generation includes all three MCP configs
+  - [ ] `arcane mcp` health check and auto-launch logic
+
+### Success Criteria
+- [ ] `arcane new my-game && cd my-game && npm install && arcane dev` → MCP server running automatically
+- [ ] Open folder in Claude Code → MCP auto-discovered, tools available, zero manual config
+- [ ] Open folder in Cursor → same
+- [ ] AI writes code → hot-reload fires → user sees changes in game window
+- [ ] AI calls `execute_action` → game state changes → user sees effect in real-time
+- [ ] Existing `--inspector` and `--mcp <port>` workflows unbroken (backward compatible)
+
+---
+
+## Phase 22: Visual Polish Foundations
+
+**Status: Planned**
+
+The "everything instantly looks better" batch. Builds the shader infrastructure (sprite effect variants, post-process passes) that later phases consume. No feature here depends on another, but they share plumbing — build it once.
+
+### Deliverables
+- [ ] **Screen transitions** (`runtime/rendering/transition.ts`, `core/src/renderer/postprocess.rs`)
+  - [ ] `transition(type, duration)` — visual transitions between scenes
+  - [ ] Built-in types: fade, wipe, circleIris, diamond, pixelate
+  - [ ] Implemented as post-process pass with uniform timer
+  - [ ] Integrates with scene manager (`pushScene`/`replaceScene` accept transition config)
+  - [ ] Reusable post-process infrastructure for reflection and weather later
+- [ ] **Nine-slice sprites** (`runtime/rendering/nineslice.ts`)
+  - [ ] `drawNineSlice(texture, rect, { border })` — scalable panels without corner distortion
+  - [ ] Configurable border insets (uniform or per-edge)
+  - [ ] Works with any sprite sheet texture
+  - [ ] UI primitives upgraded to support nine-slice backgrounds
+  - [ ] Enables real-looking dialogue boxes (consumed by typewriter text in Phase 23)
+- [ ] **Sprite effects system** (`core/src/renderer/shaders/effects.wgsl`, `runtime/rendering/sprites.ts`)
+  - [ ] Composable `effects[]` array on sprite options — not individual flags
+  - [ ] **Outline**: `{ type: 'outline', color, width }` — sample neighbor texels, emit at transparent boundaries
+  - [ ] **Palette swap**: `{ type: 'palette', palette }` — 256x1 lookup texture, fragment shader remap
+  - [ ] **Flash**: `{ type: 'flash', color }` — all-one-color override (damage feedback)
+  - [ ] Shader variant infrastructure designed to scale (new effects = new cases, not new pipelines)
+  - [ ] Presets: `flashWhite()`, `flashRed()`, `outlineGold()` for common patterns
+- [ ] **Trail / ribbon renderer** (`runtime/rendering/trail.ts`)
+  - [ ] `createTrail(options)` — ribbon that follows a moving point
+  - [ ] `updateTrail(trail, x, y)` / `drawTrail(trail)` — add points, render
+  - [ ] Configurable: width, color, fade, max length, texture
+  - [ ] Distinct geometry system: vertex-strip mesh updated per frame, not a sprite variant
+  - [ ] Use cases: sword slashes, projectile streaks, dash afterimages
+- [ ] **Demo: Visual Foundations** (`demos/visual-polish/`)
+  - [ ] Scene transitions between showcase rooms
+  - [ ] Nine-slice UI panels and dialogue boxes
+  - [ ] Character with outline on hover, palette swap on hit, flash on damage
+  - [ ] Sword trail on attack, projectile trails
+
+### Success Criteria
+- [ ] Screen transitions work with scene manager (no manual wiring)
+- [ ] Nine-slice panels scale correctly (corners never distorted)
+- [ ] Sprite effects compose: `effects: [outline(...), palette(...)]` on same sprite
+- [ ] Trail ribbons follow smoothly without gaps at any speed
+- [ ] Shader variant infra supports adding new effects without new pipelines
+- [ ] All features tested headless (60+ tests)
+- [ ] Demo showcases all features in an integrated scene
+
+---
+
+## Phase 23: Juice & Game Feel
+
+**Status: Planned**
+
+Consumes Phase 22 primitives and turns them into high-level "one call, big payoff" APIs. After this phase, an agent can make a game *feel good*, not just function.
+
+### Deliverables
+- [ ] **Impact combinator** (`runtime/rendering/juice.ts`)
+  - [ ] `impact(x, y, { shake, hitstop, flash, particles, sound })` — orchestrated juice
+  - [ ] Combines camera shake + frame freeze + sprite flash + particle burst + sound in one call
+  - [ ] All parameters optional — mix and match freely
+  - [ ] `hitstop(frames)` — freeze game for N frames on hit (frame-perfect timing)
+  - [ ] Validates that the engine's timing/sequencing primitives compose correctly
+- [ ] **Floating text / damage numbers** (`runtime/rendering/floatingtext.ts`)
+  - [ ] `spawnFloatingText(x, y, text, { color, rise, fade, duration })` — auto-animating text
+  - [ ] `updateFloatingTexts(dt)` / `drawFloatingTexts()` — update and render all active
+  - [ ] Internally: tween + text + auto-cleanup lifecycle
+  - [ ] Auto-removes on completion, object pooling for performance
+  - [ ] Use cases: damage numbers, XP gains, status messages, item pickups
+- [ ] **Typewriter text** (`runtime/rendering/typewriter.ts`)
+  - [ ] `createTypewriter(text, { speed, onChar, onComplete })` — progressive text reveal
+  - [ ] `updateTypewriter(tw, dt)` / `drawTypewriter(tw, x, y, options)` — advance and render
+  - [ ] Skip-ahead on input, pause on punctuation, per-character sound callback
+  - [ ] Pairs with nine-slice for dialogue boxes
+  - [ ] Use cases: dialogue, tutorials, narrative sequences
+- [ ] **Simple 2D shadows** (`runtime/rendering/sprites.ts`)
+  - [ ] `drawSprite({ ..., shadow: { offsetX, offsetY, color, scaleY } })` — blob/drop shadow
+  - [ ] Renders a squashed, tinted duplicate beneath the sprite
+  - [ ] No GPU changes — pure sprite duplication with transform
+  - [ ] Trivial but saves everyone from doing it manually every project
+- [ ] **Demo: Juice Showcase v2** (`demos/visual-polish/` — extend Phase 22 demo)
+  - [ ] Impact combinator on enemy hit (shake + flash + particles + hitstop + sound)
+  - [ ] Floating damage numbers on every hit
+  - [ ] Typewriter dialogue in nine-slice box
+  - [ ] Character with drop shadow
+
+### Success Criteria
+- [ ] `impact()` orchestrates 5 subsystems in one call without timing bugs
+- [ ] Hitstop freezes gameplay but not UI/particles (frame-perfect)
+- [ ] Floating text auto-animates and auto-cleans (no leaks under sustained spawning)
+- [ ] Typewriter text respects punctuation pauses and skip-ahead
+- [ ] 50+ tests for juice APIs
+- [ ] Combined demo feels like a polished commercial game
+
+---
+
+## Phase 24: Atmosphere
+
+**Status: Planned**
+
+Managed subsystem features — the engine owns a particle emitter or post-process pass, the caller gets a one-liner. Lower priority than juice (genre-specific rather than universal) but compounds beautifully. Sidescrollers, RPGs, and overworlds benefit most.
+
+### Deliverables
+- [ ] **Weather system** (`runtime/rendering/weather.ts`)
+  - [ ] `setWeather(type, { intensity, wind, color })` — rain, snow, fog, leaves
+  - [ ] Internally: managed particle emitter + optional ambient light shift + optional post-process overlay
+  - [ ] `clearWeather()` — fade out current weather
+  - [ ] Integrates with camera (particles move with/against camera)
+  - [ ] Exposable as MCP tool for agent-driven atmosphere iteration
+- [ ] **Water / reflection strip** (`runtime/rendering/water.ts`, `core/src/renderer/postprocess.rs`)
+  - [ ] `drawReflection(waterY, { distortion, opacity, tint })` — horizontal reflection below waterline
+  - [ ] Post-process: sample upper half, flip vertically, apply sine-wave UV distortion
+  - [ ] Optional animated distortion (wave speed/amplitude)
+  - [ ] Source parameter designed to accept GI buffer later (forward-compatible with Radiance Cascades)
+- [ ] **Sprite stacking** (`runtime/rendering/stacking.ts`)
+  - [ ] `drawStackedSprite(slices, x, y, { angle, elevation, spacing })` — fake 3D from stacked horizontal slices
+  - [ ] Rotation applies per-layer offset for convincing pseudo-3D effect
+  - [ ] Most niche feature but visually dramatic — great for demos and marketing
+  - [ ] Self-contained, no dependencies on other Phase 24 features
+- [ ] **Demo: Atmosphere Showcase** (`demos/atmosphere/`)
+  - [ ] Rainy village scene with puddle reflections
+  - [ ] Snowy forest with fog overlay
+  - [ ] Sprite-stacked buildings/props rotating on mouse
+  - [ ] Day/night cycle (Phase 19 lighting) + weather transitions
+
+### Success Criteria
+- [ ] Weather effects don't impact performance (< 1ms per frame at max intensity)
+- [ ] Reflection strip looks convincing with animated distortion
+- [ ] Sprite stacking produces dramatic pseudo-3D from simple slice sprites
+- [ ] Weather + lighting compose naturally (rain darkens ambient, torch flicker in fog)
+- [ ] 40+ tests for atmosphere features
+- [ ] Demo showcases weather/reflection/stacking in an integrated scene
+
+---
+
+## Phase 25: Input Systems
 
 **Status: Planned**
 
@@ -952,7 +1130,7 @@ Expand platform input beyond keyboard/mouse with gamepad, touch, and an action m
 
 ---
 
-## Phase 22: Community Building
+## Phase 26: Community Building
 
 **Status: Planned**
 
