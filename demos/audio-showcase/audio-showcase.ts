@@ -24,6 +24,7 @@ import {
   createSolidTexture,
   drawSprite,
   setBackgroundColor,
+  isMouseButtonDown,
   isMouseButtonPressed,
 } from "@arcane/runtime/rendering";
 import {
@@ -46,12 +47,12 @@ import { rgb } from "@arcane/runtime/ui";
 let currentScene = 1;
 
 // Create solid color textures for visuals
-const whiteTexture = createSolidTexture(255, 255, 255, 255);
-const redTexture = createSolidTexture(255, 100, 100, 255);
-const greenTexture = createSolidTexture(100, 255, 100, 255);
-const blueTexture = createSolidTexture(100, 100, 255, 255);
-const yellowTexture = createSolidTexture(255, 255, 100, 255);
-const purpleTexture = createSolidTexture(200, 100, 255, 255);
+const whiteTexture = createSolidTexture("white", 255, 255, 255);
+const redTexture = createSolidTexture("red", 255, 100, 100);
+const greenTexture = createSolidTexture("green", 100, 255, 100);
+const blueTexture = createSolidTexture("blue", 100, 100, 255);
+const yellowTexture = createSolidTexture("yellow", 255, 255, 100);
+const purpleTexture = createSolidTexture("purple", 200, 100, 255);
 
 //=============================================================================
 // Scene 1: Spatial Audio
@@ -68,7 +69,8 @@ const soundSources: SoundSource[] = [];
 let listenerPos = { x: 400, y: 300 };
 const LISTENER_SPEED = 200;
 
-// Create a dummy sound (will be 0 in headless, but that's ok for demo)
+// Load a dummy sound — will log "[audio] Failed to read sound file" if file doesn't exist,
+// but the demo works visually regardless. Place a real .wav/.ogg file here to hear audio.
 const dummySound = loadSound("sound.wav");
 
 function initScene1() {
@@ -136,7 +138,7 @@ function drawScene1() {
 
   // Draw sound sources
   for (const source of soundSources) {
-    drawSprite(source.color, source.x, source.y, { width: 32, height: 32 });
+    drawSprite({ textureId: source.color, x: source.x, y: source.y, w: 32, h: 32 });
 
     // Draw distance indicator
     const dx = source.x - listenerPos.x;
@@ -146,7 +148,7 @@ function drawScene1() {
   }
 
   // Draw listener
-  drawSprite(whiteTexture, listenerPos.x, listenerPos.y, { width: 40, height: 40 });
+  drawSprite({ textureId: whiteTexture, x: listenerPos.x, y: listenerPos.y, w: 40, h: 40 });
   drawText("LISTENER", listenerPos.x - 30, listenerPos.y - 30, { size: 10, screenSpace: false });
 
   // HUD
@@ -246,15 +248,18 @@ function drawScene2() {
 
   // Draw zones
   for (const zone of zones) {
-    drawSprite(zone.color, zone.x + zone.width / 2, zone.y + zone.height / 2, {
-      width: zone.width,
-      height: zone.height,
+    drawSprite({
+      textureId: zone.color,
+      x: zone.x + zone.width / 2,
+      y: zone.y + zone.height / 2,
+      w: zone.width,
+      h: zone.height,
       opacity: 0.3,
     });
   }
 
   // Draw player
-  drawSprite(whiteTexture, playerPos.x, playerPos.y, { width: 32, height: 32 });
+  drawSprite({ textureId: whiteTexture, x: playerPos.x, y: playerPos.y, w: 32, h: 32 });
 
   // HUD
   drawText("Scene 2: Music Crossfade", 10, 10, { size: 16, screenSpace: true });
@@ -267,14 +272,20 @@ function drawScene2() {
   const barY = 90;
   const barWidth = 200;
   const barHeight = 20;
-  drawSprite(whiteTexture, barX + barWidth / 2, barY + barHeight / 2, {
-    width: barWidth,
-    height: barHeight,
+  drawSprite({
+    textureId: whiteTexture,
+    x: barX + barWidth / 2,
+    y: barY + barHeight / 2,
+    w: barWidth,
+    h: barHeight,
     opacity: 0.3,
   });
-  drawSprite(greenTexture, barX + (barWidth * crossfadeProgress) / 2, barY + barHeight / 2, {
-    width: barWidth * crossfadeProgress,
-    height: barHeight,
+  drawSprite({
+    textureId: greenTexture,
+    x: barX + (barWidth * crossfadeProgress) / 2,
+    y: barY + barHeight / 2,
+    w: barWidth * crossfadeProgress,
+    h: barHeight,
     opacity: 0.8,
   });
 
@@ -307,14 +318,15 @@ function initScene3() {
 
 function updateScene3() {
   const mouse = getMousePosition();
-  const mouseDown = isMouseButtonPressed(0);
+  const held = isMouseButtonDown(0);
+  const clicked = isMouseButtonPressed(0);
 
-  // Update sliders
-  updateSlider(masterSlider, mouse.x, mouse.y, mouseDown);
-  updateSlider(sfxSlider, mouse.x, mouse.y, mouseDown);
-  updateSlider(musicSlider, mouse.x, mouse.y, mouseDown);
-  updateSlider(ambientSlider, mouse.x, mouse.y, mouseDown);
-  updateSlider(voiceSlider, mouse.x, mouse.y, mouseDown);
+  // Update sliders (need held state for drag)
+  updateSlider(masterSlider, mouse.x, mouse.y, held);
+  updateSlider(sfxSlider, mouse.x, mouse.y, held);
+  updateSlider(musicSlider, mouse.x, mouse.y, held);
+  updateSlider(ambientSlider, mouse.x, mouse.y, held);
+  updateSlider(voiceSlider, mouse.x, mouse.y, held);
 
   // Apply bus volumes
   setBusVolume("sfx", sfxSlider.value);
@@ -322,17 +334,17 @@ function updateScene3() {
   setBusVolume("ambient", ambientSlider.value);
   setBusVolume("voice", voiceSlider.value);
 
-  // Update buttons
-  if (updateButton(testSfxButton, mouse.x, mouse.y, mouseDown)) {
+  // Update buttons (need clicked state for press detection)
+  if (updateButton(testSfxButton, mouse.x, mouse.y, clicked)) {
     playSound(dummySound, { bus: "sfx", pitchVariation: 0.2 });
   }
-  if (updateButton(testMusicButton, mouse.x, mouse.y, mouseDown)) {
+  if (updateButton(testMusicButton, mouse.x, mouse.y, clicked)) {
     playSound(dummySound, { bus: "music", loop: true });
   }
-  if (updateButton(testAmbientButton, mouse.x, mouse.y, mouseDown)) {
+  if (updateButton(testAmbientButton, mouse.x, mouse.y, clicked)) {
     playSound(dummySound, { bus: "ambient", loop: true });
   }
-  if (updateButton(testVoiceButton, mouse.x, mouse.y, mouseDown)) {
+  if (updateButton(testVoiceButton, mouse.x, mouse.y, clicked)) {
     playSound(dummySound, { bus: "voice" });
   }
 }
@@ -360,17 +372,17 @@ function drawScene3() {
   drawText(`${Math.floor(voiceSlider.value * 100)}%`, 320, 340, { size: 12, screenSpace: true });
 
   // Draw sliders
-  drawSlider(masterSlider, whiteTexture, greenTexture);
-  drawSlider(sfxSlider, whiteTexture, redTexture);
-  drawSlider(musicSlider, whiteTexture, blueTexture);
-  drawSlider(ambientSlider, whiteTexture, purpleTexture);
-  drawSlider(voiceSlider, whiteTexture, yellowTexture);
+  drawSlider(masterSlider);
+  drawSlider(sfxSlider);
+  drawSlider(musicSlider);
+  drawSlider(ambientSlider);
+  drawSlider(voiceSlider);
 
   // Draw buttons
-  drawButton(testSfxButton, whiteTexture, redTexture);
-  drawButton(testMusicButton, whiteTexture, blueTexture);
-  drawButton(testAmbientButton, whiteTexture, purpleTexture);
-  drawButton(testVoiceButton, whiteTexture, yellowTexture);
+  drawButton(testSfxButton);
+  drawButton(testMusicButton);
+  drawButton(testAmbientButton);
+  drawButton(testVoiceButton);
 
   drawText("Press 1 or 2 to switch scenes", 10, vp.height - 20, { size: 12, screenSpace: true });
 }
