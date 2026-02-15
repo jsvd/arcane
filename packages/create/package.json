@@ -1,6 +1,6 @@
 {
   "name": "@arcane-engine/create",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "description": "Create a new Arcane game project",
   "type": "module",
   "bin": {

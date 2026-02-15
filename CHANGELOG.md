@@ -2,6 +2,12 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.9.4] - 2026-02-15
+
+### Fixed
+- MCP server protocol version negotiation: server now echoes client's `protocolVersion` instead of hardcoding `2025-03-26`, fixing Claude Code MCP integration
+- MCP stdio bridge no longer writes spurious responses for JSON-RPC notifications (`notifications/initialized`), which violated the JSON-RPC 2.0 spec
+
 ## [0.9.3] - 2026-02-14
 
 ### Fixed
