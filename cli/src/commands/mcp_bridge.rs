@@ -52,19 +52,26 @@ pub fn run(entry: String, port_override: Option<u16>) -> Result<()> {
             continue;
         }
 
+        // JSON-RPC 2.0: notifications have no "id" field and MUST NOT receive a response.
+        // Detect notifications by checking if the message lacks an "id" key.
+        let is_notification = !trimmed.contains("\"id\"");
+
         match proxy_request(port, trimmed) {
             Ok(response) => {
-                let _ = writeln!(stdout_lock, "{response}");
-                let _ = stdout_lock.flush();
+                if !is_notification {
+                    let _ = writeln!(stdout_lock, "{response}");
+                    let _ = stdout_lock.flush();
+                }
             }
             Err(e) => {
-                // Return a JSON-RPC error response
-                let error_resp = format!(
-                    r#"{{"jsonrpc":"2.0","error":{{"code":-32000,"message":"{}"}},"id":null}}"#,
-                    e.to_string().replace('"', "\\\"")
-                );
-                let _ = writeln!(stdout_lock, "{error_resp}");
-                let _ = stdout_lock.flush();
+                if !is_notification {
+                    let error_resp = format!(
+                        r#"{{"jsonrpc":"2.0","error":{{"code":-32000,"message":"{}"}},"id":null}}"#,
+                        e.to_string().replace('"', "\\\"")
+                    );
+                    let _ = writeln!(stdout_lock, "{error_resp}");
+                    let _ = stdout_lock.flush();
+                }
             }
         }
     }

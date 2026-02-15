@@ -129,8 +129,11 @@ fn handle_jsonrpc(body: &str, request_tx: &RequestSender) -> String {
     match rpc_method.as_str() {
         "initialize" => {
             let version = env!("CARGO_PKG_VERSION");
+            // Negotiate protocol version: use client's version if provided, else default
+            let client_version = extract_json_string(&params, "protocolVersion")
+                .unwrap_or_else(|| "2024-11-05".to_string());
             format!(
-                r#"{{"jsonrpc":"2.0","result":{{"protocolVersion":"2025-03-26","capabilities":{{"tools":{{}}}},"serverInfo":{{"name":"arcane-mcp","version":"{version}"}}}},"id":{rpc_id}}}"#,
+                r#"{{"jsonrpc":"2.0","result":{{"protocolVersion":"{client_version}","capabilities":{{"tools":{{}}}},"serverInfo":{{"name":"arcane-mcp","version":"{version}"}}}},"id":{rpc_id}}}"#,
             )
         }
         "notifications/initialized" => {
