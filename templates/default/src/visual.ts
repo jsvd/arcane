@@ -1,22 +1,11 @@
 /**
  * {{PROJECT_NAME}} - Visual Layer
- *
- * This file contains rendering and input handling.
  * Entry point for `arcane dev`.
  */
 
-import {
-  onFrame,
-  getDeltaTime,
-  drawSprite,
-  setCamera,
-  createSolidTexture,
-  drawText,
-  getDefaultFont,
-  getViewportSize,
-  isKeyDown,
-} from "@arcane/runtime/rendering";
-import { registerAgent } from "@arcane/runtime/agent";
+import { createGame as initGame, drawColorSprite, hud } from "@arcane/runtime/game";
+import { isKeyDown, setCamera, getViewportSize } from "@arcane/runtime/rendering";
+import { rgb } from "@arcane/runtime/ui";
 import { createGame, movePlayer } from "./game.ts";
 import type { GameState } from "./game.ts";
 
@@ -25,33 +14,25 @@ import type { GameState } from "./game.ts";
 const CAMERA_ZOOM = 4.0;
 const MOVE_SPEED = 100; // pixels per second
 
-// --- Textures ---
+// --- Bootstrap ---
 
-const TEX_PLAYER = createSolidTexture("player", 60, 180, 255);
-const TEX_GROUND = createSolidTexture("ground", 80, 80, 80);
+const game = initGame({ name: "{{PROJECT_NAME}}", zoom: CAMERA_ZOOM });
 
 // --- State ---
 
-// Get actual viewport dimensions for resolution-independent game
 const { width, height } = getViewportSize();
 let state: GameState = createGame(42, width, height);
 
-// --- Agent Protocol ---
-
-registerAgent({
-  name: "{{PROJECT_NAME}}",
-  getState: () => state,
-  setState: (s: GameState) => { state = s; },
+game.state<GameState>({
+  get: () => state,
+  set: (s) => { state = s; },
 });
 
 // --- Game Loop ---
 
-onFrame(() => {
-  const dt = getDeltaTime();
-
+game.onFrame((ctx) => {
   // Input
-  let dx = 0;
-  let dy = 0;
+  let dx = 0, dy = 0;
   if (isKeyDown("ArrowLeft") || isKeyDown("a")) dx -= 1;
   if (isKeyDown("ArrowRight") || isKeyDown("d")) dx += 1;
   if (isKeyDown("ArrowUp") || isKeyDown("w")) dy -= 1;
@@ -59,16 +40,16 @@ onFrame(() => {
 
   // Update
   if (dx !== 0 || dy !== 0) {
-    state = movePlayer(state, dx * MOVE_SPEED * dt, dy * MOVE_SPEED * dt);
+    state = movePlayer(state, dx * MOVE_SPEED * ctx.dt, dy * MOVE_SPEED * ctx.dt);
   }
 
-  // Camera
+  // Camera — follow the player
   setCamera(state.player.x, state.player.y, CAMERA_ZOOM);
 
   // Render ground (fills viewport at current zoom)
-  const groundSize = Math.max(state.viewportW, state.viewportH) / CAMERA_ZOOM;
-  drawSprite({
-    textureId: TEX_GROUND,
+  const groundSize = Math.max(ctx.viewport.width, ctx.viewport.height) / CAMERA_ZOOM;
+  drawColorSprite({
+    color: rgb(80, 80, 80),
     x: -groundSize / 2,
     y: -groundSize / 2,
     w: groundSize,
@@ -77,8 +58,8 @@ onFrame(() => {
   });
 
   // Render player
-  drawSprite({
-    textureId: TEX_PLAYER,
+  drawColorSprite({
+    color: rgb(60, 180, 255),
     x: state.player.x - 16,
     y: state.player.y - 16,
     w: 32,
@@ -86,11 +67,6 @@ onFrame(() => {
     layer: 1,
   });
 
-  // Render HUD
-  const font = getDefaultFont();
-  drawText(`Score: ${state.score}`, 10, 10, {
-    font,
-    scale: 2.0,
-    screenSpace: true,
-  });
+  // HUD (screen-space by default)
+  hud.text(`Score: ${state.score}`, 10, 10);
 });

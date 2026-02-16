@@ -2,6 +2,250 @@
 
 Self-contained recipes for engine features beyond the basics in `AGENTS.md`. Each snippet is copy-paste ready.
 
+---
+
+## Quick Start with createGame()
+
+Minimal game loop in ~15 lines. `createGame()` auto-clears sprites, sets (0,0) to the top-left, and provides `dt` / viewport / elapsed time in the frame context.
+
+```typescript
+import { createGame, drawColorSprite, hud } from "@arcane/runtime/game";
+import { rgb } from "@arcane/runtime/ui";
+import { setCamera, isKeyDown } from "@arcane/runtime/rendering";
+
+const game = createGame({ name: "my-game", zoom: 2 });
+let x = 400, y = 300;
+
+game.onFrame((ctx) => {
+  if (isKeyDown("ArrowRight") || isKeyDown("d")) x += 120 * ctx.dt;
+  if (isKeyDown("ArrowLeft") || isKeyDown("a")) x -= 120 * ctx.dt;
+  if (isKeyDown("ArrowDown") || isKeyDown("s")) y += 120 * ctx.dt;
+  if (isKeyDown("ArrowUp") || isKeyDown("w")) y -= 120 * ctx.dt;
+
+  setCamera(x, y, 2);
+  drawColorSprite({ color: rgb(60, 180, 255), x: x - 16, y: y - 16, w: 32, h: 32, layer: 1 });
+  hud.text("Use arrow keys to move", 10, 10);
+});
+```
+
+What `createGame()` does for you:
+- `autoClear: true` (default) -- clears all sprites at the start of each frame.
+- `autoCamera: true` (default) -- on the first frame, sets the camera so (0,0) is top-left.
+- `background: { r, g, b }` -- pass 0-255 values, converted to 0.0-1.0 internally.
+- `game.state({ get, set })` -- optionally wire up game state for agent protocol.
+
+---
+
+## Drawing Colored Sprites
+
+`drawColorSprite()` lets you pass a `color` directly instead of manually creating a solid texture. Textures are cached by RGBA value internally -- safe to call every frame.
+
+**Before (verbose):**
+
+```typescript
+import { createSolidTexture } from "@arcane/runtime/rendering";
+import { drawSprite } from "@arcane/runtime/rendering";
+
+const redTex = createSolidTexture("red", 255, 0, 0, 255);   // manual texture
+const blueTex = createSolidTexture("blue", 0, 100, 255, 255);
+
+drawSprite({ textureId: redTex, x: 100, y: 200, w: 32, h: 32, layer: 1 });
+drawSprite({ textureId: blueTex, x: 150, y: 200, w: 16, h: 16, layer: 1 });
+```
+
+**After (convenience):**
+
+```typescript
+import { drawColorSprite } from "@arcane/runtime/game";
+import { rgb } from "@arcane/runtime/ui";
+
+drawColorSprite({ color: rgb(255, 0, 0), x: 100, y: 200, w: 32, h: 32, layer: 1 });
+drawColorSprite({ color: rgb(0, 100, 255), x: 150, y: 200, w: 16, h: 16, layer: 1 });
+```
+
+`rgb()` takes 0-255 integers and returns a normalized `Color` (0.0-1.0). Alpha defaults to 255; pass a fourth argument for transparency: `rgb(255, 0, 0, 128)`.
+
+You can also pass a `textureId` alongside `color` -- when `textureId` is present, it takes priority and the color is ignored.
+
+---
+
+## HUD Shortcuts
+
+The `hud` object provides `text()`, `bar()`, and `label()` with built-in defaults for `screenSpace: true`, layer ordering, and colors. No need to repeat the same options every frame.
+
+**Before (verbose):**
+
+```typescript
+import { drawText } from "@arcane/runtime/rendering";
+import { drawBar, drawLabel } from "@arcane/runtime/ui";
+
+drawText("Score: 100", 10, 10, { scale: 2, tint: { r: 1, g: 1, b: 1, a: 1 }, layer: 100, screenSpace: true });
+drawBar(10, 30, 80, 12, health / maxHealth, {
+  fillColor: { r: 0.2, g: 0.8, b: 0.3, a: 1 },
+  bgColor: { r: 0.1, g: 0.1, b: 0.15, a: 0.85 },
+  borderColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 },
+  borderWidth: 1, layer: 100, screenSpace: true,
+});
+drawLabel("PAUSED", 350, 280, {
+  textColor: { r: 1, g: 1, b: 1, a: 1 },
+  bgColor: { r: 0.1, g: 0.1, b: 0.15, a: 0.85 },
+  padding: 8, scale: 2, layer: 110, screenSpace: true,
+});
+```
+
+**After (convenience):**
+
+```typescript
+import { hud } from "@arcane/runtime/game";
+
+hud.text("Score: 100", 10, 10);
+hud.bar(10, 30, health / maxHealth);
+hud.label("PAUSED", 350, 280);
+```
+
+All three accept an optional last argument for overrides:
+
+```typescript
+import { rgb } from "@arcane/runtime/ui";
+
+hud.text("Critical!", 10, 10, { tint: { r: 1, g: 0.2, b: 0.2, a: 1 }, scale: 3 });
+hud.bar(10, 40, mana / maxMana, { fillColor: rgb(50, 100, 255), width: 120 });
+hud.label("Game Over", 300, 250, { textColor: rgb(255, 80, 80), scale: 3 });
+```
+
+---
+
+## Entity Handles
+
+`createEntity()` binds a world position to an optional physics body and sprite. After `stepPhysics()`, call `syncEntities()` to pull positions from physics, then `drawEntities()` to render.
+
+```typescript
+import {
+  createEntity, syncEntities, drawEntities, destroyEntity,
+  findEntity, findEntities,
+} from "@arcane/runtime/game";
+import { createPhysicsWorld, stepPhysics } from "@arcane/runtime/physics";
+import { rgb } from "@arcane/runtime/ui";
+
+createPhysicsWorld({ gravity: { x: 0, y: 300 } });
+
+const entities: Entity[] = [];
+
+// Ball with physics + colored sprite
+const ball = createEntity(400, 100, {
+  sprite: { color: rgb(255, 100, 50), w: 24, h: 24, layer: 1 },
+  body: { type: "dynamic", shape: { type: "circle", radius: 12 }, material: { restitution: 0.7 } },
+  tag: "ball",
+});
+entities.push(ball);
+
+// Static floor
+const floor = createEntity(400, 550, {
+  sprite: { color: rgb(100, 100, 100), w: 600, h: 20, layer: 0 },
+  body: { type: "static", shape: { type: "aabb", halfW: 300, halfH: 10 } },
+  tag: "floor",
+});
+entities.push(floor);
+
+// In game loop:
+game.onFrame((ctx) => {
+  stepPhysics(ctx.dt);
+  syncEntities(entities);
+  drawEntities(entities);
+
+  // Find by tag
+  const b = findEntity(entities, "ball");
+  if (b) hud.text(`Ball Y: ${b.y | 0}`, 10, 10);
+});
+```
+
+Use `destroyEntity(entity)` to remove the physics body and mark the entity inactive (skipped by sync and draw). Use `findEntities(entities, "coin")` to find all active entities with a given tag.
+
+---
+
+## Collision Events
+
+`createCollisionRegistry()` provides an event-driven collision system on top of the physics engine. Register callbacks by body or by body pair, then call `processCollisions()` each frame.
+
+```typescript
+import {
+  createCollisionRegistry, onBodyCollision, onCollision,
+  processCollisions, removeBodyCollisions,
+} from "@arcane/runtime/game";
+import { stepPhysics } from "@arcane/runtime/physics";
+
+const collisions = createCollisionRegistry();
+
+// Fire callback whenever the player body hits anything
+onBodyCollision(collisions, player.bodyId!, (contact) => {
+  const other = contact.bodyA === player.bodyId ? contact.bodyB : contact.bodyA;
+  console.log("Player hit body", other);
+});
+
+// Fire callback only when two specific bodies collide
+onCollision(collisions, bullet.bodyId!, enemy.bodyId!, (contact) => {
+  destroyEntity(bullet);
+  enemyHP -= 10;
+});
+
+// In game loop:
+game.onFrame((ctx) => {
+  stepPhysics(ctx.dt);
+  processCollisions(collisions);  // fires all matching callbacks
+});
+
+// When removing a body, clean up its callbacks:
+removeBodyCollisions(collisions, bullet.bodyId!);
+destroyEntity(bullet);
+```
+
+---
+
+## Widget Auto-Input
+
+`captureInput()` snapshots mouse/keyboard state once per frame. The `autoUpdate*` functions pass that snapshot to widgets, eliminating the repetitive `(mouseX, mouseY, mouseDown, enterPressed)` arguments.
+
+**Before (verbose):**
+
+```typescript
+import { createButton, updateButton, drawButton } from "@arcane/runtime/ui";
+import { createSlider, updateSlider, drawSlider } from "@arcane/runtime/ui";
+import { getMousePosition, isMouseButtonDown, isKeyPressed } from "@arcane/runtime/rendering";
+
+// Every frame -- manually gather and pass input to each widget:
+const mouse = getMousePosition();
+const mx = mouse.x, my = mouse.y;
+const mouseDown = isMouseButtonDown(0);
+const enter = isKeyPressed("Enter");
+const left = isKeyPressed("ArrowLeft");
+const right = isKeyPressed("ArrowRight");
+
+updateButton(btn, mx, my, mouseDown, enter);
+drawButton(btn);
+updateSlider(volume, mx, my, mouseDown, left, right);
+drawSlider(volume);
+```
+
+**After (convenience):**
+
+```typescript
+import { createButton, drawButton } from "@arcane/runtime/ui";
+import { createSlider, drawSlider } from "@arcane/runtime/ui";
+import { captureInput, autoUpdateButton, autoUpdateSlider } from "@arcane/runtime/game";
+
+// Every frame -- capture once, pass to all widgets:
+const input = captureInput();
+
+autoUpdateButton(btn, input);
+drawButton(btn);
+autoUpdateSlider(volume, input);
+drawSlider(volume);
+```
+
+Also available: `autoUpdateCheckbox(cb, input)` and `autoUpdateFocus(fm, input)`. The `FrameInput` type contains `mouseX`, `mouseY`, `mouseDown`, `enterPressed`, `tabPressed`, `shiftDown`, and all four arrow key pressed states.
+
+---
+
 ## Animation State Machine
 
 Declarative state-based animation with crossfade blending and condition-driven transitions.

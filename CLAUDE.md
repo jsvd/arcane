@@ -4,7 +4,7 @@
 
 Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for performance, TypeScript scripting for game logic.
 
-**Current status: v0.9.0 released ✅ — Phases 21-25 complete (MCP-First DX, Visual Polish, Juice & Game Feel, Isometric & Hex Grids, Input Systems). 1920 TS (Node) + 1923 (V8) + 277 Rust tests passing. Next: Phase 26 (Atmosphere).**
+**Current status: v0.9.0 released ✅ — Phases 21-25 complete (MCP-First DX, Visual Polish, Juice & Game Feel, Isometric & Hex Grids, Input Systems). 1971 TS (Node) + 1971 (V8) + 277 Rust tests passing. Next: Phase 26 (Atmosphere).**
 
 ## Repository Structure
 
@@ -168,13 +168,22 @@ arcane/
 │   │   ├── save.ts                — serialize(), deserialize(), saveGame(), loadGame(), migrations
 │   │   ├── autosave.ts            — enableAutoSave(), updateAutoSave(), triggerAutoSave()
 │   │   └── index.ts               — Barrel export
-│   └── agent/
-│       ├── types.ts               — AgentConfig, ActionInfo, DescribeOptions, etc.
-│       ├── protocol.ts            — registerAgent(), AgentProtocol on globalThis
-│       ├── describe.ts            — Default text description renderer (minimal/normal/detailed)
-│       ├── mcp.ts                 — MCP tool definitions, request builders
-│       ├── index.ts               — Barrel export
-│       └── agent.test.ts          — Agent protocol tests (~37 tests)
+│   ├── agent/
+│   │   ├── types.ts               — AgentConfig, ActionInfo, DescribeOptions, etc.
+│   │   ├── protocol.ts            — registerAgent(), AgentProtocol on globalThis
+│   │   ├── describe.ts            — Default text description renderer (minimal/normal/detailed)
+│   │   ├── mcp.ts                 — MCP tool definitions, request builders
+│   │   ├── index.ts               — Barrel export
+│   │   └── agent.test.ts          — Agent protocol tests (~37 tests)
+│   └── game/
+│       ├── types.ts               — Convenience layer type definitions
+│       ├── color-sprite.ts        — drawColorSprite() with auto-cached textures
+│       ├── hud.ts                 — hud.text(), hud.bar(), hud.label() shortcuts
+│       ├── widgets.ts             — captureInput(), autoUpdate* widget helpers
+│       ├── collision.ts           — Collision event registry + callbacks
+│       ├── entity.ts              — Lightweight entity handles (sprite+physics)
+│       ├── game.ts                — createGame() bootstrap
+│       └── index.ts               — Barrel export
 ├── demos/
 │   ├── agent-testing/             — Phase 17 demo: MCP tools, snapshot replay, property testing
 │   ├── asteroids/                 — Phase 8 demo: rotation, flip, opacity, blend modes, CRT post-processing

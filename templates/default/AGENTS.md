@@ -14,7 +14,33 @@ Two-file pattern:
 Hot-reload: saving any file restarts the game loop (~200ms). State resets to initial.
 
 Imports use `@arcane/runtime/{module}`:
-`state`, `rendering`, `ui`, `physics`, `pathfinding`, `tweening`, `particles`, `systems`, `scenes`, `persistence`, `input`, `agent`, `testing`
+`state`, `rendering`, `ui`, `physics`, `pathfinding`, `tweening`, `particles`, `systems`, `scenes`, `persistence`, `input`, `agent`, `testing`, `game`
+
+### @arcane/runtime/game -- Convenience Layer
+
+Higher-level helpers that reduce frame-loop boilerplate. Use these instead of manually calling `onFrame`/`getDeltaTime`/`clearSprites`/`setCamera` when starting a new game.
+
+Key exports:
+- **`createGame(config?)`** -- Bootstrap a game loop with auto-clear, auto-camera, background color, and agent protocol wiring. Returns a `Game` object with `onFrame()` and `state()` methods.
+- **`drawColorSprite(opts)`** -- Draw a sprite with an inline `color` instead of a pre-created `textureId`. Textures are auto-cached.
+- **`hud.text(content, x, y, opts?)`** -- Screen-space text with sensible defaults (layer 100, white, scale 2).
+- **`hud.bar(x, y, fillRatio, opts?)`** -- Screen-space health/progress bar.
+- **`hud.label(content, x, y, opts?)`** -- Screen-space label (text with background panel).
+- **`captureInput()`** -- Snapshot mouse/keyboard state once per frame for widget updates.
+- **`autoUpdateButton(btn, input)`** -- Update a button using captured input (no manual mouse args).
+- **`autoUpdateSlider(slider, input)`** -- Update a slider using captured input.
+- **`autoUpdateCheckbox(cb, input)`** -- Update a checkbox using captured input.
+- **`autoUpdateFocus(fm, input)`** -- Update focus manager using captured input.
+- **`createEntity(x, y, opts?)`** -- Lightweight entity binding position + sprite + physics body.
+- **`syncEntities(entities)`** -- Sync entity positions from physics bodies (call after stepPhysics).
+- **`drawEntities(entities)`** -- Draw all active entities with sprite configs.
+- **`destroyEntity(entity)`** -- Remove physics body and mark inactive.
+- **`findEntity(entities, tag)`** / **`findEntities(entities, tag)`** -- Tag-based lookup.
+- **`createCollisionRegistry()`** -- Create a collision event registry.
+- **`onCollision(registry, bodyA, bodyB, cb)`** -- Register pair collision callback.
+- **`onBodyCollision(registry, bodyId, cb)`** -- Register single-body collision callback.
+- **`processCollisions(registry)`** -- Fire callbacks for contacts from last physics step.
+- **`removeBodyCollisions(registry, bodyId)`** -- Clean up callbacks when destroying a body.
 
 ## Coordinate System
 
@@ -92,7 +118,47 @@ Before writing rendering code, check this list. These are the most frequent bugs
 
 ## The Game Loop
 
-`onFrame()` registers a callback that runs every frame. Draw calls are **not persisted** — you must redraw everything each frame. `getDeltaTime()` returns seconds since last frame.
+### Recommended: createGame() convenience layer
+
+`createGame()` from `@arcane/runtime/game` handles sprite clearing, camera setup, background color, and agent protocol wiring automatically. The `onFrame` callback receives a `GameContext` with `dt`, `viewport`, `elapsed`, and `frame`.
+
+```typescript
+import { createGame, drawColorSprite, hud } from "@arcane/runtime/game";
+import { isKeyDown, isKeyPressed, setCamera } from "@arcane/runtime/rendering";
+import { rgb } from "@arcane/runtime/ui";
+
+const game = createGame({ name: "my-game", zoom: 2.0 });
+
+let state = newGame();
+
+game.state({ get: () => state, set: (s) => { state = s; } });
+
+game.onFrame((ctx) => {
+  // 1. Input
+  let dx = 0;
+  if (isKeyDown("ArrowLeft")) dx = -1;
+  if (isKeyDown("ArrowRight")) dx = 1;
+  if (isKeyPressed("Space")) state = jump(state);
+
+  // 2. Update (pure functions from game.ts)
+  state = movePlayer(state, dx * SPEED * ctx.dt);
+
+  // 3. Camera (override auto-camera when following the player)
+  setCamera(state.x, state.y, 2.0);
+
+  // 4. Render — no clearSprites() needed (autoClear: true by default)
+  drawColorSprite({ color: rgb(80, 80, 80), x: 0, y: 0, w: 800, h: 600, layer: 0 });
+  drawColorSprite({ color: rgb(60, 180, 255), x: state.x - 16, y: state.y - 16, w: 32, h: 32, layer: 1 });
+
+  // 5. HUD — hud.text/bar/label are screen-space by default
+  hud.text(`Score: ${state.score}`, 10, 10);
+  hud.bar(10, 30, state.hp / state.maxHp);
+});
+```
+
+### Manual: onFrame() + getDeltaTime()
+
+For full control, use the lower-level `onFrame()`/`getDeltaTime()` directly. Draw calls are **not persisted** — you must redraw everything each frame. `getDeltaTime()` returns seconds since last frame.
 
 ```typescript
 import {
@@ -141,6 +207,24 @@ onFrame(() => {
 Key input: `isKeyDown(key)` for held keys, `isKeyPressed(key)` for single-frame press. Keys use DOM-like names: `"ArrowLeft"`, `"ArrowRight"`, `"ArrowUp"`, `"ArrowDown"`, `"Space"`, `"Enter"`, `"Escape"`, `"ShiftLeft"`, `"KeyA"` through `"KeyZ"`, `"Digit0"` through `"Digit9"`. **Important:** Space is `"Space"`, not `" "` (literal space character).
 
 ## Composition Patterns
+
+**Game Convenience Layer** — For new projects, prefer `@arcane/runtime/game` over manual boilerplate:
+```typescript
+import { createGame, drawColorSprite, hud } from "@arcane/runtime/game";
+import { rgb } from "@arcane/runtime/ui";
+
+const game = createGame({ name: "my-game", zoom: 2 });
+
+game.onFrame((ctx) => {
+  // drawColorSprite: inline color, no createSolidTexture() needed
+  drawColorSprite({ color: rgb(255, 0, 0), x: 100, y: 100, w: 32, h: 32, layer: 1 });
+
+  // hud helpers: screen-space by default, sensible layer/scale
+  hud.text("Score: 42", 10, 10);
+  hud.bar(10, 30, 0.75);
+});
+```
+`createGame()` handles `clearSprites()`, `setCamera()`, agent registration, and provides `ctx.dt`/`ctx.viewport`/`ctx.elapsed`/`ctx.frame` in the callback. Use `drawColorSprite()` for quick colored rectangles without pre-creating textures. Use `hud.text()`/`hud.bar()`/`hud.label()` for screen-space HUD elements without manually passing `screenSpace: true`.
 
 **Textures** — Create once at module scope, reuse the returned `TextureId` in the loop:
 ```typescript
@@ -515,7 +599,7 @@ File organization: `src/game.ts` (logic), `src/visual.ts` (rendering), `src/*.te
 
 Read `types/arcane.d.ts` for the complete API with JSDoc documentation. Always check it before using an unfamiliar function.
 
-All module imports: `@arcane/runtime/state`, `@arcane/runtime/rendering`, `@arcane/runtime/ui`, `@arcane/runtime/physics`, `@arcane/runtime/pathfinding`, `@arcane/runtime/tweening`, `@arcane/runtime/particles`, `@arcane/runtime/systems`, `@arcane/runtime/scenes`, `@arcane/runtime/persistence`, `@arcane/runtime/input`, `@arcane/runtime/procgen`, `@arcane/runtime/agent`, `@arcane/runtime/testing`.
+All module imports: `@arcane/runtime/state`, `@arcane/runtime/rendering`, `@arcane/runtime/ui`, `@arcane/runtime/physics`, `@arcane/runtime/pathfinding`, `@arcane/runtime/tweening`, `@arcane/runtime/particles`, `@arcane/runtime/systems`, `@arcane/runtime/scenes`, `@arcane/runtime/persistence`, `@arcane/runtime/input`, `@arcane/runtime/procgen`, `@arcane/runtime/agent`, `@arcane/runtime/testing`, `@arcane/runtime/game`.
 
 ## Procedural Generation
 
