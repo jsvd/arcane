@@ -29,6 +29,8 @@ mkdir -p "$OUT_DIR"
 # Module order matches documentation priority
 MODULES=(
   "rendering:Rendering"
+  "game:Game"
+  "input:Input"
   "ui:UI"
   "state:State"
   "physics:Physics"
@@ -49,7 +51,7 @@ MODULES=(
   echo "// Regenerate with: ./scripts/generate-declarations.sh"
   echo "//"
   echo "// Import from: @arcane/runtime/{module}"
-  echo "// Modules: rendering, ui, state, physics, tweening, particles, pathfinding, systems, scenes, persistence, procgen, agent, testing"
+  echo "// Modules: rendering, game, input, ui, state, physics, tweening, particles, pathfinding, systems, scenes, persistence, procgen, agent, testing"
   echo ""
 
   for entry in "${MODULES[@]}"; do
