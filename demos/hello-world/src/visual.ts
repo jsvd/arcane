@@ -17,7 +17,7 @@ import type { GameState } from "./game.ts";
 
 // --- Constants ---
 
-const CAMERA_ZOOM = 4.0;
+const CAMERA_ZOOM = 1.0;
 
 // --- State ---
 

@@ -22,7 +22,10 @@
     "./tweening": "./src/tweening/index.ts",
     "./particles": "./src/particles/index.ts",
     "./scenes": "./src/scenes/index.ts",
-    "./persistence": "./src/persistence/index.ts"
+    "./persistence": "./src/persistence/index.ts",
+    "./procgen": "./src/procgen/index.ts",
+    "./game": "./src/game/index.ts",
+    "./input": "./src/input/index.ts"
   },
   "files": [
     "src",
