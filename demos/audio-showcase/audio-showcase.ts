@@ -14,8 +14,6 @@
  */
 
 import {
-  onFrame,
-  getDeltaTime,
   getViewportSize,
   setCamera,
   drawText,
@@ -24,7 +22,6 @@ import {
   getMousePosition,
   createSolidTexture,
   drawSprite,
-  setBackgroundColor,
   isMouseButtonDown,
   isMouseButtonPressed,
 } from "@arcane/runtime/rendering";
@@ -41,9 +38,10 @@ import {
   setPoolConfig,
   type InstanceId,
 } from "@arcane/runtime/rendering";
-import { createSlider, updateSlider, drawSlider } from "@arcane/runtime/ui";
-import { createButton, updateButton, drawButton } from "@arcane/runtime/ui";
+import { createSlider, drawSlider } from "@arcane/runtime/ui";
+import { createButton, drawButton } from "@arcane/runtime/ui";
 import { rgb } from "@arcane/runtime/ui";
+import { createGame, hud, captureInput, autoUpdateSlider, autoUpdateButton } from "../../runtime/game/index.ts";
 
 // Scene state
 let currentScene = 1;
@@ -157,12 +155,12 @@ function drawScene1() {
   drawText("LISTENER", listenerPos.x - 30, listenerPos.y - 30, { size: 10, screenSpace: false });
 
   // HUD
-  drawText("Scene 1: Spatial Audio", 10, 10, { size: 16, screenSpace: true });
-  drawText("WASD: Move listener", 10, 30, { size: 12, screenSpace: true });
-  drawText("Click: Place sound source", 10, 50, { size: 12, screenSpace: true });
-  drawText(`Listener: (${Math.floor(listenerPos.x)}, ${Math.floor(listenerPos.y)})`, 10, 70, { size: 12, screenSpace: true });
-  drawText(`Sources: ${soundSources.length}`, 10, 90, { size: 12, screenSpace: true });
-  drawText("Press 2 or 3 to switch scenes", 10, vp.height - 20, { size: 12, screenSpace: true });
+  hud.text("Scene 1: Spatial Audio", 10, 10, { scale: 2 });
+  hud.text("WASD: Move listener", 10, 30, { scale: 1 });
+  hud.text("Click: Place sound source", 10, 50, { scale: 1 });
+  hud.text(`Listener: (${Math.floor(listenerPos.x)}, ${Math.floor(listenerPos.y)})`, 10, 70, { scale: 1 });
+  hud.text(`Sources: ${soundSources.length}`, 10, 90, { scale: 1 });
+  hud.text("Press 2 or 3 to switch scenes", 10, vp.height - 20, { scale: 1 });
 }
 
 //=============================================================================
@@ -267,10 +265,10 @@ function drawScene2() {
   drawSprite({ textureId: whiteTexture, x: playerPos.x, y: playerPos.y, w: 32, h: 32 });
 
   // HUD
-  drawText("Scene 2: Music Crossfade", 10, 10, { size: 16, screenSpace: true });
-  drawText("WASD: Move between zones", 10, 30, { size: 12, screenSpace: true });
-  drawText(`Current Zone: ${currentZoneIndex + 1}`, 10, 50, { size: 12, screenSpace: true });
-  drawText(`Crossfade: ${Math.floor(crossfadeProgress * 100)}%`, 10, 70, { size: 12, screenSpace: true });
+  hud.text("Scene 2: Music Crossfade", 10, 10, { scale: 2 });
+  hud.text("WASD: Move between zones", 10, 30, { scale: 1 });
+  hud.text(`Current Zone: ${currentZoneIndex + 1}`, 10, 50, { scale: 1 });
+  hud.text(`Crossfade: ${Math.floor(crossfadeProgress * 100)}%`, 10, 70, { scale: 1 });
 
   // Draw crossfade progress bar
   const barX = 10;
@@ -294,7 +292,7 @@ function drawScene2() {
     opacity: 0.8,
   });
 
-  drawText("Press 1 or 3 to switch scenes", 10, vp.height - 20, { size: 12, screenSpace: true });
+  hud.text("Press 1 or 3 to switch scenes", 10, vp.height - 20, { scale: 1 });
 }
 
 //=============================================================================
@@ -324,16 +322,14 @@ function initScene3() {
 }
 
 function updateScene3() {
-  const mouse = getMousePosition();
-  const held = isMouseButtonDown(0);
-  const clicked = isMouseButtonPressed(0);
+  const input = captureInput();
 
-  // Update sliders (need held state for drag)
-  updateSlider(masterSlider, mouse.x, mouse.y, held);
-  updateSlider(sfxSlider, mouse.x, mouse.y, held);
-  updateSlider(musicSlider, mouse.x, mouse.y, held);
-  updateSlider(ambientSlider, mouse.x, mouse.y, held);
-  updateSlider(voiceSlider, mouse.x, mouse.y, held);
+  // Update sliders
+  autoUpdateSlider(masterSlider, input);
+  autoUpdateSlider(sfxSlider, input);
+  autoUpdateSlider(musicSlider, input);
+  autoUpdateSlider(ambientSlider, input);
+  autoUpdateSlider(voiceSlider, input);
 
   // Apply bus volumes
   setBusVolume("sfx", sfxSlider.value);
@@ -341,11 +337,11 @@ function updateScene3() {
   setBusVolume("ambient", ambientSlider.value);
   setBusVolume("voice", voiceSlider.value);
 
-  // Update buttons (pass held state for press/release detection)
-  updateButton(testSfxButton, mouse.x, mouse.y, held);
-  updateButton(testMusicButton, mouse.x, mouse.y, held);
-  updateButton(testAmbientButton, mouse.x, mouse.y, held);
-  updateButton(testVoiceButton, mouse.x, mouse.y, held);
+  // Update buttons
+  autoUpdateButton(testSfxButton, input);
+  autoUpdateButton(testMusicButton, input);
+  autoUpdateButton(testAmbientButton, input);
+  autoUpdateButton(testVoiceButton, input);
 
   if (testSfxButton.clicked) {
     playSound(sfxSound, { bus: "sfx", pitchVariation: 0.2 });
@@ -366,15 +362,15 @@ function drawScene3() {
   setCamera(vp.width / 2, vp.height / 2);
 
   // HUD
-  drawText("Scene 3: Mixer Panel", 10, 10, { size: 16, screenSpace: true });
-  drawText("Adjust bus volumes and test sounds", 10, 30, { size: 12, screenSpace: true });
+  hud.text("Scene 3: Mixer Panel", 10, 10, { scale: 2 });
+  hud.text("Adjust bus volumes and test sounds", 10, 30, { scale: 1 });
 
   // Slider values (labels are built into the sliders via createSlider)
-  drawText(`${Math.floor(masterSlider.value * 100)}%`, 320, 105, { size: 12, screenSpace: true });
-  drawText(`${Math.floor(sfxSlider.value * 100)}%`, 320, 165, { size: 12, screenSpace: true });
-  drawText(`${Math.floor(musicSlider.value * 100)}%`, 320, 225, { size: 12, screenSpace: true });
-  drawText(`${Math.floor(ambientSlider.value * 100)}%`, 320, 285, { size: 12, screenSpace: true });
-  drawText(`${Math.floor(voiceSlider.value * 100)}%`, 320, 345, { size: 12, screenSpace: true });
+  hud.text(`${Math.floor(masterSlider.value * 100)}%`, 320, 105, { scale: 1 });
+  hud.text(`${Math.floor(sfxSlider.value * 100)}%`, 320, 165, { scale: 1 });
+  hud.text(`${Math.floor(musicSlider.value * 100)}%`, 320, 225, { scale: 1 });
+  hud.text(`${Math.floor(ambientSlider.value * 100)}%`, 320, 285, { scale: 1 });
+  hud.text(`${Math.floor(voiceSlider.value * 100)}%`, 320, 345, { scale: 1 });
 
   // Draw sliders
   drawSlider(masterSlider);
@@ -389,7 +385,7 @@ function drawScene3() {
   drawButton(testAmbientButton);
   drawButton(testVoiceButton);
 
-  drawText("Press 1 or 2 to switch scenes", 10, vp.height - 20, { size: 12, screenSpace: true });
+  hud.text("Press 1 or 2 to switch scenes", 10, vp.height - 20, { scale: 1 });
 }
 
 //=============================================================================
@@ -399,9 +395,10 @@ function drawScene3() {
 // Initialize first scene
 initScene1();
 
-onFrame(() => {
-  const dt = getDeltaTime();
-  setBackgroundColor(30 / 255, 30 / 255, 40 / 255);
+const game = createGame({ background: { r: 30, g: 30, b: 40 } });
+
+game.onFrame((ctx) => {
+  const dt = ctx.dt;
 
   // Scene switching
   if (isKeyPressed("1") && currentScene !== 1) {

@@ -11,12 +11,14 @@ import {
 } from "./breakout.ts";
 import type { BreakoutState } from "./breakout.ts";
 import {
-  onFrame, drawSprite, clearSprites, setCamera,
-  isKeyDown, isKeyPressed, getDeltaTime, createSolidTexture,
-  drawText, getViewportSize,
+  setCamera,
+  isKeyDown, isKeyPressed, getViewportSize,
 } from "../../runtime/rendering/index.ts";
-import { drawBar, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
-import { registerAgent } from "../../runtime/agent/index.ts";
+import { Colors, HUDLayout, rgb } from "../../runtime/ui/index.ts";
+import {
+  createGame, drawColorSprite, hud,
+  createCollisionRegistry, onBodyCollision, processCollisions, removeBodyCollisions,
+} from "../../runtime/game/index.ts";
 import {
   createPhysicsWorld,
   stepPhysics as physicsStep,
@@ -26,21 +28,20 @@ import {
   getBodyState,
   setBodyVelocity,
   setBodyPosition,
-  getContacts,
 } from "../../runtime/physics/index.ts";
 import type { BodyId } from "../../runtime/physics/index.ts";
 
-// Textures
-const TEX_PADDLE = createSolidTexture("paddle", 220, 220, 240);
-const TEX_BALL = createSolidTexture("ball", 255, 255, 255);
-const TEX_BG = createSolidTexture("bg", 20, 20, 30);
+// Colors
+const COL_PADDLE = rgb(220, 220, 240);
+const COL_BALL = rgb(255, 255, 255);
+const COL_BG = rgb(20, 20, 30);
 const BRICK_COLORS = [
-  createSolidTexture("brick_red", 255, 80, 80),
-  createSolidTexture("brick_orange", 255, 160, 50),
-  createSolidTexture("brick_yellow", 255, 230, 50),
-  createSolidTexture("brick_green", 80, 220, 80),
-  createSolidTexture("brick_cyan", 80, 220, 230),
-  createSolidTexture("brick_blue", 80, 120, 255),
+  rgb(255, 80, 80),
+  rgb(255, 160, 50),
+  rgb(255, 230, 50),
+  rgb(80, 220, 80),
+  rgb(80, 220, 230),
+  rgb(80, 120, 255),
 ];
 
 const { width, height } = getViewportSize();
@@ -49,16 +50,20 @@ let state = createBreakoutGame(width, height);
 // Physics body tracking
 let ballBody: BodyId = 0;
 let paddleBody: BodyId = 0;
-const brickBodies: Map<BodyId, number> = new Map(); // bodyId → brick index
+const brickBodies: Map<BodyId, number> = new Map(); // bodyId -> brick index
 let wallTopBody: BodyId = 0;
 let wallLeftBody: BodyId = 0;
 let wallRightBody: BodyId = 0;
 
+// Collision registry
+let collisions = createCollisionRegistry();
+
 function initPhysicsWorld(): void {
   destroyPhysicsWorld();
   brickBodies.clear();
+  collisions = createCollisionRegistry();
 
-  // No gravity for breakout — ball moves in straight lines
+  // No gravity for breakout -- ball moves in straight lines
   createPhysicsWorld({ gravityX: 0, gravityY: 0 });
 
   const fw = state.fieldW;
@@ -121,6 +126,36 @@ function initPhysicsWorld(): void {
     });
     brickBodies.set(bid, i);
   }
+
+  // Register ball collision handler
+  onBodyCollision(collisions, ballBody, (contact) => {
+    const otherId = contact.bodyA === ballBody ? contact.bodyB : contact.bodyA;
+
+    // Paddle hit: apply angle mechanic
+    if (otherId === paddleBody) {
+      const hitPos = (state.ballX - state.paddleX) / PADDLE_W;
+      const angle = (hitPos - 0.5) * (Math.PI * 2 / 3);
+      const speed = Math.sqrt(state.ballVX * state.ballVX + state.ballVY * state.ballVY);
+      const clampedSpeed = Math.max(speed, BALL_SPEED);
+      const newVX = Math.sin(angle) * clampedSpeed;
+      const newVY = -Math.cos(angle) * clampedSpeed;
+      setBodyVelocity(ballBody, newVX, newVY);
+      state = { ...state, ballVX: newVX, ballVY: newVY };
+    }
+
+    // Brick hit: destroy brick
+    if (brickBodies.has(otherId)) {
+      const brickIdx = brickBodies.get(otherId)!;
+      if (state.bricks[brickIdx].hp > 0) {
+        const newBricks = [...state.bricks];
+        newBricks[brickIdx] = { ...newBricks[brickIdx], hp: 0 };
+        state = { ...state, bricks: newBricks, score: state.score + 10 };
+        removeBody(otherId);
+        removeBodyCollisions(collisions, otherId);
+        brickBodies.delete(otherId);
+      }
+    }
+  });
 }
 
 // Initialize physics
@@ -132,11 +167,12 @@ function syncBallToPhysics(): void {
   setBodyVelocity(ballBody, state.ballVX, state.ballVY);
 }
 
-// Agent protocol
-registerAgent<BreakoutState>({
-  name: "breakout",
-  getState: () => state,
-  setState: (s) => { state = s; },
+// Game setup
+const game = createGame({ name: "breakout", autoCamera: false });
+
+game.state<BreakoutState>({
+  get: () => state,
+  set: (s) => { state = s; },
   describe: (s, opts) => {
     if (opts.verbosity === "minimal") {
       return `Score: ${s.score}, Lives: ${s.lives}, Phase: ${s.phase}`;
@@ -165,16 +201,15 @@ registerAgent<BreakoutState>({
   },
 });
 
-onFrame(() => {
+game.onFrame((ctx) => {
   setCamera(state.fieldW / 2, state.fieldH / 2, 1);
-  const dt = getDeltaTime();
 
   // Input
   if (isKeyDown("ArrowLeft") || isKeyDown("a")) {
-    state = movePaddle(state, -PADDLE_SPEED * dt);
+    state = movePaddle(state, -PADDLE_SPEED * ctx.dt);
   }
   if (isKeyDown("ArrowRight") || isKeyDown("d")) {
-    state = movePaddle(state, PADDLE_SPEED * dt);
+    state = movePaddle(state, PADDLE_SPEED * ctx.dt);
   }
   if (isKeyPressed("Space")) {
     if (state.phase === "ready") {
@@ -193,47 +228,16 @@ onFrame(() => {
 
   if (state.phase === "playing") {
     // Step Rust physics
-    physicsStep(dt);
+    physicsStep(ctx.dt);
 
     // Read ball position from physics
     const ballState = getBodyState(ballBody);
     state = { ...state, ballX: ballState.x, ballY: ballState.y, ballVX: ballState.vx, ballVY: ballState.vy };
 
-    // Process contacts
-    const contacts = getContacts();
-    for (const contact of contacts) {
-      const aIsball = contact.bodyA === ballBody;
-      const bIsBall = contact.bodyB === ballBody;
-      if (!aIsball && !bIsBall) continue;
+    // Process collision events
+    processCollisions(collisions);
 
-      const otherId = aIsball ? contact.bodyB : contact.bodyA;
-
-      // Paddle hit: apply angle mechanic
-      if (otherId === paddleBody) {
-        const hitPos = (state.ballX - state.paddleX) / PADDLE_W;
-        const angle = (hitPos - 0.5) * (Math.PI * 2 / 3);
-        const speed = Math.sqrt(state.ballVX * state.ballVX + state.ballVY * state.ballVY);
-        const clampedSpeed = Math.max(speed, BALL_SPEED);
-        const newVX = Math.sin(angle) * clampedSpeed;
-        const newVY = -Math.cos(angle) * clampedSpeed;
-        setBodyVelocity(ballBody, newVX, newVY);
-        state = { ...state, ballVX: newVX, ballVY: newVY };
-      }
-
-      // Brick hit: destroy brick
-      if (brickBodies.has(otherId)) {
-        const brickIdx = brickBodies.get(otherId)!;
-        if (state.bricks[brickIdx].hp > 0) {
-          const newBricks = [...state.bricks];
-          newBricks[brickIdx] = { ...newBricks[brickIdx], hp: 0 };
-          state = { ...state, bricks: newBricks, score: state.score + 10 };
-          removeBody(otherId);
-          brickBodies.delete(otherId);
-        }
-      }
-    }
-
-    // Bottom boundary — lose life
+    // Bottom boundary -- lose life
     if (state.ballY + BALL_RADIUS > state.fieldH) {
       state = { ...state, lives: state.lives - 1 };
       if (state.lives <= 0) {
@@ -267,32 +271,31 @@ onFrame(() => {
   }
 
   // Render
-  clearSprites();
 
   // Background
-  drawSprite({ textureId: TEX_BG, x: 0, y: 0, w: state.fieldW, h: state.fieldH, layer: 0 });
+  drawColorSprite({ color: COL_BG, x: 0, y: 0, w: state.fieldW, h: state.fieldH, layer: 0 });
 
   // Bricks
   for (const brick of state.bricks) {
     if (brick.hp <= 0) continue;
     const colorIdx = brick.row % BRICK_COLORS.length;
-    drawSprite({
-      textureId: BRICK_COLORS[colorIdx],
+    drawColorSprite({
+      color: BRICK_COLORS[colorIdx],
       x: brick.x, y: brick.y, w: brick.w, h: brick.h,
       layer: 1,
     });
   }
 
   // Paddle
-  drawSprite({
-    textureId: TEX_PADDLE,
+  drawColorSprite({
+    color: COL_PADDLE,
     x: state.paddleX, y: state.paddleY, w: PADDLE_W, h: PADDLE_H,
     layer: 2,
   });
 
   // Ball
-  drawSprite({
-    textureId: TEX_BALL,
+  drawColorSprite({
+    color: COL_BALL,
     x: state.ballX - BALL_RADIUS, y: state.ballY - BALL_RADIUS,
     w: BALL_RADIUS * 2, h: BALL_RADIUS * 2,
     layer: 3,
@@ -301,67 +304,40 @@ onFrame(() => {
   // --- HUD (screen space) ---
 
   // Score
-  drawText(`Score: ${state.score}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y, {
-    scale: HUDLayout.TEXT_SCALE,
-    tint: Colors.WHITE,
-    layer: 100,
-    screenSpace: true,
-  });
+  hud.text(`Score: ${state.score}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y);
 
   // Lives bar
-  drawBar(
+  hud.bar(
     HUDLayout.TOP_LEFT.x,
     HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT,
-    80,
-    12,
     state.lives / 3,
-    {
-      fillColor: Colors.SUCCESS,
-      bgColor: Colors.HUD_BG,
-      borderColor: Colors.LIGHT_GRAY,
-      borderWidth: 1,
-      layer: 100,
-      screenSpace: true,
-    }
   );
 
   // Bricks remaining
   const bricksLeft = state.bricks.filter((b) => b.hp > 0).length;
-  drawText(`Bricks: ${bricksLeft}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2, {
+  hud.text(`Bricks: ${bricksLeft}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
     tint: Colors.INFO,
-    layer: 100,
-    screenSpace: true,
   });
 
   // Phase instructions
   if (state.phase === "ready") {
-    drawText("Press SPACE to launch", HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2.5, {
+    hud.text("Press SPACE to launch", HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2.5, {
       scale: HUDLayout.SMALL_TEXT_SCALE,
       tint: Colors.WARNING,
-      layer: 100,
-      screenSpace: true,
     });
   }
 
   // Win/lose screens
   if (state.phase === "won") {
-    drawLabel("VICTORY! Press SPACE to restart", HUDLayout.CENTER.x - 180, HUDLayout.CENTER.y - 20, {
+    hud.label("VICTORY! Press SPACE to restart", HUDLayout.CENTER.x - 180, HUDLayout.CENTER.y - 20, {
       textColor: Colors.WIN,
-      bgColor: Colors.HUD_BG,
       padding: 12,
-      scale: HUDLayout.TEXT_SCALE,
-      layer: 110,
-      screenSpace: true,
     });
   } else if (state.phase === "lost") {
-    drawLabel("GAME OVER! Press SPACE to restart", HUDLayout.CENTER.x - 190, HUDLayout.CENTER.y - 20, {
+    hud.label("GAME OVER! Press SPACE to restart", HUDLayout.CENTER.x - 190, HUDLayout.CENTER.y - 20, {
       textColor: Colors.LOSE,
-      bgColor: Colors.HUD_BG,
       padding: 12,
-      scale: HUDLayout.TEXT_SCALE,
-      layer: 110,
-      screenSpace: true,
     });
   }
 });

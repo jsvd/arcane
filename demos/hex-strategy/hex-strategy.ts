@@ -11,19 +11,15 @@
  */
 
 import {
-  onFrame,
-  clearSprites,
   drawSprite,
   setCamera,
   getCamera,
   isKeyPressed,
-  getDeltaTime,
   createSolidTexture,
   getViewportSize,
   drawText,
   followTargetSmooth,
   getMouseWorldPosition,
-  setBackgroundColor,
   hex,
   hexEqual,
   hexToWorld,
@@ -35,8 +31,8 @@ import {
 import { findHexPath, hexReachable, reachableToArray } from "../../runtime/pathfinding/index.ts";
 import type { HexCoord, HexConfig } from "../../runtime/rendering/index.ts";
 import type { HexPathGrid } from "../../runtime/pathfinding/index.ts";
-import { registerAgent } from "../../runtime/agent/index.ts";
 import { updateTweens } from "../../runtime/tweening/index.ts";
+import { createGame } from "../../runtime/game/index.ts";
 
 // --- Hex config ---
 const HEX_SIZE = 32;
@@ -188,7 +184,6 @@ function getGrid(): HexPathGrid {
 }
 
 // --- Camera ---
-setBackgroundColor(0.05, 0.08, 0.15);
 setCamera(0, 0, 1.0);
 
 // --- Input ---
@@ -456,8 +451,6 @@ function drawHUD(): void {
 }
 
 function render(): void {
-  clearSprites();
-
   // Draw terrain
   for (const [key, t] of terrain) {
     const [q, r] = key.split(",").map(Number);
@@ -492,18 +485,15 @@ function updateCamera(): void {
   }
 }
 
-// --- Frame loop ---
-onFrame(() => {
-  const dt = getDeltaTime();
-  updateTweens(dt);
-  handleInput();
-  updateCamera();
-  render();
+// --- Game bootstrap ---
+const game = createGame({
+  name: "hex-strategy",
+  background: { r: 13, g: 20, b: 38 },
+  autoCamera: false,
 });
 
-// --- Agent registration ---
-registerAgent({
-  getState: () => ({
+game.state({
+  get: () => ({
     turn,
     units: units.map((u) => ({
       q: u.q,
@@ -516,8 +506,12 @@ registerAgent({
     zoom: currentZoom,
     camera: getCamera(),
   }),
-  actions: [
-    { name: "reset", description: "Reset game" },
-    { name: "end_turn", description: "End current turn" },
-  ],
+  set: () => {},
+});
+
+game.onFrame((ctx) => {
+  updateTweens(ctx.dt);
+  handleInput();
+  updateCamera();
+  render();
 });

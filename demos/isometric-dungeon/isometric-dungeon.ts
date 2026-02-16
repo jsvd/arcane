@@ -12,25 +12,21 @@
  */
 
 import {
-  onFrame,
-  clearSprites,
   drawSprite,
   setCamera,
   getCamera,
   isKeyPressed,
-  getDeltaTime,
   createSolidTexture,
   getViewportSize,
   drawText,
   setCameraBounds,
   followTargetSmooth,
   getMouseWorldPosition,
-  setBackgroundColor,
 } from "../../runtime/rendering/index.ts";
 import { findPath } from "../../runtime/pathfinding/index.ts";
 import type { PathGrid } from "../../runtime/pathfinding/index.ts";
-import { registerAgent } from "../../runtime/agent/index.ts";
 import { updateTweens } from "../../runtime/tweening/index.ts";
+import { createGame } from "../../runtime/game/index.ts";
 
 // --- Isometric constants ---
 const TILE_W = 64; // Diamond width
@@ -206,7 +202,6 @@ player.x = startWorld.x;
 player.y = startWorld.y;
 
 // --- Camera setup ---
-setBackgroundColor(0.06, 0.04, 0.10);
 
 const mapCenter = isoToWorld(MAP_W / 2, MAP_H / 2);
 setCamera(mapCenter.x, mapCenter.y, 1.0);
@@ -536,7 +531,6 @@ function drawCoin(cx: number, cy: number, layer: number, time: number, seed: num
 // --- Main render ---
 
 function render(): void {
-  clearSprites();
   const time = Date.now() / 1000;
 
   // 1. Tiles
@@ -638,27 +632,29 @@ function render(): void {
   });
 }
 
-// --- Frame loop ---
-onFrame(() => {
-  const dt = getDeltaTime();
-  updateTweens(dt);
-  handleInput();
-  updatePlayer(dt);
-  checkCoins();
-  updateCamera();
-  render();
+// --- Game bootstrap ---
+const game = createGame({
+  name: "isometric-dungeon",
+  background: { r: 15, g: 10, b: 26 },
+  autoCamera: false,
 });
 
-// --- Agent registration ---
-registerAgent({
-  getState: () => ({
+game.state({
+  get: () => ({
     player: { gx: player.gx, gy: player.gy, x: player.x, y: player.y },
     score,
     totalCoins: coins.length,
     camera: getCamera(),
     zoom: currentZoom,
   }),
-  actions: [
-    { name: "reset", description: "Reset game" },
-  ],
+  set: () => {},
+});
+
+game.onFrame((ctx) => {
+  updateTweens(ctx.dt);
+  handleInput();
+  updatePlayer(ctx.dt);
+  checkCoins();
+  updateCamera();
+  render();
 });

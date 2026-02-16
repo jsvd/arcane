@@ -22,14 +22,11 @@
  */
 
 import {
-  onFrame,
-  clearSprites,
   drawSprite,
   setCamera,
   getCamera,
   isKeyDown,
   isKeyPressed,
-  getDeltaTime,
   createSolidTexture,
   getViewportSize,
   drawText,
@@ -51,7 +48,7 @@ import {
   setBackgroundColor,
   getMousePosition,
 } from "../../runtime/rendering/index.ts";
-import { registerAgent } from "../../runtime/agent/index.ts";
+import { createGame, hud } from "../../runtime/game/index.ts";
 
 // --- Textures ---
 const TEX_WALL = createSolidTexture("wall", 80, 80, 100, 255);
@@ -359,10 +356,24 @@ function drawComparisonScene(dt: number) {
   drawText("+ Radiance Cascades GI", halfW + 30, 20, { scale: 2 });
 }
 
-// --- Frame loop ---
+// --- Game bootstrap ---
 
-onFrame(() => {
-  const dt = getDeltaTime();
+const game = createGame({ name: "lighting-showcase", autoCamera: false });
+
+game.state({
+  get: () => ({
+    scene: currentScene,
+    giEnabled,
+    giIntensity,
+    timeOfDay,
+    playerX,
+    playerY,
+  }),
+  set: () => {},
+});
+
+game.onFrame((ctx) => {
+  const dt = ctx.dt;
   frameCount++;
 
   const { width: VPW, height: VPH } = getViewportSize();
@@ -370,7 +381,6 @@ onFrame(() => {
   // Center camera
   setCamera(VPW / 2, VPH / 2, 1);
 
-  clearSprites();
   clearLights();
   clearEmissives();
   clearOccluders();
@@ -492,27 +502,13 @@ onFrame(() => {
 
   // HUD
   const sceneName = ["", "Dungeon", "Lava", "Outdoor", "Neon", "Comparison"][currentScene];
-  drawText(`Scene: ${sceneName} (1-5)`, 10, 10, { scale: 1 });
-  drawText(`GI: ${giEnabled ? "ON" : "OFF"} (G)`, 10, 24, { scale: 1 });
-  drawText(`Intensity: ${giIntensity.toFixed(1)} (+/-)`, 10, 38, { scale: 1 });
+  hud.text(`Scene: ${sceneName} (1-5)`, 10, 10, { scale: 1 });
+  hud.text(`GI: ${giEnabled ? "ON" : "OFF"} (G)`, 10, 24, { scale: 1 });
+  hud.text(`Intensity: ${giIntensity.toFixed(1)} (+/-)`, 10, 38, { scale: 1 });
   if (currentScene === 3) {
     const timeLabel = ["Midnight", "Dawn", "Morning", "Noon", "Afternoon", "Dusk", "Evening", "Night"][
       Math.floor(timeOfDay * 8) % 8
     ];
-    drawText(`Time: ${timeLabel} (T)`, 10, 52, { scale: 1 });
+    hud.text(`Time: ${timeLabel} (T)`, 10, 52, { scale: 1 });
   }
-});
-
-// --- Agent ---
-
-registerAgent({
-  name: "lighting-showcase",
-  getState: () => ({
-    scene: currentScene,
-    giEnabled,
-    giIntensity,
-    timeOfDay,
-    playerX,
-    playerY,
-  }),
 });

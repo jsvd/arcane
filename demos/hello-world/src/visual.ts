@@ -6,15 +6,12 @@
  */
 
 import {
-  onFrame,
-  getDeltaTime,
-  drawSprite,
-  setCamera,
-  createSolidTexture,
   drawText,
   getDefaultFont,
+  setCamera,
 } from "@arcane-engine/runtime/rendering";
-import { registerAgent, type DescribeOptions } from "@arcane-engine/runtime/agent";
+import { createGame as initGame, drawColorSprite } from "../../../runtime/game/index.ts";
+import { rgb } from "../../../runtime/ui/types.ts";
 import { createGame } from "./game.ts";
 import type { GameState } from "./game.ts";
 
@@ -22,23 +19,20 @@ import type { GameState } from "./game.ts";
 
 const CAMERA_ZOOM = 4.0;
 
-// --- Textures ---
-
-const TEX_PLAYER = createSolidTexture("player", 60, 180, 255);
-
 // --- State ---
 
 let state: GameState = createGame(42);
 
-// --- Agent Protocol ---
+// --- Game Bootstrap ---
 
-registerAgent({
-  name: "demos/hello-world",
-  getState: () => state,
-  setState: (s: GameState) => {
+const game = initGame({ name: "demos/hello-world", autoClear: true, autoCamera: false });
+
+game.state<GameState>({
+  get: () => state,
+  set: (s: GameState) => {
     state = s;
   },
-  describe: (s: GameState, opts: DescribeOptions) => {
+  describe: (s: GameState, opts: { verbosity?: string }) => {
     if (opts.verbosity === "minimal") {
       return "demos/hello-world is running";
     }
@@ -48,15 +42,13 @@ registerAgent({
 
 // --- Game Loop ---
 
-onFrame(() => {
-  const dt = getDeltaTime();
-
+game.onFrame((ctx) => {
   // Set camera
   setCamera(0, 0, CAMERA_ZOOM);
 
   // Render example sprite
-  drawSprite({
-    textureId: TEX_PLAYER,
+  drawColorSprite({
+    color: rgb(60, 180, 255),
     x: 0,
     y: 0,
     w: 32,

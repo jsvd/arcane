@@ -4,28 +4,29 @@ import {
 } from "./platformer.ts";
 import type { PlatformerState } from "./platformer.ts";
 import {
-  onFrame, clearSprites, drawSprite, followTargetSmooth,
-  isKeyDown, isKeyPressed, getDeltaTime, createSolidTexture,
-  drawText, getViewportSize,
+  followTargetSmooth,
+  isKeyDown, isKeyPressed,
 } from "../../runtime/rendering/index.ts";
-import { drawBar, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
-import { registerAgent } from "../../runtime/agent/index.ts";
+import { Colors, HUDLayout } from "../../runtime/ui/index.ts";
+import { createGame, drawColorSprite, hud } from "../../runtime/game/index.ts";
+import { rgb } from "../../runtime/ui/index.ts";
 
-// --- Textures ---
-const TEX_PLAYER = createSolidTexture("player", 100, 180, 255);
-const TEX_PLATFORM = createSolidTexture("platform", 80, 60, 40);
-const TEX_GROUND = createSolidTexture("ground", 60, 120, 40);
-const TEX_COIN = createSolidTexture("coin", 255, 220, 50);
-const TEX_BG = createSolidTexture("bg", 30, 30, 50);
+// --- Colors ---
+const COL_PLAYER = rgb(100, 180, 255);
+const COL_PLATFORM = rgb(80, 60, 40);
+const COL_GROUND = rgb(60, 120, 40);
+const COL_COIN = rgb(255, 220, 50);
+const COL_BG = rgb(30, 30, 50);
 
 // --- State ---
 let state = createPlatformerGame();
 
-// --- Agent protocol ---
-registerAgent<PlatformerState>({
-  name: "platformer",
-  getState: () => state,
-  setState: (s) => { state = s; },
+// --- Game setup ---
+const game = createGame({ name: "platformer", autoCamera: false });
+
+game.state<PlatformerState>({
+  get: () => state,
+  set: (s) => { state = s; },
   describe: (s, opts) => {
     if (opts.verbosity === "minimal") {
       return `Score: ${s.score}, Lives: ${s.lives}, Phase: ${s.phase}`;
@@ -49,26 +50,21 @@ registerAgent<PlatformerState>({
   },
 });
 
-// --- Camera ---
-// Initial camera set via getViewportSize in frame loop
-
 // --- Game loop ---
-onFrame(() => {
-  const dt = getDeltaTime();
-
+game.onFrame((ctx) => {
   if (state.phase === "playing") {
     // Input
     let dir: -1 | 0 | 1 = 0;
     if (isKeyDown("ArrowLeft") || isKeyDown("a")) dir = -1;
     if (isKeyDown("ArrowRight") || isKeyDown("d")) dir = 1;
-    state = movePlayer(state, dir, dt);
+    state = movePlayer(state, dir, ctx.dt);
 
     if (isKeyPressed("Space") || isKeyPressed("ArrowUp") || isKeyPressed("w")) {
       state = jump(state);
     }
 
     // Physics
-    state = stepPhysics(state, dt);
+    state = stepPhysics(state, ctx.dt);
   }
 
   // Restart
@@ -79,7 +75,7 @@ onFrame(() => {
   }
 
   // Camera follows player with smooth interpolation
-  const { width: vpW, height: vpH } = getViewportSize();
+  const { width: vpW, height: vpH } = ctx.viewport;
   followTargetSmooth(
     Math.max(vpW / 2, Math.min(state.playerX, vpW / 2)),
     Math.max(vpH / 2, Math.min(state.playerY, vpH / 2)),
@@ -87,16 +83,15 @@ onFrame(() => {
   );
 
   // --- Render ---
-  clearSprites();
 
   // Background
-  drawSprite({ textureId: TEX_BG, x: -100, y: -100, w: 1000, h: 800, layer: 0 });
+  drawColorSprite({ color: COL_BG, x: -100, y: -100, w: 1000, h: 800, layer: 0 });
 
   // Platforms
   for (const plat of state.platforms) {
-    const tex = plat.h >= 40 ? TEX_GROUND : TEX_PLATFORM;
-    drawSprite({
-      textureId: tex,
+    const col = plat.h >= 40 ? COL_GROUND : COL_PLATFORM;
+    drawColorSprite({
+      color: col,
       x: plat.x, y: plat.y, w: plat.w, h: plat.h,
       layer: 1,
     });
@@ -105,8 +100,8 @@ onFrame(() => {
   // Coins
   for (const coin of state.coins) {
     if (coin.collected) continue;
-    drawSprite({
-      textureId: TEX_COIN,
+    drawColorSprite({
+      color: COL_COIN,
       x: coin.x, y: coin.y, w: 16, h: 16,
       layer: 2,
     });
@@ -116,8 +111,8 @@ onFrame(() => {
   const playerTint = state.facing === "left"
     ? { r: 0.8, g: 0.9, b: 1, a: 1 }
     : { r: 1, g: 1, b: 1, a: 1 };
-  drawSprite({
-    textureId: TEX_PLAYER,
+  drawColorSprite({
+    color: COL_PLAYER,
     x: state.playerX, y: state.playerY, w: PLAYER_W, h: PLAYER_H,
     layer: 3,
     tint: playerTint,
@@ -126,48 +121,25 @@ onFrame(() => {
   // --- HUD (screen space) ---
 
   // Score text
-  drawText(`Score: ${state.score}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y, {
-    scale: HUDLayout.TEXT_SCALE,
-    tint: Colors.WHITE,
-    layer: 100,
-    screenSpace: true,
-  });
+  hud.text(`Score: ${state.score}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y);
 
   // Lives bar
-  drawBar(
+  hud.bar(
     HUDLayout.TOP_LEFT.x,
     HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT,
-    80,
-    12,
     state.lives / 3,
-    {
-      fillColor: Colors.SUCCESS,
-      bgColor: Colors.HUD_BG,
-      borderColor: Colors.LIGHT_GRAY,
-      borderWidth: 1,
-      layer: 100,
-      screenSpace: true,
-    }
   );
 
   // Phase indicator
   if (state.phase === "won") {
-    drawLabel("YOU WIN! Press R to restart", HUDLayout.CENTER.x - 150, HUDLayout.CENTER.y - 20, {
+    hud.label("YOU WIN! Press R to restart", HUDLayout.CENTER.x - 150, HUDLayout.CENTER.y - 20, {
       textColor: Colors.WIN,
-      bgColor: Colors.HUD_BG,
       padding: 12,
-      scale: HUDLayout.TEXT_SCALE,
-      layer: 110,
-      screenSpace: true,
     });
   } else if (state.phase === "dead") {
-    drawLabel("GAME OVER! Press R to restart", HUDLayout.CENTER.x - 160, HUDLayout.CENTER.y - 20, {
+    hud.label("GAME OVER! Press R to restart", HUDLayout.CENTER.x - 160, HUDLayout.CENTER.y - 20, {
       textColor: Colors.LOSE,
-      bgColor: Colors.HUD_BG,
-      padding: 8,
       scale: 2,
-      layer: 110,
-      screenSpace: true,
     });
   }
 });

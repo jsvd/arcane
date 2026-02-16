@@ -11,14 +11,8 @@
 
 import {
   drawSprite,
-  clearSprites,
-  loadTexture,
   createSolidTexture,
-  onFrame,
-  getDeltaTime,
-  setCamera,
   getViewportSize,
-  setBackgroundColor,
   drawText,
   getDefaultFont,
   isKeyPressed,
@@ -40,7 +34,7 @@ import {
   consumeCombo,
 } from "../../runtime/input/index.ts";
 
-import { registerAgent } from "../../runtime/agent/protocol.ts";
+import { createGame, hud } from "../../runtime/game/index.ts";
 
 // --- Game Constants ---
 const GRAVITY = 800;
@@ -123,19 +117,26 @@ const platformTex = createSolidTexture("platform", 100, 180, 100, 255);
 const coinTex = createSolidTexture("coin", 255, 220, 50, 255);
 const bgTex = createSolidTexture("bg", 30, 30, 50, 255);
 
-// --- Agent ---
-registerAgent({
+// --- Game bootstrap ---
+const game = createGame({
   name: "gamepad-platformer",
-  getState: () => ({ player, score, coins, showRebind }),
+  background: { r: 20, g: 20, b: 31 },
+});
+
+game.state({
+  get: () => ({ player, score, coins, showRebind }),
+  set: () => {},
   actions: {
-    jump: { description: "Make player jump", handler: () => {
+    jump: { description: "Make player jump", handler: (s: any) => {
       if (player.grounded) {
         player.vy = JUMP_SPEED;
         player.grounded = false;
       }
+      return s;
     }},
-    toggleRebind: { description: "Toggle rebind screen", handler: () => {
+    toggleRebind: { description: "Toggle rebind screen", handler: (s: any) => {
       showRebind = !showRebind;
+      return s;
     }},
   },
 });
@@ -143,14 +144,11 @@ registerAgent({
 let font: any = null;
 
 // --- Game loop ---
-onFrame(() => {
-  const dt = getDeltaTime();
-  const vpw = getViewportSize().width;
-  const vph = getViewportSize().height;
+game.onFrame((ctx) => {
+  const dt = ctx.dt;
+  const vpw = ctx.viewport.width;
+  const vph = ctx.viewport.height;
   if (!font) font = getDefaultFont();
-
-  setCamera(vpw / 2, vph / 2);
-  setBackgroundColor(0.08, 0.08, 0.12);
 
   // Update input buffer
   let time = performance.now() / 1000;
@@ -236,7 +234,6 @@ onFrame(() => {
   }
 
   // --- Render ---
-  clearSprites();
 
   // Background
   drawSprite(bgTex, 0, 0, vpw, vph, -10);
@@ -263,37 +260,35 @@ onFrame(() => {
   });
 
   // --- HUD ---
-  if (font) {
-    drawText(`Score: ${score}`, 10, 10, font, { scale: 2 });
+  hud.text(`Score: ${score}`, 10, 10);
 
-    const gpConnected = isGamepadConnected();
-    const gpName = gpConnected ? getGamepadName() : "None";
-    drawText(`Gamepad: ${gpConnected ? gpName : "Not connected"}`, 10, 30, font, { scale: 1 });
+  const gpConnected = isGamepadConnected();
+  const gpName = gpConnected ? getGamepadName() : "None";
+  hud.text(`Gamepad: ${gpConnected ? gpName : "Not connected"}`, 10, 30, { scale: 1 });
 
-    drawText("WASD/Arrows/Gamepad: Move | Space/A: Jump", 10, vph - 30, font, { scale: 1 });
-    drawText("R: Toggle rebind | Right,Right,Shift: Dash combo", 10, vph - 18, font, { scale: 1 });
+  hud.text("WASD/Arrows/Gamepad: Move | Space/A: Jump", 10, vph - 30, { scale: 1 });
+  hud.text("R: Toggle rebind | Right,Right,Shift: Dash combo", 10, vph - 18, { scale: 1 });
 
-    if (comboTriggered && comboTimer > 0) {
-      drawText("DASH!", player.x - 10, player.y - 20, font, {
-        scale: 2,
-        tintR: 1,
-        tintG: 0.8,
-        tintB: 0.2,
-      });
-    }
+  if (comboTriggered && comboTimer > 0) {
+    // "DASH!" is world-space text above the player, not HUD
+    drawText("DASH!", player.x - 10, player.y - 20, {
+      font,
+      scale: 2,
+      tint: { r: 1, g: 0.8, b: 0.2, a: 1 },
+    });
+  }
 
-    // Touch indicator
-    if (isTouchActive()) {
-      drawText("Touch active", 10, 50, font, { scale: 1 });
-    }
+  // Touch indicator
+  if (isTouchActive()) {
+    hud.text("Touch active", 10, 50, { scale: 1 });
+  }
 
-    // Rebind screen overlay
-    if (showRebind) {
-      drawSprite(createSolidTexture("overlay", 0, 0, 0, 180), 0, 0, vpw, vph, 100);
-      drawText("REBIND CONTROLS", vpw / 2 - 60, 100, font, { scale: 2 });
-      drawText("(rebinding UI placeholder)", vpw / 2 - 80, 140, font, { scale: 1 });
-      drawText("Press R to close", vpw / 2 - 50, 180, font, { scale: 1 });
-    }
+  // Rebind screen overlay
+  if (showRebind) {
+    drawSprite(createSolidTexture("overlay", 0, 0, 0, 180), 0, 0, vpw, vph, 100);
+    hud.text("REBIND CONTROLS", vpw / 2 - 60, 100, { layer: 110 });
+    hud.text("(rebinding UI placeholder)", vpw / 2 - 80, 140, { scale: 1, layer: 110 });
+    hud.text("Press R to close", vpw / 2 - 50, 180, { scale: 1, layer: 110 });
   }
 
   // Toggle rebind screen

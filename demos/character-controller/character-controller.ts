@@ -9,19 +9,14 @@
  * - Simple platformer physics (gravity, ground detection)
  */
 import {
-  onFrame,
-  clearSprites,
   drawSprite,
   setCamera,
   isKeyDown,
   isKeyPressed,
-  getDeltaTime,
   getViewportSize,
   createSolidTexture,
   createAnimation,
   addFrameEvent,
-  drawText,
-  getDefaultFont,
   createAnimationFSM,
   getCurrentState,
   isBlending,
@@ -30,7 +25,7 @@ import {
   drawFSMSprite,
 } from "../../runtime/rendering/index.ts";
 import type { FSMState } from "../../runtime/rendering/index.ts";
-import { registerAgent } from "../../runtime/agent/index.ts";
+import { createGame, hud } from "../../runtime/game/index.ts";
 
 // --- Constants ---
 const GRAVITY = 800;
@@ -140,10 +135,17 @@ function rectOverlap(
   return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
 }
 
-// --- Agent protocol ---
-registerAgent({
-  name: "character-controller",
-  getState: () => ({
+// --- Camera setup ---
+const vpSize = getViewportSize();
+const vpW = vpSize.width || 800;
+const vpH = vpSize.height || 600;
+setCamera(vpW / 2, vpH / 2, 1);
+
+// --- Game bootstrap ---
+const game = createGame({ name: "character-controller", autoCamera: false });
+
+game.state({
+  get: () => ({
     playerX, playerY, velX, velY, onGround, facingRight,
     currentState: getCurrentState(fsm),
     isBlending: isBlending(fsm),
@@ -151,7 +153,7 @@ registerAgent({
     score,
     enemiesAlive: enemies.filter(e => e.alive).length,
   }),
-  setState: () => {},
+  set: () => {},
   describe: (s: any) => {
     return `Player at (${s.playerX.toFixed(0)}, ${s.playerY.toFixed(0)}) | State: ${s.currentState} | Score: ${s.score} | Enemies: ${s.enemiesAlive}`;
   },
@@ -161,19 +163,9 @@ registerAgent({
   },
 });
 
-// --- Camera setup ---
-const vpSize = getViewportSize();
-const vpW = vpSize.width || 800;
-const vpH = vpSize.height || 600;
-setCamera(vpW / 2, vpH / 2, 1);
-
-// --- HUD font ---
-const font = getDefaultFont();
-
 // --- Game loop ---
-onFrame(() => {
-  const dt = getDeltaTime();
-  clearSprites();
+game.onFrame((ctx) => {
+  const dt = ctx.dt;
 
   // --- Input ---
   let moveDir = 0;
@@ -323,11 +315,9 @@ onFrame(() => {
   const blending = isBlending(fsm);
   const blendProg = getBlendProgress(fsm);
 
-  if (font) {
-    drawText(`State: ${state}${blending ? ` (blend ${(blendProg * 100).toFixed(0)}%)` : ""}`, 10, 10, font, { scale: 2, layer: 100 });
-    drawText(`Score: ${score}`, 10, 30, font, { scale: 2, layer: 100 });
-    drawText(`Vel: (${velX.toFixed(0)}, ${velY.toFixed(0)})`, 10, 50, font, { scale: 2, layer: 100 });
-    drawText(`Ground: ${onGround}`, 10, 70, font, { scale: 2, layer: 100 });
-    drawText("Arrows/WASD: move  |  Space/Up: jump  |  X/J: attack", 10, 560, font, { scale: 1.5, layer: 100 });
-  }
+  hud.text(`State: ${state}${blending ? ` (blend ${(blendProg * 100).toFixed(0)}%)` : ""}`, 10, 10);
+  hud.text(`Score: ${score}`, 10, 30);
+  hud.text(`Vel: (${velX.toFixed(0)}, ${velY.toFixed(0)})`, 10, 50);
+  hud.text(`Ground: ${onGround}`, 10, 70);
+  hud.text("Arrows/WASD: move  |  Space/Up: jump  |  X/J: attack", 10, 560, { scale: 1.5 });
 });

@@ -18,8 +18,6 @@
  */
 
 import {
-  onFrame,
-  getDeltaTime,
   drawSprite,
   setCamera,
   getViewportSize,
@@ -28,13 +26,7 @@ import {
   setBackgroundColor,
   getMouseWorldPosition,
 } from "../../runtime/rendering/index.ts";
-import {
-  drawText,
-} from "../../runtime/rendering/text.ts";
-import {
-  drawPanel,
-  drawLabel,
-} from "../../runtime/ui/primitives.ts";
+import { createGame, hud } from "../../runtime/game/index.ts";
 import { updateTweens } from "../../runtime/tweening/tween.ts";
 import { updateParticles, getAllParticles } from "../../runtime/particles/emitter.ts";
 import { getCameraShakeOffset } from "../../runtime/tweening/helpers.ts";
@@ -122,11 +114,11 @@ const sceneColors = [
   { r: 0.05, g: 0.1, b: 0.05 },
 ];
 
-setBackgroundColor(0.08, 0.08, 0.16);
+const game = createGame({ background: { r: 20, g: 20, b: 41 } });
 
-onFrame(() => {
-  const dt = getDeltaTime();
-  const { width: vpW, height: vpH } = getViewportSize();
+game.onFrame((ctx) => {
+  const dt = ctx.dt;
+  const { width: vpW, height: vpH } = ctx.viewport;
 
   // Position camera for web-like coords (0,0 = top-left)
   setCamera(vpW / 2, vpH / 2);
@@ -314,26 +306,18 @@ onFrame(() => {
   }
 
   // HUD
-  drawLabel(`HP: ${target.hp}/100  Hits: ${hitCount}`, 10, 10, {
-    screenSpace: true,
-    layer: 100,
-    scale: 1,
-    textColor: { r: 1, g: 1, b: 1, a: 1 },
-  });
+  hud.label(`HP: ${target.hp}/100  Hits: ${hitCount}`, 10, 10, { scale: 1 });
 
-  drawText("1-5: Transitions  SPACE: Hit  T: Dialogue  R: Reset", 10, vpH - 20, {
+  hud.text("1-5: Transitions  SPACE: Hit  T: Dialogue  R: Reset", 10, vpH - 20, {
     scale: 1,
-    layer: 100,
-    screenSpace: true,
     tint: { r: 0.7, g: 0.7, b: 0.7, a: 0.8 },
   });
 
   // Hitstop indicator
   if (isHitstopActive()) {
-    drawText("HITSTOP!", vpW / 2 - 30, 40, {
+    hud.text("HITSTOP!", vpW / 2 - 30, 40, {
       scale: 2,
       layer: 110,
-      screenSpace: true,
       tint: { r: 1, g: 1, b: 0, a: 1 },
     });
   }

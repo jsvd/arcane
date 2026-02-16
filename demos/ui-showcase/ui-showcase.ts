@@ -12,14 +12,7 @@
  */
 
 import {
-  onFrame,
-  getDeltaTime,
-  setCamera,
-  getViewportSize,
   isKeyPressed,
-  isKeyDown,
-  getMousePosition,
-  isMouseButtonDown,
   drawText,
 } from "../../runtime/rendering/index.ts";
 import {
@@ -28,28 +21,32 @@ import {
   Colors,
   withAlpha,
   createButton,
-  updateButton,
   drawButton,
   createCheckbox,
-  updateCheckbox,
   drawCheckbox,
   createRadioGroup,
   updateRadioGroup,
   drawRadioGroup,
   createSlider,
-  updateSlider,
   drawSlider,
   createTextInput,
   updateTextInput,
   drawTextInput,
   createFocusManager,
   registerFocusable,
-  updateFocus,
   verticalStack,
   anchorPosition,
 } from "../../runtime/ui/index.ts";
 import type { TextInputKeyEvent } from "../../runtime/ui/index.ts";
-import { registerAgent } from "../../runtime/agent/index.ts";
+import {
+  createGame,
+  captureInput,
+  autoUpdateButton,
+  autoUpdateSlider,
+  autoUpdateCheckbox,
+  autoUpdateFocus,
+} from "../../runtime/game/index.ts";
+import type { FrameInput } from "../../runtime/game/index.ts";
 
 // ---- State ----
 type Page = "menu" | "settings" | "profile";
@@ -136,30 +133,54 @@ function showStatus(msg: string): void {
   statusTimer = 2.0;
 }
 
+// ---- Game bootstrap ----
+const game = createGame({ name: "ui-showcase" });
+
+game.state({
+  get: () => ({
+    page: currentPage,
+    menu: {
+      startClicked: startBtn.clicked,
+      startHovered: startBtn.hovered,
+    },
+    settings: {
+      masterVolume: masterVol.value,
+      sfxVolume: sfxVol.value,
+      musicVolume: musicVol.value,
+      fullscreen: fullscreenCb.checked,
+      vSync: vSyncCb.checked,
+      showFps: showFpsCb.checked,
+      quality: qualityRadio.options[qualityRadio.selectedIndex],
+    },
+    profile: {
+      name: nameInput.text,
+      class: classRadio.options[classRadio.selectedIndex],
+    },
+    status: statusMessage,
+  }),
+  set: () => {},
+  describe: (state) => {
+    const s = state as any;
+    return `UI Showcase — ${s.page}\nVolume: ${s.settings.masterVolume}%\nProfile: ${s.profile.name || "(empty)"} the ${s.profile.class}`;
+  },
+});
+
 // ---- Game loop ----
-onFrame(() => {
-  const dt = getDeltaTime();
-  totalTime += dt;
+game.onFrame((ctx) => {
+  totalTime += ctx.dt;
 
   if (statusTimer > 0) {
-    statusTimer -= dt;
+    statusTimer -= ctx.dt;
     if (statusTimer <= 0) statusMessage = "";
   }
 
-  const vp = getViewportSize();
-  setCamera(vp.width / 2, vp.height / 2);
-
-  const mouse = getMousePosition();
-  const mouseDown = isMouseButtonDown(0); // Left mouse button
-  const tabPressed = isKeyPressed("Tab");
-  const shiftDown = isKeyDown("Shift");
-  const enterPressed = isKeyPressed("Enter");
+  const input = captureInput();
 
   // Focus system
-  updateFocus(focus, tabPressed, shiftDown);
+  autoUpdateFocus(focus, input);
 
   // Background
-  drawRect(0, 0, vp.width, vp.height, {
+  drawRect(0, 0, ctx.viewport.width, ctx.viewport.height, {
     color: { r: 0.08, g: 0.08, b: 0.12, a: 1 },
     layer: 0,
     screenSpace: true,
@@ -189,7 +210,7 @@ onFrame(() => {
   // Status message
   if (statusMessage) {
     const alpha = Math.min(1, statusTimer);
-    drawText(statusMessage, vp.width / 2 - statusMessage.length * 4, vp.height - 30, {
+    drawText(statusMessage, ctx.viewport.width / 2 - statusMessage.length * 4, ctx.viewport.height - 30, {
       scale: 1,
       tint: { ...Colors.SUCCESS, a: alpha },
       layer: 110,
@@ -200,18 +221,18 @@ onFrame(() => {
   // Render current page
   switch (currentPage) {
     case "menu":
-      renderMenuPage(mouse.x, mouse.y, mouseDown, enterPressed, vp.width, vp.height);
+      renderMenuPage(input, ctx.viewport.width, ctx.viewport.height);
       break;
     case "settings":
-      renderSettingsPage(mouse.x, mouse.y, mouseDown, vp.width, vp.height);
+      renderSettingsPage(input, ctx.viewport.width, ctx.viewport.height);
       break;
     case "profile":
-      renderProfilePage(mouse.x, mouse.y, mouseDown, enterPressed, vp.width, vp.height);
+      renderProfilePage(input, ctx.viewport.width, ctx.viewport.height);
       break;
   }
 
   // Controls hint
-  drawText("Tab: cycle focus | Enter: activate | Esc: back", 10, vp.height - 14, {
+  drawText("Tab: cycle focus | Enter: activate | Esc: back", 10, ctx.viewport.height - 14, {
     scale: 1,
     tint: withAlpha(Colors.GRAY, 0.6),
     layer: 100,
@@ -220,7 +241,7 @@ onFrame(() => {
 });
 
 function renderMenuPage(
-  mx: number, my: number, md: boolean, enter: boolean,
+  input: FrameInput,
   vpW: number, vpH: number,
 ): void {
   // Center the buttons
@@ -236,10 +257,10 @@ function renderMenuPage(
   disabledBtn.x = positions[3].x;
   disabledBtn.y = positions[3].y;
 
-  updateButton(startBtn, mx, my, md, enter);
-  updateButton(settingsBtn, mx, my, md, enter);
-  updateButton(profileBtn, mx, my, md, enter);
-  updateButton(disabledBtn, mx, my, md, enter);
+  autoUpdateButton(startBtn, input);
+  autoUpdateButton(settingsBtn, input);
+  autoUpdateButton(profileBtn, input);
+  autoUpdateButton(disabledBtn, input);
 
   if (startBtn.clicked) showStatus("Game started! (demo)");
   if (settingsBtn.clicked) currentPage = "settings";
@@ -270,7 +291,7 @@ function renderMenuPage(
 }
 
 function renderSettingsPage(
-  mx: number, my: number, md: boolean,
+  input: FrameInput,
   vpW: number, vpH: number,
 ): void {
   const left = 80;
@@ -288,12 +309,9 @@ function renderSettingsPage(
   musicVol.x = left;
   musicVol.y = startY + 130;
 
-  updateSlider(masterVol, mx, my, md,
-    isKeyPressed("ArrowLeft"), isKeyPressed("ArrowRight"));
-  updateSlider(sfxVol, mx, my, md,
-    isKeyPressed("ArrowLeft"), isKeyPressed("ArrowRight"));
-  updateSlider(musicVol, mx, my, md,
-    isKeyPressed("ArrowLeft"), isKeyPressed("ArrowRight"));
+  autoUpdateSlider(masterVol, input);
+  autoUpdateSlider(sfxVol, input);
+  autoUpdateSlider(musicVol, input);
 
   drawSlider(masterVol);
   drawSlider(sfxVol);
@@ -313,9 +331,9 @@ function renderSettingsPage(
   showFpsCb.x = rightCol;
   showFpsCb.y = startY + 85;
 
-  updateCheckbox(fullscreenCb, mx, my, md);
-  updateCheckbox(vSyncCb, mx, my, md);
-  updateCheckbox(showFpsCb, mx, my, md);
+  autoUpdateCheckbox(fullscreenCb, input);
+  autoUpdateCheckbox(vSyncCb, input);
+  autoUpdateCheckbox(showFpsCb, input);
 
   drawCheckbox(fullscreenCb);
   drawCheckbox(vSyncCb);
@@ -329,14 +347,14 @@ function renderSettingsPage(
   qualityRadio.x = rightCol;
   qualityRadio.y = startY + 150;
 
-  updateRadioGroup(qualityRadio, mx, my, md,
-    isKeyPressed("ArrowUp"), isKeyPressed("ArrowDown"));
+  updateRadioGroup(qualityRadio, input.mouseX, input.mouseY, input.mouseDown,
+    input.arrowUpPressed, input.arrowDownPressed);
   drawRadioGroup(qualityRadio);
 
   // Back button
   settingsBackBtn.x = left;
   settingsBackBtn.y = vpH - 60;
-  updateButton(settingsBackBtn, mx, my, md);
+  autoUpdateButton(settingsBackBtn, input);
   if (settingsBackBtn.clicked || isKeyPressed("Escape")) {
     currentPage = "menu";
   }
@@ -353,7 +371,7 @@ function renderSettingsPage(
 }
 
 function renderProfilePage(
-  mx: number, my: number, md: boolean, enter: boolean,
+  input: FrameInput,
   vpW: number, vpH: number,
 ): void {
   const left = vpW / 2 - 120;
@@ -367,7 +385,7 @@ function renderProfilePage(
   nameInput.x = left;
   nameInput.y = startY + 30;
   const keys = collectKeyEvents();
-  updateTextInput(nameInput, mx, my, md, keys);
+  updateTextInput(nameInput, input.mouseX, input.mouseY, input.mouseDown, keys);
   drawTextInput(nameInput, totalTime);
 
   // Class selection
@@ -377,14 +395,14 @@ function renderProfilePage(
 
   classRadio.x = left;
   classRadio.y = startY + 110;
-  updateRadioGroup(classRadio, mx, my, md,
-    isKeyPressed("ArrowUp"), isKeyPressed("ArrowDown"));
+  updateRadioGroup(classRadio, input.mouseX, input.mouseY, input.mouseDown,
+    input.arrowUpPressed, input.arrowDownPressed);
   drawRadioGroup(classRadio);
 
   // Buttons
   saveProfileBtn.x = left;
   saveProfileBtn.y = startY + 220;
-  updateButton(saveProfileBtn, mx, my, md, enter);
+  autoUpdateButton(saveProfileBtn, input);
   if (saveProfileBtn.clicked) {
     const name = nameInput.text || "Unnamed Hero";
     const cls = classRadio.options[classRadio.selectedIndex];
@@ -394,40 +412,10 @@ function renderProfilePage(
 
   profileBackBtn.x = left;
   profileBackBtn.y = vpH - 60;
-  updateButton(profileBackBtn, mx, my, md);
+  autoUpdateButton(profileBackBtn, input);
   if (profileBackBtn.clicked || isKeyPressed("Escape")) {
     currentPage = "menu";
   }
   drawButton(profileBackBtn);
 }
 
-// ---- Agent registration ----
-registerAgent({
-  name: "ui-showcase",
-  getState: () => ({
-    page: currentPage,
-    menu: {
-      startClicked: startBtn.clicked,
-      startHovered: startBtn.hovered,
-    },
-    settings: {
-      masterVolume: masterVol.value,
-      sfxVolume: sfxVol.value,
-      musicVolume: musicVol.value,
-      fullscreen: fullscreenCb.checked,
-      vSync: vSyncCb.checked,
-      showFps: showFpsCb.checked,
-      quality: qualityRadio.options[qualityRadio.selectedIndex],
-    },
-    profile: {
-      name: nameInput.text,
-      class: classRadio.options[classRadio.selectedIndex],
-    },
-    status: statusMessage,
-  }),
-  setState: () => {},
-  describe: (state) => {
-    const s = state as any;
-    return `UI Showcase — ${s.page}\nVolume: ${s.settings.masterVolume}%\nProfile: ${s.profile.name || "(empty)"} the ${s.profile.class}`;
-  },
-});

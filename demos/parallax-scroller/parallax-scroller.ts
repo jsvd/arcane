@@ -20,14 +20,11 @@
  */
 
 import {
-  onFrame,
-  clearSprites,
   drawSprite,
   setCamera,
   getCamera,
   isKeyDown,
   isKeyPressed,
-  getDeltaTime,
   createSolidTexture,
   getViewportSize,
   drawText,
@@ -41,7 +38,8 @@ import {
   drawParallaxSprite,
 } from "../../runtime/rendering/index.ts";
 import { updateTweens, easeOutCubic } from "../../runtime/tweening/index.ts";
-import { registerAgent } from "../../runtime/agent/index.ts";
+import { createGame, drawColorSprite } from "../../runtime/game/index.ts";
+import { rgb } from "../../runtime/ui/types.ts";
 
 // --- Map constants ---
 const MAP_WIDTH = 3200;
@@ -52,14 +50,17 @@ const PLAYER_SPEED = 300;
 const JUMP_VELOCITY = -500;
 
 // --- Textures (solid colors for prototyping) ---
+// Textures used by drawParallaxSprite (require real textureId)
 const TEX_SKY_FAR = createSolidTexture("sky_far", 20, 10, 60);
 const TEX_MOUNTAINS = createSolidTexture("mountains", 40, 30, 80);
 const TEX_TREES = createSolidTexture("trees", 20, 60, 30);
-const TEX_GROUND = createSolidTexture("ground", 80, 60, 40);
-const TEX_PLATFORM = createSolidTexture("platform", 100, 80, 60);
-const TEX_PLAYER = createSolidTexture("player", 80, 180, 255);
-const TEX_COIN = createSolidTexture("coin", 255, 220, 50);
 const TEX_STAR = createSolidTexture("star", 255, 255, 200);
+
+// Inline colors for drawSprite-only objects
+const COL_GROUND = rgb(80, 60, 40);
+const COL_PLATFORM = rgb(100, 80, 60);
+const COL_PLAYER = rgb(80, 180, 255);
+const COL_COIN = rgb(255, 220, 50);
 
 // --- State ---
 const player = {
@@ -261,8 +262,6 @@ function render(): void {
   const vp = getViewportSize();
   const cam = getCamera();
 
-  clearSprites();
-
   // Layer 0: Far sky (fixed)
   drawParallaxSprite({
     textureId: TEX_SKY_FAR,
@@ -315,8 +314,8 @@ function render(): void {
   }
 
   // Layer 4: Ground (moves with camera — factor 1.0, use normal drawSprite)
-  drawSprite({
-    textureId: TEX_GROUND,
+  drawColorSprite({
+    color: COL_GROUND,
     x: 0,
     y: GROUND_Y,
     w: MAP_WIDTH,
@@ -326,8 +325,8 @@ function render(): void {
 
   // Layer 5: Platforms
   for (const p of platforms) {
-    drawSprite({
-      textureId: TEX_PLATFORM,
+    drawColorSprite({
+      color: COL_PLATFORM,
       x: p.x,
       y: p.y,
       w: p.w,
@@ -341,8 +340,8 @@ function render(): void {
   for (const coin of coins) {
     if (coin.collected) continue;
     const bobY = Math.sin(time * 3 + coin.x * 0.1) * 4;
-    drawSprite({
-      textureId: TEX_COIN,
+    drawColorSprite({
+      color: COL_COIN,
       x: coin.x,
       y: coin.y + bobY,
       w: coin.w,
@@ -352,8 +351,8 @@ function render(): void {
   }
 
   // Layer 7: Player
-  drawSprite({
-    textureId: TEX_PLAYER,
+  drawColorSprite({
+    color: COL_PLAYER,
     x: player.x,
     y: player.y,
     w: player.w,
@@ -419,19 +418,30 @@ function render(): void {
   }
 }
 
+// --- Game bootstrap ---
+const app = createGame({ name: "parallax-scroller", autoCamera: false });
+
 // --- Frame loop ---
-onFrame(() => {
-  const dt = getDeltaTime();
-  updateTweens(dt);
+app.onFrame((ctx) => {
+  updateTweens(ctx.dt);
   handleInput();
-  updatePlayer(dt);
+  updatePlayer(ctx.dt);
   updateCamera();
   render();
 });
 
-// --- Agent registration ---
-registerAgent({
-  getState: () => ({
+// --- Agent state ---
+type ParallaxState = {
+  player: { x: number; y: number; coins: number };
+  camera: ReturnType<typeof getCamera>;
+  bounds: ReturnType<typeof getCameraBounds>;
+  deadzone: ReturnType<typeof getCameraDeadzone>;
+  smoothFollow: boolean;
+  settings: { useSmoothFollow: boolean; useDeadzone: boolean; useBounds: boolean; currentZoom: number };
+};
+
+app.state<ParallaxState>({
+  get: () => ({
     player: { x: player.x, y: player.y, coins: player.coins },
     camera: getCamera(),
     bounds: getCameraBounds(),
@@ -439,9 +449,9 @@ registerAgent({
     smoothFollow: useSmoothFollow,
     settings: { useSmoothFollow, useDeadzone, useBounds, currentZoom },
   }),
-  actions: [
-    { name: "toggleSmooth", description: "Toggle smooth camera follow" },
-    { name: "toggleDeadzone", description: "Toggle camera deadzone" },
-    { name: "toggleBounds", description: "Toggle camera bounds" },
-  ],
+  set: (s) => {
+    player.x = s.player.x;
+    player.y = s.player.y;
+    player.coins = s.player.coins;
+  },
 });

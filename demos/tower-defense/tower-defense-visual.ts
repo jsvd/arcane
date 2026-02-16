@@ -4,37 +4,37 @@ import {
 } from "./tower-defense.ts";
 import type { TDState, TowerType } from "./tower-defense.ts";
 import {
-  onFrame, clearSprites, drawSprite, setCamera,
-  isKeyPressed, getDeltaTime, createSolidTexture,
-  getMouseWorldPosition, drawText,
+  setCamera, isKeyPressed, getMouseWorldPosition,
 } from "../../runtime/rendering/index.ts";
-import { drawBar, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
-import { registerAgent } from "../../runtime/agent/index.ts";
+import { drawBar, Colors } from "../../runtime/ui/index.ts";
+import { rgb } from "../../runtime/ui/types.ts";
+import { createGame, drawColorSprite, hud } from "../../runtime/game/index.ts";
+import type { Color } from "../../runtime/ui/types.ts";
 
-// --- Textures ---
-const TEX_PATH = createSolidTexture("path", 160, 130, 90);
-const TEX_BUILDABLE = createSolidTexture("buildable", 60, 130, 60);
-const TEX_BLOCKED = createSolidTexture("blocked", 80, 80, 80);
-const TEX_TOWER_ARROW = createSolidTexture("tower-arrow", 50, 100, 200);
-const TEX_TOWER_SLOW = createSolidTexture("tower-slow", 50, 200, 200);
-const TEX_TOWER_SPLASH = createSolidTexture("tower-splash", 200, 50, 50);
-const TEX_ENEMY_BASIC = createSolidTexture("enemy-basic", 200, 50, 50);
-const TEX_ENEMY_FAST = createSolidTexture("enemy-fast", 255, 150, 50);
-const TEX_ENEMY_TANK = createSolidTexture("enemy-tank", 150, 50, 150);
-const TEX_RANGE = createSolidTexture("range", 255, 255, 255);
+// --- Colors ---
+const COL_PATH = rgb(160, 130, 90);
+const COL_BUILDABLE = rgb(60, 130, 60);
+const COL_BLOCKED = rgb(80, 80, 80);
+const COL_TOWER_ARROW = rgb(50, 100, 200);
+const COL_TOWER_SLOW = rgb(50, 200, 200);
+const COL_TOWER_SPLASH = rgb(200, 50, 50);
+const COL_ENEMY_BASIC = rgb(200, 50, 50);
+const COL_ENEMY_FAST = rgb(255, 150, 50);
+const COL_ENEMY_TANK = rgb(150, 50, 150);
+const COL_RANGE = rgb(255, 255, 255);
 
 const TILE_SIZE = 48;
 
-const TOWER_TEX: Record<TowerType, number> = {
-  arrow: TEX_TOWER_ARROW,
-  slow: TEX_TOWER_SLOW,
-  splash: TEX_TOWER_SPLASH,
+const TOWER_COLOR: Record<TowerType, Color> = {
+  arrow: COL_TOWER_ARROW,
+  slow: COL_TOWER_SLOW,
+  splash: COL_TOWER_SPLASH,
 };
 
-const ENEMY_TEX: Record<string, number> = {
-  basic: TEX_ENEMY_BASIC,
-  fast: TEX_ENEMY_FAST,
-  tank: TEX_ENEMY_TANK,
+const ENEMY_COLOR: Record<string, Color> = {
+  basic: COL_ENEMY_BASIC,
+  fast: COL_ENEMY_FAST,
+  tank: COL_ENEMY_TANK,
 };
 
 // --- State ---
@@ -46,11 +46,12 @@ const camX = (state.mapWidth * TILE_SIZE) / 2;
 const camY = (state.mapHeight * TILE_SIZE) / 2;
 setCamera(camX, camY, 1);
 
-// --- Agent protocol ---
-registerAgent<TDState>({
-  name: "tower-defense",
-  getState: () => state,
-  setState: (s) => { state = s; },
+// --- Game setup ---
+const game = createGame({ name: "tower-defense", autoCamera: false, autoClear: true });
+
+game.state<TDState>({
+  get: () => state,
+  set: (s) => { state = s; },
   describe: (s, opts) => {
     if (opts.verbosity === "minimal") {
       return `Wave: ${s.currentWave + 1}/${s.waves.length}, Gold: ${s.gold}, Lives: ${s.lives}, Phase: ${s.phase}`;
@@ -83,9 +84,7 @@ registerAgent<TDState>({
 });
 
 // --- Game loop ---
-onFrame(() => {
-  const dt = getDeltaTime();
-
+game.onFrame((ctx) => {
   // --- Input ---
   if (isKeyPressed("1")) selectedTower = "arrow";
   if (isKeyPressed("2")) selectedTower = "slow";
@@ -119,7 +118,7 @@ onFrame(() => {
 
   // Wave simulation
   if (state.phase === "wave") {
-    state = stepWave(state, dt);
+    state = stepWave(state, ctx.dt);
   }
 
   // Restart
@@ -130,17 +129,16 @@ onFrame(() => {
   }
 
   // --- Render ---
-  clearSprites();
 
   // Grid
   for (let y = 0; y < state.mapHeight; y++) {
     for (let x = 0; x < state.mapWidth; x++) {
       const cell = state.cells[y][x];
-      let tex = TEX_BLOCKED;
-      if (cell === 0) tex = TEX_PATH;
-      else if (cell === 1) tex = TEX_BUILDABLE;
-      drawSprite({
-        textureId: tex,
+      let col = COL_BLOCKED;
+      if (cell === 0) col = COL_PATH;
+      else if (cell === 1) col = COL_BUILDABLE;
+      drawColorSprite({
+        color: col,
         x: x * TILE_SIZE, y: y * TILE_SIZE,
         w: TILE_SIZE - 1, h: TILE_SIZE - 1,
         layer: 0,
@@ -152,8 +150,8 @@ onFrame(() => {
   if ((state.phase === "build" || state.phase === "between-waves") && validGrid) {
     if (state.cells[gridY][gridX] === 1) {
       const range = TOWER_STATS[selectedTower].range * TILE_SIZE;
-      drawSprite({
-        textureId: TEX_RANGE,
+      drawColorSprite({
+        color: COL_RANGE,
         x: gridX * TILE_SIZE + TILE_SIZE / 2 - range,
         y: gridY * TILE_SIZE + TILE_SIZE / 2 - range,
         w: range * 2, h: range * 2,
@@ -165,8 +163,8 @@ onFrame(() => {
 
   // Towers
   for (const tower of state.towers) {
-    drawSprite({
-      textureId: TOWER_TEX[tower.type],
+    drawColorSprite({
+      color: TOWER_COLOR[tower.type],
       x: tower.pos.x * TILE_SIZE + 4,
       y: tower.pos.y * TILE_SIZE + 4,
       w: TILE_SIZE - 8, h: TILE_SIZE - 8,
@@ -179,15 +177,15 @@ onFrame(() => {
     if (!enemy.alive) continue;
     const size = enemy.type === "tank" ? 32 : enemy.type === "fast" ? 20 : 24;
     const offset = (TILE_SIZE - size) / 2;
-    drawSprite({
-      textureId: ENEMY_TEX[enemy.type],
+    drawColorSprite({
+      color: ENEMY_COLOR[enemy.type],
       x: enemy.pos.x * TILE_SIZE + offset,
       y: enemy.pos.y * TILE_SIZE + offset,
       w: size, h: size,
       layer: 3,
     });
 
-    // Health bar
+    // Health bar (world-space, not HUD)
     if (enemy.hp < enemy.maxHp) {
       drawBar(
         enemy.pos.x * TILE_SIZE + 4,
@@ -210,55 +208,39 @@ onFrame(() => {
       ? "WAVE"
       : state.phase.toUpperCase();
 
-  drawText(`${phaseText}  Wave: ${state.currentWave + 1}/${state.waves.length}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y, {
-    scale: HUDLayout.TEXT_SCALE,
-    tint: Colors.WHITE,
-    layer: 100,
-    screenSpace: true,
-  });
+  hud.text(`${phaseText}  Wave: ${state.currentWave + 1}/${state.waves.length}`, 10, 10);
 
-  drawText(`Gold: ${state.gold}  Lives: ${state.lives}  Score: ${state.score}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT, {
-    scale: HUDLayout.TEXT_SCALE,
+  hud.text(`Gold: ${state.gold}  Lives: ${state.lives}  Score: ${state.score}`, 10, 35, {
     tint: Colors.GOLD,
-    layer: 100,
-    screenSpace: true,
   });
 
   // Selected tower
   const costStr = `[${selectedTower.toUpperCase()}] Cost: ${TOWER_COSTS[selectedTower]}`;
-  drawText(`Tower: ${costStr}  (1=Arrow 2=Slow 3=Splash)`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2, {
-    scale: HUDLayout.SMALL_TEXT_SCALE,
+  hud.text(`Tower: ${costStr}  (1=Arrow 2=Slow 3=Splash)`, 10, 60, {
+    scale: 1.5,
     tint: Colors.INFO,
-    layer: 100,
-    screenSpace: true,
   });
 
   if (state.phase === "build" || state.phase === "between-waves") {
-    drawText("Space=Place  S=Sell  Enter=Start Wave", HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2.5, {
-      scale: HUDLayout.SMALL_TEXT_SCALE,
+    hud.text("Space=Place  S=Sell  Enter=Start Wave", 10, 72.5, {
+      scale: 1.5,
       tint: Colors.SUCCESS,
-      layer: 100,
-      screenSpace: true,
     });
   }
 
   if (state.phase === "won") {
-    drawLabel("VICTORY! Press R to restart", HUDLayout.CENTER.x - 150, HUDLayout.CENTER.y - 20, {
+    hud.label("VICTORY! Press R to restart", 400 - 150, 300 - 20, {
       textColor: Colors.WIN,
       bgColor: Colors.HUD_BG,
       padding: 12,
-      scale: HUDLayout.TEXT_SCALE + 1,
-      layer: 110,
-      screenSpace: true,
+      scale: 3,
     });
   } else if (state.phase === "lost") {
-    drawLabel("DEFEATED! Press R to restart", HUDLayout.CENTER.x - 160, HUDLayout.CENTER.y - 20, {
+    hud.label("DEFEATED! Press R to restart", 400 - 160, 300 - 20, {
       textColor: Colors.LOSE,
       bgColor: Colors.HUD_BG,
       padding: 12,
-      scale: HUDLayout.TEXT_SCALE + 1,
-      layer: 110,
-      screenSpace: true,
+      scale: 3,
     });
   }
 });

@@ -2,17 +2,13 @@
 // Run with: arcane dev demos/msdf-text-showcase/msdf-text-showcase.ts
 
 import {
-  onFrame,
-  getDeltaTime,
   isKeyPressed,
   getViewportSize,
-  setBackgroundColor,
   drawText,
-  measureText,
   getDefaultFont,
   getDefaultMSDFFont,
 } from "../../runtime/rendering/index.ts";
-import { registerAgent } from "../../runtime/agent/protocol.ts";
+import { createGame } from "../../runtime/game/index.ts";
 
 // --- State ---
 
@@ -486,11 +482,14 @@ function drawSection6_Interactive() {
   }
 }
 
+// --- Game Bootstrap ---
+
+// background: 0.15, 0.15, 0.2 in 0-1 range = 38, 38, 51 in 0-255 range
+const game = createGame({ name: "msdf-text-showcase", background: { r: 38, g: 38, b: 51 } });
+
 // --- Main Frame Loop ---
 
-setBackgroundColor(0.15, 0.15, 0.2);
-
-onFrame(() => {
+game.onFrame((ctx) => {
   // Section switching with number keys
   if (isKeyPressed("1")) currentSection = 1;
   if (isKeyPressed("2")) currentSection = 2;
@@ -527,9 +526,10 @@ onFrame(() => {
 
 // --- Agent Registration ---
 
-registerAgent({
-  name: "msdf-text-showcase",
-  getState: () => ({ section: currentSection }),
-  setState: (s) => { currentSection = s.section; },
+type MSDFState = { section: number };
+
+game.state<MSDFState>({
+  get: () => ({ section: currentSection }),
+  set: (s) => { currentSection = s.section; },
   describe: (s) => `MSDF text showcase | Section ${s.section}/${totalSections}`,
 });

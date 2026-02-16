@@ -16,46 +16,36 @@
  */
 
 import {
-  onFrame,
-  clearSprites,
-  drawSprite,
   setCamera,
   isKeyPressed,
-  isKeyDown,
   isMouseButtonPressed,
-  getDeltaTime,
-  createSolidTexture,
   getMouseWorldPosition,
-  drawText,
   getViewportSize,
 } from "../../runtime/rendering/index.ts";
-import { drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
-import { registerAgent } from "../../runtime/agent/index.ts";
+import { Colors, HUDLayout, rgb } from "../../runtime/ui/index.ts";
+import { createGame, drawColorSprite, hud } from "../../runtime/game/index.ts";
 import {
   createPhysicsWorld,
   stepPhysics,
   destroyPhysicsWorld,
   createBody,
-  removeBody,
   getBodyState,
   setBodyVelocity,
-  applyImpulse,
   createDistanceJoint,
   createRevoluteJoint,
   getContacts,
 } from "../../runtime/physics/index.ts";
-import type { BodyId, Contact } from "../../runtime/physics/index.ts";
+import type { BodyId } from "../../runtime/physics/index.ts";
 
-// Textures
-const TEX_BOX = createSolidTexture("box", 180, 120, 60);
-const TEX_BALL = createSolidTexture("ball", 60, 140, 200);
-const TEX_GROUND = createSolidTexture("ground", 80, 80, 80);
-const TEX_WALL = createSolidTexture("wall", 60, 60, 60);
-const TEX_SEESAW = createSolidTexture("seesaw", 160, 100, 60);
-const TEX_PIVOT = createSolidTexture("pivot", 200, 200, 50);
-const TEX_ROPE = createSolidTexture("rope", 100, 60, 40);
-const TEX_SLEEP = createSolidTexture("sleep", 100, 100, 120);
-const TEX_BG = createSolidTexture("bg", 25, 25, 35);
+// Colors (0-255 via rgb() helper)
+const COL_BOX = rgb(180, 120, 60);
+const COL_BALL = rgb(60, 140, 200);
+const COL_GROUND = rgb(80, 80, 80);
+const COL_SEESAW = rgb(160, 100, 60);
+const COL_PIVOT = rgb(200, 200, 50);
+const COL_ROPE = rgb(100, 60, 40);
+const COL_SLEEP = rgb(100, 100, 120);
+const COL_BG = rgb(25, 25, 35);
 
 // Body tracking
 type TrackedBody = {
@@ -214,7 +204,7 @@ function spawnRope(x: number, y: number): void {
 // Initialize
 setupWorld();
 
-// State for demo
+// State for agent protocol
 type PlaygroundState = {
   spawnMode: number;
   bodyCount: number;
@@ -226,11 +216,12 @@ function getPlaygroundState(): PlaygroundState {
   return { spawnMode, bodyCount, gravityOn, contacts: getContacts().length };
 }
 
-// Agent protocol
-registerAgent<PlaygroundState>({
-  name: "physics-playground",
-  getState: getPlaygroundState,
-  setState: () => {},
+// Game setup
+const game = createGame({ name: "physics-playground", autoCamera: false });
+
+game.state<PlaygroundState>({
+  get: getPlaygroundState,
+  set: () => {},
   describe: (s, opts) => {
     if (opts.verbosity === "minimal") {
       return `Bodies: ${s.bodyCount}, Mode: ${s.spawnMode}`;
@@ -243,11 +234,11 @@ registerAgent<PlaygroundState>({
       description: "Reset the physics world",
     },
     spawnBox: {
-      handler: (s) => { spawnBox(VPW / 2, 100); return getPlaygroundState(); },
+      handler: () => { spawnBox(VPW / 2, 100); return getPlaygroundState(); },
       description: "Spawn a box at center-top",
     },
     spawnBall: {
-      handler: (s) => { spawnBall(VPW / 2, 100); return getPlaygroundState(); },
+      handler: () => { spawnBall(VPW / 2, 100); return getPlaygroundState(); },
       description: "Spawn a ball at center-top",
     },
   },
@@ -256,8 +247,19 @@ registerAgent<PlaygroundState>({
 // Mode names
 const MODE_NAMES = ["", "Box", "Ball", "Cluster", "Seesaw", "Rope"];
 
-onFrame(() => {
-  const dt = getDeltaTime();
+/** Pick the render color for a tracked body, factoring in sleep state. */
+function bodyColor(tracked: TrackedBody, sleeping: boolean): { r: number; g: number; b: number; a: number } {
+  switch (tracked.kind) {
+    case "box": return sleeping ? COL_SLEEP : COL_BOX;
+    case "ball": return sleeping ? COL_SLEEP : COL_BALL;
+    case "seesaw": return COL_SEESAW;
+    case "pivot": return COL_PIVOT;
+    case "rope": return COL_ROPE;
+    default: return COL_BOX;
+  }
+}
+
+game.onFrame((ctx) => {
   setCamera(VPW / 2, VPH / 2, 1);
 
   // Input: mode selection
@@ -276,7 +278,6 @@ onFrame(() => {
   if (isKeyPressed("g")) {
     gravityOn = !gravityOn;
     destroyPhysicsWorld();
-    const oldBodies = bodies;
     bodies = [];
     createPhysicsWorld({ gravityX: 0, gravityY: gravityOn ? 400 : 0 });
     // Recreating world clears bodies, so reset
@@ -319,51 +320,38 @@ onFrame(() => {
   }
 
   // Step physics
-  stepPhysics(dt);
+  stepPhysics(ctx.dt);
 
   // Get contacts for display
   const contacts = getContacts();
 
   // Render
-  clearSprites();
 
   // Background
-  drawSprite({ textureId: TEX_BG, x: 0, y: 0, w: VPW, h: VPH, layer: 0 });
+  drawColorSprite({ color: COL_BG, x: 0, y: 0, w: VPW, h: VPH, layer: 0 });
 
   // Draw all tracked bodies
   for (const tracked of bodies) {
-    const state = getBodyState(tracked.id);
-    const x = state.x;
-    const y = state.y;
-    const sleeping = state.sleeping;
-
-    let tex: number;
-    switch (tracked.kind) {
-      case "box": tex = sleeping ? TEX_SLEEP : TEX_BOX; break;
-      case "ball": tex = sleeping ? TEX_SLEEP : TEX_BALL; break;
-      case "seesaw": tex = TEX_SEESAW; break;
-      case "pivot": tex = TEX_PIVOT; break;
-      case "rope": tex = TEX_ROPE; break;
-      default: tex = TEX_BOX;
-    }
+    const bs = getBodyState(tracked.id);
+    const col = bodyColor(tracked, bs.sleeping);
 
     if (tracked.radius) {
       // Circle: draw as square centered on position
       const r = tracked.radius;
-      drawSprite({
-        textureId: tex,
-        x: x - r,
-        y: y - r,
+      drawColorSprite({
+        color: col,
+        x: bs.x - r,
+        y: bs.y - r,
         w: r * 2,
         h: r * 2,
         layer: 2,
       });
     } else {
       // AABB: draw from center
-      drawSprite({
-        textureId: tex,
-        x: x - tracked.halfW,
-        y: y - tracked.halfH,
+      drawColorSprite({
+        color: col,
+        x: bs.x - tracked.halfW,
+        y: bs.y - tracked.halfH,
         w: tracked.halfW * 2,
         h: tracked.halfH * 2,
         layer: 2,
@@ -372,8 +360,8 @@ onFrame(() => {
   }
 
   // Ground highlight
-  drawSprite({
-    textureId: TEX_GROUND,
+  drawColorSprite({
+    color: COL_GROUND,
     x: 0,
     y: VPH - 40,
     w: VPW,
@@ -386,38 +374,25 @@ onFrame(() => {
   const hudY = HUDLayout.TOP_LEFT.y;
   const lh = HUDLayout.LINE_HEIGHT;
 
-  drawText(`Physics Playground`, hudX, hudY, {
-    scale: HUDLayout.TEXT_SCALE,
-    tint: Colors.WHITE,
-    layer: 100,
-    screenSpace: true,
-  });
+  hud.text("Physics Playground", hudX, hudY);
 
-  drawText(`Bodies: ${bodyCount}  Contacts: ${contacts.length}`, hudX, hudY + lh, {
+  hud.text(`Bodies: ${bodyCount}  Contacts: ${contacts.length}`, hudX, hudY + lh, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
     tint: Colors.INFO,
-    layer: 100,
-    screenSpace: true,
   });
 
-  drawText(`Mode [1-5]: ${MODE_NAMES[spawnMode]}`, hudX, hudY + lh * 2, {
+  hud.text(`Mode [1-5]: ${MODE_NAMES[spawnMode]}`, hudX, hudY + lh * 2, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
     tint: Colors.WARNING,
-    layer: 100,
-    screenSpace: true,
   });
 
-  drawText(`Gravity: ${gravityOn ? "ON" : "OFF"} [G]`, hudX, hudY + lh * 3, {
+  hud.text(`Gravity: ${gravityOn ? "ON" : "OFF"} [G]`, hudX, hudY + lh * 3, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
     tint: gravityOn ? Colors.SUCCESS : Colors.LOSE,
-    layer: 100,
-    screenSpace: true,
   });
 
-  drawText(`[R] Reset  [Space] Launch  [Click] Spawn`, hudX, hudY + lh * 4, {
+  hud.text("[R] Reset  [Space] Launch  [Click] Spawn", hudX, hudY + lh * 4, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
     tint: Colors.LIGHT_GRAY,
-    layer: 100,
-    screenSpace: true,
   });
 });

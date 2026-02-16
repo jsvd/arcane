@@ -22,17 +22,11 @@
  */
 
 import {
-  onFrame,
-  clearSprites,
-  drawSprite,
   setCamera,
-  getCamera,
   isKeyDown,
   isKeyPressed,
-  getDeltaTime,
   createSolidTexture,
   getViewportSize,
-  drawText,
   // Tilemap
   createLayeredTilemap,
   setLayerTile,
@@ -54,7 +48,8 @@ import {
   createAutotileRule,
   applyAutotile,
 } from "../../runtime/rendering/index.ts";
-import { registerAgent } from "../../runtime/agent/index.ts";
+import { createGame, hud, drawColorSprite } from "../../runtime/game/index.ts";
+import { rgb } from "../../runtime/ui/types.ts";
 
 // ---------------------------------------------------------------------------
 // Tile IDs (simulated atlas: 8x8 = 64 tiles)
@@ -97,7 +92,7 @@ const MAP_H = 22;
 // ---------------------------------------------------------------------------
 
 const TEX_ATLAS = createSolidTexture("atlas", 128, 128, 128);
-const TEX_CURSOR = createSolidTexture("cursor", 255, 255, 0);
+const COL_CURSOR = rgb(255, 255, 0);
 
 // ---------------------------------------------------------------------------
 // Tile properties
@@ -287,12 +282,18 @@ setupAnimatedTiles();
 generateMap();
 
 // ---------------------------------------------------------------------------
+// Game bootstrap
+// ---------------------------------------------------------------------------
+
+const game = createGame({ name: "tilemap-showcase", autoCamera: false });
+
+// ---------------------------------------------------------------------------
 // Frame callback
 // ---------------------------------------------------------------------------
 
-onFrame(() => {
-  const dt = getDeltaTime();
-  const { width: vpW, height: vpH } = getViewportSize();
+game.onFrame((ctx) => {
+  const dt = ctx.dt;
+  const { width: vpW, height: vpH } = ctx.viewport;
 
   // Update animated tiles
   updateAnimatedTiles(dt);
@@ -341,7 +342,6 @@ onFrame(() => {
   setCamera(cameraX, cameraY, cameraZoom);
 
   // --- Render ---
-  clearSprites();
 
   // Draw all tilemap layers
   const camX = parallaxEnabled ? cameraX : 0;
@@ -351,8 +351,8 @@ onFrame(() => {
   // Draw cursor highlight
   const cursorWorldX = cursorGX * TILE_SIZE;
   const cursorWorldY = cursorGY * TILE_SIZE;
-  drawSprite({
-    textureId: TEX_CURSOR,
+  drawColorSprite({
+    color: COL_CURSOR,
     x: cursorWorldX,
     y: cursorWorldY,
     w: TILE_SIZE,
@@ -364,13 +364,10 @@ onFrame(() => {
   // --- HUD (screen-space) ---
   const hudX = 10;
   const hudScale = 1.5;
+  const smallScale = hudScale * 0.9;
 
   // Title
-  drawText("Tilemap Showcase", hudX, 10, {
-    scale: hudScale,
-    layer: 200,
-    screenSpace: true,
-  });
+  hud.text("Tilemap Showcase", hudX, 10, { scale: hudScale, layer: 200 });
 
   // Layer status
   const layers = getLayerNames(map);
@@ -379,29 +376,20 @@ onFrame(() => {
     const name = layers[i];
     const vis = layerVisibility[name] ?? true;
     const label = `[${i + 1}] ${name}: ${vis ? "ON" : "OFF"}`;
-    drawText(label, hudX, yOff, {
-      scale: hudScale * 0.9,
+    hud.text(label, hudX, yOff, {
+      scale: smallScale,
       layer: 200,
-      screenSpace: true,
       tint: vis ? { r: 0.5, g: 1, b: 0.5, a: 1 } : { r: 0.5, g: 0.5, b: 0.5, a: 1 },
     });
     yOff += 13;
   }
 
   // Parallax status
-  drawText(`[P] Parallax: ${parallaxEnabled ? "ON" : "OFF"}`, hudX, yOff, {
-    scale: hudScale * 0.9,
-    layer: 200,
-    screenSpace: true,
-  });
+  hud.text(`[P] Parallax: ${parallaxEnabled ? "ON" : "OFF"}`, hudX, yOff, { scale: smallScale, layer: 200 });
   yOff += 18;
 
   // Cursor info
-  drawText(`Cursor: (${cursorGX}, ${cursorGY})`, hudX, yOff, {
-    scale: hudScale * 0.9,
-    layer: 200,
-    screenSpace: true,
-  });
+  hud.text(`Cursor: (${cursorGX}, ${cursorGY})`, hudX, yOff, { scale: smallScale, layer: 200 });
   yOff += 13;
 
   // Tile property at cursor
@@ -410,54 +398,54 @@ onFrame(() => {
   const decoProp = getTilePropertyAt(map, "decoration", cursorGX, cursorGY, "name");
   const walkable = getTilePropertyAt(map, "collision", cursorGX, cursorGY, "solid");
 
-  drawText(`Ground: ${groundProp ?? "empty"}`, hudX, yOff, {
-    scale: hudScale * 0.9,
-    layer: 200,
-    screenSpace: true,
-  });
+  hud.text(`Ground: ${groundProp ?? "empty"}`, hudX, yOff, { scale: smallScale, layer: 200 });
   yOff += 13;
-  drawText(`Wall: ${wallProp ?? "empty"}`, hudX, yOff, {
-    scale: hudScale * 0.9,
-    layer: 200,
-    screenSpace: true,
-  });
+  hud.text(`Wall: ${wallProp ?? "empty"}`, hudX, yOff, { scale: smallScale, layer: 200 });
   yOff += 13;
-  drawText(`Deco: ${decoProp ?? "empty"}`, hudX, yOff, {
-    scale: hudScale * 0.9,
-    layer: 200,
-    screenSpace: true,
-  });
+  hud.text(`Deco: ${decoProp ?? "empty"}`, hudX, yOff, { scale: smallScale, layer: 200 });
   yOff += 13;
-  drawText(`Solid: ${walkable === true ? "YES" : "no"}`, hudX, yOff, {
-    scale: hudScale * 0.9,
+  hud.text(`Solid: ${walkable === true ? "YES" : "no"}`, hudX, yOff, {
+    scale: smallScale,
     layer: 200,
-    screenSpace: true,
     tint: walkable ? { r: 1, g: 0.3, b: 0.3, a: 1 } : { r: 0.5, g: 1, b: 0.5, a: 1 },
   });
 
   // Controls (bottom)
-  drawText("Arrows=Camera Z/X=Zoom WASD=Cursor", hudX, vpH - 20, {
+  hud.text("Arrows=Camera Z/X=Zoom WASD=Cursor", hudX, vpH - 20, {
     scale: hudScale * 0.8,
     layer: 200,
-    screenSpace: true,
     tint: { r: 0.7, g: 0.7, b: 0.7, a: 1 },
   });
 });
 
 // ---------------------------------------------------------------------------
-// Agent protocol
+// Agent protocol (wired via game.state())
 // ---------------------------------------------------------------------------
 
-registerAgent({
-  name: "tilemap-showcase",
-  getState: () => ({
+type ShowcaseState = {
+  camera: { x: number; y: number; zoom: number };
+  cursor: { gx: number; gy: number };
+  layers: Record<string, boolean>;
+  parallax: boolean;
+  mapSize: { w: number; h: number; tileSize: number };
+};
+
+game.state<ShowcaseState>({
+  get: () => ({
     camera: { x: cameraX, y: cameraY, zoom: cameraZoom },
     cursor: { gx: cursorGX, gy: cursorGY },
     layers: layerVisibility,
     parallax: parallaxEnabled,
     mapSize: { w: MAP_W, h: MAP_H, tileSize: TILE_SIZE },
   }),
-  describeState: () => {
+  set: (s) => {
+    cameraX = s.camera.x;
+    cameraY = s.camera.y;
+    cameraZoom = s.camera.zoom;
+    cursorGX = s.cursor.gx;
+    cursorGY = s.cursor.gy;
+  },
+  describe: () => {
     const lines = [
       `Tilemap Showcase (${MAP_W}x${MAP_H} tiles, ${TILE_SIZE}px)`,
       `Camera: (${Math.round(cameraX)}, ${Math.round(cameraY)}) zoom=${cameraZoom.toFixed(1)}`,
@@ -467,39 +455,52 @@ registerAgent({
     ];
     return lines.join("\n");
   },
-  getActions: () => [
-    { id: "toggle-ground", name: "Toggle ground layer" },
-    { id: "toggle-walls", name: "Toggle walls layer" },
-    { id: "toggle-decoration", name: "Toggle decoration layer" },
-    { id: "toggle-collision", name: "Toggle collision layer" },
-    { id: "toggle-parallax", name: "Toggle parallax" },
-    { id: "reapply-autotile", name: "Re-apply auto-tiling" },
-  ],
-  performAction: (id: string) => {
-    switch (id) {
-      case "toggle-ground":
+  actions: {
+    "toggle-ground": {
+      handler: (s) => {
         layerVisibility.ground = !layerVisibility.ground;
         setLayerVisible(map, "ground", layerVisibility.ground);
-        break;
-      case "toggle-walls":
+        return s;
+      },
+      description: "Toggle ground layer",
+    },
+    "toggle-walls": {
+      handler: (s) => {
         layerVisibility.walls = !layerVisibility.walls;
         setLayerVisible(map, "walls", layerVisibility.walls);
-        break;
-      case "toggle-decoration":
+        return s;
+      },
+      description: "Toggle walls layer",
+    },
+    "toggle-decoration": {
+      handler: (s) => {
         layerVisibility.decoration = !layerVisibility.decoration;
         setLayerVisible(map, "decoration", layerVisibility.decoration);
-        break;
-      case "toggle-collision":
+        return s;
+      },
+      description: "Toggle decoration layer",
+    },
+    "toggle-collision": {
+      handler: (s) => {
         layerVisibility.collision = !layerVisibility.collision;
         setLayerVisible(map, "collision", layerVisibility.collision);
-        break;
-      case "toggle-parallax":
+        return s;
+      },
+      description: "Toggle collision layer",
+    },
+    "toggle-parallax": {
+      handler: (s) => {
         parallaxEnabled = !parallaxEnabled;
-        break;
-      case "reapply-autotile":
+        return s;
+      },
+      description: "Toggle parallax",
+    },
+    "reapply-autotile": {
+      handler: (s) => {
         applyWallAutotiling();
-        break;
-    }
-    return true;
+        return s;
+      },
+      description: "Re-apply auto-tiling",
+    },
   },
 });

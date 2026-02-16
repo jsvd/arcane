@@ -13,21 +13,16 @@
  */
 
 import {
-  onFrame,
-  clearSprites,
   drawSprite,
   setCamera,
   getCamera,
   isKeyPressed,
-  getDeltaTime,
   createSolidTexture,
   getMousePosition,
   getMouseWorldPosition,
-  getViewportSize,
-  drawText,
 } from "../../runtime/rendering/index.ts";
-import { Colors, HUDLayout, drawPanel, drawLabel } from "../../runtime/ui/index.ts";
-import { registerAgent } from "../../runtime/agent/index.ts";
+import { Colors, HUDLayout, drawPanel } from "../../runtime/ui/index.ts";
+import { createGame, hud, drawColorSprite } from "../../runtime/game/index.ts";
 import {
   tween,
   updateTweens,
@@ -51,10 +46,7 @@ import {
 import type { EmitterConfig } from "../../runtime/particles/index.ts";
 
 // --- Textures ---
-const TEX_BOX = createSolidTexture("box", 100, 150, 255);
-const TEX_BUTTON = createSolidTexture("button", 80, 120, 200);
 const TEX_PARTICLE = createSolidTexture("particle", 255, 255, 255);
-const TEX_BG = createSolidTexture("bg", 40, 40, 50);
 
 // --- State ---
 interface DemoState {
@@ -243,11 +235,12 @@ function spawnTrail(x: number, y: number) {
   createEmitter(config);
 }
 
-// --- Agent Protocol ---
-registerAgent<DemoState>({
-  name: "juice-showcase",
-  getState: () => state,
-  setState: (s) => {
+// --- Game Bootstrap ---
+const game = createGame({ name: "juice-showcase" });
+
+game.state<DemoState>({
+  get: () => state,
+  set: (s) => {
     state.juiceEnabled = s.juiceEnabled;
   },
   describe: (s) => {
@@ -276,13 +269,11 @@ registerAgent<DemoState>({
   },
 });
 
-// --- Camera Setup ---
-const { width: VPW, height: VPH } = getViewportSize();
-setCamera(VPW / 2, VPH / 2, 1);
-
 // --- Game Loop ---
-onFrame(() => {
-  const dt = getDeltaTime();
+game.onFrame((ctx) => {
+  const dt = ctx.dt;
+  const VPW = ctx.viewport.width;
+  const VPH = ctx.viewport.height;
 
   // Toggle juice with space
   if (isKeyPressed("Space")) {
@@ -334,16 +325,15 @@ onFrame(() => {
   );
 
   // --- Render ---
-  clearSprites();
 
   // Background
-  drawSprite({ textureId: TEX_BG, x: 0, y: 0, w: VPW, h: VPH, layer: 0 });
+  drawColorSprite({ color: { r: 0.157, g: 0.157, b: 0.196, a: 1 }, x: 0, y: 0, w: VPW, h: VPH, layer: 0 });
 
   // Boxes (tween targets)
   for (const box of state.boxes) {
     const size = 64 * box.scale;
-    drawSprite({
-      textureId: TEX_BOX,
+    drawColorSprite({
+      color: { r: 0.392, g: 0.588, b: 1, a: 1 },
       x: box.x - size / 2,
       y: box.y - size / 2,
       w: size,
@@ -380,11 +370,9 @@ onFrame(() => {
       screenSpace: true,
     });
 
-    drawText(button.label, button.x + 10, button.y + 12, {
+    hud.text(button.label, button.x + 10, button.y + 12, {
       scale: 1.5,
-      tint: Colors.WHITE,
       layer: 3,
-      screenSpace: true,
     });
   }
 
@@ -419,28 +407,21 @@ onFrame(() => {
   const statusText = state.juiceEnabled ? "JUICE: ON" : "JUICE: OFF";
   const statusColor = state.juiceEnabled ? Colors.SUCCESS : Colors.DANGER;
 
-  drawLabel(statusText, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y, {
+  hud.label(statusText, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y, {
     textColor: statusColor,
-    bgColor: Colors.HUD_BG,
-    padding: 8,
-    scale: HUDLayout.TEXT_SCALE,
-    layer: 110,
-    screenSpace: true,
   });
 
-  drawText("Space: Toggle Juice | Click buttons to trigger effects", HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + 40, {
+  hud.text("Space: Toggle Juice | Click buttons to trigger effects", HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + 40, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
     tint: Colors.LIGHT_GRAY,
     layer: 110,
-    screenSpace: true,
   });
 
   // Particle count
-  drawText(`Particles: ${particles.length}`, HUDLayout.TOP_RIGHT.x - 100, HUDLayout.TOP_LEFT.y, {
+  hud.text(`Particles: ${particles.length}`, HUDLayout.TOP_RIGHT.x - 100, HUDLayout.TOP_LEFT.y, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
     tint: Colors.INFO,
     layer: 110,
-    screenSpace: true,
   });
 
   // Instructions at bottom
@@ -452,10 +433,9 @@ onFrame(() => {
     screenSpace: true,
   });
 
-  drawText("Tip: Click 'Explosion' or 'Trail', then click anywhere to spawn particles", HUDLayout.BOTTOM_LEFT.x + 10, HUDLayout.BOTTOM_LEFT.y - 30, {
+  hud.text("Tip: Click 'Explosion' or 'Trail', then click anywhere to spawn particles", HUDLayout.BOTTOM_LEFT.x + 10, HUDLayout.BOTTOM_LEFT.y - 30, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
     tint: Colors.LIGHT_GRAY,
     layer: 111,
-    screenSpace: true,
   });
 });

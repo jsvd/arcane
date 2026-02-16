@@ -19,20 +19,17 @@
  */
 
 import {
-  onFrame,
-  clearSprites,
-  drawSprite,
-  setCamera,
   isKeyDown,
   isKeyPressed,
-  getDeltaTime,
-  createSolidTexture,
+  setCamera,
   getViewportSize,
   drawText,
   addPostProcessEffect,
   removeEffect,
   setEffectParam,
 } from "../../runtime/rendering/index.ts";
+import { rgb } from "../../runtime/ui/types.ts";
+import { createGame, drawColorSprite } from "../../runtime/game/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 
 // --- Constants ---
@@ -51,15 +48,15 @@ const SHOOT_COOLDOWN = 0.15;
 const PARTICLE_LIFETIME = 0.6;
 const INVULNERABLE_TIME = 2.0;
 
-// --- Textures ---
-const TEX_SHIP = createSolidTexture("ship", 180, 220, 255);
-const TEX_SHIP_THRUST = createSolidTexture("thrust", 255, 160, 50);
-const TEX_BULLET = createSolidTexture("bullet", 255, 255, 200);
-const TEX_ASTEROID = createSolidTexture("asteroid", 160, 140, 120);
-const TEX_PARTICLE = createSolidTexture("particle", 255, 200, 100);
-const TEX_EXPLOSION = createSolidTexture("explosion", 255, 120, 40);
-const TEX_STAR = createSolidTexture("star", 200, 200, 220);
-const TEX_BG = createSolidTexture("bg", 5, 5, 15);
+// --- Colors ---
+const COL_SHIP = rgb(180, 220, 255);
+const COL_THRUST = rgb(255, 160, 50);
+const COL_BULLET = rgb(255, 255, 200);
+const COL_ASTEROID = rgb(160, 140, 120);
+const COL_PARTICLE = rgb(255, 200, 100);
+const COL_EXPLOSION = rgb(255, 120, 40);
+const COL_STAR = rgb(200, 200, 220);
+const COL_BG = rgb(5, 5, 15);
 
 // --- Types ---
 type Vec2 = { x: number; y: number };
@@ -459,21 +456,19 @@ function spawnExplosion(s: GameState, x: number, y: number, radius: number): voi
 
 // --- Render ---
 function render(s: GameState): void {
-  clearSprites();
-
   const fw = s.fieldW;
   const fh = s.fieldH;
 
   // Background
-  drawSprite({ textureId: TEX_BG, x: 0, y: 0, w: fw, h: fh, layer: -10 });
+  drawColorSprite({ color: COL_BG, x: 0, y: 0, w: fw, h: fh, layer: -10 });
 
   // Stars (twinkle with opacity)
   for (const star of s.stars) {
     const twinkle =
       0.5 + 0.5 * Math.sin(s.time * 2 + star.twinklePhase);
     const alpha = star.brightness * twinkle;
-    drawSprite({
-      textureId: TEX_STAR,
+    drawColorSprite({
+      color: COL_STAR,
       x: star.x - 1,
       y: star.y - 1,
       w: 2,
@@ -486,9 +481,9 @@ function render(s: GameState): void {
   // Particles (additive blending + opacity fade)
   for (const p of s.particles) {
     const t = p.life / p.maxLife;
-    const tex = p.isExplosion ? TEX_EXPLOSION : TEX_PARTICLE;
-    drawSprite({
-      textureId: tex,
+    const col = p.isExplosion ? COL_EXPLOSION : COL_PARTICLE;
+    drawColorSprite({
+      color: col,
       x: p.x - p.size / 2,
       y: p.y - p.size / 2,
       w: p.size,
@@ -502,8 +497,8 @@ function render(s: GameState): void {
   // Asteroids (rotation)
   for (const a of s.asteroids) {
     const r = ASTEROID_SIZES[a.size];
-    drawSprite({
-      textureId: TEX_ASTEROID,
+    drawColorSprite({
+      color: COL_ASTEROID,
       x: a.x - r,
       y: a.y - r,
       w: r * 2,
@@ -518,8 +513,8 @@ function render(s: GameState): void {
   // Bullets
   for (const b of s.bullets) {
     const opacity = Math.min(b.life / 0.3, 1);
-    drawSprite({
-      textureId: TEX_BULLET,
+    drawColorSprite({
+      color: COL_BULLET,
       x: b.x - BULLET_SIZE / 2,
       y: b.y - BULLET_SIZE / 2,
       w: BULLET_SIZE,
@@ -545,8 +540,8 @@ function render(s: GameState): void {
         const glowX = ship.x + Math.cos(backAngle) * SHIP_SIZE * 0.5;
         const glowY = ship.y + Math.sin(backAngle) * SHIP_SIZE * 0.5;
         const glowSize = SHIP_SIZE * (0.8 + Math.sin(s.time * 20) * 0.2);
-        drawSprite({
-          textureId: TEX_SHIP_THRUST,
+        drawColorSprite({
+          color: COL_THRUST,
           x: glowX - glowSize / 2,
           y: glowY - glowSize / 2,
           w: glowSize,
@@ -567,8 +562,8 @@ function render(s: GameState): void {
         Math.cos(ship.angle) * ship.vx + Math.sin(ship.angle) * ship.vy <
           -30;
 
-      drawSprite({
-        textureId: TEX_SHIP,
+      drawColorSprite({
+        color: COL_SHIP,
         x: ship.x - SHIP_SIZE / 2,
         y: ship.y - SHIP_SIZE / 2,
         w: SHIP_SIZE,
@@ -584,14 +579,14 @@ function render(s: GameState): void {
 
   // HUD
   const hudY = 8;
-  drawLabel("Score: " + s.score, 10, hudY, 100);
-  drawLabel("Lives: " + s.lives, fw - 110, hudY, 100);
-  drawLabel("Level: " + s.level, fw / 2 - 40, hudY, 80);
+  drawHudLabel("Score: " + s.score, 10, hudY, 100);
+  drawHudLabel("Lives: " + s.lives, fw - 110, hudY, 100);
+  drawHudLabel("Level: " + s.level, fw / 2 - 40, hudY, 80);
 
   if (s.postProcessEnabled) {
-    drawLabel("CRT: ON", fw - 110, fh - 24, 100);
+    drawHudLabel("CRT: ON", fw - 110, fh - 24, 100);
   } else {
-    drawLabel("CRT: OFF", fw - 110, fh - 24, 100);
+    drawHudLabel("CRT: OFF", fw - 110, fh - 24, 100);
   }
 
   if (s.gameOver) {
@@ -609,7 +604,7 @@ function render(s: GameState): void {
   }
 }
 
-function drawLabel(text: string, x: number, y: number, _w: number): void {
+function drawHudLabel(text: string, x: number, y: number, _w: number): void {
   drawText(text, x, y, { tint: { r: 0.8, g: 0.8, b: 0.9, a: 1 } });
 }
 
@@ -617,9 +612,10 @@ function drawLabel(text: string, x: number, y: number, _w: number): void {
 setCamera(vpW / 2, vpH / 2);
 
 // --- Game loop ---
-onFrame(() => {
-  const dt = getDeltaTime();
-  update(state, Math.min(dt, 0.05));
+const game = createGame({ autoCamera: false, autoClear: true });
+
+game.onFrame((ctx) => {
+  update(state, Math.min(ctx.dt, 0.05));
   render(state);
 });
 
@@ -668,4 +664,4 @@ registerAgent({
     (state.gameOver ? " | GAME OVER" : "") +
     ` | Asteroids: ${state.asteroids.length}` +
     ` | CRT: ${state.postProcessEnabled ? "ON" : "OFF"}`,
-});
+} as any);

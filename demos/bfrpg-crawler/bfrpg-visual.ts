@@ -3,23 +3,17 @@
  */
 
 import {
-  onFrame,
-  drawSprite,
-  clearSprites,
-  setCamera,
   isKeyPressed,
-  createSolidTexture,
-  drawText,
-  getDefaultFont,
+  setCamera,
   setAmbientLight,
   addPointLight,
   clearLights,
   getViewportSize,
 } from "../../runtime/rendering/index.ts";
-import { drawBar, drawPanel, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
-import { registerAgent } from "../../runtime/agent/index.ts";
-import type { AgentConfig } from "../../runtime/agent/index.ts";
-import { createGame } from "./game.ts";
+import { drawPanel, Colors } from "../../runtime/ui/index.ts";
+import { rgb } from "../../runtime/ui/types.ts";
+import { createGame, drawColorSprite, hud } from "../../runtime/game/index.ts";
+import { createGame as createBFRPGGame } from "./game.ts";
 import {
   moveCharacter,
   checkDeath,
@@ -34,25 +28,24 @@ const TILE_SIZE = 16.0;
 const SEED = 12345;
 const TEXT_SCALE = 1.5; // Reduced from HUDLayout.TEXT_SCALE (2) for better readability
 
-// Textures
-const TEX_WALL = createSolidTexture("wall", 60, 60, 80);
-const TEX_FLOOR = createSolidTexture("floor", 140, 120, 100);
-const TEX_CORRIDOR = createSolidTexture("corridor", 120, 110, 90);
-const TEX_STAIRS = createSolidTexture("stairs", 255, 255, 100);
-const TEX_PLAYER = createSolidTexture("player", 60, 180, 255);
-const TEX_MONSTER = createSolidTexture("monster", 255, 60, 60);
-const TEX_EXPLORED = createSolidTexture("explored", 40, 40, 55);
+// Colors
+const COL_WALL = rgb(60, 60, 80);
+const COL_FLOOR = rgb(140, 120, 100);
+const COL_CORRIDOR = rgb(120, 110, 90);
+const COL_STAIRS = rgb(255, 255, 100);
+const COL_PLAYER = rgb(60, 180, 255);
+const COL_MONSTER = rgb(255, 60, 60);
+const COL_EXPLORED = rgb(40, 40, 55);
 
 // Initialize game
-let state = createGame("Thrain", "Fighter", "Dwarf", SEED);
+let state = createBFRPGGame("Thrain", "Fighter", "Dwarf", SEED);
 
-// Agent protocol
-const agentConfig: AgentConfig<BFRPGState> = {
-  name: "bfrpg-crawler",
-  getState: () => state,
-  setState: (s) => {
-    state = s;
-  },
+// --- Game setup ---
+const game = createGame({ name: "bfrpg-crawler", autoCamera: false, autoClear: true });
+
+game.state<BFRPGState>({
+  get: () => state,
+  set: (s) => { state = s; },
   describe: (s, opts) => {
     const { character, dungeon, phase } = s;
 
@@ -125,11 +118,9 @@ Phase: ${phase}`;
       description: "Descend stairs to next floor (heals 25% HP)",
     },
   },
-};
+});
 
-registerAgent(agentConfig);
-
-onFrame(() => {
+game.onFrame(() => {
   // Handle input
   handleInput();
 
@@ -148,7 +139,6 @@ onFrame(() => {
   setupLighting();
 
   // Render
-  clearSprites();
   renderDungeon();
   renderMonsters();
   renderCharacter();
@@ -231,18 +221,17 @@ function renderDungeon() {
 
       if (fov.visible[y][x]) {
         // Currently visible
-        let tex: number;
-        if (tile === "wall") tex = TEX_WALL;
-        else if (tile === "floor") tex = TEX_FLOOR;
-        else if (tile === "corridor") tex = TEX_CORRIDOR;
-        else if (tile === "stairs") tex = TEX_STAIRS;
-        else tex = TEX_FLOOR;
+        let col = COL_FLOOR;
+        if (tile === "wall") col = COL_WALL;
+        else if (tile === "floor") col = COL_FLOOR;
+        else if (tile === "corridor") col = COL_CORRIDOR;
+        else if (tile === "stairs") col = COL_STAIRS;
 
-        drawSprite({ textureId: tex, x: px, y: py, w: TILE_SIZE, h: TILE_SIZE, layer: 0 });
+        drawColorSprite({ color: col, x: px, y: py, w: TILE_SIZE, h: TILE_SIZE, layer: 0 });
       } else if (fov.explored[y][x]) {
         // Explored but not visible
-        drawSprite({
-          textureId: TEX_EXPLORED,
+        drawColorSprite({
+          color: COL_EXPLORED,
           x: px,
           y: py,
           w: TILE_SIZE,
@@ -261,8 +250,8 @@ function renderMonsters() {
     if (!monster.alive) continue;
     if (!fov.visible[monster.pos.y]?.[monster.pos.x]) continue;
 
-    drawSprite({
-      textureId: TEX_MONSTER,
+    drawColorSprite({
+      color: COL_MONSTER,
       x: monster.pos.x * TILE_SIZE + 2.0,
       y: monster.pos.y * TILE_SIZE + 2.0,
       w: TILE_SIZE - 4.0,
@@ -275,8 +264,8 @@ function renderMonsters() {
 function renderCharacter() {
   const { character } = state;
 
-  drawSprite({
-    textureId: TEX_PLAYER,
+  drawColorSprite({
+    color: COL_PLAYER,
     x: character.pos.x * TILE_SIZE + 2.0,
     y: character.pos.y * TILE_SIZE + 2.0,
     w: TILE_SIZE - 4.0,
@@ -288,7 +277,6 @@ function renderCharacter() {
 function renderHUD() {
   const { character, dungeon, log } = state;
 
-  const font = getDefaultFont();
   const viewport = getViewportSize();
 
   // Character info panel (top-left, screen-space)
@@ -306,70 +294,69 @@ function renderHUD() {
   });
 
   // Character name and class
-  drawText(
+  hud.text(
     `${character.name}`,
     panelX + 10.0,
     panelY + 10.0,
-    { font, scale: TEXT_SCALE, layer: 11, screenSpace: true }
+    { scale: TEXT_SCALE, layer: 11 }
   );
 
-  drawText(
+  hud.text(
     `L${character.level} ${character.race} ${character.class}`,
     panelX + 10.0,
     panelY + 25.0,
-    { font, scale: TEXT_SCALE, layer: 11, screenSpace: true }
+    { scale: TEXT_SCALE, layer: 11 }
   );
 
   // HP bar
-  drawLabel("HP:", panelX + 10.0, panelY + 45.0, { scale: TEXT_SCALE, layer: 11, screenSpace: true });
+  hud.label("HP:", panelX + 10.0, panelY + 45.0, { scale: TEXT_SCALE, layer: 11 });
 
   const hpRatio = character.hp / character.maxHp;
   const hpColor = hpRatio > 0.5 ? Colors.SUCCESS : hpRatio > 0.25 ? Colors.WARNING : Colors.DANGER;
-  drawBar(
+  hud.bar(
     panelX + 40.0,
     panelY + 45.0,
-    150.0,
-    12.0,
     hpRatio,
     {
+      width: 150,
+      height: 12,
       fillColor: hpColor,
       bgColor: Colors.DANGER,
       borderColor: Colors.HUD_BG_LIGHT,
-      borderWidth: 1.0,
+      borderWidth: 1,
       layer: 11,
-      screenSpace: true,
     }
   );
 
-  drawText(
+  hud.text(
     `${character.hp}/${character.maxHp}`,
     panelX + 100.0,
     panelY + 46.0,
-    { font, scale: TEXT_SCALE, layer: 12, screenSpace: true }
+    { scale: TEXT_SCALE, layer: 12 }
   );
 
   // Stats
-  drawText(
+  hud.text(
     `AC: ${character.ac}  BAB: +${character.bab}`,
     panelX + 10.0,
     panelY + 65.0,
-    { font, scale: TEXT_SCALE, layer: 11, screenSpace: true }
+    { scale: TEXT_SCALE, layer: 11 }
   );
 
   // Floor and gold
-  drawText(
+  hud.text(
     `Floor: ${dungeon.floor}  Gold: ${character.gold}`,
     panelX + 10.0,
     panelY + 80.0,
-    { font, scale: TEXT_SCALE, layer: 11, screenSpace: true }
+    { scale: TEXT_SCALE, layer: 11 }
   );
 
   // Kills
-  drawText(
+  hud.text(
     `Kills: ${character.kills}`,
     panelX + 10.0,
     panelY + 95.0,
-    { font, scale: TEXT_SCALE, layer: 11, screenSpace: true }
+    { scale: TEXT_SCALE, layer: 11 }
   );
 
   // Message log (bottom panel, screen-space)
@@ -389,7 +376,7 @@ function renderHUD() {
   // Show last 2 log messages
   const recentLogs = log.slice(-2);
   for (let i = 0; i < recentLogs.length; i++) {
-    drawText(recentLogs[i].message, logPanelX + 10.0, logPanelY + 10.0 + i * 12.0, { font, scale: TEXT_SCALE, layer: 11, screenSpace: true });
+    hud.text(recentLogs[i].message, logPanelX + 10.0, logPanelY + 10.0 + i * 12.0, { scale: TEXT_SCALE, layer: 11 });
   }
 
   // Controls help panel (bottom-right)
@@ -406,17 +393,16 @@ function renderHUD() {
     screenSpace: true,
   });
 
-  drawText("Controls:", helpPanelX + 10.0, helpPanelY + 10.0, { font, scale: TEXT_SCALE, layer: 11, screenSpace: true });
-  drawText("WASD - Move", helpPanelX + 10.0, helpPanelY + 25.0, { font, scale: TEXT_SCALE * 0.8, layer: 11, screenSpace: true });
-  drawText("R - Rest", helpPanelX + 10.0, helpPanelY + 38.0, { font, scale: TEXT_SCALE * 0.8, layer: 11, screenSpace: true });
-  drawText("> - Stairs", helpPanelX + 10.0, helpPanelY + 51.0, { font, scale: TEXT_SCALE * 0.8, layer: 11, screenSpace: true });
-  drawText("1/2 - Combat", helpPanelX + 10.0, helpPanelY + 64.0, { font, scale: TEXT_SCALE * 0.8, layer: 11, screenSpace: true });
+  hud.text("Controls:", helpPanelX + 10.0, helpPanelY + 10.0, { scale: TEXT_SCALE, layer: 11 });
+  hud.text("WASD - Move", helpPanelX + 10.0, helpPanelY + 25.0, { scale: TEXT_SCALE * 0.8, layer: 11 });
+  hud.text("R - Rest", helpPanelX + 10.0, helpPanelY + 38.0, { scale: TEXT_SCALE * 0.8, layer: 11 });
+  hud.text("> - Stairs", helpPanelX + 10.0, helpPanelY + 51.0, { scale: TEXT_SCALE * 0.8, layer: 11 });
+  hud.text("1/2 - Combat", helpPanelX + 10.0, helpPanelY + 64.0, { scale: TEXT_SCALE * 0.8, layer: 11 });
 }
 
 function renderCombatUI() {
   // TODO: Implement combat UI
   // For now, just show a simple indicator
-  const font = getDefaultFont();
   const viewport = getViewportSize();
 
   // Position panel on right side
@@ -433,15 +419,14 @@ function renderCombatUI() {
     screenSpace: true,
   });
 
-  drawText("COMBAT!", panelX + 20.0, panelY + 10.0, { font, scale: TEXT_SCALE, layer: 11, screenSpace: true });
+  hud.text("COMBAT!", panelX + 20.0, panelY + 10.0, { scale: TEXT_SCALE, layer: 11 });
 
-  drawText("1 - Attack", panelX + 20.0, panelY + 30.0, { font, scale: TEXT_SCALE, layer: 11, screenSpace: true });
+  hud.text("1 - Attack", panelX + 20.0, panelY + 30.0, { scale: TEXT_SCALE, layer: 11 });
 
-  drawText("2 - Dodge", panelX + 20.0, panelY + 45.0, { font, scale: TEXT_SCALE, layer: 11, screenSpace: true });
+  hud.text("2 - Dodge", panelX + 20.0, panelY + 45.0, { scale: TEXT_SCALE, layer: 11 });
 }
 
 function renderDeathScreen() {
-  const font = getDefaultFont();
   const viewport = getViewportSize();
 
   // Darken overlay
@@ -457,25 +442,24 @@ function renderDeathScreen() {
   const centerX = viewport.width / 2.0;
   const centerY = viewport.height / 2.0;
 
-  drawText("YOU DIED", centerX - 70.0, centerY - 30.0, { font, scale: TEXT_SCALE, tint: Colors.LOSE, layer: 21, screenSpace: true });
+  hud.text("YOU DIED", centerX - 70.0, centerY - 30.0, { scale: TEXT_SCALE, tint: Colors.LOSE, layer: 21 });
 
-  drawText(
+  hud.text(
     `Floor reached: ${state.dungeon.floor}`,
     centerX - 90.0,
     centerY,
-    { font, scale: TEXT_SCALE, layer: 21, screenSpace: true }
+    { scale: TEXT_SCALE, layer: 21 }
   );
 
-  drawText(
+  hud.text(
     `Monsters slain: ${state.character.kills}`,
     centerX - 95.0,
     centerY + 20.0,
-    { font, scale: TEXT_SCALE, layer: 21, screenSpace: true }
+    { scale: TEXT_SCALE, layer: 21 }
   );
 }
 
 function renderVictoryScreen() {
-  const font = getDefaultFont();
   const viewport = getViewportSize();
 
   // Victory overlay
@@ -491,26 +475,26 @@ function renderVictoryScreen() {
   const centerX = viewport.width / 2.0;
   const centerY = viewport.height / 2.0;
 
-  drawText("VICTORY!", centerX - 65.0, centerY - 30.0, { font, scale: TEXT_SCALE, tint: Colors.WIN, layer: 21, screenSpace: true });
+  hud.text("VICTORY!", centerX - 65.0, centerY - 30.0, { scale: TEXT_SCALE, tint: Colors.WIN, layer: 21 });
 
-  drawText(
+  hud.text(
     `You conquered ${state.dungeon.floor} floors!`,
     centerX - 130.0,
     centerY,
-    { font, scale: TEXT_SCALE, layer: 21, screenSpace: true }
+    { scale: TEXT_SCALE, layer: 21 }
   );
 
-  drawText(
+  hud.text(
     `Final level: ${state.character.level}`,
     centerX - 85.0,
     centerY + 20.0,
-    { font, scale: TEXT_SCALE, layer: 21, screenSpace: true }
+    { scale: TEXT_SCALE, layer: 21 }
   );
 
-  drawText(
+  hud.text(
     `Total kills: ${state.character.kills}`,
     centerX - 80.0,
     centerY + 40.0,
-    { font, scale: TEXT_SCALE, layer: 21, screenSpace: true }
+    { scale: TEXT_SCALE, layer: 21 }
   );
 }

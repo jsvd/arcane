@@ -6,18 +6,14 @@
  */
 
 import {
-  onFrame,
-  clearSprites,
   drawSprite,
   setCamera,
   isKeyDown,
   isKeyPressed,
-  getDeltaTime,
   loadTexture,
   createSolidTexture,
   loadSound,
   playSound,
-  drawText,
   createAnimation,
   playAnimation,
   updateAnimation,
@@ -26,7 +22,7 @@ import {
 } from "../../runtime/rendering/index.ts";
 import type { AnimationState } from "../../runtime/rendering/index.ts";
 import { Colors } from "../../runtime/ui/index.ts";
-import { registerAgent } from "../../runtime/agent/index.ts";
+import { createGame, hud } from "../../runtime/game/index.ts";
 
 // --- Types ---
 type State = {
@@ -114,14 +110,15 @@ const state: State = {
   assetsLoaded: assetsExist,
 };
 
-// --- Camera ---
+// --- Game Bootstrap ---
+const game = createGame({ name: "sprite-demo", autoCamera: false, zoom: 1 });
+
 setCamera(400, 300, 1);
 
 // --- Agent Protocol ---
-registerAgent<State>({
-  name: "sprite-demo",
-  getState: () => state,
-  setState: (s) => {
+game.state<State>({
+  get: () => state,
+  set: (s) => {
     state.x = s.x;
     state.y = s.y;
     state.dirX = s.dirX;
@@ -161,8 +158,8 @@ registerAgent<State>({
 // --- Game Loop ---
 const MOVE_SPEED = 150; // pixels per second
 
-onFrame(() => {
-  const dt = getDeltaTime();
+game.onFrame((ctx) => {
+  const dt = ctx.dt;
 
   // --- Input ---
   let dx = 0;
@@ -222,7 +219,6 @@ onFrame(() => {
   }
 
   // --- Render ---
-  clearSprites();
 
   // Draw character (3x bigger than spritesheet size)
   // Determine which row based on direction
@@ -283,47 +279,35 @@ onFrame(() => {
     ? "✓ Real assets loaded (256×128 spritesheet)"
     : "ℹ Using placeholders (see README.md)";
 
-  drawText(assetStatus, 10, 10, {
-    scale: 2,
+  hud.text(assetStatus, 10, 10, {
     tint: state.assetsLoaded ? Colors.SUCCESS : Colors.WARNING,
-    layer: 100,
-    screenSpace: true,
   });
 
   // Show detected spritesheet grid info (what arcane assets inspect shows)
   if (state.assetsLoaded) {
-    drawText(`Grid: ${COLS} cols × ${ROWS} rows = ${COLS * ROWS} frames @ ${FRAME_SIZE}×${FRAME_SIZE} px`, 10, 35, {
+    hud.text(`Grid: ${COLS} cols × ${ROWS} rows = ${COLS * ROWS} frames @ ${FRAME_SIZE}×${FRAME_SIZE} px`, 10, 35, {
       scale: 1.5,
       tint: Colors.LIGHT_GRAY,
-      layer: 100,
-      screenSpace: true,
     });
   }
 
-  drawText("Arrow Keys: Move  |  Space: Sound  |  R: Reset", 10, 60, {
+  hud.text("Arrow Keys: Move  |  Space: Sound  |  R: Reset", 10, 60, {
     scale: 1.5,
     tint: Colors.LIGHT_GRAY,
-    layer: 100,
-    screenSpace: true,
   });
 
   const dirText = state.dirY === -1 ? "Up" : state.dirY === 1 ? "Down" : state.dirX === -1 ? "Left" : state.dirX === 1 ? "Right" : "Idle";
   const statusText = state.isWalking ? `Walking ${dirText}` : `Idle (${dirText})`;
-  drawText(`Status: ${statusText}`, 10, 85, {
-    scale: 2,
+  hud.text(`Status: ${statusText}`, 10, 85, {
     tint: Colors.INFO,
-    layer: 100,
-    screenSpace: true,
   });
 
   if (state.assetsLoaded && state.isWalking) {
     const frameNum = state.walkAnim.frame;
     const dirRow = state.dirY === -1 ? 0 : state.dirY === 1 ? 1 : state.dirX === -1 ? 2 : 3;
-    drawText(`Frame: ${frameNum + 1}/${COLS} from Row ${dirRow}`, 10, 110, {
+    hud.text(`Frame: ${frameNum + 1}/${COLS} from Row ${dirRow}`, 10, 110, {
       scale: 1.5,
       tint: Colors.LIGHT_GRAY,
-      layer: 100,
-      screenSpace: true,
     });
   }
 });

@@ -28,7 +28,6 @@ import {
   setCamera,
   getViewportSize,
   isKeyPressed,
-  isKeyDown,
   getMousePosition,
   drawText,
 } from "../../runtime/rendering/index.ts";
@@ -38,11 +37,11 @@ import {
   Colors,
   withAlpha,
   createButton,
-  updateButton,
   drawButton,
 } from "../../runtime/ui/index.ts";
 import type { ButtonState } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
+import { captureInput, autoUpdateButton } from "../../runtime/game/index.ts";
 
 // --- Shared transition config ---
 const FADE: TransitionConfig = { type: "fade", duration: 0.4 };
@@ -141,12 +140,15 @@ const MenuScene = createScene<MenuState>({
   onUpdate: (state, dt, ctx) => {
     let sel = state.selected;
     const count = state.buttons.length;
+    const input = captureInput();
+    // Menu accepts Space as well as Enter for activation
+    const menuInput = { ...input, enterPressed: input.enterPressed || isKeyPressed("Space") };
 
     // Keyboard navigation
-    if (isKeyPressed("ArrowUp") || isKeyPressed("w")) {
+    if (menuInput.arrowUpPressed || isKeyPressed("w")) {
       sel = (sel - 1 + count) % count;
     }
-    if (isKeyPressed("ArrowDown") || isKeyPressed("s")) {
+    if (menuInput.arrowDownPressed || isKeyPressed("s")) {
       sel = (sel + 1) % count;
     }
 
@@ -156,13 +158,10 @@ const MenuScene = createScene<MenuState>({
     }
 
     // Update buttons with mouse + keyboard
-    const mouse = getMousePosition();
-    const mouseDown = isKeyDown("MouseLeft");
-    const enterPressed = isKeyPressed("Space") || isKeyPressed("Enter");
     for (let i = 0; i < state.buttons.length; i++) {
-      updateButton(state.buttons[i], mouse.x, mouse.y, mouseDown, enterPressed);
+      autoUpdateButton(state.buttons[i], menuInput);
       // If mouse clicked on a different button, update selection
-      if (state.buttons[i].hovered && mouseDown) {
+      if (state.buttons[i].hovered && menuInput.mouseDown) {
         sel = i;
       }
       if (state.buttons[i].clicked) {
@@ -384,8 +383,11 @@ const PauseScene = createScene<PauseState>({
   },
   onUpdate: (state, _dt, ctx) => {
     let sel = state.selected;
-    if (isKeyPressed("ArrowUp") || isKeyPressed("w")) sel = sel === 0 ? 1 : 0;
-    if (isKeyPressed("ArrowDown") || isKeyPressed("s")) sel = sel === 0 ? 1 : 0;
+    const input = captureInput();
+    const pauseInput = { ...input, enterPressed: input.enterPressed || isKeyPressed("Space") };
+
+    if (pauseInput.arrowUpPressed || isKeyPressed("w")) sel = sel === 0 ? 1 : 0;
+    if (pauseInput.arrowDownPressed || isKeyPressed("s")) sel = sel === 0 ? 1 : 0;
     if (isKeyPressed("Escape")) {
       ctx.pop({ type: "none" });
       return state;
@@ -395,15 +397,11 @@ const PauseScene = createScene<PauseState>({
     state.resumeBtn.focused = sel === 0;
     state.quitBtn.focused = sel === 1;
 
-    const mouse = getMousePosition();
-    const mouseDown = isKeyDown("MouseLeft");
-    const enterPressed = isKeyPressed("Space") || isKeyPressed("Enter");
+    autoUpdateButton(state.resumeBtn, pauseInput);
+    autoUpdateButton(state.quitBtn, pauseInput);
 
-    updateButton(state.resumeBtn, mouse.x, mouse.y, mouseDown, enterPressed);
-    updateButton(state.quitBtn, mouse.x, mouse.y, mouseDown, enterPressed);
-
-    if (state.resumeBtn.hovered && mouseDown) sel = 0;
-    if (state.quitBtn.hovered && mouseDown) sel = 1;
+    if (state.resumeBtn.hovered && pauseInput.mouseDown) sel = 0;
+    if (state.quitBtn.hovered && pauseInput.mouseDown) sel = 1;
 
     if (state.resumeBtn.clicked) {
       ctx.pop({ type: "none" });
@@ -487,22 +485,21 @@ const GameOverScene = createScene<GameOverState>({
   },
   onUpdate: (state, _dt, ctx) => {
     let sel = state.selected;
-    if (isKeyPressed("ArrowUp") || isKeyPressed("w")) sel = sel === 0 ? 1 : 0;
-    if (isKeyPressed("ArrowDown") || isKeyPressed("s")) sel = sel === 0 ? 1 : 0;
+    const input = captureInput();
+    const goInput = { ...input, enterPressed: input.enterPressed || isKeyPressed("Space") };
+
+    if (goInput.arrowUpPressed || isKeyPressed("w")) sel = sel === 0 ? 1 : 0;
+    if (goInput.arrowDownPressed || isKeyPressed("s")) sel = sel === 0 ? 1 : 0;
 
     // Update focus
     state.playAgainBtn.focused = sel === 0;
     state.menuBtn.focused = sel === 1;
 
-    const mouse = getMousePosition();
-    const mouseDown = isKeyDown("MouseLeft");
-    const enterPressed = isKeyPressed("Space") || isKeyPressed("Enter");
+    autoUpdateButton(state.playAgainBtn, goInput);
+    autoUpdateButton(state.menuBtn, goInput);
 
-    updateButton(state.playAgainBtn, mouse.x, mouse.y, mouseDown, enterPressed);
-    updateButton(state.menuBtn, mouse.x, mouse.y, mouseDown, enterPressed);
-
-    if (state.playAgainBtn.hovered && mouseDown) sel = 0;
-    if (state.menuBtn.hovered && mouseDown) sel = 1;
+    if (state.playAgainBtn.hovered && goInput.mouseDown) sel = 0;
+    if (state.menuBtn.hovered && goInput.mouseDown) sel = 1;
 
     if (state.playAgainBtn.clicked) {
       rngState = Date.now() & 0x7fffffff;

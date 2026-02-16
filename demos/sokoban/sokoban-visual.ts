@@ -11,16 +11,13 @@ import { createSokobanGame } from "./sokoban.ts";
 import type { Direction, SokobanState } from "./sokoban.ts";
 import type { Vec2 } from "../../runtime/state/index.ts";
 import {
-  onFrame,
-  drawSprite,
-  clearSprites,
   setCamera,
   isKeyPressed,
-  createSolidTexture,
-  drawText,
   getViewportSize,
 } from "../../runtime/rendering/index.ts";
-import { drawBar, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
+import { Colors, HUDLayout } from "../../runtime/ui/index.ts";
+import { createGame, hud, drawColorSprite } from "../../runtime/game/index.ts";
+import { rgb } from "../../runtime/ui/types.ts";
 
 // --- Constants ---
 
@@ -42,14 +39,14 @@ const LEVEL = `
 
 const game = createSokobanGame(LEVEL.trim());
 
-// --- Create placeholder textures (solid colors) ---
+// --- Colors for placeholder tiles ---
 
-const TEX_WALL = createSolidTexture("wall", 80, 80, 100);
-const TEX_FLOOR = createSolidTexture("floor", 40, 40, 50);
-const TEX_PLAYER = createSolidTexture("player", 50, 150, 255);
-const TEX_BOX = createSolidTexture("box", 200, 150, 50);
-const TEX_GOAL = createSolidTexture("goal", 255, 80, 80);
-const TEX_BOX_ON_GOAL = createSolidTexture("box_on_goal", 50, 200, 50);
+const COL_WALL = rgb(80, 80, 100);
+const COL_FLOOR = rgb(40, 40, 50);
+const COL_PLAYER = rgb(50, 150, 255);
+const COL_BOX = rgb(200, 150, 50);
+const COL_GOAL = rgb(255, 80, 80);
+const COL_BOX_ON_GOAL = rgb(50, 200, 50);
 
 // --- Input handling ---
 
@@ -64,9 +61,13 @@ const KEY_MAP: Record<string, Direction> = {
   d: "right",
 };
 
+// --- Game Bootstrap ---
+
+const app = createGame({ name: "sokoban" });
+
 // --- Frame loop ---
 
-onFrame(() => {
+app.onFrame((ctx) => {
   const state = game.store.getState() as SokobanState;
 
   // Handle input
@@ -94,9 +95,6 @@ onFrame(() => {
   const { width: vpW, height: vpH } = getViewportSize();
   setCamera(vpW / 2, vpH / 2, 1);
 
-  // Clear previous frame
-  clearSprites();
-
   // Draw tiles
   for (let y = 0; y < current.height; y++) {
     for (let x = 0; x < current.width; x++) {
@@ -105,8 +103,8 @@ onFrame(() => {
       const tile = current.tiles[y][x];
 
       if (tile === "wall") {
-        drawSprite({
-          textureId: TEX_WALL,
+        drawColorSprite({
+          color: COL_WALL,
           x: px,
           y: py,
           w: TILE_SIZE,
@@ -114,8 +112,8 @@ onFrame(() => {
           layer: 0,
         });
       } else {
-        drawSprite({
-          textureId: TEX_FLOOR,
+        drawColorSprite({
+          color: COL_FLOOR,
           x: px,
           y: py,
           w: TILE_SIZE,
@@ -128,8 +126,8 @@ onFrame(() => {
 
   // Draw goals (layer 1, behind boxes/player)
   for (const goal of current.goals) {
-    drawSprite({
-      textureId: TEX_GOAL,
+    drawColorSprite({
+      color: COL_GOAL,
       x: goal.x * TILE_SIZE + 4,
       y: goal.y * TILE_SIZE + 4,
       w: TILE_SIZE - 8,
@@ -143,8 +141,8 @@ onFrame(() => {
     const onGoal = current.goals.some(
       (g: Vec2) => g.x === box_.x && g.y === box_.y,
     );
-    drawSprite({
-      textureId: onGoal ? TEX_BOX_ON_GOAL : TEX_BOX,
+    drawColorSprite({
+      color: onGoal ? COL_BOX_ON_GOAL : COL_BOX,
       x: box_.x * TILE_SIZE + 2,
       y: box_.y * TILE_SIZE + 2,
       w: TILE_SIZE - 4,
@@ -154,8 +152,8 @@ onFrame(() => {
   }
 
   // Draw player (layer 3, on top)
-  drawSprite({
-    textureId: TEX_PLAYER,
+  drawColorSprite({
+    color: COL_PLAYER,
     x: current.player.x * TILE_SIZE + 4,
     y: current.player.y * TILE_SIZE + 4,
     w: TILE_SIZE - 8,
@@ -166,59 +164,36 @@ onFrame(() => {
   // --- HUD (screen space) ---
 
   // Move counter
-  drawText(`Moves: ${current.moves}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y, {
-    scale: HUDLayout.TEXT_SCALE,
-    tint: Colors.WHITE,
-    layer: 100,
-    screenSpace: true,
-  });
+  hud.text(`Moves: ${current.moves}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y);
 
   // Progress bar (boxes on goals)
   const boxesOnGoals = current.boxes.filter((box: Vec2) =>
     current.goals.some((g: Vec2) => g.x === box.x && g.y === box.y)
   ).length;
   const progress = current.goals.length > 0 ? boxesOnGoals / current.goals.length : 0;
-  drawBar(
+  hud.bar(
     HUDLayout.TOP_LEFT.x,
     HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT,
-    100,
-    12,
     progress,
-    {
-      fillColor: Colors.SUCCESS,
-      bgColor: Colors.HUD_BG,
-      borderColor: Colors.LIGHT_GRAY,
-      borderWidth: 1,
-      layer: 100,
-      screenSpace: true,
-    }
+    { width: 100 },
   );
 
   // Progress text
-  drawText(`${boxesOnGoals}/${current.goals.length} boxes`, HUDLayout.TOP_LEFT.x + 105, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT, {
+  hud.text(`${boxesOnGoals}/${current.goals.length} boxes`, HUDLayout.TOP_LEFT.x + 105, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
-    tint: Colors.WHITE,
-    layer: 100,
-    screenSpace: true,
   });
 
   // Controls hint
-  drawText("WASD/Arrows=Move  Z=Undo  R=Reset", HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2, {
+  hud.text("WASD/Arrows=Move  Z=Undo  R=Reset", HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
     tint: Colors.LIGHT_GRAY,
-    layer: 100,
-    screenSpace: true,
   });
 
   // Victory screen
   if (current.won) {
-    drawLabel(`VICTORY! ${current.moves} moves`, HUDLayout.CENTER.x - 120, HUDLayout.CENTER.y - 20, {
+    hud.label(`VICTORY! ${current.moves} moves`, HUDLayout.CENTER.x - 120, HUDLayout.CENTER.y - 20, {
       textColor: Colors.WIN,
-      bgColor: Colors.HUD_BG,
       padding: 12,
-      scale: HUDLayout.TEXT_SCALE,
-      layer: 110,
-      screenSpace: true,
     });
   }
 });

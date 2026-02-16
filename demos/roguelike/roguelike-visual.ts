@@ -2,33 +2,33 @@ import { createRoguelikeGame, movePlayer } from "./roguelike.ts";
 import type { Direction, RoguelikeState } from "./roguelike.ts";
 import { WALL, FLOOR, CORRIDOR, STAIRS_DOWN } from "./dungeon.ts";
 import {
-  onFrame, drawSprite, clearSprites, setCamera,
-  isKeyPressed, createSolidTexture,
+  setCamera, isKeyPressed,
   setAmbientLight, addPointLight, clearLights,
-  drawText,
 } from "../../runtime/rendering/index.ts";
-import { drawBar, drawLabel, Colors, HUDLayout } from "../../runtime/ui/index.ts";
-import { registerAgent } from "../../runtime/agent/index.ts";
+import { Colors } from "../../runtime/ui/index.ts";
+import { rgb } from "../../runtime/ui/types.ts";
+import { createGame, drawColorSprite, hud } from "../../runtime/game/index.ts";
 
 const TILE_SIZE = 16;
 const SEED = 12345;
 
-// Textures -- solid colors for tiles
-const TEX_WALL = createSolidTexture("wall_tile", 60, 60, 80);
-const TEX_FLOOR = createSolidTexture("floor_tile", 140, 120, 100);
-const TEX_CORRIDOR = createSolidTexture("corridor_tile", 120, 110, 90);
-const TEX_STAIRS = createSolidTexture("stairs_tile", 255, 255, 100);
-const TEX_PLAYER = createSolidTexture("player", 60, 180, 255);
-const TEX_ENEMY = createSolidTexture("enemy", 255, 60, 60);
-const TEX_EXPLORED = createSolidTexture("explored", 40, 40, 55);
+// Colors for tiles
+const COL_WALL = rgb(60, 60, 80);
+const COL_FLOOR = rgb(140, 120, 100);
+const COL_CORRIDOR = rgb(120, 110, 90);
+const COL_STAIRS = rgb(255, 255, 100);
+const COL_PLAYER = rgb(60, 180, 255);
+const COL_ENEMY = rgb(255, 60, 60);
+const COL_EXPLORED = rgb(40, 40, 55);
 
 let state = createRoguelikeGame(SEED);
 
-// Agent protocol
-registerAgent<RoguelikeState>({
-  name: "roguelike",
-  getState: () => state,
-  setState: (s) => { state = s; },
+// --- Game setup ---
+const game = createGame({ name: "roguelike", autoCamera: false, autoClear: true });
+
+game.state<RoguelikeState>({
+  get: () => state,
+  set: (s) => { state = s; },
   describe: (s, opts) => {
     if (opts.verbosity === "minimal") {
       return `Turn ${s.turn}, HP: ${s.player.hp}/${s.player.maxHp}, Phase: ${s.phase}`;
@@ -62,7 +62,7 @@ const KEY_MAP: Record<string, Direction> = {
   Space: "wait",
 };
 
-onFrame(() => {
+game.onFrame(() => {
   // Handle input
   for (const [key, dir] of Object.entries(KEY_MAP)) {
     if (isKeyPressed(key)) {
@@ -90,8 +90,6 @@ onFrame(() => {
   );
 
   // Render
-  clearSprites();
-
   const { dungeon, fov, entities, player } = state;
 
   // Draw tiles
@@ -103,18 +101,17 @@ onFrame(() => {
 
       if (fov.visible[y][x]) {
         // Currently visible -- full brightness
-        let tex: number;
-        if (tile === WALL) tex = TEX_WALL;
-        else if (tile === FLOOR) tex = TEX_FLOOR;
-        else if (tile === CORRIDOR) tex = TEX_CORRIDOR;
-        else if (tile === STAIRS_DOWN) tex = TEX_STAIRS;
-        else tex = TEX_FLOOR;
+        let col = COL_FLOOR;
+        if (tile === WALL) col = COL_WALL;
+        else if (tile === FLOOR) col = COL_FLOOR;
+        else if (tile === CORRIDOR) col = COL_CORRIDOR;
+        else if (tile === STAIRS_DOWN) col = COL_STAIRS;
 
-        drawSprite({ textureId: tex, x: px, y: py, w: TILE_SIZE, h: TILE_SIZE, layer: 0 });
+        drawColorSprite({ color: col, x: px, y: py, w: TILE_SIZE, h: TILE_SIZE, layer: 0 });
       } else if (fov.explored[y][x]) {
         // Explored but not visible -- dark tint
-        drawSprite({
-          textureId: TEX_EXPLORED,
+        drawColorSprite({
+          color: COL_EXPLORED,
           x: px, y: py, w: TILE_SIZE, h: TILE_SIZE,
           layer: 0,
         });
@@ -128,8 +125,8 @@ onFrame(() => {
     if (entity.hp <= 0) continue;
     if (!fov.visible[entity.pos.y]?.[entity.pos.x]) continue;
 
-    drawSprite({
-      textureId: TEX_ENEMY,
+    drawColorSprite({
+      color: COL_ENEMY,
       x: entity.pos.x * TILE_SIZE + 2,
       y: entity.pos.y * TILE_SIZE + 2,
       w: TILE_SIZE - 4,
@@ -139,8 +136,8 @@ onFrame(() => {
   }
 
   // Draw player
-  drawSprite({
-    textureId: TEX_PLAYER,
+  drawColorSprite({
+    color: COL_PLAYER,
     x: player.pos.x * TILE_SIZE + 2,
     y: player.pos.y * TILE_SIZE + 2,
     w: TILE_SIZE - 4,
@@ -151,66 +148,49 @@ onFrame(() => {
   // --- HUD (screen space) ---
 
   // Turn counter
-  drawText(`Turn: ${state.turn}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y, {
-    scale: HUDLayout.TEXT_SCALE,
-    tint: Colors.WHITE,
-    layer: 100,
-    screenSpace: true,
-  });
+  hud.text(`Turn: ${state.turn}`, 10, 10);
 
   // HP bar
   const hpRatio = state.player.hp / state.player.maxHp;
   const hpColor = hpRatio > 0.5 ? Colors.SUCCESS : hpRatio > 0.25 ? Colors.WARNING : Colors.DANGER;
-  drawBar(
-    HUDLayout.TOP_LEFT.x,
-    HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT,
-    100,
-    12,
+  hud.bar(
+    10,
+    35,
     hpRatio,
     {
+      width: 100,
+      height: 12,
       fillColor: hpColor,
       bgColor: Colors.HUD_BG,
       borderColor: Colors.LIGHT_GRAY,
       borderWidth: 1,
-      layer: 100,
-      screenSpace: true,
     }
   );
 
   // HP text
-  drawText(`HP: ${state.player.hp}/${state.player.maxHp}`, HUDLayout.TOP_LEFT.x + 105, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT, {
-    scale: HUDLayout.SMALL_TEXT_SCALE,
-    tint: Colors.WHITE,
-    layer: 100,
-    screenSpace: true,
+  hud.text(`HP: ${state.player.hp}/${state.player.maxHp}`, 115, 35, {
+    scale: 1.5,
   });
 
   // Enemies alive
   const alive = state.entities.filter((e) => e.hp > 0).length;
-  drawText(`Enemies: ${alive}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2, {
-    scale: HUDLayout.SMALL_TEXT_SCALE,
+  hud.text(`Enemies: ${alive}`, 10, 60, {
+    scale: 1.5,
     tint: Colors.INFO,
-    layer: 100,
-    screenSpace: true,
   });
 
   // Controls hint
-  drawText("WASD/Arrows=Move  Space=Wait", HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2.5, {
-    scale: HUDLayout.SMALL_TEXT_SCALE,
+  hud.text("WASD/Arrows=Move  Space=Wait", 10, 72.5, {
+    scale: 1.5,
     tint: Colors.LIGHT_GRAY,
-    layer: 100,
-    screenSpace: true,
   });
 
   // Game over screen
   if (state.phase === "lost") {
-    drawLabel("DEFEATED! Refresh to restart", HUDLayout.CENTER.x - 160, HUDLayout.CENTER.y - 20, {
+    hud.label("DEFEATED! Refresh to restart", 400 - 160, 300 - 20, {
       textColor: Colors.LOSE,
       bgColor: Colors.HUD_BG,
       padding: 12,
-      scale: HUDLayout.TEXT_SCALE,
-      layer: 110,
-      screenSpace: true,
     });
   }
 });

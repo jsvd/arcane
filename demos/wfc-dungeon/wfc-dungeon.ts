@@ -15,25 +15,21 @@
  */
 
 import {
-  onFrame,
-  clearSprites,
   drawSprite,
   setCamera,
   getCamera,
   isKeyDown,
   isKeyPressed,
-  getDeltaTime,
   createSolidTexture,
   getViewportSize,
-  drawText,
 } from "../../runtime/rendering/index.ts";
 import {
   generate,
   countTile,
 } from "../../runtime/procgen/index.ts";
 import type { TileSet, WFCGrid, WFCResult } from "../../runtime/procgen/index.ts";
-import { registerAgent } from "../../runtime/agent/index.ts";
 import { seed as prngSeed, randomInt } from "../../runtime/state/prng.ts";
+import { createGame, hud } from "../../runtime/game/index.ts";
 
 // ---------------------------------------------------------------------------
 // Tile IDs (for display — WFC only uses WALL=0, FLOOR=1)
@@ -221,7 +217,37 @@ function tileTexture(tileId: number): number {
 
 let initialized = false;
 
-onFrame(() => {
+const game = createGame({ name: "wfc-dungeon", autoCamera: false });
+
+game.state({
+  get: () => ({
+    seed: currentSeed,
+    success: currentResult?.success ?? false,
+    grid: currentResult?.grid
+      ? { width: currentResult.grid.width, height: currentResult.grid.height }
+      : null,
+  }),
+  set: () => {},
+  actions: {
+    regenerate: {
+      description: "Generate a new dungeon with the next seed",
+      handler: (s: any) => {
+        currentSeed++;
+        generateDungeon();
+        return s;
+      },
+    },
+  },
+  describe: () => {
+    const status = currentResult?.success ? "success" : "failed";
+    const grid = currentResult?.grid
+      ? `${currentResult.grid.width}x${currentResult.grid.height}`
+      : "none";
+    return `WFC Dungeon Generator | ${status} | seed=${currentSeed} | grid=${grid}`;
+  },
+});
+
+game.onFrame((ctx) => {
   if (!initialized) {
     initTextures();
     generateDungeon();
@@ -230,8 +256,7 @@ onFrame(() => {
     initialized = true;
   }
 
-  const dt = getDeltaTime();
-  clearSprites();
+  const dt = ctx.dt;
 
   // Input: regenerate
   if (isKeyPressed("r")) {
@@ -278,55 +303,21 @@ onFrame(() => {
   }
 
   // Draw status text
-  drawText(statusText, 10, 10, { layer: 100 });
-  drawText("R: Regenerate | Arrows: Pan | Z/X: Zoom", 10, 26, { layer: 100 });
+  hud.text(statusText, 10, 10);
+  hud.text("R: Regenerate | Arrows: Pan | Z/X: Zoom", 10, 26);
 
   // Draw legend
   const vp2 = getViewportSize();
   const legendX = vp2.width - 160;
-  drawText("Legend:", legendX, 10, { layer: 100 });
+  hud.text("Legend:", legendX, 10);
   drawSprite({ textureId: texWall, x: legendX, y: 26, w: 12, h: 12, layer: 100 });
-  drawText("Wall", legendX + 16, 26, { layer: 100 });
+  hud.text("Wall", legendX + 16, 26);
   drawSprite({ textureId: texFloor, x: legendX, y: 42, w: 12, h: 12, layer: 100 });
-  drawText("Floor", legendX + 16, 42, { layer: 100 });
+  hud.text("Floor", legendX + 16, 42);
   drawSprite({ textureId: texEntrance, x: legendX, y: 58, w: 12, h: 12, layer: 100 });
-  drawText("Entrance", legendX + 16, 58, { layer: 100 });
+  hud.text("Entrance", legendX + 16, 58);
   drawSprite({ textureId: texExit, x: legendX, y: 74, w: 12, h: 12, layer: 100 });
-  drawText("Exit", legendX + 16, 74, { layer: 100 });
+  hud.text("Exit", legendX + 16, 74);
   drawSprite({ textureId: texDecoration, x: legendX, y: 90, w: 12, h: 12, layer: 100 });
-  drawText("Decor", legendX + 16, 90, { layer: 100 });
-});
-
-// ---------------------------------------------------------------------------
-// Agent protocol
-// ---------------------------------------------------------------------------
-
-registerAgent({
-  name: "wfc-dungeon",
-  version: "1.0.0",
-  getState: () => ({
-    seed: currentSeed,
-    success: currentResult?.success ?? false,
-    grid: currentResult?.grid
-      ? { width: currentResult.grid.width, height: currentResult.grid.height }
-      : null,
-  }),
-  actions: {
-    regenerate: {
-      description: "Generate a new dungeon with the next seed",
-      execute: () => {
-        currentSeed++;
-        generateDungeon();
-        return `Generated dungeon with seed ${currentSeed}`;
-      },
-    },
-  },
-  describe: () => ({
-    scene: "WFC Dungeon Generator",
-    status: currentResult?.success ? "success" : "failed",
-    seed: currentSeed,
-    grid: currentResult?.grid
-      ? `${currentResult.grid.width}x${currentResult.grid.height}`
-      : "none",
-  }),
+  hud.text("Decor", legendX + 16, 90);
 });
