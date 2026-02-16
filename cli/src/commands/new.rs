@@ -36,7 +36,7 @@ pub fn run(name: &str) -> Result<()> {
     println!("MCP auto-configured for Claude Code, Cursor, and VS Code.");
     println!("AI tools will discover your game engine automatically.");    println!();
     println!("Read AGENTS.md for LLM development guide.");
-    println!("Full API reference in types/arcane.d.ts.");
+    println!("API reference in types/*.d.ts (one file per module).");
     println!();
     println!("Happy game building! 🎮");
 
