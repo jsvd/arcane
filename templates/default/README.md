@@ -17,8 +17,14 @@ arcane test
 ```
 {{PROJECT_NAME}}/
 ├── AGENTS.md             # LLM development guide (start here if using AI)
+├── docs/                 # Topic guides (coordinates, animation, physics, rendering)
 ├── types/
-│   └── arcane.d.ts       # Full API reference with JSDoc
+│   ├── rendering.d.ts    # Sprites, camera, tilemap, lighting, audio, animation, text
+│   ├── game.d.ts         # createGame, entities, HUD, collision events
+│   ├── physics.d.ts      # Rigid bodies, constraints, queries
+│   ├── ui.d.ts           # Buttons, sliders, toggles, text input, layout
+│   ├── input.d.ts        # Action mapping, gamepad, touch
+│   └── ...               # One .d.ts per module (15 total)
 ├── src/
 │   ├── game.ts           # Pure game logic (state in, state out)
 │   ├── game.test.ts      # Tests for game logic
@@ -59,4 +65,5 @@ All packs are from [Kenney.nl](https://kenney.nl) (CC0 public domain, no attribu
 ## For LLMs
 
 Read `AGENTS.md` for architecture patterns, game loop examples, and API usage.
-The complete API with JSDoc is in `types/arcane.d.ts`.
+Per-module API declarations with JSDoc are in `types/*.d.ts`. Use `/api` to look up specific functions.
+Topic guides in `docs/` cover coordinates, animation, physics, and rendering in depth.

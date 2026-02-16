@@ -52,21 +52,20 @@ These files ship with every new project created via `arcane new`. They are the p
 The main LLM development guide. Check:
 - **Composition Patterns section**: Does it cover all major engine features? Each pattern should have a working copy-paste code snippet. Missing pattern = LLMs won't know the feature exists.
 - **Module import list**: Does it list all available modules? (Compare against `runtime/*/index.ts`)
-- **API Reference section**: Does it mention `types/arcane.d.ts`?
+- **API Reference section**: Does it mention per-module `types/*.d.ts` files?
 
-### `templates/default/COOKBOOK.md`
-Advanced pattern recipes. Check:
-- Does it have recipes for all non-trivial engine features?
-- Do code examples use the current API? (Same type-checking as docs/ audit.)
-- Are there new features that deserve a cookbook entry?
+### `templates/default/docs/*.md`
+Topic guides covering specific systems (coordinates, animation, physics, rendering). Check:
+- Do code examples use the current API?
+- Are there new systems that deserve a topic guide?
 
-### `templates/default/types/arcane.d.ts`
-Auto-generated API declarations. Regenerate and diff:
+### `templates/default/types/*.d.ts`
+Auto-generated per-module API declarations. Regenerate and diff:
 ```bash
 ./scripts/generate-declarations.sh
-git diff templates/default/types/arcane.d.ts
+git diff templates/default/types/
 ```
-If stale, commit the updated version.
+If stale, commit the updated files.
 
 ### Template source code
 - `templates/default/src/visual.ts` — Does it compile? Does it use current API patterns?

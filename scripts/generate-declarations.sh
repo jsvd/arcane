@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Generate arcane.d.ts — the bundled API declaration file for scaffolded projects.
+# Generate per-module .d.ts files — API declarations for scaffolded projects.
 #
 # Usage: ./scripts/generate-declarations.sh
 #
 # This script:
 # 1. Runs tsc to generate individual .d.ts files from runtime source
-# 2. Bundles them into a single file organized by module
-# 3. Outputs to templates/default/types/arcane.d.ts
+# 2. Writes one declaration file per module to templates/default/types/
+# 3. Removes old bundled arcane.d.ts if present
 
 set -euo pipefail
 
@@ -14,7 +14,6 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist-types"
 OUT_DIR="$ROOT_DIR/templates/default/types"
-OUT_FILE="$OUT_DIR/arcane.d.ts"
 
 cd "$ROOT_DIR"
 
@@ -22,9 +21,15 @@ cd "$ROOT_DIR"
 echo "Generating declarations..."
 npx -p typescript tsc -p tsconfig.declarations.json
 
-# Step 2: Bundle into a single file
-echo "Bundling into arcane.d.ts..."
+# Step 2: Write per-module declaration files
+echo "Writing per-module declaration files..."
 mkdir -p "$OUT_DIR"
+
+# Remove old bundled file if present
+if [ -f "$OUT_DIR/arcane.d.ts" ]; then
+  rm "$OUT_DIR/arcane.d.ts"
+  echo "Removed old arcane.d.ts"
+fi
 
 # Module order matches documentation priority
 MODULES=(
@@ -45,28 +50,24 @@ MODULES=(
   "testing:Testing"
 )
 
-{
-  echo "// Arcane Engine — TypeScript API Declarations"
-  echo "// Generated from runtime source. Do not edit manually."
-  echo "// Regenerate with: ./scripts/generate-declarations.sh"
-  echo "//"
-  echo "// Import from: @arcane/runtime/{module}"
-  echo "// Modules: rendering, game, input, ui, state, physics, tweening, particles, pathfinding, systems, scenes, persistence, procgen, agent, testing"
-  echo ""
+for entry in "${MODULES[@]}"; do
+  dir="${entry%%:*}"
+  label="${entry##*:}"
 
-  for entry in "${MODULES[@]}"; do
-    dir="${entry%%:*}"
-    label="${entry##*:}"
+  module_dir="$DIST_DIR/$dir"
+  if [ ! -d "$module_dir" ]; then
+    echo "WARNING: Module $dir not found, skipping"
+    continue
+  fi
 
-    module_dir="$DIST_DIR/$dir"
-    if [ ! -d "$module_dir" ]; then
-      echo "// WARNING: Module $dir not found, skipping"
-      continue
-    fi
+  out_file="$OUT_DIR/$dir.d.ts"
 
-    echo "// ============================================================================"
-    echo "// Module: @arcane/runtime/$dir ($label)"
-    echo "// ============================================================================"
+  {
+    echo "// Arcane Engine — $label Module Declarations"
+    echo "// Generated from runtime source. Do not edit manually."
+    echo "// Regenerate with: ./scripts/generate-declarations.sh"
+    echo "//"
+    echo "// Import from: @arcane/runtime/$dir"
     echo ""
     echo "declare module \"@arcane/runtime/$dir\" {"
 
@@ -85,8 +86,6 @@ MODULES=(
     done
 
     for dts_file in "${dts_files[@]}"; do
-      basename=$(basename "$dts_file")
-
       # Read the file and indent, removing import/export from statements,
       # converting exports to plain declarations
       while IFS= read -r line; do
@@ -119,13 +118,14 @@ MODULES=(
     done
 
     echo "}"
-    echo ""
-  done
-} > "$OUT_FILE"
+  } > "$out_file"
+
+  lines=$(wc -l < "$out_file")
+  echo "  $dir.d.ts ($lines lines)"
+done
 
 # Step 3: Clean up
 rm -rf "$DIST_DIR"
 
-# Count output
-LINES=$(wc -l < "$OUT_FILE")
-echo "Generated $OUT_FILE ($LINES lines)"
+echo ""
+echo "Done. Per-module declarations written to $OUT_DIR/"

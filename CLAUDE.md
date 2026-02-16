@@ -217,9 +217,9 @@ arcane/
 │   ├── runtime/                   — @arcane-engine/runtime npm package (symlink to runtime/)
 │   └── create/                    — @arcane-engine/create npm scaffolding tool
 ├── templates/
-│   └── default/                   — Scaffolded project template (AGENTS.md, COOKBOOK.md, types/)
+│   └── default/                   — Scaffolded project template (AGENTS.md, docs/, types/)
 ├── scripts/
-│   └── generate-declarations.sh   — Generates arcane.d.ts from runtime source JSDoc
+│   └── generate-declarations.sh   — Generates per-module .d.ts files from runtime source JSDoc
 ```
 
 ## Conventions
@@ -280,11 +280,11 @@ Read `docs/engineering-philosophy.md` first. It governs everything else.
 
 ## Maintaining API Declarations
 
-After changing any public API in `runtime/`, run `scripts/generate-declarations.sh` and commit the updated `templates/default/types/arcane.d.ts`. This file ships with scaffolded projects and is the primary API reference for LLMs.
+After changing any public API in `runtime/`, run `scripts/generate-declarations.sh` and commit the updated `templates/default/types/*.d.ts` files. These per-module declaration files ship with scaffolded projects and are the primary API reference for LLMs.
 
 ## Documentation Refresh
 
-After phase completions or significant changes, run the documentation refresh checklist in [docs/documentation-refresh.md](docs/documentation-refresh.md). It covers auditing `docs/`, verifying user-facing READMEs, updating the scaffolding template (AGENTS.md, COOKBOOK.md, arcane.d.ts), and fixing stale test counts, demo lists, and cross-references.
+After phase completions or significant changes, run the documentation refresh checklist in [docs/documentation-refresh.md](docs/documentation-refresh.md). It covers auditing `docs/`, verifying user-facing READMEs, updating the scaffolding template (AGENTS.md, topic guides, per-module types/*.d.ts), and fixing stale test counts, demo lists, and cross-references.
 
 ## Agent Tooling
 
