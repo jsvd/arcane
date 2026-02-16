@@ -2,6 +2,30 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.10.0] - 2026-02-16
+
+### Added
+- **Game Convenience Layer** (`runtime/game/`) — new module reducing ~40% boilerplate in typical games
+  - `createGame()` — bootstrap with auto-clear, auto-camera, agent protocol wiring
+  - `drawColorSprite()` — inline colors with auto-cached solid textures (replaces `createSolidTexture` + `drawSprite` pattern)
+  - `hud.text()`, `hud.bar()`, `hud.label()` — screen-space HUD helpers with sensible defaults
+  - `captureInput()` + `autoUpdateButton/Slider/Checkbox/Focus()` — widget auto-wiring
+  - `createEntity()`, `syncEntities()`, `drawEntities()`, `destroyEntity()` — lightweight entity handles binding position + sprite + physics
+  - `createCollisionRegistry()`, `onCollision()`, `onBodyCollision()`, `processCollisions()` — collision event callbacks
+  - 48 new tests across 6 test files
+- **Scaffolded project restructure**
+  - `arcane.d.ts` split into per-module declaration files (`rendering.d.ts`, `game.d.ts`, `physics.d.ts`, etc.) for faster LLM context loading
+  - `COOKBOOK.md` replaced with focused `docs/` topic guides (coordinates, animation, physics, rendering, UI, etc.)
+  - `AGENTS.md` streamlined to essentials with cross-references to topic docs
+  - `CLAUDE.md` added to scaffolded projects pointing to AGENTS.md
+  - `/api` skill for looking up specific API functions
+- **COOKBOOK.md** — 6 new sections: Quick Start, Colored Sprites, HUD Shortcuts, Entity Handles, Collision Events, Widget Auto-Input
+
+### Changed
+- All 24 visual demos updated to use convenience layer (net -265 lines of boilerplate)
+- Template `visual.ts` rewritten with `createGame()`, `drawColorSprite()`, `hud.text()`
+- `generate-declarations.sh` now produces `@arcane/runtime/game` and `@arcane/runtime/input` declarations
+
 ## [0.9.4] - 2026-02-15
 
 ### Fixed
