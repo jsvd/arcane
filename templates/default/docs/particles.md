@@ -43,6 +43,25 @@ for (const p of getAllParticles()) {
 - `"circle"` — spawn within a radius: `{ shape: "circle", radius: 20, ... }`
 - `"rect"` — spawn within a rectangle: `{ shape: "rect", w: 100, h: 50, ... }`
 
+## Seeded Randomness in Particle Spawning
+
+Use `createRng()` for deterministic procedural particle placement (e.g., starfield, debris patterns):
+
+```typescript
+import { createRng } from "@arcane/runtime/state";
+
+const rng = createRng(42);
+for (let i = 0; i < 50; i++) {
+  createEmitter({
+    shape: "point", x: rng.int(0, 800), y: rng.int(0, 600),
+    mode: "continuous", rate: rng.int(1, 4),
+    lifetime: [0.3, 0.8], velocityY: [-20, -5],
+    startColor: { r: 1, g: 1, b: 1, a: 0.6 },
+    endColor: { r: 1, g: 1, b: 1, a: 0 },
+  });
+}
+```
+
 ## Common Patterns
 
 **Death explosion:**

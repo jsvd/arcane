@@ -65,6 +65,27 @@ game.onFrame((ctx) => {
 
 Use `destroyEntity(entity)` to remove the physics body and mark the entity inactive (skipped by sync/draw). Use `findEntities(entities, "coin")` to find all active entities with a given tag.
 
+## Sprite Groups
+
+For multi-part characters (body + head + weapon + armor), use sprite groups instead of multiple manual `drawSprite()` calls. Groups handle relative offsets, flip mirroring, opacity inheritance, and per-part visibility.
+
+```typescript
+import { createSpriteGroup, drawSpriteGroup, setPartVisible } from "@arcane/runtime/game";
+import { rgb } from "@arcane/runtime/ui";
+
+const character = createSpriteGroup([
+  { name: "body",  offsetX: 0, offsetY: 0,   w: 16, h: 24, color: rgb(100, 100, 200) },
+  { name: "head",  offsetX: 2, offsetY: -14, w: 12, h: 12, color: rgb(255, 200, 170) },
+  { name: "sword", offsetX: 14, offsetY: -4, w: 6,  h: 20, color: rgb(200, 200, 230), layerOffset: 1 },
+], 5);
+
+// In onFrame:
+drawSpriteGroup(character, entity.x, entity.y, { flipX: !entity.facingRight });
+setPartVisible(character, "sword", entity.hasSword);
+```
+
+Use `textureId` instead of `color` on parts when using loaded sprite sheets. See [rendering.md](rendering.md) for full sprite group API.
+
 ## Collision Events
 
 Event-driven collision system on top of the physics engine:

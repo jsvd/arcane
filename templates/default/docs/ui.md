@@ -16,7 +16,37 @@ hud.label("PAUSED", 350, 280);
 hud.text("Critical!", 10, 10, { tint: { r: 1, g: 0.2, b: 0.2, a: 1 }, scale: 3 });
 hud.bar(10, 40, mana / maxMana, { fillColor: rgb(50, 100, 255), width: 120 });
 hud.label("Game Over", 300, 250, { textColor: rgb(255, 80, 80), scale: 3 });
+
+// Full-screen overlay (pause, damage flash, fade-to-black)
+hud.overlay({ r: 0, g: 0, b: 0, a: 0.5 });                    // 50% black
+hud.overlay({ r: 1, g: 0, b: 0, a: 0.3 });                    // red damage flash
+hud.overlay({ r: 0, g: 0, b: 0, a: fadeAlpha }, { layer: 300 }); // custom layer
 ```
+
+`hud.overlay()` covers the full viewport with a colored rect at layer 200 (above other HUD). Use it for pause screens, damage flashes, or fade effects. For animated screen transitions, use `startScreenTransition()` instead — see [transitions.md](transitions.md).
+
+## Shape Drawing
+
+Draw circles, lines, and triangles as colored primitives. Same pattern as `drawRect` — supports `screenSpace`, `layer`, and `color`.
+
+```typescript
+import { drawCircle, drawLine, drawTriangle } from "@arcane/runtime/ui";
+import { rgb } from "@arcane/runtime/ui";
+
+// Circle (cx, cy, radius)
+drawCircle(100, 100, 20, { color: rgb(255, 100, 50), layer: 5 });
+
+// Line (x1, y1 → x2, y2, thickness)
+drawLine(50, 50, 200, 150, { color: rgb(255, 255, 255), thickness: 2, layer: 5 });
+
+// Triangle (three vertices)
+drawTriangle(100, 50, 50, 150, 150, 150, { color: rgb(0, 200, 100), layer: 5 });
+
+// Screen-space shapes (HUD)
+drawCircle(20, 20, 8, { color: rgb(255, 0, 0), screenSpace: true, layer: 100 });
+```
+
+Shapes are rendered via scanline sprites (circles, triangles) or a rotated rectangle (lines). They work in headless mode for testing via the draw call capture system.
 
 ## Screen-Space Rendering
 

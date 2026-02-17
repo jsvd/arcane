@@ -75,6 +75,22 @@ export type BarOptions = {
   screenSpace?: boolean;
 };
 
+/** Options for shape drawing functions ({@link drawCircle}, {@link drawTriangle}). */
+export type ShapeOptions = {
+  /** Fill color. Default: white `{ r: 1, g: 1, b: 1, a: 1 }`. */
+  color?: Color;
+  /** Draw order layer. Default: 90. */
+  layer?: number;
+  /** If true, coordinates are screen pixels (HUD). If false, world units. Default: false. */
+  screenSpace?: boolean;
+};
+
+/** Options for {@link drawLine}. Extends {@link ShapeOptions} with thickness. */
+export type LineOptions = ShapeOptions & {
+  /** Line thickness in pixels (screenSpace) or world units. Default: 1. */
+  thickness?: number;
+};
+
 /** Options for {@link drawLabel}. */
 export type LabelOptions = {
   /** Text color. Default: white. */

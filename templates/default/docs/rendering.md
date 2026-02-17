@@ -50,6 +50,37 @@ drawColorSprite({ color: rgb(255, 0, 0), x: 100, y: 200, w: 32, h: 32, layer: 1 
 
 `rgb()` takes 0-255 integers. Alpha defaults to 255; pass a fourth arg for transparency: `rgb(255, 0, 0, 128)`.
 
+### Sprite Groups (Composite Characters)
+
+Bundle multiple sprite parts with relative offsets. Draw multi-part characters, equipment, or vehicles with a single call.
+
+```typescript
+import { createSpriteGroup, drawSpriteGroup, setPartVisible, getSpritePart } from "@arcane/runtime/game";
+import { rgb } from "@arcane/runtime/ui";
+
+const knight = createSpriteGroup([
+  { name: "body",   offsetX: 0, offsetY: 0,    w: 16, h: 16, color: rgb(150, 150, 150) },
+  { name: "head",   offsetX: 2, offsetY: -12,  w: 12, h: 12, color: rgb(255, 200, 170) },
+  { name: "sword",  offsetX: 14, offsetY: -2,  w: 6,  h: 20, color: rgb(200, 200, 230), layerOffset: 1 },
+  { name: "shield", offsetX: -8, offsetY: 0,   w: 8,  h: 14, color: rgb(139, 69, 19), layerOffset: 1 },
+], /* baseLayer */ 5);
+
+// Draw at position — all parts rendered with correct offsets
+drawSpriteGroup(knight, player.x, player.y);
+
+// Flip entire group (sword swaps sides, offsets mirror automatically)
+drawSpriteGroup(knight, player.x, player.y, { flipX: !facingRight });
+
+// Control opacity (e.g., ghost effect)
+drawSpriteGroup(knight, player.x, player.y, { opacity: 0.5 });
+
+// Toggle individual parts
+setPartVisible(knight, "shield", hasShield);
+setPartVisible(knight, "sword", hasSword);
+```
+
+Parts with `flipWithParent: false` stay in place when the group flips (useful for symmetrical elements). Part opacity multiplies with group opacity.
+
 ## Text
 
 ### Bitmap Text (Fixed-Size)

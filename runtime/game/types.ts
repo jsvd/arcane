@@ -60,6 +60,102 @@ export type HUDLabelOptions = {
   layer?: number;
 };
 
+/** Options for hud.overlay(). */
+export type HUDOverlayOptions = {
+  /** Draw layer. Default: 200 (above other HUD). */
+  layer?: number;
+};
+
+// --- Sprite Group ---
+
+/** A single sprite part within a group. */
+export type SpritePart = {
+  /** Unique name for lookup. */
+  name: string;
+  /** Horizontal offset from the group origin. */
+  offsetX: number;
+  /** Vertical offset from the group origin. */
+  offsetY: number;
+  /** Part width. */
+  w: number;
+  /** Part height. */
+  h: number;
+  /** Inline color. Used if textureId is not set. */
+  color?: Color;
+  /** Pre-loaded texture ID. Takes priority over color. */
+  textureId?: TextureId;
+  /** Layer offset relative to group baseLayer. Default: 0. */
+  layerOffset?: number;
+  /** Part opacity (0-1). Multiplied with group opacity. Default: 1. */
+  opacity?: number;
+  /** Blend mode. Default: "alpha". */
+  blendMode?: "alpha" | "additive" | "multiply" | "screen";
+  /** Whether this part flips horizontally when the group flips. Default: true. */
+  flipWithParent?: boolean;
+  /** Whether this part is visible. Default: true. */
+  visible?: boolean;
+};
+
+/** A collection of sprite parts with a shared base layer. */
+export type SpriteGroupType = {
+  parts: SpritePart[];
+  baseLayer: number;
+};
+
+/** Options for drawSpriteGroup(). */
+export type SpriteGroupDrawOptions = {
+  /** Flip the entire group horizontally. */
+  flipX?: boolean;
+  /** Group opacity multiplier (0-1). Applied to all parts. */
+  opacity?: number;
+};
+
+// --- Platformer ---
+
+/** Configuration for the platformer controller. All optional fields have sensible defaults. */
+export type PlatformerConfig = {
+  /** Downward acceleration in pixels/sec². Default: 980. */
+  gravity?: number;
+  /** Initial upward velocity when jumping (negative = up). Default: -400. */
+  jumpForce?: number;
+  /** Horizontal speed when walking, pixels/sec. Default: 160. */
+  walkSpeed?: number;
+  /** Horizontal speed when running, pixels/sec. Default: 280. */
+  runSpeed?: number;
+  /** Maximum downward velocity, pixels/sec. Default: 600. */
+  terminalVelocity?: number;
+  /** Seconds after leaving ground where jump is still allowed. Default: 0.08. */
+  coyoteTime?: number;
+  /** Seconds before landing that a jump input is remembered. Default: 0.1. */
+  jumpBuffer?: number;
+  /** Player AABB width. Required. */
+  playerWidth: number;
+  /** Player AABB height. Required. */
+  playerHeight: number;
+};
+
+/** Mutable platformer state. Returned by all platformer functions. */
+export type PlatformerStateType = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  onGround: boolean;
+  facingRight: boolean;
+  coyoteTimer: number;
+  jumpBufferTimer: number;
+};
+
+/** A static platform rectangle. oneWay platforms only block from above. */
+export type PlatformType = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** If true, only blocks downward movement (pass through from below/sides). */
+  oneWay?: boolean;
+};
+
 // --- Widgets ---
 
 /** Captured input state for one frame. Pass to autoUpdate* functions. */

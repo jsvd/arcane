@@ -164,4 +164,41 @@ describe("hud", () => {
       disableDrawCallCapture();
     });
   });
+
+  describe("hud.overlay", () => {
+    it("should log a rect draw call covering full viewport with screenSpace", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      hud.overlay({ r: 0, g: 0, b: 0, a: 0.5 });
+      const log = getDrawCalls();
+      const rectCalls = log.filter((l: any) => l.type === "rect");
+      assert.ok(rectCalls.length >= 1, "expected at least one rect draw call");
+      assert.equal((rectCalls[0] as any).screenSpace, true);
+      assert.equal((rectCalls[0] as any).x, 0);
+      assert.equal((rectCalls[0] as any).y, 0);
+      disableDrawCallCapture();
+    });
+
+    it("should default to layer 200", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      hud.overlay({ r: 1, g: 0, b: 0, a: 1 });
+      const log = getDrawCalls();
+      const rectCalls = log.filter((l: any) => l.type === "rect");
+      assert.ok(rectCalls.length >= 1, "expected rect draw call");
+      assert.equal((rectCalls[0] as any).layer, 200);
+      disableDrawCallCapture();
+    });
+
+    it("should accept custom layer", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      hud.overlay({ r: 0, g: 0, b: 0, a: 1 }, { layer: 300 });
+      const log = getDrawCalls();
+      const rectCalls = log.filter((l: any) => l.type === "rect");
+      assert.ok(rectCalls.length >= 1, "expected rect draw call");
+      assert.equal((rectCalls[0] as any).layer, 300);
+      disableDrawCallCapture();
+    });
+  });
 });

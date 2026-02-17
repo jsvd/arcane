@@ -18,9 +18,11 @@
  */
 
 import { drawText } from "../rendering/text.ts";
-import { drawBar, drawLabel } from "../ui/primitives.ts";
+import { drawBar, drawLabel, drawRect } from "../ui/primitives.ts";
 import { Colors, HUDLayout } from "../ui/colors.ts";
-import type { HUDTextOptions, HUDBarOptions, HUDLabelOptions } from "./types.ts";
+import { getViewportSize } from "../rendering/input.ts";
+import type { Color } from "../ui/types.ts";
+import type { HUDTextOptions, HUDBarOptions, HUDLabelOptions, HUDOverlayOptions } from "./types.ts";
 
 export const hud = {
   /**
@@ -78,6 +80,25 @@ export const hud = {
       scale: opts?.scale ?? HUDLayout.TEXT_SCALE,
       layer: opts?.layer ?? 110,
       screenSpace: true,
+    });
+  },
+
+  /**
+   * Draw a full-screen overlay rectangle (e.g., fade-to-black, damage flash).
+   * screenSpace: true, default layer: 200 (above other HUD elements).
+   *
+   * @param color - Overlay color (use alpha for transparency).
+   * @param opts - Optional layer override.
+   *
+   * @example
+   * hud.overlay({ r: 0, g: 0, b: 0, a: 0.5 }); // 50% black overlay
+   */
+  overlay(color: Color, opts?: HUDOverlayOptions): void {
+    const { width, height } = getViewportSize();
+    drawRect(0, 0, width, height, {
+      color,
+      screenSpace: true,
+      layer: opts?.layer ?? 200,
     });
   },
 };

@@ -91,7 +91,10 @@ game.onFrame((ctx) => {
 - Use `followTargetSmooth()` instead of raw `setCamera()` — smooth follow with deadzone support.
 - Always call `updateTweens(dt)`, `updateParticles(dt)`, and `updateScreenTransition(dt)` in your frame loop, even if you're not using them yet. They're no-ops when idle and ready when you need them.
 - Use `drawColorSprite()` for colored rectangles without pre-creating textures.
-- Use `hud.text()`/`hud.bar()`/`hud.label()` for HUD without manually passing `screenSpace: true`.
+- Use `hud.text()`/`hud.bar()`/`hud.label()` for HUD without manually passing `screenSpace: true`. Use `hud.overlay()` for full-screen effects (pause, damage flash).
+- Use `createSpriteGroup()` for multi-part characters instead of multiple manual `drawSprite()` calls.
+- Use `createRng(seed)` for ergonomic deterministic randomness instead of threading `PRNGState` through every call.
+- Use `drawCircle()`/`drawLine()`/`drawTriangle()` for shape primitives instead of manual sprite hacks.
 
 ## Coordinate System
 
@@ -174,11 +177,19 @@ followTargetSmooth(player.x, player.y, 2.0, 0.08);
 
 **15. Using raw `setCamera()` each frame** — Use `followTargetSmooth()` with `setCameraBounds()` and `setCameraDeadzone()`. Handles smooth interpolation and clamping. See [docs/coordinates.md](docs/coordinates.md).
 
+**16. Hand-rolling platformer physics** — Use `createPlatformerState()` + `platformerMove()` + `platformerJump()` + `platformerStep()`. Handles gravity, coyote time, jump buffer, one-way platforms. See [docs/game-patterns.md](docs/game-patterns.md).
+
+**17. Threading PRNGState through every random call** — Use `createRng(seed)` for a mutable wrapper: `rng.int()`, `rng.pick()`, `rng.roll("2d6+3")`, `rng.shuffle()`. Same deterministic output, less boilerplate.
+
+**18. Multiple drawSprite() calls for multi-part characters** — Use `createSpriteGroup()` + `drawSpriteGroup()`. Handles offsets, flip mirroring, opacity, per-part visibility. See [docs/entities.md](docs/entities.md).
+
+**19. Using drawRect() for circles/lines** — Use `drawCircle()`, `drawLine()`, `drawTriangle()` from `@arcane/runtime/ui`. See [docs/ui.md](docs/ui.md).
+
 ## Recommended Reading by Genre
 
 Read the **Essential** guides first, then the genre-specific guides for your game type.
 
-**Platformer:** [coordinates.md](docs/coordinates.md) (camera follow + bounds) → [physics.md](docs/physics.md) (AABB collision) → [juice.md](docs/juice.md) (impact, shake on land/hit) → [particles.md](docs/particles.md) (dust, death, fire effects) → [tweening.md](docs/tweening.md) (animated pickups, screen flash) → [input.md](docs/input.md) (gamepad support)
+**Platformer:** [game-patterns.md](docs/game-patterns.md) (platformer controller, coyote time, one-way platforms) → [coordinates.md](docs/coordinates.md) (camera follow + bounds) → [entities.md](docs/entities.md) (sprite groups for characters) → [juice.md](docs/juice.md) (impact, shake on land/hit) → [particles.md](docs/particles.md) (dust, death, fire effects) → [tweening.md](docs/tweening.md) (animated pickups, screen flash) → [input.md](docs/input.md) (gamepad support)
 
 **RPG / Roguelike:** [tilemaps.md](docs/tilemaps.md) (grid maps) → [scenes.md](docs/scenes.md) (menu flow, save/load) → [procgen.md](docs/procgen.md) (WFC dungeons) → [juice.md](docs/juice.md) (floating damage text, impact) → [tweening.md](docs/tweening.md) (menu animations)
 
@@ -199,7 +210,7 @@ Read the **Essential** guides first, then the genre-specific guides for your gam
 | [docs/juice.md](docs/juice.md) | `impact()` combinator (shake + hitstop + flash + particles), trails/ribbons, typewriter text |
 | [docs/transitions.md](docs/transitions.md) | Screen transitions: fade, wipe, circleIris, diamond, pixelate |
 | [docs/input.md](docs/input.md) | `createInputMap()`, keyboard, gamepad, touch, action mapping, combos |
-| [docs/entities.md](docs/entities.md) | Entity handles, collision registry, createGame patterns, immutable state |
+| [docs/entities.md](docs/entities.md) | Entity handles, sprite groups, collision registry, createGame patterns, immutable state |
 
 ### As needed
 
@@ -208,13 +219,13 @@ Read the **Essential** guides first, then the genre-specific guides for your gam
 | [docs/physics.md](docs/physics.md) | Rigid bodies, AABB helpers, collision layers, constraints, queries |
 | [docs/animation.md](docs/animation.md) | Basic animation, FSM, blending |
 | [docs/audio.md](docs/audio.md) | Sound, music, spatial audio, crossfade, bus mixing |
-| [docs/ui.md](docs/ui.md) | HUD, buttons, sliders, toggles, text input, layout, focus, widget auto-input |
+| [docs/ui.md](docs/ui.md) | HUD, hud.overlay, shape primitives, buttons, sliders, toggles, text input, layout, focus |
 | [docs/tilemaps.md](docs/tilemaps.md) | Basic + layered, auto-tiling, animated tiles, tile properties |
 | [docs/grids.md](docs/grids.md) | Isometric, hex, grid + hex pathfinding |
 | [docs/scenes.md](docs/scenes.md) | Scene manager, save/load, persistence, migrations |
 | [docs/procgen.md](docs/procgen.md) | WFC, constraints, validation |
 | [docs/testing.md](docs/testing.md) | Harness, property testing, visual testing / draw call capture |
-| [docs/game-patterns.md](docs/game-patterns.md) | Angular movement, screen wrapping, cooldowns, entity lifecycle |
+| [docs/game-patterns.md](docs/game-patterns.md) | Angular movement, screen wrapping, cooldowns, entity lifecycle, platformer controller, seeded RNG |
 | [docs/assets.md](docs/assets.md) | Asset catalog, download commands, OpenGameArt.org |
 
 ## Type Declarations

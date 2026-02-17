@@ -97,5 +97,8 @@ export type {
   BarDrawCall,
   LabelDrawCall,
   TilemapDrawCall,
+  CircleDrawCall,
+  LineDrawCall,
+  TriangleDrawCall,
   DrawCallFilter,
 } from "./visual.ts";

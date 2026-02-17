@@ -40,7 +40,10 @@ export type DrawCall =
   | PanelDrawCall
   | BarDrawCall
   | LabelDrawCall
-  | TilemapDrawCall;
+  | TilemapDrawCall
+  | CircleDrawCall
+  | LineDrawCall
+  | TriangleDrawCall;
 
 /** A drawSprite() call. */
 export type SpriteDrawCall = {
@@ -123,6 +126,41 @@ export type TilemapDrawCall = {
   x: number;
   y: number;
   layer: number;
+};
+
+/** A drawCircle() call. */
+export type CircleDrawCall = {
+  type: "circle";
+  cx: number;
+  cy: number;
+  radius: number;
+  layer: number;
+  screenSpace: boolean;
+};
+
+/** A drawLine() call. */
+export type LineDrawCall = {
+  type: "line";
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  thickness: number;
+  layer: number;
+  screenSpace: boolean;
+};
+
+/** A drawTriangle() call. */
+export type TriangleDrawCall = {
+  type: "triangle";
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  x3: number;
+  y3: number;
+  layer: number;
+  screenSpace: boolean;
 };
 
 /** Filter criteria for finding draw calls. All fields are optional — only specified fields are matched. */

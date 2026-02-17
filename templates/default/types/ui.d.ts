@@ -70,6 +70,20 @@ declare module "@arcane/runtime/ui" {
       /** If true, x/y are screen pixels (HUD). If false, world units. Default: false. */
       screenSpace?: boolean;
   };
+  /** Options for shape drawing functions ({@link drawCircle}, {@link drawTriangle}). */
+  export type ShapeOptions = {
+      /** Fill color. Default: white `{ r: 1, g: 1, b: 1, a: 1 }`. */
+      color?: Color;
+      /** Draw order layer. Default: 90. */
+      layer?: number;
+      /** If true, coordinates are screen pixels (HUD). If false, world units. Default: false. */
+      screenSpace?: boolean;
+  };
+  /** Options for {@link drawLine}. Extends {@link ShapeOptions} with thickness. */
+  export type LineOptions = ShapeOptions & {
+      /** Line thickness in pixels (screenSpace) or world units. Default: 1. */
+      thickness?: number;
+  };
   /** Options for {@link drawLabel}. */
   export type LabelOptions = {
       /** Text color. Default: white. */
@@ -633,6 +647,66 @@ declare module "@arcane/runtime/ui" {
    * @param options - Text color, background, border, padding, scale, layer, and screenSpace.
    */
   export declare function drawLabel(text: string, x: number, y: number, options?: LabelOptions): void;
+
+  /**
+   * Shape drawing primitives: circle, line, and triangle.
+   *
+   * Rendered via drawSprite() with cached solid textures — same pattern
+   * as the rectangle/panel/bar primitives in primitives.ts.
+   *
+   * @example
+   * ```ts
+   * import { drawCircle, drawLine, drawTriangle } from "@arcane/runtime/ui";
+   *
+   * drawCircle(100, 100, 30, { color: { r: 1, g: 0, b: 0, a: 1 } });
+   * drawLine(0, 0, 200, 150, { color: { r: 0, g: 1, b: 0, a: 1 }, thickness: 3 });
+   * drawTriangle(50, 10, 10, 90, 90, 90, { color: { r: 0, g: 0, b: 1, a: 1 } });
+   * ```
+   */
+  /**
+   * Draw a filled circle using scanline fill (one drawSprite per pixel row).
+   * No-op in headless mode.
+   *
+   * @param cx - Center X position (screen pixels if screenSpace, world units otherwise).
+   * @param cy - Center Y position (screen pixels if screenSpace, world units otherwise).
+   * @param radius - Circle radius in pixels (screenSpace) or world units.
+   * @param options - Color, layer, and screenSpace options.
+   *
+   * @example
+   * drawCircle(200, 150, 40, { color: { r: 1, g: 0, b: 0, a: 1 } });
+   */
+  export declare function drawCircle(cx: number, cy: number, radius: number, options?: ShapeOptions): void;
+  /**
+   * Draw a line between two points as a rotated rectangle.
+   * No-op in headless mode.
+   *
+   * @param x1 - Start X position (screen pixels if screenSpace, world units otherwise).
+   * @param y1 - Start Y position (screen pixels if screenSpace, world units otherwise).
+   * @param x2 - End X position.
+   * @param y2 - End Y position.
+   * @param options - Color, thickness, layer, and screenSpace options.
+   *
+   * @example
+   * drawLine(10, 10, 200, 150, { color: { r: 0, g: 1, b: 0, a: 1 }, thickness: 2 });
+   */
+  export declare function drawLine(x1: number, y1: number, x2: number, y2: number, options?: LineOptions): void;
+  /**
+   * Draw a filled triangle using scanline fill.
+   * Vertices are sorted by Y, then edges are interpolated per row.
+   * No-op in headless mode.
+   *
+   * @param x1 - First vertex X.
+   * @param y1 - First vertex Y.
+   * @param x2 - Second vertex X.
+   * @param y2 - Second vertex Y.
+   * @param x3 - Third vertex X.
+   * @param y3 - Third vertex Y.
+   * @param options - Color, layer, and screenSpace options.
+   *
+   * @example
+   * drawTriangle(100, 10, 50, 90, 150, 90, { color: { r: 0, g: 0, b: 1, a: 1 } });
+   */
+  export declare function drawTriangle(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, options?: ShapeOptions): void;
 
   /**
    * Immediate-mode horizontal slider widget.

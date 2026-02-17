@@ -59,6 +59,91 @@ declare module "@arcane/runtime/game" {
       /** Draw layer. Default: 110. */
       layer?: number;
   };
+  /** Options for hud.overlay(). */
+  export type HUDOverlayOptions = {
+      /** Draw layer. Default: 200 (above other HUD). */
+      layer?: number;
+  };
+  /** A single sprite part within a group. */
+  export type SpritePart = {
+      /** Unique name for lookup. */
+      name: string;
+      /** Horizontal offset from the group origin. */
+      offsetX: number;
+      /** Vertical offset from the group origin. */
+      offsetY: number;
+      /** Part width. */
+      w: number;
+      /** Part height. */
+      h: number;
+      /** Inline color. Used if textureId is not set. */
+      color?: Color;
+      /** Pre-loaded texture ID. Takes priority over color. */
+      textureId?: TextureId;
+      /** Layer offset relative to group baseLayer. Default: 0. */
+      layerOffset?: number;
+      /** Part opacity (0-1). Multiplied with group opacity. Default: 1. */
+      opacity?: number;
+      /** Blend mode. Default: "alpha". */
+      blendMode?: "alpha" | "additive" | "multiply" | "screen";
+      /** Whether this part flips horizontally when the group flips. Default: true. */
+      flipWithParent?: boolean;
+      /** Whether this part is visible. Default: true. */
+      visible?: boolean;
+  };
+  /** A collection of sprite parts with a shared base layer. */
+  export type SpriteGroupType = {
+      parts: SpritePart[];
+      baseLayer: number;
+  };
+  /** Options for drawSpriteGroup(). */
+  export type SpriteGroupDrawOptions = {
+      /** Flip the entire group horizontally. */
+      flipX?: boolean;
+      /** Group opacity multiplier (0-1). Applied to all parts. */
+      opacity?: number;
+  };
+  /** Configuration for the platformer controller. All optional fields have sensible defaults. */
+  export type PlatformerConfig = {
+      /** Downward acceleration in pixels/sec². Default: 980. */
+      gravity?: number;
+      /** Initial upward velocity when jumping (negative = up). Default: -400. */
+      jumpForce?: number;
+      /** Horizontal speed when walking, pixels/sec. Default: 160. */
+      walkSpeed?: number;
+      /** Horizontal speed when running, pixels/sec. Default: 280. */
+      runSpeed?: number;
+      /** Maximum downward velocity, pixels/sec. Default: 600. */
+      terminalVelocity?: number;
+      /** Seconds after leaving ground where jump is still allowed. Default: 0.08. */
+      coyoteTime?: number;
+      /** Seconds before landing that a jump input is remembered. Default: 0.1. */
+      jumpBuffer?: number;
+      /** Player AABB width. Required. */
+      playerWidth: number;
+      /** Player AABB height. Required. */
+      playerHeight: number;
+  };
+  /** Mutable platformer state. Returned by all platformer functions. */
+  export type PlatformerStateType = {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      onGround: boolean;
+      facingRight: boolean;
+      coyoteTimer: number;
+      jumpBufferTimer: number;
+  };
+  /** A static platform rectangle. oneWay platforms only block from above. */
+  export type PlatformType = {
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      /** If true, only blocks downward movement (pass through from below/sides). */
+      oneWay?: boolean;
+  };
   /** Captured input state for one frame. Pass to autoUpdate* functions. */
   export type FrameInput = {
       readonly mouseX: number;
@@ -424,7 +509,214 @@ declare module "@arcane/runtime/game" {
        * @param opts - Optional overrides for colors, padding, scale, and layer.
        */
       label(content: string, x: number, y: number, opts?: HUDLabelOptions): void;
+      /**
+       * Draw a full-screen overlay rectangle (e.g., fade-to-black, damage flash).
+       * screenSpace: true, default layer: 200 (above other HUD elements).
+       *
+       * @param color - Overlay color (use alpha for transparency).
+       * @param opts - Optional layer override.
+       *
+       * @example
+       * hud.overlay({ r: 0, g: 0, b: 0, a: 0.5 }); // 50% black overlay
+       */
+      overlay(color: Color, opts?: HUDOverlayOptions): void;
   };
+
+  /**
+   * Platformer controller: pure functions for 2D side-scrolling movement.
+   *
+   * State in, state out -- no rendering, no globals. Handles gravity, jump
+   * (with coyote time + jump buffer), walk/run, and AABB platform collision.
+   *
+   * @example
+   * ```ts
+   * import { createPlatformerState, platformerMove, platformerJump, platformerStep } from "@arcane/runtime/game";
+   *
+   * const config = { playerWidth: 16, playerHeight: 24, gravity: 980 };
+   * let player = createPlatformerState(100, 100);
+   *
+   * // In your frame callback:
+   * if (isKeyDown("ArrowRight")) player = platformerMove(player, 1, false, config);
+   * if (isKeyPressed("Space")) player = platformerJump(player, config);
+   * player = platformerStep(player, dt, platforms, config);
+   * ```
+   */
+  /** Configuration for the platformer controller. All optional fields have sensible defaults. */
+  export type PlatformerConfig = {
+      /** Downward acceleration in pixels/sec^2. Default: 980. */
+      gravity?: number;
+      /** Initial upward velocity when jumping (negative = up). Default: -400. */
+      jumpForce?: number;
+      /** Horizontal speed when walking, pixels/sec. Default: 160. */
+      walkSpeed?: number;
+      /** Horizontal speed when running, pixels/sec. Default: 280. */
+      runSpeed?: number;
+      /** Maximum downward velocity, pixels/sec. Default: 600. */
+      terminalVelocity?: number;
+      /** Seconds after leaving ground where jump is still allowed. Default: 0.08. */
+      coyoteTime?: number;
+      /** Seconds before landing that a jump input is remembered. Default: 0.1. */
+      jumpBuffer?: number;
+      /** Player AABB width. Required. */
+      playerWidth: number;
+      /** Player AABB height. Required. */
+      playerHeight: number;
+  };
+  /** Mutable platformer state. Returned by all platformer functions. */
+  export type PlatformerState = {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      onGround: boolean;
+      facingRight: boolean;
+      coyoteTimer: number;
+      jumpBufferTimer: number;
+  };
+  /** A static platform rectangle. oneWay platforms only block from above. */
+  export type Platform = {
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      /** If true, only blocks downward movement (pass through from below/sides). */
+      oneWay?: boolean;
+  };
+  /**
+   * Create a new platformer state at the given position.
+   *
+   * Initializes velocity to zero, airborne, facing right, with no active
+   * coyote or jump buffer timers.
+   *
+   * @param x - Initial horizontal position (left edge of player AABB).
+   * @param y - Initial vertical position (top edge of player AABB).
+   * @returns A fresh PlatformerState.
+   */
+  export declare function createPlatformerState(x: number, y: number): PlatformerState;
+  /**
+   * Set horizontal movement direction and speed.
+   *
+   * @param state - Current platformer state.
+   * @param direction - -1 (left), 0 (stop), or 1 (right).
+   * @param running - If true, use runSpeed instead of walkSpeed.
+   * @param config - Platformer configuration.
+   * @returns New state with updated vx and facingRight.
+   */
+  export declare function platformerMove(state: PlatformerState, direction: -1 | 0 | 1, running: boolean, config: PlatformerConfig): PlatformerState;
+  /**
+   * Request a jump. If on the ground (or within coyote time), applies jump force
+   * immediately. Otherwise, sets the jump buffer timer so the jump triggers
+   * automatically on the next landing.
+   *
+   * @param state - Current platformer state.
+   * @param config - Platformer configuration.
+   * @returns New state with jump applied or jump buffer set.
+   */
+  export declare function platformerJump(state: PlatformerState, config: PlatformerConfig): PlatformerState;
+  /**
+   * Advance the platformer by one frame. Applies gravity, integrates position,
+   * resolves AABB collisions against platforms, and updates coyote time and
+   * jump buffer timers.
+   *
+   * @param state - Current platformer state.
+   * @param dt - Frame delta time in seconds.
+   * @param platforms - Array of static platform rectangles to collide against.
+   * @param config - Platformer configuration.
+   * @returns New state after physics integration and collision resolution.
+   */
+  export declare function platformerStep(state: PlatformerState, dt: number, platforms: Platform[], config: PlatformerConfig): PlatformerState;
+
+  /**
+   * Sprite group: bundle multiple sprite parts with relative offsets.
+   * Draw composite characters or multi-part objects with a single call.
+   *
+   * @example
+   * ```ts
+   * import { createSpriteGroup, drawSpriteGroup, setPartVisible } from "@arcane/runtime/game";
+   *
+   * const knight = createSpriteGroup([
+   *   { name: "body", offsetX: 0, offsetY: 0, w: 16, h: 16, color: { r: 0.6, g: 0.6, b: 0.6, a: 1 } },
+   *   { name: "head", offsetX: 2, offsetY: -12, w: 12, h: 12, color: { r: 1, g: 0.8, b: 0.7, a: 1 } },
+   *   { name: "sword", offsetX: 14, offsetY: -2, w: 6, h: 20, color: { r: 0.8, g: 0.8, b: 0.9, a: 1 }, layerOffset: 1 },
+   * ], 5);
+   *
+   * drawSpriteGroup(knight, 100, 200);
+   * drawSpriteGroup(knight, 100, 200, { flipX: true }); // mirrors all parts
+   * setPartVisible(knight, "sword", false); // hide sword
+   * ```
+   */
+  /** A single sprite part within a group. */
+  export type SpritePart = {
+      /** Unique name for lookup. */
+      name: string;
+      /** Horizontal offset from the group origin. */
+      offsetX: number;
+      /** Vertical offset from the group origin. */
+      offsetY: number;
+      /** Part width. */
+      w: number;
+      /** Part height. */
+      h: number;
+      /** Inline color. Used if textureId is not set. */
+      color?: Color;
+      /** Pre-loaded texture ID. Takes priority over color. */
+      textureId?: TextureId;
+      /** Layer offset relative to group baseLayer. Default: 0. */
+      layerOffset?: number;
+      /** Part opacity (0-1). Multiplied with group opacity. Default: 1. */
+      opacity?: number;
+      /** Blend mode. Default: "alpha". */
+      blendMode?: "alpha" | "additive" | "multiply" | "screen";
+      /** Whether this part flips horizontally when the group flips. Default: true. */
+      flipWithParent?: boolean;
+      /** Whether this part is visible. Default: true. */
+      visible?: boolean;
+  };
+  /** A collection of sprite parts with a shared base layer. */
+  export type SpriteGroup = {
+      parts: SpritePart[];
+      baseLayer: number;
+  };
+  /** Options for drawSpriteGroup(). */
+  export type SpriteGroupDrawOptions = {
+      /** Flip the entire group horizontally. */
+      flipX?: boolean;
+      /** Group opacity multiplier (0-1). Applied to all parts. */
+      opacity?: number;
+  };
+  /**
+   * Create a sprite group from an array of parts.
+   *
+   * @param parts - Sprite parts with relative offsets.
+   * @param baseLayer - Base draw layer. Part layers = baseLayer + part.layerOffset. Default: 0.
+   * @returns A new SpriteGroup.
+   */
+  export declare function createSpriteGroup(parts: SpritePart[], baseLayer?: number): SpriteGroup;
+  /**
+   * Draw all visible parts of a sprite group at the given position.
+   *
+   * @param group - The sprite group to draw.
+   * @param x - Group origin X position in world units.
+   * @param y - Group origin Y position in world units.
+   * @param opts - Optional flip and opacity overrides.
+   */
+  export declare function drawSpriteGroup(group: SpriteGroup, x: number, y: number, opts?: SpriteGroupDrawOptions): void;
+  /**
+   * Find a sprite part by name.
+   *
+   * @param group - The sprite group to search.
+   * @param name - Part name to find.
+   * @returns The matching SpritePart, or undefined if not found.
+   */
+  export declare function getSpritePart(group: SpriteGroup, name: string): SpritePart | undefined;
+  /**
+   * Set a part's visibility by name.
+   *
+   * @param group - The sprite group to modify.
+   * @param name - Part name to update.
+   * @param visible - Whether the part should be drawn.
+   */
+  export declare function setPartVisible(group: SpriteGroup, name: string, visible: boolean): void;
 
   /**
    * Widget auto-wiring: capture input once per frame, pass to all widgets.

@@ -12,6 +12,13 @@ export type {
   HUDTextOptions,
   HUDBarOptions,
   HUDLabelOptions,
+  HUDOverlayOptions,
+  SpritePart,
+  SpriteGroupType,
+  SpriteGroupDrawOptions,
+  PlatformerConfig,
+  PlatformerStateType,
+  PlatformType,
   FrameInput,
   CollisionCallback,
   CollisionRegistry,
@@ -39,6 +46,14 @@ export { createCollisionRegistry, onBodyCollision, onCollision, removeBodyCollis
 
 // Entity handles
 export { createEntity, syncEntities, drawEntities, destroyEntity, findEntity, findEntities } from "./entity.ts";
+
+// Sprite groups
+export type { SpriteGroup } from "./sprite-group.ts";
+export { createSpriteGroup, drawSpriteGroup, getSpritePart, setPartVisible } from "./sprite-group.ts";
+
+// Platformer controller
+export type { PlatformerState, Platform } from "./platformer.ts";
+export { createPlatformerState, platformerMove, platformerJump, platformerStep } from "./platformer.ts";
 
 // Game bootstrap
 export { createGame } from "./game.ts";

@@ -18,6 +18,10 @@ export {
   shuffle,
 } from "./prng.ts";
 
+// Mutable PRNG wrapper
+export type { Rng } from "./rng.ts";
+export { createRng } from "./rng.ts";
+
 // Transactions
 export type {
   Mutation,
