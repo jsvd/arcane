@@ -29,7 +29,6 @@ import {
   setEffectParam,
 } from "../../runtime/rendering/index.ts";
 import { rgb } from "../../runtime/ui/types.ts";
-import { drawCircle } from "../../runtime/ui/index.ts";
 import { createGame, drawColorSprite } from "../../runtime/game/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 import { createRng } from "../../runtime/state/index.ts";
@@ -499,15 +498,35 @@ function render(s: GameState): void {
     });
   }
 
-  // Asteroids (circles)
+  // Asteroids (rotation)
   for (const a of s.asteroids) {
     const r = ASTEROID_SIZES[a.size];
-    drawCircle(a.x, a.y, r, { color: COL_ASTEROID, layer: 2 });
+    drawColorSprite({
+      color: COL_ASTEROID,
+      x: a.x - r,
+      y: a.y - r,
+      w: r * 2,
+      h: r * 2,
+      layer: 2,
+      rotation: a.angle,
+      originX: 0.5,
+      originY: 0.5,
+    });
   }
 
-  // Bullets (circles)
+  // Bullets
   for (const b of s.bullets) {
-    drawCircle(b.x, b.y, BULLET_SIZE / 2, { color: COL_BULLET, layer: 3 });
+    const opacity = Math.min(b.life / 0.3, 1);
+    drawColorSprite({
+      color: COL_BULLET,
+      x: b.x - BULLET_SIZE / 2,
+      y: b.y - BULLET_SIZE / 2,
+      w: BULLET_SIZE,
+      h: BULLET_SIZE,
+      layer: 3,
+      opacity,
+      blendMode: "additive",
+    });
   }
 
   // Ship
