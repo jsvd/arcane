@@ -20,39 +20,78 @@ Imports use `@arcane/runtime/{module}`:
 
 ```typescript
 import { createGame, drawColorSprite, hud } from "@arcane/runtime/game";
-import { isKeyDown, isKeyPressed, setCamera } from "@arcane/runtime/rendering";
+import { followTargetSmooth, setCameraBounds, getViewportSize, drawSprite } from "@arcane/runtime/rendering";
+import { updateTweens, shakeCamera, getCameraShakeOffset } from "@arcane/runtime/tweening";
+import { createEmitter, updateParticles, getAllParticles } from "@arcane/runtime/particles";
+import { createInputMap, isActionDown, isActionPressed } from "@arcane/runtime/input";
+import {
+  updateScreenTransition, drawScreenTransition,
+} from "@arcane/runtime/rendering";
 import { rgb } from "@arcane/runtime/ui";
 
 const game = createGame({ name: "my-game", zoom: 2.0 });
+
+// Input actions — supports keyboard + gamepad + touch in one place
+const input = createInputMap({
+  left:  ["ArrowLeft", "a", { type: "gamepadAxis", axis: "LeftStickX", direction: -1 }],
+  right: ["ArrowRight", "d", { type: "gamepadAxis", axis: "LeftStickX", direction: 1 }],
+  jump:  ["Space", "ArrowUp", "w", "GamepadA"],
+});
 
 let state = newGame();
 
 game.state({ get: () => state, set: (s) => { state = s; } });
 
 game.onFrame((ctx) => {
-  // 1. Input
+  // 1. Input — use action map, not raw keys
   let dx = 0;
-  if (isKeyDown("ArrowLeft")) dx = -1;
-  if (isKeyDown("ArrowRight")) dx = 1;
-  if (isKeyPressed("Space")) state = jump(state);
+  if (isActionDown("left", input)) dx = -1;
+  if (isActionDown("right", input)) dx = 1;
+  if (isActionPressed("jump", input)) state = jump(state);
 
   // 2. Update (pure functions from game.ts)
   state = movePlayer(state, dx * SPEED * ctx.dt);
 
-  // 3. Camera (override auto-camera when following player)
-  setCamera(state.x, state.y, 2.0);
+  // 3. Camera — smooth follow with bounds, not raw setCamera()
+  setCameraBounds({ minX: 0, minY: 0, maxX: WORLD_W, maxY: WORLD_H });
+  const shake = getCameraShakeOffset();
+  followTargetSmooth(state.x + shake.x, state.y + shake.y, 2.0, 0.08);
 
-  // 4. Render — no clearSprites() needed (autoClear: true by default)
+  // 4. Update subsystems — ALWAYS call these
+  updateTweens(ctx.dt);
+  updateParticles(ctx.dt);
+  updateScreenTransition(ctx.dt);
+
+  // 5. Render — no clearSprites() needed (autoClear: true by default)
   drawColorSprite({ color: rgb(80, 80, 80), x: 0, y: 0, w: 800, h: 600, layer: 0 });
   drawColorSprite({ color: rgb(60, 180, 255), x: state.x - 16, y: state.y - 16, w: 32, h: 32, layer: 1 });
 
-  // 5. HUD — hud.text/bar/label are screen-space by default
+  // 6. Render particles from engine particle system
+  for (const p of getAllParticles()) {
+    drawSprite({
+      textureId: p.textureId, x: p.x - 2, y: p.y - 2,
+      w: 4 * p.scale, h: 4 * p.scale,
+      opacity: p.lifetime / p.maxLifetime,
+      blendMode: "additive", layer: 5,
+    });
+  }
+
+  // 7. Transitions overlay (no-op if inactive)
+  drawScreenTransition();
+
+  // 8. HUD — hud.text/bar/label are screen-space by default
   hud.text(`Score: ${state.score}`, 10, 10);
   hud.bar(10, 30, state.hp / state.maxHp);
 });
 ```
 
-`createGame()` handles `clearSprites()`, `setCamera()`, agent registration, and provides `ctx.dt`/`ctx.viewport`/`ctx.elapsed`/`ctx.frame`. Use `drawColorSprite()` for colored rectangles without pre-creating textures. Use `hud.text()`/`hud.bar()`/`hud.label()` for HUD without manually passing `screenSpace: true`.
+**Key points:**
+- `createGame()` handles `clearSprites()`, initial camera, agent registration, and provides `ctx.dt`/`ctx.viewport`/`ctx.elapsed`/`ctx.frame`.
+- Use `createInputMap()` instead of raw `isKeyDown()` — gets you gamepad and touch for free.
+- Use `followTargetSmooth()` instead of raw `setCamera()` — smooth follow with deadzone support.
+- Always call `updateTweens(dt)`, `updateParticles(dt)`, and `updateScreenTransition(dt)` in your frame loop, even if you're not using them yet. They're no-ops when idle and ready when you need them.
+- Use `drawColorSprite()` for colored rectangles without pre-creating textures.
+- Use `hud.text()`/`hud.bar()`/`hud.label()` for HUD without manually passing `screenSpace: true`.
 
 ## Coordinate System
 
@@ -96,14 +135,16 @@ const { width: VPW, height: VPH } = getViewportSize();
 setCamera(VPW / 2, VPH / 2);  // now (0,0) = top-left corner
 ```
 
-**Scrolling world** — center camera on the player:
+**Scrolling world** — smooth camera follow with bounds:
 ```typescript
-setCamera(player.x, player.y, 2.0);  // follow player, 2x zoom
+setCameraBounds({ minX: 0, minY: 0, maxX: worldWidth, maxY: worldHeight });
+setCameraDeadzone({ width: 60, height: 40 });
+followTargetSmooth(player.x, player.y, 2.0, 0.08);
 ```
 
 ## Common Mistakes
 
-**1. Forgetting `setCamera()`** — Without it, camera is at (0,0) = screen center. Fix: call `setCamera(VPW/2, VPH/2)` every frame for web-like coordinates.
+**1. Forgetting `setCamera()`** — Without it, camera is at (0,0) = screen center. Fix: call `setCamera(VPW/2, VPH/2)` every frame for web-like coordinates, or use `followTargetSmooth()`.
 
 **2. Hardcoding viewport size** — Never use `800`, `600`. Always: `const { width: VPW, height: VPH } = getViewportSize();`
 
@@ -123,24 +164,56 @@ setCamera(player.x, player.y, 2.0);  // follow player, 2x zoom
 
 **10. `setBackgroundColor` range** — Takes 0.0-1.0 floats, NOT 0-255 integers.
 
+**11. Writing your own particle system** — Use `createEmitter()` + `updateParticles(dt)` + `getAllParticles()`. The engine handles pooling, lifetime, color interpolation, burst/continuous modes. See [docs/particles.md](docs/particles.md).
+
+**12. Using raw `Math.sin()` for animation** — Use `tween()` + `updateTweens(dt)` with 30 built-in easing functions. Tweens handle timing, completion callbacks, and chaining. See [docs/tweening.md](docs/tweening.md).
+
+**13. Hand-rolling screen transitions** — Use `startScreenTransition("fade", 0.5, opts, onMidpoint)`. Five built-in patterns (fade, wipe, circleIris, diamond, pixelate). See [docs/transitions.md](docs/transitions.md).
+
+**14. Polling raw `isKeyDown()` for all input** — Use `createInputMap()` + `isActionDown()`/`isActionPressed()`. Maps named actions to keyboard + gamepad + touch. See [docs/input.md](docs/input.md).
+
+**15. Using raw `setCamera()` each frame** — Use `followTargetSmooth()` with `setCameraBounds()` and `setCameraDeadzone()`. Handles smooth interpolation and clamping. See [docs/coordinates.md](docs/coordinates.md).
+
+## Recommended Reading by Genre
+
+Read the **Essential** guides first, then the genre-specific guides for your game type.
+
+**Platformer:** [coordinates.md](docs/coordinates.md) (camera follow + bounds) → [physics.md](docs/physics.md) (AABB collision) → [juice.md](docs/juice.md) (impact, shake on land/hit) → [particles.md](docs/particles.md) (dust, death, fire effects) → [tweening.md](docs/tweening.md) (animated pickups, screen flash) → [input.md](docs/input.md) (gamepad support)
+
+**RPG / Roguelike:** [tilemaps.md](docs/tilemaps.md) (grid maps) → [scenes.md](docs/scenes.md) (menu flow, save/load) → [procgen.md](docs/procgen.md) (WFC dungeons) → [juice.md](docs/juice.md) (floating damage text, impact) → [tweening.md](docs/tweening.md) (menu animations)
+
+**Action / Shooter:** [physics.md](docs/physics.md) (rigid bodies, raycast) → [particles.md](docs/particles.md) (explosions, muzzle flash) → [juice.md](docs/juice.md) (hitstop, shake, impact) → [input.md](docs/input.md) (gamepad + touch) → [audio.md](docs/audio.md) (spatial audio)
+
+**Puzzle:** [rendering.md](docs/rendering.md) (sprites, text) → [tweening.md](docs/tweening.md) (piece movement, pop effects) → [scenes.md](docs/scenes.md) (level select, save) → [ui.md](docs/ui.md) (menus, buttons)
+
 ## Topic Guides
+
+### Essential — read before writing game code
 
 | Guide | Contents |
 |-------|----------|
-| [docs/coordinates.md](docs/coordinates.md) | Camera, viewport, resolution-adaptive, parallax, zoom |
-| [docs/rendering.md](docs/rendering.md) | Sprites, textures, drawColorSprite, text/MSDF, post-processing, shaders, nine-slice, lighting, GI |
+| [docs/rendering.md](docs/rendering.md) | Sprites, textures, drawColorSprite, text/MSDF, nine-slice, post-processing, shaders, lighting |
+| [docs/coordinates.md](docs/coordinates.md) | Camera follow, smooth follow, bounds, deadzone, parallax, zoom |
+| [docs/tweening.md](docs/tweening.md) | `tween()`, 30 easing functions, `sequence()`/`parallel()`/`stagger()`, camera shake, screen flash |
+| [docs/particles.md](docs/particles.md) | `createEmitter()`, burst/continuous modes, rendering particles, floating text |
+| [docs/juice.md](docs/juice.md) | `impact()` combinator (shake + hitstop + flash + particles), trails/ribbons, typewriter text |
+| [docs/transitions.md](docs/transitions.md) | Screen transitions: fade, wipe, circleIris, diamond, pixelate |
+| [docs/input.md](docs/input.md) | `createInputMap()`, keyboard, gamepad, touch, action mapping, combos |
+| [docs/entities.md](docs/entities.md) | Entity handles, collision registry, createGame patterns, immutable state |
+
+### As needed
+
+| Guide | Contents |
+|-------|----------|
+| [docs/physics.md](docs/physics.md) | Rigid bodies, AABB helpers, collision layers, constraints, queries |
 | [docs/animation.md](docs/animation.md) | Basic animation, FSM, blending |
-| [docs/physics.md](docs/physics.md) | Rigid bodies, AABB helpers, collision layers |
 | [docs/audio.md](docs/audio.md) | Sound, music, spatial audio, crossfade, bus mixing |
 | [docs/ui.md](docs/ui.md) | HUD, buttons, sliders, toggles, text input, layout, focus, widget auto-input |
 | [docs/tilemaps.md](docs/tilemaps.md) | Basic + layered, auto-tiling, animated tiles, tile properties |
-| [docs/game-feel.md](docs/game-feel.md) | Tweening, chains, shake, particles, impact/juice, floating text, typewriter, trails, transitions |
-| [docs/input.md](docs/input.md) | Keyboard, gamepad, touch, input actions, combos |
 | [docs/grids.md](docs/grids.md) | Isometric, hex, grid + hex pathfinding |
 | [docs/scenes.md](docs/scenes.md) | Scene manager, save/load, persistence, migrations |
 | [docs/procgen.md](docs/procgen.md) | WFC, constraints, validation |
 | [docs/testing.md](docs/testing.md) | Harness, property testing, visual testing / draw call capture |
-| [docs/entities.md](docs/entities.md) | Entity handles, collision registry, createGame patterns, immutable state |
 | [docs/game-patterns.md](docs/game-patterns.md) | Angular movement, screen wrapping, cooldowns, entity lifecycle |
 | [docs/assets.md](docs/assets.md) | Asset catalog, download commands, OpenGameArt.org |
 
@@ -196,3 +269,6 @@ File organization: `src/game.ts` (logic), `src/visual.ts` (rendering), `src/*.te
 - Key names: `"Space"` not `" "`, `"Enter"` not `"\n"`. Check type declarations if unsure.
 - For rotation, `0` = no rotation, positive = clockwise. Ship sprites facing "up" need `angle - Math.PI/2` offset.
 - Use `blendMode: "additive"` for glowing effects (exhaust, fire, magic).
+- Use `impact()` or `impactLight()` when something hits — one call gives you shake + flash + particles.
+- Use `createEmitter()` for any visual effect that spawns many short-lived objects (fire, dust, sparks, explosions).
+- Use `startScreenTransition()` for level changes — don't hand-roll fade overlays.
