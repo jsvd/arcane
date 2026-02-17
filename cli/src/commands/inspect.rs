@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use arcane_engine::scripting::ArcaneRuntime;
+use arcane_core::scripting::ArcaneRuntime;
 
 use super::{create_import_map, type_check};
 

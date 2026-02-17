@@ -1,14 +1,14 @@
 [package]
-name = "arcane-cli"
-version = "0.10.2"
+name = "arcane-engine"
+version = "0.11.0"
 edition.workspace = true
 license.workspace = true
-description = "CLI for Arcane - agent-native 2D game engine (dev server, testing, project scaffolding)"
+description = "Arcane game engine — agent-native 2D engine with embedded TypeScript runtime"
 repository = "https://github.com/anthropics/arcane"
 homepage = "https://github.com/anthropics/arcane"
-documentation = "https://docs.rs/arcane-cli"
-keywords = ["game-engine", "cli", "gamedev", "2d"]
-categories = ["command-line-utilities", "game-engines", "development-tools"]
+documentation = "https://docs.rs/arcane-engine"
+keywords = ["game-engine", "2d", "gamedev", "typescript", "v8"]
+categories = ["game-engines", "development-tools", "game-development"]
 readme = "../README.md"
 include = ["src/**/*", "Cargo.toml", "build.rs", "data/**/*"]
 
@@ -17,7 +17,7 @@ name = "arcane"
 path = "src/main.rs"
 
 [dependencies]
-arcane-engine = { version = "0.10.2", path = "../core", features = ["renderer"] }
+arcane-core = { version = "0.11.0", path = "../core", features = ["renderer"] }
 clap = { version = "4", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 anyhow = "1"

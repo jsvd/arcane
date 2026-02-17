@@ -29,7 +29,7 @@ import {
 } from "@arcane/runtime/rendering";
 import { rgb } from "@arcane/runtime/ui";
 
-const game = createGame({ name: "my-game", zoom: 2.0 });
+const game = createGame({ name: "my-game", zoom: 1.0 });
 
 // Input actions — supports keyboard + gamepad + touch in one place
 const input = createInputMap({

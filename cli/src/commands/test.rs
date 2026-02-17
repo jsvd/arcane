@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use arcane_engine::scripting::{run_test_file_with_import_map, TestSummary};
+use arcane_core::scripting::{run_test_file_with_import_map, TestSummary};
 
 use super::{create_import_map, type_check};
 

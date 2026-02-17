@@ -5,14 +5,11 @@ A 2D game built with [Arcane](https://github.com/anthropics/arcane) - an agent-n
 ## Getting Started
 
 ```bash
-# Install dependencies
-npm install
-
 # Run development server with hot-reload
-npm run dev
+arcane dev
 
 # Run tests
-npm run test
+arcane test
 ```
 
 ## Project Structure

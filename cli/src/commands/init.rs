@@ -43,17 +43,31 @@ pub fn run() -> Result<()> {
         }
     }
 
+    // Copy runtime into project
+    let runtime_dst = current_dir.join("runtime");
+    match new::find_runtime_dir() {
+        Some(runtime_src) => new::copy_runtime_fs(&runtime_src, &runtime_dst)?,
+        None => new::copy_embedded_raw(&new::RUNTIME_DIR, &runtime_dst)?,
+    }
+
+    // Copy recipes into project
+    let recipes_dst = current_dir.join("recipes");
+    match new::find_recipes_dir_fs() {
+        Some(recipes_src) => new::copy_dir_fs(&recipes_src, &recipes_dst)?,
+        None => new::copy_embedded_raw(&new::RECIPES_DIR, &recipes_dst)?,
+    }
+
     println!("\n✓ Created Arcane project \"{}\"", project_name);
     println!("\nNext steps:");
-    println!("  npm install");
     println!("  arcane dev              # Run with hot-reload (defaults to src/visual.ts)");
     println!("  arcane test             # Run tests");
     println!("  arcane add --list       # See available recipes");
     println!();
     println!("MCP auto-configured for Claude Code, Cursor, and VS Code.");
-    println!("AI tools will discover your game engine automatically.");    println!();
+    println!("AI tools will discover your game engine automatically.");
+    println!();
     println!("Read AGENTS.md for LLM development guide.");
-    println!("Full API reference in types/arcane.d.ts.");
+    println!("API reference in types/*.d.ts (one file per module).");
 
     Ok(())
 }

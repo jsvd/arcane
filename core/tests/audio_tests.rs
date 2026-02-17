@@ -1,4 +1,4 @@
-use arcane_engine::audio::{AudioBus, AudioCommand};
+use arcane_core::audio::{AudioBus, AudioCommand};
 
 #[test]
 fn test_audio_bus_from_u32() {

@@ -5,10 +5,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use arcane_engine::audio::{self, AudioCommand, AudioSender};
-use arcane_engine::platform::window::{DevConfig, RenderState};
-use arcane_engine::scripting::render_ops::{BridgeAudioCommand, RenderBridgeState};
-use arcane_engine::scripting::ArcaneRuntime;
+use arcane_core::audio::{self, AudioCommand, AudioSender};
+use arcane_core::platform::window::{DevConfig, RenderState};
+use arcane_core::scripting::render_ops::{BridgeAudioCommand, RenderBridgeState};
+use arcane_core::scripting::ArcaneRuntime;
 
 use super::{create_import_map, type_check};
 
@@ -62,8 +62,8 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
 
     // Start HTTP inspector if requested
     let inspector_rx = inspector_port.map(|port| {
-        let (tx, rx) = arcane_engine::agent::inspector_channel();
-        let _handle = arcane_engine::agent::inspector::start_inspector(port, tx);
+        let (tx, rx) = arcane_core::agent::inspector_channel();
+        let _handle = arcane_core::agent::inspector::start_inspector(port, tx);
         // Leak the handle — inspector runs for the lifetime of the process
         std::mem::forget(_handle);
         write_mcp_port_file(port);
@@ -73,8 +73,8 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
 
     // Start MCP server if requested
     let mcp_rx = mcp_port.map(|port| {
-        let (tx, rx) = arcane_engine::agent::inspector_channel();
-        let _handle = arcane_engine::agent::mcp::start_mcp_server(port, tx);
+        let (tx, rx) = arcane_core::agent::inspector_channel();
+        let _handle = arcane_core::agent::mcp::start_mcp_server(port, tx);
         std::mem::forget(_handle);
         write_mcp_port_file(port);
         eprintln!("[arcane] MCP server on http://localhost:{port}");
@@ -90,7 +90,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
     let _watcher = start_file_watcher(&base_dir, &entry_path, reload_flag.clone());
 
     // Initialize gamepad manager (gilrs)
-    let mut gamepad_manager = arcane_engine::platform::GamepadManager::new();
+    let mut gamepad_manager = arcane_core::platform::GamepadManager::new();
 
     // Create the render state for the window
     let render_state = Rc::new(RefCell::new(RenderState::new()));
@@ -173,7 +173,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
                 bridge.gamepad_buttons_pressed.insert(btn.as_str().to_string());
             }
             bridge.gamepad_axes.clear();
-            use arcane_engine::platform::GamepadAxis;
+            use arcane_core::platform::GamepadAxis;
             let axes = [
                 (GamepadAxis::LeftStickX, "LeftStickX"),
                 (GamepadAxis::LeftStickY, "LeftStickY"),
@@ -278,7 +278,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
         if let Some(ref mut renderer) = state.renderer {
             for font_tex_id in pending_fonts {
                 let (pixels, width, height) =
-                    arcane_engine::renderer::font::generate_builtin_font();
+                    arcane_core::renderer::font::generate_builtin_font();
                 renderer.textures.upload_raw(
                     &renderer.gpu,
                     &renderer.sprites.texture_bind_group_layout,
@@ -299,7 +299,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
         if let Some(ref mut renderer) = state.renderer {
             for (_font_id, tex_id) in pending_msdf_builtin {
                 let (pixels, width, height, _font) =
-                    arcane_engine::renderer::msdf::generate_builtin_msdf_font();
+                    arcane_core::renderer::msdf::generate_builtin_msdf_font();
                 renderer.textures.upload_raw_linear(
                     &renderer.gpu,
                     &renderer.sprites.texture_bind_group_layout,
@@ -402,7 +402,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
             }
             for (id, type_name) in pending_effects {
                 if let Some(effect_type) =
-                    arcane_engine::renderer::postprocess::EffectType::from_str(&type_name)
+                    arcane_core::renderer::postprocess::EffectType::from_str(&type_name)
                 {
                     renderer
                         .postprocess
@@ -454,26 +454,26 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
                 renderer.radiance_state.cascade_count = bridge.gi_cascade_count;
 
                 renderer.radiance_state.emissives = bridge.emissives.drain(..).map(|e| {
-                    arcane_engine::renderer::EmissiveSurface {
+                    arcane_core::renderer::EmissiveSurface {
                         x: e[0], y: e[1], width: e[2], height: e[3],
                         r: e[4], g: e[5], b: e[6], intensity: e[7],
                     }
                 }).collect();
 
                 renderer.radiance_state.occluders = bridge.occluders.drain(..).map(|o| {
-                    arcane_engine::renderer::Occluder {
+                    arcane_core::renderer::Occluder {
                         x: o[0], y: o[1], width: o[2], height: o[3],
                     }
                 }).collect();
 
                 renderer.radiance_state.directional_lights = bridge.directional_lights.drain(..).map(|d| {
-                    arcane_engine::renderer::DirectionalLight {
+                    arcane_core::renderer::DirectionalLight {
                         angle: d[0], r: d[1], g: d[2], b: d[3], intensity: d[4],
                     }
                 }).collect();
 
                 renderer.radiance_state.spot_lights = bridge.spot_lights.drain(..).map(|s| {
-                    arcane_engine::renderer::SpotLight {
+                    arcane_core::renderer::SpotLight {
                         x: s[0], y: s[1], angle: s[2], spread: s[3], range: s[4],
                         r: s[5], g: s[6], b: s[7], intensity: s[8],
                     }
@@ -507,7 +507,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
     });
 
     // Run the winit event loop (blocks until window closes)
-    arcane_engine::platform::run_event_loop(config, render_state, frame_callback)?;
+    arcane_core::platform::run_event_loop(config, render_state, frame_callback)?;
 
     // Clean up MCP port file on exit
     cleanup_mcp_port_file();
@@ -517,9 +517,9 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
 /// Process a single inspector request by evaluating TS via the agent protocol.
 fn process_inspector_request(
     runtime: &mut ArcaneRuntime,
-    req: arcane_engine::agent::InspectorRequest,
-) -> arcane_engine::agent::InspectorResponse {
-    use arcane_engine::agent::{InspectorRequest, InspectorResponse};
+    req: arcane_core::agent::InspectorRequest,
+) -> arcane_core::agent::InspectorResponse {
+    use arcane_core::agent::{InspectorRequest, InspectorResponse};
 
     match req {
         InspectorRequest::Health => InspectorResponse::json(r#"{"status":"ok"}"#.into()),
@@ -590,10 +590,10 @@ fn process_inspector_request(
 fn eval_json(
     runtime: &mut ArcaneRuntime,
     script: &str,
-) -> arcane_engine::agent::InspectorResponse {
+) -> arcane_core::agent::InspectorResponse {
     match runtime.eval_to_string(script) {
-        Ok(result) => arcane_engine::agent::InspectorResponse::json(result),
-        Err(e) => arcane_engine::agent::InspectorResponse::error(500, format!("{e}")),
+        Ok(result) => arcane_core::agent::InspectorResponse::json(result),
+        Err(e) => arcane_core::agent::InspectorResponse::error(500, format!("{e}")),
     }
 }
 
@@ -677,7 +677,7 @@ fn process_audio_command(
             reverb_mix,
             reverb_delay_ms,
         } => {
-            if let Some(bus_enum) = arcane_engine::audio::AudioBus::from_u32(bus) {
+            if let Some(bus_enum) = arcane_core::audio::AudioBus::from_u32(bus) {
                 let _ = audio_tx.send(AudioCommand::PlaySoundEx {
                     sound_id,
                     instance_id,
@@ -705,7 +705,7 @@ fn process_audio_command(
             listener_x,
             listener_y,
         } => {
-            if let Some(bus_enum) = arcane_engine::audio::AudioBus::from_u32(bus) {
+            if let Some(bus_enum) = arcane_core::audio::AudioBus::from_u32(bus) {
                 let _ = audio_tx.send(AudioCommand::PlaySoundSpatial {
                     sound_id,
                     instance_id,
@@ -742,7 +742,7 @@ fn process_audio_command(
         }
 
         BridgeAudioCommand::SetBusVolume { bus, volume } => {
-            if let Some(bus_enum) = arcane_engine::audio::AudioBus::from_u32(bus) {
+            if let Some(bus_enum) = arcane_core::audio::AudioBus::from_u32(bus) {
                 let _ = audio_tx.send(AudioCommand::SetBusVolume { bus: bus_enum, volume });
             }
         }

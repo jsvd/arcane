@@ -185,29 +185,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "arcane-cli"
-version = "0.10.2"
-dependencies = [
- "anyhow",
- "arcane-engine",
- "clap",
- "image",
- "include_dir",
- "notify",
- "notify-debouncer-mini",
- "scraper",
- "serde",
- "serde_json",
- "tokio",
- "ureq",
- "urlencoding",
- "walkdir",
- "zip",
-]
-
-[[package]]
-name = "arcane-engine"
-version = "0.10.2"
+name = "arcane-core"
+version = "0.11.0"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -227,6 +206,27 @@ dependencies = [
  "tokio",
  "wgpu",
  "winit",
+]
+
+[[package]]
+name = "arcane-engine"
+version = "0.11.0"
+dependencies = [
+ "anyhow",
+ "arcane-core",
+ "clap",
+ "image",
+ "include_dir",
+ "notify",
+ "notify-debouncer-mini",
+ "scraper",
+ "serde",
+ "serde_json",
+ "tokio",
+ "ureq",
+ "urlencoding",
+ "walkdir",
+ "zip",
 ]
 
 [[package]]

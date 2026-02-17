@@ -19,7 +19,7 @@ import type { GameState } from "./game.ts";
 
 // --- Constants ---
 
-const ZOOM = 2.0;
+const ZOOM = 1.0;
 
 // --- Bootstrap ---
 

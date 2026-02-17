@@ -1,6 +1,7 @@
 {
   "name": "@arcane-engine/runtime",
-  "version": "0.10.2",
+  "version": "0.11.0",
+  "deprecated": "Use cargo install arcane-engine instead. Runtime is now embedded in the CLI binary.",
   "description": "Agent-native 2D game engine runtime - TypeScript APIs for state management, rendering, and game logic",
   "type": "module",
   "scripts": {

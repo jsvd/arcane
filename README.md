@@ -96,11 +96,11 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**v0.9.0 — Phases 21-25 complete!**
+**v0.11.0 — Single binary distribution!**
 
-All packages published and ready to use:
-- **npm**: [@arcane-engine/runtime@0.10.2](https://www.npmjs.com/package/@arcane-engine/runtime), [@arcane-engine/create@0.10.2](https://www.npmjs.com/package/@arcane-engine/create)
-- **crates.io**: [arcane-engine@0.10.2](https://crates.io/crates/arcane-engine), [arcane-cli@0.10.2](https://crates.io/crates/arcane-cli)
+Install: [`cargo install arcane-engine`](https://crates.io/crates/arcane-engine)
+
+One binary. No npm required. The CLI embeds the TypeScript runtime and copies it into your project.
 
 **Current features:**
 - ✅ Core engine: rendering, audio, text, UI, animation, pathfinding, tweening, particles
@@ -129,9 +129,9 @@ All packages published and ready to use:
 - ✅ Isometric & hex grids: coordinate systems, tilemaps, depth sorting, hex pathfinding
 - ✅ Input systems: gamepad support (gilrs), multi-touch, action mapping with remapping & buffering
 - ✅ MCP-first DX: zero-config MCP auto-discovery for Claude Code, Cursor, VS Code
-- ✅ Standalone install: `cargo install arcane-cli` just works
+- ✅ Single binary distribution: `cargo install arcane-engine` embeds runtime + recipes, no npm required
 - ✅ Built-in asset discovery: 25 free CC0 packs with search, download, and extraction
-- ✅ 1920 TS (Node) + 1923 (V8) + 277 Rust tests passing
+- ✅ 2028 TS (Node) + 2125 (V8) + 292 Rust tests passing
 - ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
 - ✅ 27 example projects (Hello World, Card Battler, Sokoban, Breakout, Roguelike, Platformer, Tower Defense, Sprite Demo, BFRPG RPG, Asteroids, Juice Showcase, Menu Flow, Physics Playground, Parallax Scroller, Tilemap Showcase, Character Controller, UI Showcase, Agent Testing, WFC Dungeon, Lighting Showcase, MSDF Text Showcase, Isometric Dungeon, Audio Showcase, Visual Polish, Hex Strategy, Gamepad Platformer)
 
@@ -139,20 +139,15 @@ All packages published and ready to use:
 
 See [docs/roadmap.md](docs/roadmap.md) for the full development plan.
 
-## Quick Start
-
-### Using cargo install (recommended)
+### Quick Start
 
 ```bash
 # Install the Arcane CLI
-cargo install arcane-cli
+cargo install arcane-engine
 
 # Create a new game project
 arcane new my-game
 cd my-game
-
-# Install runtime
-npm install
 
 # Run with hot-reload
 arcane dev
@@ -178,7 +173,6 @@ cd arcane
 # Create a new game project
 cargo run --release -- new my-game
 cd my-game
-npm install
 
 # Run with hot-reload
 cargo run --release -- dev
@@ -229,7 +223,6 @@ arcane assets list --type audio       # Filter by type
 ### Prerequisites
 - Rust 1.75+ (`cargo --version`)
 - Node.js 18+ (for TypeScript testing)
-- TypeScript 5+ (`tsc --version`)
 
 ### Build & Test
 ```bash

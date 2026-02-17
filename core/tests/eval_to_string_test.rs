@@ -1,4 +1,4 @@
-use arcane_engine::scripting::ArcaneRuntime;
+use arcane_core::scripting::ArcaneRuntime;
 
 #[test]
 fn eval_to_string_basic() {

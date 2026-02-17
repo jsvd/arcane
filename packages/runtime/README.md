@@ -10,7 +10,7 @@ npm install @arcane-engine/runtime
 
 **Note:** You also need the Arcane CLI:
 ```bash
-cargo install arcane-cli
+cargo install arcane-engine
 ```
 
 ## Quick Example

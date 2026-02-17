@@ -26,7 +26,7 @@ This creates a new Arcane project with:
 The Arcane CLI must be installed:
 
 ```bash
-cargo install arcane-cli
+cargo install arcane-engine
 ```
 
 Or build from source:

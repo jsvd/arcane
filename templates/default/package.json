@@ -6,12 +6,5 @@
   "scripts": {
     "dev": "arcane dev",
     "test": "arcane test"
-  },
-  "dependencies": {
-    "@arcane-engine/runtime": "^0.10.0"
-  },
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "typescript": "^5.3.0"
   }
 }

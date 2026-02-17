@@ -10,27 +10,17 @@ pub mod new;
 pub mod init;
 pub mod mcp_bridge;
 use std::path::Path;
-use arcane_engine::scripting::ImportMap;
+use arcane_core::scripting::ImportMap;
 
 /// Create an import map for resolving @arcane/runtime imports to the actual runtime files.
 /// Used by dev, test, describe, and inspect commands.
 pub fn create_import_map(base_dir: &Path) -> ImportMap {
     let mut import_map = ImportMap::new();
 
-    // Try to find the arcane runtime directory
-    // Search order (walking up from entry file dir):
-    // 1. node_modules/@arcane-engine/runtime/src/ (standalone npm install)
-    // 2. runtime/ with state/ subdir (dev-from-repo)
+    // Find the arcane runtime directory by walking up from entry file dir
     let mut search_dir = base_dir.to_path_buf();
     let runtime_dir = loop {
-        // Check node_modules first (standalone projects after npm install)
-        let nm_candidate =
-            search_dir.join("node_modules/@arcane-engine/runtime/src");
-        if nm_candidate.exists() && nm_candidate.join("state").exists() {
-            break Some(nm_candidate);
-        }
-
-        // Check repo runtime directory (dev-from-repo)
+        // Check for runtime/ with state/ subdir
         let candidate = search_dir.join("runtime");
         if candidate.exists() && candidate.join("state").exists() {
             break Some(candidate);

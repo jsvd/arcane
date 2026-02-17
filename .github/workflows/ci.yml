@@ -47,7 +47,6 @@ jobs:
           prefix-key: v1-rust
       - name: Install system dependencies (ALSA + udev)
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
-      - run: npm install
       - run: cargo run -- test
 
   headless-check:
@@ -59,7 +58,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: v1-rust
-      - run: cargo check -p arcane-engine --no-default-features
+      - run: cargo check -p arcane-core --no-default-features
 
   declarations-check:
     name: API declarations up-to-date

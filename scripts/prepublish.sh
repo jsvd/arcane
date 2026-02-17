@@ -1,21 +1,16 @@
 #!/bin/bash
 # Sync embedded data into cli/data/ for crate publishing.
-# Source of truth: templates/, assets/ at repo root.
-# Recipes are distributed via npm, not embedded in the crate.
-# Run this before: cargo publish -p arcane-cli --allow-dirty
+# build.rs auto-syncs when building from the repo, but this script
+# can be run manually to verify cli/data/ is fresh before publishing.
+#
+# Run this before: cargo publish -p arcane-engine --allow-dirty
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-DATA_DIR="$REPO_ROOT/cli/data"
 
-echo "Syncing embedded data for arcane-cli..."
-
-rm -rf "$DATA_DIR"
-mkdir -p "$DATA_DIR/templates"
-
-cp -r "$REPO_ROOT/templates/default" "$DATA_DIR/templates/default"
-cp -r "$REPO_ROOT/assets" "$DATA_DIR/assets"
+echo "Triggering build.rs auto-sync via cargo check..."
+(cd "$REPO_ROOT" && cargo check -p arcane-engine --quiet 2>&1)
 
 echo "Done. cli/data/ is up to date."
-echo "Now run: cargo publish -p arcane-cli --allow-dirty"
+echo "Now run: cargo publish -p arcane-engine --allow-dirty"

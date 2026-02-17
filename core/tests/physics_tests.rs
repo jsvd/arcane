@@ -1,12 +1,12 @@
 //! Integration tests for the physics engine.
 
-use arcane_engine::physics::broadphase::SpatialHash;
-use arcane_engine::physics::integrate::integrate;
-use arcane_engine::physics::narrowphase::test_collision;
-use arcane_engine::physics::resolve::resolve_contacts;
-use arcane_engine::physics::sleep::update_sleep;
-use arcane_engine::physics::types::*;
-use arcane_engine::physics::world::PhysicsWorld;
+use arcane_core::physics::broadphase::SpatialHash;
+use arcane_core::physics::integrate::integrate;
+use arcane_core::physics::narrowphase::test_collision;
+use arcane_core::physics::resolve::resolve_contacts;
+use arcane_core::physics::sleep::update_sleep;
+use arcane_core::physics::types::*;
+use arcane_core::physics::world::PhysicsWorld;
 
 fn make_body(id: BodyId, body_type: BodyType, shape: Shape, x: f32, y: f32, mass: f32) -> RigidBody {
     let (inv_mass, inertia, inv_inertia) = compute_mass_and_inertia(&shape, mass, body_type);
@@ -1157,7 +1157,7 @@ fn test_polygon_mass_inertia() {
 
 #[test]
 fn test_physics_ops_create_world() {
-    let mut rt = arcane_engine::scripting::ArcaneRuntime::new();
+    let mut rt = arcane_core::scripting::ArcaneRuntime::new();
     rt.execute_script(
         "<test>",
         "Deno.core.ops.op_create_physics_world(0.0, 9.81)",
@@ -1167,7 +1167,7 @@ fn test_physics_ops_create_world() {
 
 #[test]
 fn test_physics_ops_create_body_and_step() {
-    let mut rt = arcane_engine::scripting::ArcaneRuntime::new();
+    let mut rt = arcane_core::scripting::ArcaneRuntime::new();
     rt.execute_script(
         "<test>",
         r#"
@@ -1184,7 +1184,7 @@ fn test_physics_ops_create_body_and_step() {
 
 #[test]
 fn test_physics_ops_set_velocity() {
-    let mut rt = arcane_engine::scripting::ArcaneRuntime::new();
+    let mut rt = arcane_core::scripting::ArcaneRuntime::new();
     rt.execute_script(
         "<test>",
         r#"
@@ -1201,7 +1201,7 @@ fn test_physics_ops_set_velocity() {
 
 #[test]
 fn test_physics_ops_apply_force_and_impulse() {
-    let mut rt = arcane_engine::scripting::ArcaneRuntime::new();
+    let mut rt = arcane_core::scripting::ArcaneRuntime::new();
     rt.execute_script(
         "<test>",
         r#"
@@ -1221,7 +1221,7 @@ fn test_physics_ops_apply_force_and_impulse() {
 
 #[test]
 fn test_physics_ops_remove_body() {
-    let mut rt = arcane_engine::scripting::ArcaneRuntime::new();
+    let mut rt = arcane_core::scripting::ArcaneRuntime::new();
     rt.execute_script(
         "<test>",
         r#"
@@ -1237,7 +1237,7 @@ fn test_physics_ops_remove_body() {
 
 #[test]
 fn test_physics_ops_query_aabb() {
-    let mut rt = arcane_engine::scripting::ArcaneRuntime::new();
+    let mut rt = arcane_core::scripting::ArcaneRuntime::new();
     rt.execute_script(
         "<test>",
         r#"
@@ -1253,7 +1253,7 @@ fn test_physics_ops_query_aabb() {
 
 #[test]
 fn test_physics_ops_raycast() {
-    let mut rt = arcane_engine::scripting::ArcaneRuntime::new();
+    let mut rt = arcane_core::scripting::ArcaneRuntime::new();
     rt.execute_script(
         "<test>",
         r#"
@@ -1270,7 +1270,7 @@ fn test_physics_ops_raycast() {
 
 #[test]
 fn test_physics_ops_raycast_miss() {
-    let mut rt = arcane_engine::scripting::ArcaneRuntime::new();
+    let mut rt = arcane_core::scripting::ArcaneRuntime::new();
     rt.execute_script(
         "<test>",
         r#"
@@ -1285,7 +1285,7 @@ fn test_physics_ops_raycast_miss() {
 
 #[test]
 fn test_physics_ops_joints() {
-    let mut rt = arcane_engine::scripting::ArcaneRuntime::new();
+    let mut rt = arcane_core::scripting::ArcaneRuntime::new();
     rt.execute_script(
         "<test>",
         r#"
@@ -1304,7 +1304,7 @@ fn test_physics_ops_joints() {
 
 #[test]
 fn test_physics_ops_revolute_joint() {
-    let mut rt = arcane_engine::scripting::ArcaneRuntime::new();
+    let mut rt = arcane_core::scripting::ArcaneRuntime::new();
     rt.execute_script(
         "<test>",
         r#"
@@ -1321,7 +1321,7 @@ fn test_physics_ops_revolute_joint() {
 
 #[test]
 fn test_physics_ops_set_position() {
-    let mut rt = arcane_engine::scripting::ArcaneRuntime::new();
+    let mut rt = arcane_core::scripting::ArcaneRuntime::new();
     rt.execute_script(
         "<test>",
         r#"
@@ -1338,7 +1338,7 @@ fn test_physics_ops_set_position() {
 
 #[test]
 fn test_physics_ops_set_angular_velocity() {
-    let mut rt = arcane_engine::scripting::ArcaneRuntime::new();
+    let mut rt = arcane_core::scripting::ArcaneRuntime::new();
     rt.execute_script(
         "<test>",
         r#"
@@ -1354,7 +1354,7 @@ fn test_physics_ops_set_angular_velocity() {
 
 #[test]
 fn test_physics_ops_collision_layers() {
-    let mut rt = arcane_engine::scripting::ArcaneRuntime::new();
+    let mut rt = arcane_core::scripting::ArcaneRuntime::new();
     rt.execute_script(
         "<test>",
         r#"
@@ -1370,7 +1370,7 @@ fn test_physics_ops_collision_layers() {
 
 #[test]
 fn test_physics_ops_get_contacts() {
-    let mut rt = arcane_engine::scripting::ArcaneRuntime::new();
+    let mut rt = arcane_core::scripting::ArcaneRuntime::new();
     rt.execute_script(
         "<test>",
         r#"
@@ -1389,7 +1389,7 @@ fn test_physics_ops_get_contacts() {
 
 #[test]
 fn test_physics_ops_destroy_world() {
-    let mut rt = arcane_engine::scripting::ArcaneRuntime::new();
+    let mut rt = arcane_core::scripting::ArcaneRuntime::new();
     rt.execute_script(
         "<test>",
         r#"
@@ -1406,7 +1406,7 @@ fn test_physics_ops_destroy_world() {
 
 #[test]
 fn test_physics_ops_aabb_body() {
-    let mut rt = arcane_engine::scripting::ArcaneRuntime::new();
+    let mut rt = arcane_core::scripting::ArcaneRuntime::new();
     rt.execute_script(
         "<test>",
         r#"
@@ -1424,7 +1424,7 @@ fn test_physics_ops_aabb_body() {
 
 #[test]
 fn test_physics_ops_static_body() {
-    let mut rt = arcane_engine::scripting::ArcaneRuntime::new();
+    let mut rt = arcane_core::scripting::ArcaneRuntime::new();
     rt.execute_script(
         "<test>",
         r#"

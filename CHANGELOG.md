@@ -2,6 +2,25 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.11.0] - 2026-02-17
+
+### Changed
+- **Single binary distribution** — `cargo install arcane-engine` is now the only install step. The CLI binary embeds the TypeScript runtime (~888KB) and recipes, copying them into projects during `arcane new`. No npm packages required.
+- `arcane new` and `arcane init` now copy `runtime/` and `recipes/` directly into the project directory
+- Import map simplified — removed `node_modules/@arcane-engine/runtime` search path
+- `arcane add` uses embedded recipe data when filesystem recipes aren't found
+- Template `tsconfig.json` paths updated from `node_modules` to local `runtime/`
+- Template `package.json` simplified — no dependencies or devDependencies
+- **Crate rename**: `arcane-engine` (lib) → `arcane-core`, `arcane-cli` (bin) → `arcane-engine` — users now `cargo install arcane-engine`
+
+### Deprecated
+- `@arcane-engine/runtime` npm package — use `cargo install arcane-engine` instead
+- `@arcane-engine/create` npm package — use `arcane new` instead
+
+### Removed
+- `npm install` step from project setup
+- `scripts/sync-cli-data.sh` (build.rs handles all syncing)
+
 ## [0.10.2] - 2026-02-17
 
 ### Fixed

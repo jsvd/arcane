@@ -4,7 +4,7 @@ description: Bump version numbers across all package files and verify consistenc
 allowed-tools: Bash, Read, Edit, Grep
 ---
 
-Bump all version numbers to the version provided as an argument. The argument is a semver string like `0.9.0`.
+Bump all version numbers to the version provided as an argument. The argument is a semver string like `0.11.0`.
 
 ## Steps
 
@@ -12,7 +12,7 @@ Bump all version numbers to the version provided as an argument. The argument is
 
 Read `core/Cargo.toml` to find the current version. The new version is the argument passed by the user.
 
-### 2. Update all 7 files
+### 2. Update all 3 files
 
 Update these files with the new version `X.Y.Z`:
 
@@ -22,21 +22,10 @@ Change `version = "OLD"` to `version = "X.Y.Z"` (the first `version =` line unde
 #### b. `cli/Cargo.toml`
 Change TWO things:
 - `version = "OLD"` to `version = "X.Y.Z"` (under `[package]`)
-- `arcane-engine = { version = "OLD"` to `arcane-engine = { version = "X.Y.Z"` (under `[dependencies]`)
+- `arcane-core = { version = "OLD"` to `arcane-core = { version = "X.Y.Z"` (under `[dependencies]`)
 
-#### c. `packages/runtime/package.json`
-Change `"version": "OLD"` to `"version": "X.Y.Z"`.
-
-#### d. `packages/create/package.json`
-Change TWO things:
-- `"version": "OLD"` to `"version": "X.Y.Z"`
-- `"arcane-cli": "^OLD_MINOR"` to `"arcane-cli": "^X.Y.0"` in peerDependencies
-
-#### e. `templates/default/package.json`
-Change `"@arcane-engine/runtime": "^OLD_MINOR"` to `"@arcane-engine/runtime": "^X.Y.0"`.
-
-#### f. `README.md`
-Update version references in the Status section. There are 4 package links that contain the version number — update each one.
+#### c. `README.md`
+Update the version reference in the Status section (the crate link).
 
 ### 3. Update Cargo.lock
 
@@ -49,10 +38,10 @@ This auto-updates `Cargo.lock` with the new version numbers.
 ### 4. Verify no stale versions remain
 
 ```bash
-grep -rn 'OLD_VERSION' --include='*.toml' --include='*.json' --include='*.md' | grep -v node_modules | grep -v target/ | grep -v CHANGELOG
+grep -rn 'OLD_VERSION' --include='*.toml' --include='*.md' | grep -v node_modules | grep -v target/ | grep -v CHANGELOG
 ```
 
-Replace `OLD_VERSION` with the **old** version string. If any results appear (other than CHANGELOG.md which intentionally keeps history), report them as warnings.
+Replace `OLD_VERSION` with the **old** version string. If any results appear (other than CHANGELOG.md), report them as warnings.
 
 ### 5. Print summary
 
@@ -64,11 +53,8 @@ Print a summary table:
 | File | Change |
 |------|--------|
 | core/Cargo.toml | version = "X.Y.Z" |
-| cli/Cargo.toml | version = "X.Y.Z", arcane-engine dep = "X.Y.Z" |
-| packages/runtime/package.json | version = "X.Y.Z" |
-| packages/create/package.json | version = "X.Y.Z", peerDep ^X.Y.0 |
-| templates/default/package.json | @arcane-engine/runtime ^X.Y.0 |
-| README.md | 4 package links updated |
+| cli/Cargo.toml | version = "X.Y.Z", arcane-core dep = "X.Y.Z" |
+| README.md | crate link updated |
 | Cargo.lock | auto-updated |
 
 All version references updated. Ready to commit.

@@ -4,7 +4,7 @@
 
 Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for performance, TypeScript scripting for game logic.
 
-**Current status: v0.9.0 released ✅ — Phases 21-25 complete (MCP-First DX, Visual Polish, Juice & Game Feel, Isometric & Hex Grids, Input Systems). 1971 TS (Node) + 1971 (V8) + 277 Rust tests passing. Next: Phase 26 (Atmosphere).**
+**Current status: v0.11.0 — Single binary distribution. No npm required. 1920 TS (Node) + 1923 (V8) + 277 Rust tests passing. Next: Phase 26 (Atmosphere).**
 
 ## Repository Structure
 
@@ -28,7 +28,7 @@ arcane/
 │   ├── technical-decisions.md     — ADR-style decision log
 │   ├── documentation-refresh.md   — Checklist for auditing and refreshing all docs
 │   ├── asset-management.md        — `arcane assets` CLI docs (search, download, catalog)
-│   ├── publishing-guide.md        — npm/crates.io release process and checklist
+│   ├── publishing-guide.md        — crates.io release process and checklist
 │   ├── recipe-guide.md            — Building reusable game systems with system()/rule()
 │   └── testing-hot-reload.md      — Hot-reload implementation details and debugging
 ├── core/                          — arcane-core lib crate
@@ -80,7 +80,7 @@ arcane/
 │   │   └── audio/                 — [feature = "renderer"]
 │   │       └── mod.rs             — AudioCommand, audio_channel(), start_audio_thread() (rodio)
 │   └── tests/                     — Rust integration tests
-├── cli/                           — arcane-cli bin crate
+├── cli/                           — arcane-engine bin crate
 │   ├── Cargo.toml
 │   └── src/
 │       ├── main.rs                — clap CLI entrypoint
@@ -213,9 +213,6 @@ arcane/
 │   ├── inventory-equipment/       — Items, stacking, weight, equipment slots, stat bonuses
 │   ├── grid-movement/             — Grid entity movement, pathfinding integration
 │   └── fog-of-war/                — 8-octant shadowcasting FOV, visibility states
-├── packages/
-│   ├── runtime/                   — @arcane-engine/runtime npm package (symlink to runtime/)
-│   └── create/                    — @arcane-engine/create npm scaffolding tool
 ├── templates/
 │   └── default/                   — Scaffolded project template (AGENTS.md, docs/, types/)
 ├── scripts/

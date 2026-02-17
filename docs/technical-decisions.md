@@ -418,7 +418,7 @@ Phase 9.5 shipped an MCP server (`arcane-assets-mcp`) for asset discovery. This 
 **CLI-first.** Replace the MCP server with `arcane assets list/search/download` commands built into the binary.
 
 ### Rationale
-- **Zero friction**: `cargo install arcane-cli` gives you asset discovery — no npm, no config, no background processes
+- **Zero friction**: `cargo install arcane-engine` gives you asset discovery — no npm, no config, no background processes
 - **Universal**: Works identically for humans typing commands and agents calling shell
 - **Embedded catalog**: Asset metadata ships in the binary via `include_dir`, with filesystem fallback for development
 - **Same functionality**: Search with synonym expansion, type filtering, relevance scoring, download + extraction — all preserved from the MCP implementation
@@ -489,3 +489,31 @@ Key reference: Erin Catto's GDC talks on sequential impulse solvers (the algorit
 - Compound shapes (use multiple bodies instead)
 - Island solver (solve each island independently for parallelism — overkill under 1000 bodies)
 - Prismatic/weld joints (add when a demo needs them)
+
+---
+
+## ADR-016: Single Binary Distribution
+
+### Context
+Arcane published 4 packages per release: 2 npm (`@arcane-engine/runtime`, `@arcane-engine/create`) and 2 crates.io (`arcane-core` (lib, formerly `arcane-engine`), `arcane-engine` (CLI, formerly `arcane-cli`)). The `@arcane-engine/runtime` npm package existed solely so `node_modules/` had the TS source for import resolution. The `@arcane-engine/create` package was a thin wrapper around `arcane new`.
+
+This caused:
+- **User friction**: `npm install` required after `arcane new`
+- **Staleness bugs**: `cli/data/` snapshot went stale, shipping incorrect defaults
+- **Release complexity**: 7 files to version-bump, 4 packages to publish in order
+
+### Options Considered
+1. **Keep 4 packages** — accept the complexity
+2. **Embed runtime in CLI, keep npm for optional use** — partial simplification
+3. **Single binary: embed runtime + recipes in CLI** — `cargo install arcane-engine` is the only step
+
+### Decision
+**Option 3: Single binary distribution.**
+
+### Rationale
+- The runtime TS source is ~888KB — trivial to embed in a Rust binary
+- `arcane new` already copies templates; adding runtime + recipes is the same pattern
+- Eliminates an entire class of staleness bugs (npm version mismatches)
+- Release process drops from 7 files + 4 packages to 3 files + 2 crates
+- Users who already have Rust toolchain (required for `arcane-engine` anyway) need nothing else
+- Backward compatibility: import prefixes `@arcane/runtime` and `@arcane-engine/runtime` both still work via the import map

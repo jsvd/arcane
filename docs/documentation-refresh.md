@@ -37,12 +37,10 @@ The project README is the first thing users and LLMs see. Check:
 
 ## 4. Check package READMEs
 
-These appear on npm. Read each and verify:
+> **Note:** As of v0.11.0, the npm packages (`@arcane-engine/runtime`, `@arcane-engine/create`) are deprecated. The CLI binary embeds the runtime. These READMEs are only relevant for users on older versions.
 
-- `packages/runtime/README.md` — correct package name (`@arcane-engine/runtime`), working code example using actual API, correct install command
-- `packages/create/README.md` — correct package name (`@arcane-engine/create`), correct `npm create` command, accurate list of scaffolded files
-
-**Common trap**: Code imports use `@arcane/runtime/{module}` (via tsconfig path mapping) but the npm package is `@arcane-engine/runtime`. The install command must use the npm name; code examples use the import name.
+- `packages/runtime/README.md` — deprecated, points users to `cargo install arcane-engine`
+- `packages/create/README.md` — deprecated, points users to `arcane new`
 
 ## 5. Audit scaffolding template
 
