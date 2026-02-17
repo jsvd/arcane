@@ -73,10 +73,10 @@ jobs:
       - run: ./scripts/generate-declarations.sh
       - name: Check for stale declarations
         run: |
-          if git diff --exit-code templates/default/types/arcane.d.ts; then
+          if git diff --exit-code templates/default/types/; then
             echo "Declarations are up to date."
           else
-            echo "ERROR: templates/default/types/arcane.d.ts is stale."
+            echo "ERROR: templates/default/types/*.d.ts are stale."
             echo "Run ./scripts/generate-declarations.sh and commit the result."
             exit 1
           fi
