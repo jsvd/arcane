@@ -7,13 +7,6 @@
     "moduleResolution": "bundler",
     "target": "es2022",
     "lib": ["es2022"],
-    "baseUrl": ".",
-    "paths": {
-      "@arcane/runtime": ["./runtime/index.ts"],
-      "@arcane/runtime/*": ["./runtime/*/index.ts"],
-      "@arcane-engine/runtime": ["./runtime/index.ts"],
-      "@arcane-engine/runtime/*": ["./runtime/*/index.ts"]
-    },
     "noEmit": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
