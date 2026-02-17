@@ -2424,6 +2424,345 @@ fn test_cluster_drop_no_ground_clipping() {
     );
 }
 
+// =========================================================================
+// Sticking regression tests — overlapping dynamic bodies must separate
+// =========================================================================
+
+/// Two overlapping boxes placed midair must separate under gravity, not stick.
+/// This tests that velocity clamping doesn't zero out gravity-driven velocity
+/// for dynamic-dynamic contacts.
+#[test]
+fn test_overlapping_boxes_midair_separate() {
+    let mut world = PhysicsWorld::new(0.0, 300.0);
+    let half = 10.0;
+
+    // Two boxes placed at the same position (fully overlapping) midair
+    let a = world.add_body(
+        BodyType::Dynamic,
+        Shape::AABB { half_w: half, half_h: half },
+        100.0, 100.0, 1.0,
+        Material { restitution: 0.0, friction: 0.3 },
+        0xFFFF, 0xFFFF,
+    );
+    let b = world.add_body(
+        BodyType::Dynamic,
+        Shape::AABB { half_w: half, half_h: half },
+        100.0, 110.0, 1.0, // 10 units of vertical overlap
+        Material { restitution: 0.0, friction: 0.3 },
+        0xFFFF, 0xFFFF,
+    );
+
+    // Both should fall under gravity. After 1 second, they must have
+    // separated AND moved significantly downward.
+    let start_y_a = world.get_body(a).unwrap().y;
+    let start_y_b = world.get_body(b).unwrap().y;
+
+    for _ in 0..60 {
+        world.step(1.0 / 60.0);
+    }
+
+    let end_a = world.get_body(a).unwrap();
+    let end_b = world.get_body(b).unwrap();
+
+    // Both should have fallen significantly (gravity = 300, after 1s: ~150 units)
+    let fall_a = end_a.y - start_y_a;
+    let fall_b = end_b.y - start_y_b;
+
+    eprintln!(
+        "Overlapping midair: A fell {:.1}, B fell {:.1}, separation = {:.1}",
+        fall_a, fall_b, (end_b.y - end_a.y).abs(),
+    );
+
+    assert!(
+        fall_a > 50.0,
+        "Body A stuck midair: only fell {:.1} units in 1 second (expected >50 with gravity=300)",
+        fall_a,
+    );
+    assert!(
+        fall_b > 50.0,
+        "Body B stuck midair: only fell {:.1} units in 1 second (expected >50 with gravity=300)",
+        fall_b,
+    );
+
+    // They should have separated (no longer overlapping)
+    let gap = (end_b.y - end_a.y).abs();
+    assert!(
+        gap >= half * 2.0 - 1.0, // allow small tolerance
+        "Bodies still overlapping after 1 second: gap={:.1}, expected >= {:.1}",
+        gap, half * 2.0,
+    );
+}
+
+/// A vertical stack of 5 overlapping circles placed midair must all fall,
+/// not stick together as a floating column.
+#[test]
+fn test_overlapping_circle_column_falls() {
+    let mut world = PhysicsWorld::new(0.0, 300.0);
+    let radius = 8.0;
+    let mut ids = Vec::new();
+
+    // 5 circles in a vertical column, each overlapping the next by 50%
+    for i in 0..5 {
+        let id = world.add_body(
+            BodyType::Dynamic,
+            Shape::Circle { radius },
+            100.0, 50.0 + i as f32 * radius, // spacing = radius (50% overlap)
+            1.0,
+            Material { restitution: 0.0, friction: 0.3 },
+            0xFFFF, 0xFFFF,
+        );
+        ids.push(id);
+    }
+
+    let start_y: Vec<f32> = ids.iter().map(|&id| world.get_body(id).unwrap().y).collect();
+
+    // Simulate 2 seconds
+    for _ in 0..120 {
+        world.step(1.0 / 60.0);
+    }
+
+    // Every body must have fallen significantly
+    for (i, &id) in ids.iter().enumerate() {
+        let body = world.get_body(id).unwrap();
+        let fall = body.y - start_y[i];
+        eprintln!("Circle {}: fell {:.1} units", i, fall);
+        assert!(
+            fall > 100.0,
+            "Circle {} stuck midair: only fell {:.1} units in 2 seconds (gravity=300)",
+            i, fall,
+        );
+    }
+}
+
+/// Bodies spawned at the exact same position must fully separate.
+/// This catches the velocity clamping sign bug: body A's separation velocity
+/// was being zeroed instead of its approach velocity, preventing separation.
+#[test]
+fn test_bodies_at_same_position_fully_separate() {
+    let mut world = PhysicsWorld::new(0.0, 400.0);
+    let half = 15.0;
+
+    // Spawn 4 boxes at the exact same position (mimics rapid clicking in demo)
+    let mut ids = Vec::new();
+    for _ in 0..4 {
+        let id = world.add_body(
+            BodyType::Dynamic,
+            Shape::AABB { half_w: half, half_h: half },
+            200.0, 100.0, 1.0,
+            Material { restitution: 0.3, friction: 0.6 },
+            0xFFFF, 0xFFFF,
+        );
+        ids.push(id);
+    }
+
+    // Simulate 3 seconds
+    for _ in 0..180 {
+        world.step(1.0 / 60.0);
+    }
+
+    // Check that all bodies have separated: no pair should overlap
+    for i in 0..ids.len() {
+        for j in (i + 1)..ids.len() {
+            let a = world.get_body(ids[i]).unwrap();
+            let b = world.get_body(ids[j]).unwrap();
+            let dx = (b.x - a.x).abs();
+            let dy = (b.y - a.y).abs();
+            // For two AABBs with half_w=half, they overlap if dx < 2*half AND dy < 2*half
+            let overlap_x = (2.0 * half - dx).max(0.0);
+            let overlap_y = (2.0 * half - dy).max(0.0);
+            let overlapping = overlap_x > 0.5 && overlap_y > 0.5;
+            eprintln!(
+                "Pair ({},{}): dx={:.1} dy={:.1} overlap_x={:.1} overlap_y={:.1} overlapping={}",
+                i, j, dx, dy, overlap_x, overlap_y, overlapping,
+            );
+            assert!(
+                !overlapping,
+                "Bodies {} and {} still overlapping after 3 seconds: dx={:.1} dy={:.1}",
+                i, j, dx, dy,
+            );
+        }
+    }
+}
+
+/// Bodies spawned over successive frames at the same position must separate.
+/// Simulates rapid clicking in the physics demo.
+#[test]
+fn test_successive_spawns_same_position_separate() {
+    let mut world = PhysicsWorld::new(0.0, 400.0);
+
+    // Add ground
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 500.0, half_h: 20.0 },
+        250.0, 500.0, 1.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    let half = 20.0;
+    let mut ids = Vec::new();
+
+    // Spawn a new box at the same position every 10 frames (6 boxes total)
+    for frame in 0..360 {
+        if frame % 10 == 0 && ids.len() < 6 {
+            let id = world.add_body(
+                BodyType::Dynamic,
+                Shape::AABB { half_w: half, half_h: half },
+                200.0, 100.0, 1.0,
+                Material { restitution: 0.3, friction: 0.6 },
+                0xFFFF, 0xFFFF,
+            );
+            ids.push(id);
+        }
+        world.step(1.0 / 60.0);
+    }
+
+    // After 6 seconds, check no two dynamic bodies overlap
+    let positions: Vec<(f32, f32)> = ids.iter()
+        .map(|&id| {
+            let b = world.get_body(id).unwrap();
+            (b.x, b.y)
+        })
+        .collect();
+
+    for i in 0..positions.len() {
+        for j in (i + 1)..positions.len() {
+            let dx = (positions[j].0 - positions[i].0).abs();
+            let dy = (positions[j].1 - positions[i].1).abs();
+            let overlap_x = (2.0 * half - dx).max(0.0);
+            let overlap_y = (2.0 * half - dy).max(0.0);
+            let overlapping = overlap_x > 1.0 && overlap_y > 1.0;
+            assert!(
+                !overlapping,
+                "Successively spawned bodies {} and {} still overlap after settling: \
+                 pos_i=({:.1},{:.1}) pos_j=({:.1},{:.1}) overlap=({:.1},{:.1})",
+                i, j, positions[i].0, positions[i].1,
+                positions[j].0, positions[j].1,
+                overlap_x, overlap_y,
+            );
+        }
+    }
+}
+
+/// Mixed shapes (boxes + circles) spawned overlapping midair must not stick.
+#[test]
+fn test_mixed_shapes_overlapping_midair_dont_stick() {
+    let mut world = PhysicsWorld::new(0.0, 300.0);
+    let mut ids = Vec::new();
+
+    // Create a cluster of overlapping shapes at the same position
+    let cx = 100.0;
+    let cy = 80.0;
+
+    ids.push(world.add_body(
+        BodyType::Dynamic,
+        Shape::AABB { half_w: 12.0, half_h: 12.0 },
+        cx, cy, 1.0,
+        Material { restitution: 0.0, friction: 0.3 },
+        0xFFFF, 0xFFFF,
+    ));
+    ids.push(world.add_body(
+        BodyType::Dynamic,
+        Shape::Circle { radius: 10.0 },
+        cx + 5.0, cy + 5.0, 1.0,
+        Material { restitution: 0.0, friction: 0.3 },
+        0xFFFF, 0xFFFF,
+    ));
+    ids.push(world.add_body(
+        BodyType::Dynamic,
+        Shape::AABB { half_w: 8.0, half_h: 8.0 },
+        cx - 3.0, cy + 10.0, 1.0,
+        Material { restitution: 0.0, friction: 0.3 },
+        0xFFFF, 0xFFFF,
+    ));
+    ids.push(world.add_body(
+        BodyType::Dynamic,
+        Shape::Circle { radius: 6.0 },
+        cx + 2.0, cy - 5.0, 1.0,
+        Material { restitution: 0.0, friction: 0.3 },
+        0xFFFF, 0xFFFF,
+    ));
+
+    let start_y: Vec<f32> = ids.iter().map(|&id| world.get_body(id).unwrap().y).collect();
+
+    for _ in 0..90 {
+        world.step(1.0 / 60.0);
+    }
+
+    for (i, &id) in ids.iter().enumerate() {
+        let body = world.get_body(id).unwrap();
+        let fall = body.y - start_y[i];
+        eprintln!("Mixed body {}: fell {:.1}", i, fall);
+        assert!(
+            fall > 50.0,
+            "Body {} stuck midair: fell only {:.1} in 1.5s",
+            i, fall,
+        );
+    }
+}
+
+// =========================================================================
+// Contact accumulation — get_contacts() must report all sub-step collisions
+// =========================================================================
+
+/// A fast ball hitting a static wall should appear in get_contacts() even
+/// if the ball bounces away during an earlier sub-step. This simulates
+/// the breakout scenario where the ball hits a brick and bounces off
+/// within the same frame.
+#[test]
+fn test_contacts_accumulated_across_substeps() {
+    let mut world = PhysicsWorld::new(0.0, 0.0); // No gravity
+
+    // Static wall
+    let wall_id = world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 200.0, half_h: 10.0 },
+        200.0, 0.0, 1.0,
+        Material { restitution: 1.0, friction: 0.0 },
+        0xFFFF, 0xFFFF,
+    );
+
+    // Fast ball approaching wall from below (positive Y = toward wall at y=0)
+    let ball_id = world.add_body(
+        BodyType::Dynamic,
+        Shape::Circle { radius: 6.0 },
+        200.0, 20.0, 1.0,
+        Material { restitution: 1.0, friction: 0.0 },
+        0xFFFF, 0xFFFF,
+    );
+    world.set_velocity(ball_id, 0.0, -350.0); // Moving toward wall
+
+    // Step one frame
+    world.step(1.0 / 60.0);
+
+    // The ball should have bounced off the wall. Even if it separated by
+    // the last sub-step, get_contacts() must report the collision.
+    let contacts = world.get_contacts();
+    let has_wall_contact = contacts.iter().any(|c| {
+        (c.body_a == ball_id && c.body_b == wall_id) ||
+        (c.body_a == wall_id && c.body_b == ball_id)
+    });
+
+    // The ball at y=20, radius=6, moving at -350 u/s. In 1/60s = 5.83 units.
+    // After 1 sub-step (1/240s): moves ~1.46 units → y≈18.5, still no contact.
+    // The ball needs to reach y=16 (wall top at 10 + radius 6) to hit.
+    // This takes ~4/350 * 240 ≈ 2.7 sub-steps. So contact happens mid-frame
+    // and the ball bounces away. Without accumulation, we'd miss it.
+    let ball_state = world.get_body(ball_id).unwrap();
+    eprintln!(
+        "Ball after step: y={:.1} vy={:.1}, contacts={}, wall_contact={}",
+        ball_state.y, ball_state.vy, contacts.len(), has_wall_contact,
+    );
+
+    assert!(
+        has_wall_contact,
+        "Ball-wall contact missing from get_contacts(). Ball likely bounced during \
+         an earlier sub-step and the contact was lost. Found {} contacts: {:?}",
+        contacts.len(),
+        contacts.iter().map(|c| (c.body_a, c.body_b)).collect::<Vec<_>>(),
+    );
+}
+
 /// Box at the edge of a platform must not clip through.
 /// This tests the AABB axis selection issue where horizontal overlap
 /// can be smaller than vertical, causing incorrect sideways resolution.

@@ -12,6 +12,11 @@ All notable changes to Arcane are documented here.
 - **`hud.overlay()`** — full-screen colored overlay for pause screens, damage flash, fade-to-black
 - 60 new tests (15 rng + 10 shapes + 12 sprite-group + 20 platformer + 3 overlay)
 
+### Fixed
+- **Physics: bodies sticking together midair** — velocity clamping had an inverted sign for body A, removing separation velocity instead of approach velocity; overlapping dynamic bodies now correctly push apart
+- **Physics: collision events missed during sub-stepping** — `getContacts()` now accumulates contacts across all 4 sub-steps (de-duplicated by body pair), fixing breakout bricks not popping and similar collision callback issues
+- **Physics: bodies clipping through static ground** — sub-stepping (Box2D v3 approach: 4 sub-steps/frame) with Box2D-standard Baumgarte factor (0.2) and max correction clamping dramatically reduces penetration
+
 ### Changed
 - 18 demos refactored to use new convenience APIs (net -199 lines)
   - 4 platformer demos replace ~270 lines of hand-rolled physics with `platformerStep()`

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::broadphase::SpatialHash;
 use super::constraints::solve_constraints;
@@ -18,6 +18,13 @@ pub struct PhysicsWorld {
     fixed_dt: f32,
     accumulator: f32,
     contacts: Vec<Contact>,
+    /// Contacts accumulated across all sub-steps within a frame.
+    /// Game code reads this via get_contacts() to see every collision that
+    /// occurred during the frame, not just the last sub-step's contacts.
+    /// De-duplicated by body pair (first contact per pair wins).
+    frame_contacts: Vec<Contact>,
+    /// Tracks which body pairs already have a contact in frame_contacts.
+    frame_contact_pairs: HashSet<(BodyId, BodyId)>,
     broadphase: SpatialHash,
     solver_iterations: usize,
     /// Warm-start cache: maps (body_a, body_b) → (normal_impulse, friction_impulse)
@@ -36,6 +43,8 @@ impl PhysicsWorld {
             fixed_dt: 1.0 / 60.0,
             accumulator: 0.0,
             contacts: Vec::new(),
+            frame_contacts: Vec::new(),
+            frame_contact_pairs: HashSet::new(),
             broadphase: SpatialHash::new(64.0),
             solver_iterations: 6,
             warm_cache: HashMap::new(),
@@ -45,13 +54,28 @@ impl PhysicsWorld {
     /// Fixed-timestep physics step. Accumulates dt and runs sub-steps as needed.
     /// Uses 4 sub-steps per fixed step (Box2D v3 approach) for improved stack
     /// stability: sub-stepping is more effective than extra solver iterations.
+    ///
+    /// Contacts are accumulated across all sub-steps (de-duplicated by body pair)
+    /// so that game code can see every collision via get_contacts().
     pub fn step(&mut self, dt: f32) {
         self.accumulator += dt;
+
+        // Clear frame-level contact accumulator at the start of each step call
+        self.frame_contacts.clear();
+        self.frame_contact_pairs.clear();
 
         while self.accumulator >= self.fixed_dt {
             let sub_dt = self.fixed_dt / 4.0;
             for _ in 0..4 {
                 self.sub_step(sub_dt);
+
+                // Accumulate contacts from this sub-step (de-duplicate by pair)
+                for contact in &self.contacts {
+                    let key = (contact.body_a.min(contact.body_b), contact.body_a.max(contact.body_b));
+                    if self.frame_contact_pairs.insert(key) {
+                        self.frame_contacts.push(contact.clone());
+                    }
+                }
             }
             self.accumulator -= self.fixed_dt;
         }
@@ -184,6 +208,10 @@ impl PhysicsWorld {
         // 6. Post-correction velocity clamping: after position correction, if bodies
         // are still penetrating, zero out any velocity component driving them deeper.
         // This prevents re-introduction of penetration on the next integration step.
+        //
+        // Contact normal points from body_a toward body_b.
+        // Body A "into contact" = toward B = +normal direction.
+        // Body B "into contact" = toward A = -normal direction.
         for contact in &self.contacts {
             let a_idx = contact.body_a as usize;
             let b_idx = contact.body_b as usize;
@@ -200,17 +228,17 @@ impl PhysicsWorld {
 
             let (nx, ny) = contact.normal;
 
-            // Clamp velocity of body A: remove component going into contact
+            // Clamp velocity of body A: remove component toward B (along +normal)
             if let Some(a) = &mut self.bodies[a_idx] {
                 if a.body_type == BodyType::Dynamic {
-                    let vn = a.vx * (-nx) + a.vy * (-ny);
+                    let vn = a.vx * nx + a.vy * ny;
                     if vn > 0.0 {
-                        a.vx -= vn * (-nx);
-                        a.vy -= vn * (-ny);
+                        a.vx -= vn * nx;
+                        a.vy -= vn * ny;
                     }
                 }
             }
-            // Clamp velocity of body B: remove component going into contact
+            // Clamp velocity of body B: remove component toward A (along -normal)
             if let Some(b) = &mut self.bodies[b_idx] {
                 if b.body_type == BodyType::Dynamic {
                     let vn = b.vx * nx + b.vy * ny;
@@ -440,8 +468,12 @@ impl PhysicsWorld {
         closest
     }
 
+    /// Return all contacts that occurred during the last step() call.
+    /// Accumulated across all sub-steps, de-duplicated by body pair.
+    /// This ensures game code sees every collision, even if the bodies
+    /// separated during a later sub-step.
     pub fn get_contacts(&self) -> &[Contact] {
-        &self.contacts
+        &self.frame_contacts
     }
 
     /// Return all active (non-None) bodies.
