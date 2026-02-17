@@ -169,14 +169,17 @@ export function platformerStep(
   const jumpBufferTime = config.jumpBuffer ?? 0.1;
   const { playerWidth, playerHeight } = config;
 
+  // Clamp dt to prevent tunneling through thin platforms on lag spikes / first frame
+  const clampedDt = Math.min(dt, 0.033);
+
   // 1. Apply gravity
-  let vy = Math.min(state.vy + gravity * dt, terminalVelocity);
+  let vy = Math.min(state.vy + gravity * clampedDt, terminalVelocity);
   let vx = state.vx;
   let x = state.x;
   let y = state.y;
 
   // 2. Move horizontal
-  x += vx * dt;
+  x += vx * clampedDt;
 
   // 3. Resolve horizontal collisions (non-oneWay only)
   for (const plat of platforms) {
@@ -194,7 +197,7 @@ export function platformerStep(
   }
 
   // 4. Move vertical
-  y += vy * dt;
+  y += vy * clampedDt;
 
   // 5. Track previous ground state
   const wasOnGround = state.onGround;
@@ -235,11 +238,11 @@ export function platformerStep(
     // Just walked off a ledge (not jumped)
     coyoteTimer = coyoteTime;
   } else {
-    coyoteTimer = Math.max(state.coyoteTimer - dt, 0);
+    coyoteTimer = Math.max(state.coyoteTimer - clampedDt, 0);
   }
 
   // 8. Update jump buffer
-  let jumpBufferTimer = Math.max(state.jumpBufferTimer - dt, 0);
+  let jumpBufferTimer = Math.max(state.jumpBufferTimer - clampedDt, 0);
   if (onGround && jumpBufferTimer > 0) {
     // Auto-trigger buffered jump
     vy = jumpForce;

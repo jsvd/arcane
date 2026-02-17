@@ -320,6 +320,27 @@ describe("platformer", () => {
   });
 
   // 20
+  it("platformerStep: large dt does not tunnel through platform", () => {
+    // Player standing on a thin platform (16px tall)
+    const thinPlat: Platform = { x: 0, y: 200, w: 300, h: 16 };
+    const s = standingOnFloor();
+    // Override to stand on the thin platform instead
+    const standing: PlatformerState = {
+      ...s,
+      x: 100,
+      y: 200 - DEFAULT_CONFIG.playerHeight,
+      onGround: true,
+    };
+
+    // Simulate a huge dt spike (e.g. 500ms lag or first frame after load)
+    const result = platformerStep(standing, 0.5, [thinPlat], DEFAULT_CONFIG);
+
+    // Player should still be on the platform, not fallen through
+    assert.equal(result.onGround, true, "Should still be on ground after large dt");
+    assert.equal(result.y, 200 - DEFAULT_CONFIG.playerHeight, "Should not have fallen through");
+  });
+
+  // 21
   it("platformerStep: facingRight preserved through step", () => {
     const s = { ...createPlatformerState(100, 100), facingRight: false };
     const dt = 1 / 60;

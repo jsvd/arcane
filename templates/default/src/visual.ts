@@ -69,8 +69,8 @@ game.onFrame((ctx) => {
   //    drawColorSprite({ color: rgb(60, 180, 255), x: 10, y: 10, w: 32, h: 32, layer: 1 });
   //    drawCircle(x, y, radius, { color: rgb(255, 80, 80) });
   //    For sprites: loadTexture("player.png") then drawSprite({ textureId, x, y, w, h, layer: 1 });
-  //    For hit effects: impact({ shake: true, flash: true }); — one call, multiple effects
-  //    For particles: createEmitter({ x, y, count: 20, speed: 100 });
+  //    For hit effects: impact(x, y, { shake: true, hitstop: 3 }); — one call, multiple effects
+  //    For particles: createEmitter({ shape: "point", x, y, mode: "burst", burstCount: 20 });
 
   // 6. Transitions — no-op if inactive
   //    Start one with: startScreenTransition("fade", 0.5, {}, () => { /* midpoint */ });
