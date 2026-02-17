@@ -63,7 +63,8 @@ game.onFrame((ctx) => {
   updateScreenTransition(ctx.dt);
 
   // 5. Render — no clearSprites() needed (autoClear: true by default)
-  drawColorSprite({ color: rgb(80, 80, 80), x: 0, y: 0, w: 800, h: 600, layer: 0 });
+  const { width: VPW, height: VPH } = getViewportSize();
+  drawColorSprite({ color: rgb(80, 80, 80), x: 0, y: 0, w: VPW, h: VPH, layer: 0 });
   drawColorSprite({ color: rgb(60, 180, 255), x: state.x - 16, y: state.y - 16, w: 32, h: 32, layer: 1 });
 
   // 6. Render particles from engine particle system
