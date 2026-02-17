@@ -37,17 +37,22 @@ impl PhysicsWorld {
             accumulator: 0.0,
             contacts: Vec::new(),
             broadphase: SpatialHash::new(64.0),
-            solver_iterations: 10,
+            solver_iterations: 6,
             warm_cache: HashMap::new(),
         }
     }
 
     /// Fixed-timestep physics step. Accumulates dt and runs sub-steps as needed.
+    /// Uses 4 sub-steps per fixed step (Box2D v3 approach) for improved stack
+    /// stability: sub-stepping is more effective than extra solver iterations.
     pub fn step(&mut self, dt: f32) {
         self.accumulator += dt;
 
         while self.accumulator >= self.fixed_dt {
-            self.sub_step(self.fixed_dt);
+            let sub_dt = self.fixed_dt / 4.0;
+            for _ in 0..4 {
+                self.sub_step(sub_dt);
+            }
             self.accumulator -= self.fixed_dt;
         }
     }
@@ -155,8 +160,11 @@ impl PhysicsWorld {
             self.warm_cache.insert(key, (contact.accumulated_jn, contact.accumulated_jt));
         }
 
-        // 5. Position correction (multiple iterations with fresh collision re-check)
-        for i in 0..4 {
+        // 5. Position correction (3 iterations per sub-step, matching Box2D v2).
+        // With 4 sub-steps per frame, this gives 12 effective position corrections per
+        // frame. Combined with a Baumgarte factor of 0.2 (Box2D standard) and max
+        // correction clamping, this converges stably for large body stacks.
+        for i in 0..3 {
             for contact in &mut self.contacts {
                 let a = &self.bodies[contact.body_a as usize];
                 let b = &self.bodies[contact.body_b as usize];
@@ -173,7 +181,48 @@ impl PhysicsWorld {
             resolve_contacts_position(&mut self.bodies, &self.contacts, i % 2 == 1);
         }
 
-        // 6. Update sleep
+        // 6. Post-correction velocity clamping: after position correction, if bodies
+        // are still penetrating, zero out any velocity component driving them deeper.
+        // This prevents re-introduction of penetration on the next integration step.
+        for contact in &self.contacts {
+            let a_idx = contact.body_a as usize;
+            let b_idx = contact.body_b as usize;
+
+            // Re-test to get fresh penetration
+            let still_penetrating = match (&self.bodies[a_idx], &self.bodies[b_idx]) {
+                (Some(a), Some(b)) => test_collision(a, b).map_or(false, |c| c.penetration > 0.01),
+                _ => false,
+            };
+
+            if !still_penetrating {
+                continue;
+            }
+
+            let (nx, ny) = contact.normal;
+
+            // Clamp velocity of body A: remove component going into contact
+            if let Some(a) = &mut self.bodies[a_idx] {
+                if a.body_type == BodyType::Dynamic {
+                    let vn = a.vx * (-nx) + a.vy * (-ny);
+                    if vn > 0.0 {
+                        a.vx -= vn * (-nx);
+                        a.vy -= vn * (-ny);
+                    }
+                }
+            }
+            // Clamp velocity of body B: remove component going into contact
+            if let Some(b) = &mut self.bodies[b_idx] {
+                if b.body_type == BodyType::Dynamic {
+                    let vn = b.vx * nx + b.vy * ny;
+                    if vn < 0.0 {
+                        b.vx -= vn * nx;
+                        b.vy -= vn * ny;
+                    }
+                }
+            }
+        }
+
+        // 7. Update sleep
         update_sleep(&mut self.bodies, &self.contacts, dt);
     }
 

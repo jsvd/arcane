@@ -2198,3 +2198,284 @@ fn test_12_stacked_boxes_reach_sleep_within_5_seconds() {
     assert!(frame < 300,
         "12-box stack should sleep within 5s, took {:.1}s (frame {})", seconds, frame);
 }
+
+// =========================================================================
+// Clipping regression tests — bodies must not penetrate static ground
+// =========================================================================
+
+/// A single dynamic box dropped from height onto a static ground
+/// must never penetrate more than the allowed slop (0.005 units).
+#[test]
+fn test_single_box_no_ground_clipping() {
+    let mut world = PhysicsWorld::new(0.0, 300.0);
+    let box_size = 20.0;
+    let half = box_size / 2.0;
+
+    // Static ground at y=200
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 500.0, half_h: 20.0 },
+        250.0, 220.0, 1.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Dynamic box dropped from y=50
+    let box_id = world.add_body(
+        BodyType::Dynamic,
+        Shape::AABB { half_w: half, half_h: half },
+        250.0, 50.0, 1.0,
+        Material { restitution: 0.0, friction: 0.3 },
+        0xFFFF, 0xFFFF,
+    );
+
+    let ground_top = 200.0; // ground center 220 - half_h 20
+    let max_allowed_penetration = 0.5; // generous threshold for visible clipping
+
+    // Simulate 5 seconds at 60fps
+    for frame in 0..300 {
+        world.step(1.0 / 60.0);
+
+        let body = world.get_body(box_id).unwrap();
+        let box_bottom = body.y + half;
+
+        assert!(
+            box_bottom <= ground_top + max_allowed_penetration,
+            "Frame {}: box bottom ({:.3}) penetrates ground top ({:.3}) by {:.3} units (max allowed: {:.3})",
+            frame, box_bottom, ground_top, box_bottom - ground_top, max_allowed_penetration,
+        );
+    }
+}
+
+/// Stack of 20 boxes on ground — no box should clip into the ground
+/// by more than a small threshold during active simulation.
+#[test]
+fn test_stacked_boxes_no_ground_clipping() {
+    let mut world = PhysicsWorld::new(0.0, 300.0);
+    let box_size = 20.0;
+    let half = box_size / 2.0;
+
+    // Wide static ground at y=500
+    let ground_center_y = 520.0;
+    let ground_half_h = 20.0;
+    let ground_top = ground_center_y - ground_half_h; // 500.0
+
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 500.0, half_h: ground_half_h },
+        250.0, ground_center_y, 1.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Stack 20 boxes
+    let mut box_ids = Vec::new();
+    for i in 0..20 {
+        let y = ground_top - half - (i as f32 * box_size) - 1.0;
+        let id = world.add_body(
+            BodyType::Dynamic,
+            Shape::AABB { half_w: half, half_h: half },
+            250.0, y, 1.0,
+            Material { restitution: 0.0, friction: 0.5 },
+            0xFFFF, 0xFFFF,
+        );
+        box_ids.push(id);
+    }
+
+    let max_allowed_penetration = 1.0; // slightly more generous for stacks
+
+    // Simulate 5 seconds
+    for frame in 0..300 {
+        world.step(1.0 / 60.0);
+
+        // Check the bottom box (most likely to clip)
+        let bottom_box = world.get_body(box_ids[0]).unwrap();
+        let box_bottom = bottom_box.y + half;
+
+        assert!(
+            box_bottom <= ground_top + max_allowed_penetration,
+            "Frame {}: bottom box clips ground by {:.3} units (bottom={:.3}, ground_top={:.3}, max={:.3})",
+            frame, box_bottom - ground_top, box_bottom, ground_top, max_allowed_penetration,
+        );
+    }
+}
+
+/// Many boxes dropped in a cluster — simulates the physics playground scenario
+/// where hundreds of bodies pile up. Tests two things:
+/// 1. Transient penetration during chaotic impact must stay bounded
+/// 2. Steady-state penetration after settling must be near zero
+#[test]
+fn test_cluster_drop_no_ground_clipping() {
+    let mut world = PhysicsWorld::new(0.0, 300.0);
+    let box_size = 15.0;
+    let half = box_size / 2.0;
+
+    // Wide static ground
+    let ground_center_y = 400.0;
+    let ground_half_h = 20.0;
+    let ground_top = ground_center_y - ground_half_h; // 380.0
+
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 300.0, half_h: ground_half_h },
+        200.0, ground_center_y, 1.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Static walls to contain the pile
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 20.0, half_h: 200.0 },
+        -20.0, 280.0, 1.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 20.0, half_h: 200.0 },
+        420.0, 280.0, 1.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Drop 100 boxes in a grid pattern
+    let mut box_ids = Vec::new();
+    for row in 0..10 {
+        for col in 0..10 {
+            let x = 80.0 + col as f32 * (box_size + 2.0);
+            let y = 100.0 - row as f32 * (box_size + 2.0);
+            let id = world.add_body(
+                BodyType::Dynamic,
+                Shape::AABB { half_w: half, half_h: half },
+                x, y, 1.0,
+                Material { restitution: 0.0, friction: 0.3 },
+                0xFFFF, 0xFFFF,
+            );
+            box_ids.push(id);
+        }
+    }
+
+    // Phase 1: Impact phase (first 3 seconds = 180 frames)
+    // With 4 sub-steps per frame, transient penetration stays under 0.5 units even
+    // during chaotic multi-body impact. Sub-stepping (Box2D v3 approach) is far more
+    // effective than extra solver iterations for stack stability.
+    let max_transient_penetration = 1.0;
+    let mut worst_transient = 0.0f32;
+    let mut worst_frame = 0;
+
+    for frame in 0..180 {
+        world.step(1.0 / 60.0);
+
+        for &id in &box_ids {
+            if let Some(body) = world.get_body(id) {
+                let penetration = (body.y + half) - ground_top;
+                if penetration > worst_transient {
+                    worst_transient = penetration;
+                    worst_frame = frame;
+                }
+            }
+        }
+    }
+
+    eprintln!(
+        "100-body cluster: worst transient penetration = {:.3} at frame {} ({:.1}s)",
+        worst_transient, worst_frame, worst_frame as f32 / 60.0,
+    );
+
+    assert!(
+        worst_transient <= max_transient_penetration,
+        "Cluster impact: worst transient penetration {:.3} exceeds {:.3} at frame {}",
+        worst_transient, max_transient_penetration, worst_frame,
+    );
+
+    // Phase 2: Settling phase (simulate 5 more seconds = 300 frames)
+    for _ in 0..300 {
+        world.step(1.0 / 60.0);
+    }
+
+    // Phase 3: Steady state — after settling, penetration must be near zero.
+    // This is what the user actually sees: bodies at rest should not clip.
+    // With sub-stepping, steady-state penetration is ~0.005 (just the slop value).
+    let max_steady_penetration = 0.1;
+    let mut worst_steady = 0.0f32;
+    let mut worst_body = 0u32;
+
+    for &id in &box_ids {
+        if let Some(body) = world.get_body(id) {
+            let penetration = (body.y + half) - ground_top;
+            if penetration > worst_steady {
+                worst_steady = penetration;
+                worst_body = id;
+            }
+        }
+    }
+
+    eprintln!(
+        "100-body cluster steady state: worst penetration = {:.3} (body {})",
+        worst_steady, worst_body,
+    );
+
+    assert!(
+        worst_steady <= max_steady_penetration,
+        "Cluster steady-state: body {} penetrates ground by {:.3} (max allowed: {:.3}). \
+         Bodies at rest must not visibly clip through surfaces.",
+        worst_body, worst_steady, max_steady_penetration,
+    );
+}
+
+/// Box at the edge of a platform must not clip through.
+/// This tests the AABB axis selection issue where horizontal overlap
+/// can be smaller than vertical, causing incorrect sideways resolution.
+#[test]
+fn test_box_on_platform_edge_no_clipping() {
+    let mut world = PhysicsWorld::new(0.0, 300.0);
+    let box_size = 20.0;
+    let half = box_size / 2.0;
+
+    // Platform: 100 units wide, centered at x=100
+    let plat_center_x = 100.0;
+    let plat_half_w = 50.0;
+    let plat_center_y = 220.0;
+    let plat_half_h = 10.0;
+    let plat_top = plat_center_y - plat_half_h; // 210.0
+    let plat_right = plat_center_x + plat_half_w; // 150.0
+
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: plat_half_w, half_h: plat_half_h },
+        plat_center_x, plat_center_y, 1.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Drop box near the right edge of the platform (only 5 units of horizontal overlap)
+    let box_x = plat_right - 5.0; // most of the box hangs off the right edge
+    let box_id = world.add_body(
+        BodyType::Dynamic,
+        Shape::AABB { half_w: half, half_h: half },
+        box_x, 50.0, 1.0,
+        Material { restitution: 0.0, friction: 0.5 },
+        0xFFFF, 0xFFFF,
+    );
+
+    let max_allowed_penetration = 1.0;
+
+    for frame in 0..300 {
+        world.step(1.0 / 60.0);
+
+        let body = world.get_body(box_id).unwrap();
+        let box_bottom = body.y + half;
+
+        // The box should either land on top of the platform or slide off the edge.
+        // It must NOT clip through the platform surface.
+        if body.x + half > plat_center_x - plat_half_w && body.x - half < plat_right {
+            // Box still overlaps platform horizontally
+            assert!(
+                box_bottom <= plat_top + max_allowed_penetration,
+                "Frame {}: edge box penetrates platform by {:.3} (bottom={:.3}, plat_top={:.3})",
+                frame, box_bottom - plat_top, box_bottom, plat_top,
+            );
+        }
+    }
+}

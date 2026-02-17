@@ -315,9 +315,11 @@ fn position_correction(bodies: &mut [Option<RigidBody>], contact: &Contact) {
     }
 
     let slop = 0.005;
-    let baumgarte = 0.4;
+    let max_correction = 0.2; // Box2D b2_maxLinearCorrection: prevents overshoot
+    let baumgarte = 0.2; // Box2D standard: low factor avoids chain-reaction instability
 
-    let correction = ((contact.penetration - slop).max(0.0) * baumgarte) / (inv_ma + inv_mb);
+    let pen = (contact.penetration - slop).max(0.0);
+    let correction = (pen * baumgarte).min(max_correction) / (inv_ma + inv_mb);
 
     let (nx, ny) = contact.normal;
 
