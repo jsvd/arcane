@@ -13,11 +13,14 @@ All notable changes to Arcane are documented here.
 - 60 new tests (15 rng + 10 shapes + 12 sprite-group + 20 platformer + 3 overlay)
 
 ### Fixed
+- **Radiance GI crash with off-screen occluders/emissives** — negative pixel coordinates in `build_scene_data` were cast from `i32` to `usize` without a lower-bound clamp, wrapping to ~2^64 and causing an index-out-of-bounds panic when any occluder or emissive was positioned left of or above the viewport
 - **Physics: bodies sticking together midair** — velocity clamping had an inverted sign for body A, removing separation velocity instead of approach velocity; overlapping dynamic bodies now correctly push apart
 - **Physics: collision events missed during sub-stepping** — `getContacts()` now accumulates contacts across all 4 sub-steps (de-duplicated by body pair), fixing breakout bricks not popping and similar collision callback issues
 - **Physics: bodies clipping through static ground** — sub-stepping (Box2D v3 approach: 4 sub-steps/frame) with Box2D-standard Baumgarte factor (0.2) and max correction clamping dramatically reduces penetration
+- CI: type-check now validates per-module `types/*.d.ts` instead of removed monolithic `arcane.d.ts`
 
 ### Changed
+- Scaffold template rewritten as plumbing-only skeleton — sets up all subsystems (camera, input actions, tweening, particles, transitions, HUD) without game logic, with comments pointing to higher-level APIs
 - 18 demos refactored to use new convenience APIs (net -199 lines)
   - 4 platformer demos replace ~270 lines of hand-rolled physics with `platformerStep()`
   - 11 demos replace verbose PRNG destructuring or `Math.random()` with `createRng()`
