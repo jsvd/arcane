@@ -533,8 +533,6 @@ impl RadiancePipeline {
         });
     }
 
-    /// Build the scene texture data from emissives, occluders, point lights,
-    /// directional lights, and spot lights.
     fn build_scene_data(
         &self,
         scene_w: u32,
@@ -546,6 +544,22 @@ impl RadiancePipeline {
         viewport_w: f32,
         viewport_h: f32,
     ) -> Vec<u8> {
+        build_scene_data(scene_w, scene_h, radiance, lighting, camera_x, camera_y, viewport_w, viewport_h)
+    }
+}
+
+/// Build the scene texture data from emissives, occluders, point lights,
+/// directional lights, and spot lights.
+fn build_scene_data(
+    scene_w: u32,
+    scene_h: u32,
+    radiance: &RadianceState,
+    lighting: &LightingState,
+    camera_x: f32,
+    camera_y: f32,
+    viewport_w: f32,
+    viewport_h: f32,
+) -> Vec<u8> {
         let w = scene_w as usize;
         let h = scene_h as usize;
         // Rgba32Float: 4 channels × 4 bytes = 16 bytes per pixel
@@ -559,8 +573,8 @@ impl RadiancePipeline {
         for em in &radiance.emissives {
             let px0 = ((em.x - world_left) as i32).max(0) as usize;
             let py0 = ((em.y - world_top) as i32).max(0) as usize;
-            let px1 = ((em.x + em.width - world_left) as i32).min(w as i32) as usize;
-            let py1 = ((em.y + em.height - world_top) as i32).min(h as i32) as usize;
+            let px1 = ((em.x + em.width - world_left) as i32).max(0).min(w as i32) as usize;
+            let py1 = ((em.y + em.height - world_top) as i32).max(0).min(h as i32) as usize;
 
             let er = em.r * em.intensity;
             let eg = em.g * em.intensity;
@@ -632,8 +646,8 @@ impl RadiancePipeline {
         for occ in &radiance.occluders {
             let px0 = ((occ.x - world_left) as i32).max(0) as usize;
             let py0 = ((occ.y - world_top) as i32).max(0) as usize;
-            let px1 = ((occ.x + occ.width - world_left) as i32).min(w as i32) as usize;
-            let py1 = ((occ.y + occ.height - world_top) as i32).min(h as i32) as usize;
+            let px1 = ((occ.x + occ.width - world_left) as i32).max(0).min(w as i32) as usize;
+            let py1 = ((occ.y + occ.height - world_top) as i32).max(0).min(h as i32) as usize;
 
             for py in py0..py1 {
                 for px in px0..px1 {
@@ -647,6 +661,7 @@ impl RadiancePipeline {
         bytemuck::cast_slice(&pixels).to_vec()
     }
 
+impl RadiancePipeline {
     /// Execute the full radiance cascade pipeline for one frame.
     /// Returns true if the light texture was computed and the compose pass should run.
     pub fn compute(
@@ -1035,5 +1050,101 @@ mod tests {
             intensity: 1.5,
         };
         assert_eq!(sl.range, 300.0);
+    }
+
+    // Regression: off-screen occluders/emissives caused index-out-of-bounds panic
+    // because negative pixel coordinates wrapped to huge usize values.
+    // https://github.com/anthropics/arcane/issues/XXX
+
+    fn empty_lighting() -> LightingState {
+        LightingState::default()
+    }
+
+    #[test]
+    fn test_build_scene_data_occluder_offscreen_left() {
+        let mut radiance = RadianceState::default();
+        // Occluder entirely to the left of the viewport
+        radiance.occluders.push(Occluder {
+            x: -200.0,
+            y: 100.0,
+            width: 50.0,
+            height: 50.0,
+        });
+        // Camera at (400,300) with 800x600 viewport → world_left=0, world_top=0
+        // Occluder right edge at -150, which is left of viewport
+        let data = build_scene_data(800, 600, &radiance, &empty_lighting(), 400.0, 300.0, 800.0, 600.0);
+        assert_eq!(data.len(), 800 * 600 * 4 * 4); // w*h*4 channels * 4 bytes per f32
+    }
+
+    #[test]
+    fn test_build_scene_data_occluder_offscreen_above() {
+        let mut radiance = RadianceState::default();
+        // Occluder entirely above the viewport
+        radiance.occluders.push(Occluder {
+            x: 100.0,
+            y: -300.0,
+            width: 50.0,
+            height: 50.0,
+        });
+        let data = build_scene_data(800, 600, &radiance, &empty_lighting(), 400.0, 300.0, 800.0, 600.0);
+        assert_eq!(data.len(), 800 * 600 * 4 * 4);
+    }
+
+    #[test]
+    fn test_build_scene_data_emissive_offscreen_left() {
+        let mut radiance = RadianceState::default();
+        // Emissive entirely to the left of the viewport
+        radiance.emissives.push(EmissiveSurface {
+            x: -500.0,
+            y: 100.0,
+            width: 100.0,
+            height: 100.0,
+            r: 1.0, g: 1.0, b: 1.0,
+            intensity: 1.0,
+        });
+        let data = build_scene_data(800, 600, &radiance, &empty_lighting(), 400.0, 300.0, 800.0, 600.0);
+        assert_eq!(data.len(), 800 * 600 * 4 * 4);
+    }
+
+    #[test]
+    fn test_build_scene_data_occluder_partially_onscreen() {
+        let mut radiance = RadianceState::default();
+        // Occluder that straddles the bottom-right edge of the viewport
+        radiance.occluders.push(Occluder {
+            x: 750.0,
+            y: 550.0,
+            width: 200.0,
+            height: 200.0,
+        });
+        // Camera at (400,300) → viewport covers (0,0)-(800,600)
+        // Occluder covers (750,550)-(950,750), clipped to (750,550)-(800,600)
+        let data = build_scene_data(800, 600, &radiance, &empty_lighting(), 400.0, 300.0, 800.0, 600.0);
+        let pixels: &[f32] = bytemuck::cast_slice(&data);
+        // Check that an occluder pixel inside the viewport is set
+        let idx = (560 * 800 + 760) * 4; // py=560, px=760 — inside the clipped region
+        assert_eq!(pixels[idx + 3], 1.0);
+    }
+
+    #[test]
+    fn test_build_scene_data_occluder_far_offscreen() {
+        let mut radiance = RadianceState::default();
+        // Occluder very far off-screen in all negative directions
+        radiance.occluders.push(Occluder {
+            x: -10000.0,
+            y: -10000.0,
+            width: 50.0,
+            height: 50.0,
+        });
+        radiance.emissives.push(EmissiveSurface {
+            x: -10000.0,
+            y: -10000.0,
+            width: 50.0,
+            height: 50.0,
+            r: 1.0, g: 1.0, b: 1.0,
+            intensity: 5.0,
+        });
+        // Should not panic
+        let data = build_scene_data(800, 600, &radiance, &empty_lighting(), 400.0, 300.0, 800.0, 600.0);
+        assert_eq!(data.len(), 800 * 600 * 4 * 4);
     }
 }
