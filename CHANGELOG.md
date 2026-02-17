@@ -2,6 +2,26 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.10.1] - 2026-02-17
+
+### Added
+- **`createRng(seed)`** — mutable PRNG wrapper with `int`, `float`, `pick`, `shuffle`, `roll`, `snapshot`, `restore`, `fork` (eliminates verbose `[val, rng] = randomInt(rng, ...)` destructuring)
+- **Shape primitives** — `drawCircle()`, `drawLine()`, `drawTriangle()` in `@arcane/runtime/ui` (scanline fill / rotated rect rendering)
+- **Platformer controller** — `createPlatformerState()`, `platformerMove()`, `platformerJump()`, `platformerStep()` with coyote time, jump buffer, one-way platforms
+- **Sprite groups** — `createSpriteGroup()`, `drawSpriteGroup()`, `getSpritePart()`, `setPartVisible()` for composite multi-part characters
+- **`hud.overlay()`** — full-screen colored overlay for pause screens, damage flash, fade-to-black
+- 60 new tests (15 rng + 10 shapes + 12 sprite-group + 20 platformer + 3 overlay)
+
+### Changed
+- 18 demos refactored to use new convenience APIs (net -199 lines)
+  - 4 platformer demos replace ~270 lines of hand-rolled physics with `platformerStep()`
+  - 11 demos replace verbose PRNG destructuring or `Math.random()` with `createRng()`
+  - Isometric dungeon replaces 20 `drawSprite()` calls with 1 `createSpriteGroup()`
+  - 3 demos replace manual viewport-sized `drawRect()` with `hud.overlay()`
+  - Round objects (asteroids, balls, circular bodies) now render as circles
+- Template topic guides updated: ui.md, rendering.md, game-patterns.md, entities.md, particles.md
+- AGENTS.md: 4 new "Common Mistakes" entries, updated genre reading orders
+
 ## [0.10.0] - 2026-02-16
 
 ### Added
