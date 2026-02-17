@@ -89,10 +89,10 @@ cd cli
 # dependencies.arcane-engine version must match the just-published core version
 
 # Dry run (will fail if cli/data/ is not populated)
-cargo publish --dry-run
+cargo publish --dry-run --allow-dirty
 
-# Publish
-cargo publish
+# Publish (--allow-dirty needed because cli/data/ is gitignored but included in crate)
+cargo publish --allow-dirty
 ```
 
 **Post-publish:**
