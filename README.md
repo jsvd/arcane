@@ -96,7 +96,7 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**v0.11.0 — Single binary distribution!**
+**v0.11.1 — Single binary distribution!**
 
 Install: [`cargo install arcane-engine`](https://crates.io/crates/arcane-engine)
 

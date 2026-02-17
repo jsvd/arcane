@@ -2,6 +2,11 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.11.1] - 2026-02-17
+
+### Fixed
+- **Type-check errors in scaffolded projects** — removed tsconfig `paths` that caused tsc to type-check embedded runtime source files (which require Node.js ambient types). The `types/*.d.ts` ambient declarations provide all needed type info.
+
 ## [0.11.0] - 2026-02-17
 
 ### Changed
