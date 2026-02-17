@@ -30,6 +30,7 @@ import {
 import type { TileSet, WFCGrid, WFCResult } from "../../runtime/procgen/index.ts";
 import { createRng } from "../../runtime/state/rng.ts";
 import { createGame, hud } from "../../runtime/game/index.ts";
+import { rgb } from "../../runtime/ui/index.ts";
 
 // ---------------------------------------------------------------------------
 // Tile IDs (for display — WFC only uses WALL=0, FLOOR=1)
@@ -192,11 +193,11 @@ let texExit = 0;
 let texDecoration = 0;
 
 function initTextures(): void {
-  texWall = createSolidTexture("wall", 40, 40, 50, 255);
-  texFloor = createSolidTexture("floor", 180, 170, 140, 255);
-  texEntrance = createSolidTexture("entrance", 80, 200, 80, 255);
-  texExit = createSolidTexture("exit", 200, 80, 80, 255);
-  texDecoration = createSolidTexture("decoration", 100, 80, 160, 255);
+  texWall = createSolidTexture("wall", rgb(40, 40, 50));
+  texFloor = createSolidTexture("floor", rgb(180, 170, 140));
+  texEntrance = createSolidTexture("entrance", rgb(80, 200, 80));
+  texExit = createSolidTexture("exit", rgb(200, 80, 80));
+  texDecoration = createSolidTexture("decoration", rgb(100, 80, 160));
 }
 
 function tileTexture(tileId: number): number {

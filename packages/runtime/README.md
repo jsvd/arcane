@@ -17,8 +17,9 @@ cargo install arcane-engine
 
 ```typescript
 import { onFrame, drawSprite, createSolidTexture, setCamera, getViewportSize } from "@arcane/runtime/rendering";
+import { rgb } from "@arcane/runtime/ui";
 
-const TEX = createSolidTexture("player", 60, 180, 255);
+const TEX = createSolidTexture("player", rgb(60, 180, 255));
 const { width: VPW, height: VPH } = getViewportSize();
 
 onFrame(() => {

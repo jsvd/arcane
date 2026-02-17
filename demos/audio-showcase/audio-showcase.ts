@@ -47,12 +47,12 @@ import { createGame, hud, captureInput, autoUpdateSlider, autoUpdateButton } fro
 let currentScene = 1;
 
 // Create solid color textures for visuals
-const whiteTexture = createSolidTexture("white", 255, 255, 255);
-const redTexture = createSolidTexture("red", 255, 100, 100);
-const greenTexture = createSolidTexture("green", 100, 255, 100);
-const blueTexture = createSolidTexture("blue", 100, 100, 255);
-const yellowTexture = createSolidTexture("yellow", 255, 255, 100);
-const purpleTexture = createSolidTexture("purple", 200, 100, 255);
+const whiteTexture = createSolidTexture("white", rgb(255, 255, 255));
+const redTexture = createSolidTexture("red", rgb(255, 100, 100));
+const greenTexture = createSolidTexture("green", rgb(100, 255, 100));
+const blueTexture = createSolidTexture("blue", rgb(100, 100, 255));
+const yellowTexture = createSolidTexture("yellow", rgb(255, 255, 100));
+const purpleTexture = createSolidTexture("purple", rgb(200, 100, 255));
 
 //=============================================================================
 // Scene 1: Spatial Audio
@@ -395,7 +395,7 @@ function drawScene3() {
 // Initialize first scene
 initScene1();
 
-const game = createGame({ background: { r: 30, g: 30, b: 40 } });
+const game = createGame({ background: { r: 30 / 255, g: 30 / 255, b: 40 / 255 } });
 
 game.onFrame((ctx) => {
   const dt = ctx.dt;

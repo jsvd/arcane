@@ -21,7 +21,7 @@ import {
   resetAnimation,
 } from "../../runtime/rendering/index.ts";
 import type { AnimationState } from "../../runtime/rendering/index.ts";
-import { Colors } from "../../runtime/ui/index.ts";
+import { Colors, rgb } from "../../runtime/ui/index.ts";
 import { createGame, hud } from "../../runtime/game/index.ts";
 
 // --- Types ---
@@ -58,7 +58,7 @@ try {
 
 // Fallback to solid color if no sprite sheet
 if (characterTexture === 0) {
-  characterTexture = createSolidTexture("player", 50, 150, 255);
+  characterTexture = createSolidTexture("player", rgb(50, 150, 255));
 }
 
 // Try loading sound

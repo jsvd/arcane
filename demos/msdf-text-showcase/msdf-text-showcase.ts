@@ -484,8 +484,7 @@ function drawSection6_Interactive() {
 
 // --- Game Bootstrap ---
 
-// background: 0.15, 0.15, 0.2 in 0-1 range = 38, 38, 51 in 0-255 range
-const game = createGame({ name: "msdf-text-showcase", background: { r: 38, g: 38, b: 51 } });
+const game = createGame({ name: "msdf-text-showcase", background: { r: 38 / 255, g: 38 / 255, b: 51 / 255 } });
 
 // --- Main Frame Loop ---
 

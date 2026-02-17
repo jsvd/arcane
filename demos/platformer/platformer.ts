@@ -98,6 +98,8 @@ function toController(state: PlatformerState): ControllerState {
     facingRight: state.facing === "right",
     coyoteTimer: 0,
     jumpBufferTimer: 0,
+    externalVx: 0,
+    externalVy: 0,
   };
 }
 

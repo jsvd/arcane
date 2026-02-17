@@ -52,6 +52,10 @@ export type PlatformerState = {
   facingRight: boolean;
   coyoteTimer: number;
   jumpBufferTimer: number;
+  /** External velocity X (e.g., knockback). Decays by ×0.85 per step. */
+  externalVx: number;
+  /** External velocity Y (e.g., knockback). Decays by ×0.85 per step. */
+  externalVy: number;
 };
 
 /** A static platform rectangle. oneWay platforms only block from above. */
@@ -84,6 +88,8 @@ export function createPlatformerState(x: number, y: number): PlatformerState {
     facingRight: true,
     coyoteTimer: 0,
     jumpBufferTimer: 0,
+    externalVx: 0,
+    externalVy: 0,
   };
 }
 
@@ -108,7 +114,7 @@ export function platformerMove(
 
   return {
     ...state,
-    vx: direction * speed,
+    vx: direction * speed + state.externalVx,
     facingRight: direction !== 0 ? direction > 0 : state.facingRight,
   };
 }
@@ -259,5 +265,28 @@ export function platformerStep(
     facingRight: state.facingRight,
     coyoteTimer,
     jumpBufferTimer,
+    externalVx: state.externalVx * 0.85,
+    externalVy: state.externalVy * 0.85,
+  };
+}
+
+/**
+ * Apply an instant velocity impulse (e.g., knockback). The impulse is added
+ * to movement velocity each frame and decays over time (x0.85 per step).
+ *
+ * @param state - Current platformer state.
+ * @param vx - Horizontal impulse velocity.
+ * @param vy - Vertical impulse velocity.
+ * @returns New state with impulse added to external velocity.
+ */
+export function platformerApplyImpulse(
+  state: PlatformerState,
+  vx: number,
+  vy: number,
+): PlatformerState {
+  return {
+    ...state,
+    externalVx: state.externalVx + vx,
+    externalVy: state.externalVy + vy,
   };
 }

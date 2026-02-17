@@ -21,7 +21,7 @@ import {
   getMousePosition,
   getMouseWorldPosition,
 } from "../../runtime/rendering/index.ts";
-import { Colors, HUDLayout, drawPanel } from "../../runtime/ui/index.ts";
+import { Colors, HUDLayout, drawPanel, rgb } from "../../runtime/ui/index.ts";
 import { createGame, hud, drawColorSprite } from "../../runtime/game/index.ts";
 import {
   tween,
@@ -46,7 +46,7 @@ import {
 import type { EmitterConfig } from "../../runtime/particles/index.ts";
 
 // --- Textures ---
-const TEX_PARTICLE = createSolidTexture("particle", 255, 255, 255);
+const TEX_PARTICLE = createSolidTexture("particle", rgb(255, 255, 255));
 
 // --- State ---
 interface DemoState {

@@ -153,8 +153,8 @@ export interface EmitterConfig {
   /** Color at particle death. Interpolated linearly from startColor over lifetime. */
   endColor: Color;
 
-  /** Texture ID for rendering particles. Obtain via loadTexture() or createSolidTexture(). */
-  textureId: number;
+  /** Texture ID for rendering particles. Obtain via loadTexture() or createSolidTexture(). If omitted, uses a default 1x1 white texture. */
+  textureId?: number;
 
   /** Maximum alive particles for this emitter. New particles are not spawned if at limit. Default: unlimited. */
   maxParticles?: number;

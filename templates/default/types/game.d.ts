@@ -134,6 +134,10 @@ declare module "@arcane/runtime/game" {
       facingRight: boolean;
       coyoteTimer: number;
       jumpBufferTimer: number;
+      /** External velocity X (e.g., knockback). Decays by ×0.85 per step. */
+      externalVx: number;
+      /** External velocity Y (e.g., knockback). Decays by ×0.85 per step. */
+      externalVy: number;
   };
   /** A static platform rectangle. oneWay platforms only block from above. */
   export type PlatformType = {
@@ -223,7 +227,7 @@ declare module "@arcane/runtime/game" {
       zoom?: number;
       /** Auto-clear sprites each frame? Default: true. */
       autoClear?: boolean;
-      /** Background color as {r, g, b} in 0-255 range. */
+      /** Background color with 0.0-1.0 float components. Use rgb() to create from 0-255 values. */
       background?: {
           r: number;
           g: number;
@@ -423,7 +427,7 @@ declare module "@arcane/runtime/game" {
    * - Wiring up agent protocol for AI interaction
    *
    * @example
-   * const game = createGame({ name: "my-game", background: { r: 30, g: 30, b: 50 } });
+   * const game = createGame({ name: "my-game", background: { r: 0.12, g: 0.12, b: 0.2 } });
    * game.onFrame((ctx) => {
    *   drawSprite({ textureId: tex, x: 100, y: 100, w: 32, h: 32 });
    * });
@@ -436,7 +440,7 @@ declare module "@arcane/runtime/game" {
    * - `autoCamera: true` -- on the first frame, sets the camera so (0,0) is top-left.
    * - `zoom: 1` -- default zoom level.
    *
-   * If `background` is provided (0-255 RGB), converts to 0.0-1.0 and calls setBackgroundColor().
+   * If `background` is provided (0.0-1.0 RGB), calls setBackgroundColor().
    *
    * @param config - Optional configuration. All fields have sensible defaults.
    * @returns A Game object with `onFrame()` and `state()` methods.
@@ -444,7 +448,7 @@ declare module "@arcane/runtime/game" {
    * @example
    * const game = createGame({
    *   name: "dungeon-crawler",
-   *   background: { r: 20, g: 12, b: 28 },
+   *   background: { r: 0.08, g: 0.05, b: 0.11 },
    *   zoom: 2,
    * });
    *
@@ -572,6 +576,10 @@ declare module "@arcane/runtime/game" {
       facingRight: boolean;
       coyoteTimer: number;
       jumpBufferTimer: number;
+      /** External velocity X (e.g., knockback). Decays by ×0.85 per step. */
+      externalVx: number;
+      /** External velocity Y (e.g., knockback). Decays by ×0.85 per step. */
+      externalVy: number;
   };
   /** A static platform rectangle. oneWay platforms only block from above. */
   export type Platform = {
@@ -625,6 +633,16 @@ declare module "@arcane/runtime/game" {
    * @returns New state after physics integration and collision resolution.
    */
   export declare function platformerStep(state: PlatformerState, dt: number, platforms: Platform[], config: PlatformerConfig): PlatformerState;
+  /**
+   * Apply an instant velocity impulse (e.g., knockback). The impulse is added
+   * to movement velocity each frame and decays over time (x0.85 per step).
+   *
+   * @param state - Current platformer state.
+   * @param vx - Horizontal impulse velocity.
+   * @param vy - Vertical impulse velocity.
+   * @returns New state with impulse added to external velocity.
+   */
+  export declare function platformerApplyImpulse(state: PlatformerState, vx: number, vy: number): PlatformerState;
 
   /**
    * Sprite group: bundle multiple sprite parts with relative offsets.

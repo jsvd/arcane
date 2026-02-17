@@ -23,7 +23,7 @@ describe("shapes", () => {
       disableDrawCallCapture();
     });
 
-    it("uses default layer 90 and screenSpace false", () => {
+    it("uses default layer 0 and screenSpace false", () => {
       enableDrawCallCapture();
       clearDrawCalls();
       drawCircle(50, 50, 10);
@@ -31,7 +31,7 @@ describe("shapes", () => {
       const circleCalls = calls.filter((c: any) => c.type === "circle");
       assert.equal(circleCalls.length, 1);
       const call = circleCalls[0] as any;
-      assert.equal(call.layer, 90);
+      assert.equal(call.layer, 0);
       assert.equal(call.screenSpace, false);
       disableDrawCallCapture();
     });
@@ -118,7 +118,7 @@ describe("shapes", () => {
       disableDrawCallCapture();
     });
 
-    it("uses default layer 90 and screenSpace false", () => {
+    it("uses default layer 0 and screenSpace false", () => {
       enableDrawCallCapture();
       clearDrawCalls();
       drawTriangle(0, 0, 50, 100, 100, 0);
@@ -126,7 +126,7 @@ describe("shapes", () => {
       const triCalls = calls.filter((c: any) => c.type === "triangle");
       assert.equal(triCalls.length, 1);
       const call = triCalls[0] as any;
-      assert.equal(call.layer, 90);
+      assert.equal(call.layer, 0);
       assert.equal(call.screenSpace, false);
       disableDrawCallCapture();
     });

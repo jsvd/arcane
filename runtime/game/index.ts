@@ -53,7 +53,7 @@ export { createSpriteGroup, drawSpriteGroup, getSpritePart, setPartVisible } fro
 
 // Platformer controller
 export type { PlatformerState, Platform } from "./platformer.ts";
-export { createPlatformerState, platformerMove, platformerJump, platformerStep } from "./platformer.ts";
+export { createPlatformerState, platformerMove, platformerJump, platformerStep, platformerApplyImpulse } from "./platformer.ts";
 
 // Game bootstrap
 export { createGame } from "./game.ts";

@@ -380,3 +380,17 @@ export {
   getVisibleText,
   isTypewriterComplete,
 } from "./typewriter.ts";
+
+// --- Cross-module re-exports for convenience ---
+// These reduce import sprawl by re-exporting commonly-needed functions
+// from other modules so they can be imported from rendering.
+
+// Color helper (canonical home: ui/types.ts)
+export { rgb } from "../ui/types.ts";
+export type { Color } from "../ui/types.ts";
+
+// Shape primitives (canonical home: ui/shapes.ts)
+export { drawCircle, drawLine, drawTriangle } from "../ui/shapes.ts";
+
+// Camera shake (canonical home: tweening/helpers.ts)
+export { shakeCamera, getCameraShakeOffset } from "../tweening/helpers.ts";

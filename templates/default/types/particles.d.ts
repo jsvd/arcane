@@ -124,8 +124,8 @@ declare module "@arcane/runtime/particles" {
       startColor: Color;
       /** Color at particle death. Interpolated linearly from startColor over lifetime. */
       endColor: Color;
-      /** Texture ID for rendering particles. Obtain via loadTexture() or createSolidTexture(). */
-      textureId: number;
+      /** Texture ID for rendering particles. Obtain via loadTexture() or createSolidTexture(). If omitted, uses a default 1x1 white texture. */
+      textureId?: number;
       /** Maximum alive particles for this emitter. New particles are not spawned if at limit. Default: unlimited. */
       maxParticles?: number;
   }
@@ -270,5 +270,153 @@ declare module "@arcane/runtime/particles" {
    * @returns Count of registered emitters (active or inactive).
    */
   export declare function getEmitterCount(): number;
+
+  /**
+   * Particle preset configurations and convenience functions.
+   *
+   * Provides ready-to-use emitter configs for common effects and
+   * quick-fire functions that create emitters with minimal boilerplate.
+   *
+   * @example
+   * ```ts
+   * import { burstParticles, streamParticles, ParticlePresets } from "@arcane/runtime/particles";
+   *
+   * // One-shot burst at position
+   * burstParticles(100, 200);
+   *
+   * // Continuous fire stream
+   * const fire = streamParticles(x, y, { preset: "fire" });
+   * ```
+   */
+  /** Options for quick particle functions. Unset fields use preset defaults. */
+  export type ParticleOptions = {
+      /** Number of particles (burst) or rate (stream). */
+      count?: number;
+      /** Start color. */
+      color?: Color;
+      /** End color. */
+      endColor?: Color;
+      /** Speed multiplier (scales velocity range). Default: 1. */
+      speed?: number;
+      /** Particle lifetime range [min, max] in seconds. */
+      lifetime?: [number, number];
+      /** Downward gravity force. 0 = none. */
+      gravity?: number;
+      /** Texture ID. If omitted, uses default white texture. */
+      textureId?: number;
+      /** Preset name to use as base config. Default: "sparks". */
+      preset?: keyof typeof ParticlePresets;
+  };
+  /** Pre-built emitter configurations for common effects. */
+  export declare const ParticlePresets: {
+      /** Small brown/tan particles, fast fade. Good for footsteps, impacts on ground. */
+      readonly dust: {
+          readonly startColor: {
+              readonly r: 0.6;
+              readonly g: 0.5;
+              readonly b: 0.3;
+              readonly a: 0.8;
+          };
+          readonly endColor: {
+              readonly r: 0.5;
+              readonly g: 0.4;
+              readonly b: 0.3;
+              readonly a: 0;
+          };
+          readonly lifetime: [number, number];
+          readonly velocityX: [number, number];
+          readonly velocityY: [number, number];
+          readonly scale: [number, number];
+          readonly count: 8;
+      };
+      /** Orange-to-red, rising particles with additive feel. */
+      readonly fire: {
+          readonly startColor: {
+              readonly r: 1;
+              readonly g: 0.7;
+              readonly b: 0.1;
+              readonly a: 1;
+          };
+          readonly endColor: {
+              readonly r: 0.8;
+              readonly g: 0.1;
+              readonly b: 0;
+              readonly a: 0;
+          };
+          readonly lifetime: [number, number];
+          readonly velocityX: [number, number];
+          readonly velocityY: [number, number];
+          readonly scale: [number, number];
+          readonly count: 15;
+      };
+      /** Bright yellow-to-red, fast, scattered. Good for hits and explosions. */
+      readonly sparks: {
+          readonly startColor: {
+              readonly r: 1;
+              readonly g: 0.9;
+              readonly b: 0.3;
+              readonly a: 1;
+          };
+          readonly endColor: {
+              readonly r: 1;
+              readonly g: 0.2;
+              readonly b: 0;
+              readonly a: 0;
+          };
+          readonly lifetime: [number, number];
+          readonly velocityX: [number, number];
+          readonly velocityY: [number, number];
+          readonly scale: [number, number];
+          readonly count: 12;
+      };
+      /** Gray, slow, rising. Good for chimneys, aftermath of fire. */
+      readonly smoke: {
+          readonly startColor: {
+              readonly r: 0.5;
+              readonly g: 0.5;
+              readonly b: 0.5;
+              readonly a: 0.6;
+          };
+          readonly endColor: {
+              readonly r: 0.3;
+              readonly g: 0.3;
+              readonly b: 0.3;
+              readonly a: 0;
+          };
+          readonly lifetime: [number, number];
+          readonly velocityX: [number, number];
+          readonly velocityY: [number, number];
+          readonly scale: [number, number];
+          readonly scaleSpeed: [number, number];
+          readonly count: 6;
+      };
+  };
+  /**
+   * Create a one-shot burst of particles at a position.
+   *
+   * @param x - World X position.
+   * @param y - World Y position.
+   * @param options - Override preset defaults. Use `preset` to pick a base config.
+   * @returns The created emitter.
+   *
+   * @example
+   * burstParticles(enemy.x, enemy.y); // default sparks
+   * burstParticles(x, y, { preset: "dust", count: 20 });
+   * burstParticles(x, y, { color: { r: 0, g: 1, b: 0, a: 1 } });
+   */
+  export declare function burstParticles(x: number, y: number, options?: ParticleOptions): Emitter;
+  /**
+   * Create a continuous particle stream at a position.
+   *
+   * @param x - World X position.
+   * @param y - World Y position.
+   * @param options - Override preset defaults. Use `preset` to pick a base config.
+   * @returns The created emitter. Move it by updating `emitter.config.x/y`.
+   *
+   * @example
+   * const smoke = streamParticles(chimney.x, chimney.y, { preset: "smoke" });
+   * const fire = streamParticles(torch.x, torch.y, { preset: "fire", count: 30 });
+   */
+  export declare function streamParticles(x: number, y: number, options?: ParticleOptions): Emitter;
 
 }

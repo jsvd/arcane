@@ -79,7 +79,7 @@ export type BarOptions = {
 export type ShapeOptions = {
   /** Fill color. Default: white `{ r: 1, g: 1, b: 1, a: 1 }`. */
   color?: Color;
-  /** Draw order layer. Default: 90. */
+  /** Draw order layer. Default: 0 (same as sprites). */
   layer?: number;
   /** If true, coordinates are screen pixels (HUD). If false, world units. Default: false. */
   screenSpace?: boolean;

@@ -124,7 +124,56 @@ for entry in "${MODULES[@]}"; do
   echo "  $dir.d.ts ($lines lines)"
 done
 
-# Step 3: Clean up
+# Step 3: Generate cheatsheet (compact one-liner signatures from all modules)
+echo "Generating cheatsheet..."
+CHEATSHEET="$OUT_DIR/cheatsheet.d.ts"
+{
+  echo "// Arcane Engine — API Cheatsheet"
+  echo "// Generated from runtime source. Do not edit manually."
+  echo "// Regenerate with: ./scripts/generate-declarations.sh"
+  echo "//"
+  echo "// One-liner signatures for every exported function, grouped by module."
+  echo "// For full JSDoc, argument types, and examples, see the per-module files in types/."
+  echo ""
+
+  for entry in "${MODULES[@]}"; do
+    dir="${entry%%:*}"
+    label="${entry##*:}"
+    module_file="$OUT_DIR/$dir.d.ts"
+    if [ ! -f "$module_file" ]; then
+      continue
+    fi
+
+    echo "// --- $dir (@arcane/runtime/$dir) ---"
+
+    # Extract type names (one-liner summary)
+    type_names=$(grep -E '^\s+export type \w+ ' "$module_file" 2>/dev/null | sed 's/.*export type \([A-Za-z_][A-Za-z0-9_]*\).*/\1/' | sort -u | tr '\n' ', ' | sed 's/, $//') || true
+    if [ -n "$type_names" ]; then
+      echo "// Types: $type_names"
+    fi
+
+    # Extract function declarations (just the signature line)
+    grep -E '^\s+export declare function ' "$module_file" 2>/dev/null | while IFS= read -r line; do
+      # Strip leading whitespace and "export " prefix
+      trimmed="${line#"${line%%[! ]*}"}"
+      trimmed="${trimmed#export }"
+      echo "$trimmed"
+    done || true
+
+    # Extract const declarations (just name and type)
+    grep -E '^\s+export declare const ' "$module_file" 2>/dev/null | while IFS= read -r line; do
+      trimmed="${line#"${line%%[! ]*}"}"
+      trimmed="${trimmed#export }"
+      echo "$trimmed"
+    done || true
+
+    echo ""
+  done
+} > "$CHEATSHEET"
+cheatsheet_lines=$(wc -l < "$CHEATSHEET")
+echo "  cheatsheet.d.ts ($cheatsheet_lines lines)"
+
+# Step 4: Clean up
 rm -rf "$DIST_DIR"
 
 echo ""

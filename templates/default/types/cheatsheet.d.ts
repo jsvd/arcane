@@ -1,0 +1,592 @@
+// Arcane Engine — API Cheatsheet
+// Generated from runtime source. Do not edit manually.
+// Regenerate with: ./scripts/generate-declarations.sh
+//
+// One-liner signatures for every exported function, grouped by module.
+// For full JSDoc, argument types, and examples, see the per-module files in types/.
+
+// --- rendering (@arcane/runtime/rendering) ---
+// Types: AnimatedTileDef,AnimationDef,AnimationFinishedCondition,AnimationId,AnimationState,AudioBus,AutotileMapping,AutotileRule,BitmapFont,BlendState,BooleanCondition,CameraBounds,CameraDeadzone,CameraState,EffectId,FSMConfig,FSMParams,FSMState,FSMStateDef,FSMTransition,FloatingTextOptions,FrameEvent,FrameEventCallback,HexConfig,HexCoord,HexOrientation,HexTile,HexTilemap,HexTilemapConfig,ImpactConfig,ImpactFlash,ImpactParticles,ImpactShake,ImpactSound,InstanceId,IsoConfig,IsoTile,IsoTilemap,IsoTilemapConfig,KeyName,LayerOptions,LayeredTilemap,MSDFFont,MSDFGlyph,MousePosition,NeighborCheck,NineSliceBorder,NineSliceOptions,OffsetType,ParallaxSpriteOptions,PlayOptions,PoolConfig,ScreenTransitionConfig,ScreenTransitionType,ShaderId,SoundId,SpatialOptions,SpriteOptions,StaggeredIsoConfig,TextMeasurement,TextOptions,TextOutline,TextShadow,TextureId,ThresholdCondition,TileProperties,TilemapId,TilemapLayer,TilemapOptions,Trail,TrailConfig,TrailPoint,TransitionCondition,TriggerCondition,Typewriter,TypewriterConfig,TypewriterDrawOptions,
+declare function createAnimationFSM(config: FSMConfig): FSMState;
+declare function getCurrentState(fsm: FSMState): string;
+declare function isBlending(fsm: FSMState): boolean;
+declare function getBlendProgress(fsm: FSMState): number;
+declare function setFSMState(fsm: FSMState, stateName: string, blendDuration?: number): FSMState;
+declare function updateFSM(fsm: FSMState, dt: number, params?: FSMParams): FSMState;
+declare function drawFSMSprite(fsm: FSMState, x: number, y: number, w: number, h: number, options?: {
+declare function createAnimation(textureId: TextureId, frameW: number, frameH: number, frameCount: number, fps: number, options?: {
+declare function addFrameEvent(defId: AnimationId, frame: number, callback: FrameEventCallback): void;
+declare function updateAnimationWithEvents(anim: AnimationState, dt: number): AnimationState;
+declare function getAnimationDef(defId: AnimationId): AnimationDef | undefined;
+declare function playAnimation(defId: AnimationId): AnimationState;
+declare function updateAnimation(anim: AnimationState, dt: number): AnimationState;
+declare function getAnimationUV(anim: AnimationState): {
+declare function drawAnimatedSprite(anim: AnimationState, x: number, y: number, w: number, h: number, options?: {
+declare function resetAnimation(anim: AnimationState): AnimationState;
+declare function stopAnimation(anim: AnimationState): AnimationState;
+declare function loadSound(path: string): SoundId;
+declare function playSound(id: SoundId, options?: PlayOptions): InstanceId;
+declare function playMusic(path: string, volume?: number): InstanceId;
+declare function stopSound(id: SoundId): void;
+declare function stopAll(): void;
+declare function setVolume(volume: number): void;
+declare function playSoundAt(id: SoundId, options: SpatialOptions): InstanceId;
+declare function crossfadeMusic(path: string, duration?: number, volume?: number): InstanceId;
+declare function stopInstance(instanceId: InstanceId): void;
+declare function setBusVolume(bus: AudioBus, volume: number): void;
+declare function getBusVolume(bus: AudioBus): number;
+declare function setListenerPosition(x: number, y: number): void;
+declare function updateSpatialAudio(): void;
+declare function setPoolConfig(id: SoundId, config: PoolConfig): void;
+declare function setInstanceVolume(instanceId: InstanceId, volume: number): void;
+declare function computeAutotileBitmask4(gx: number, gy: number, check: NeighborCheck): number;
+declare function computeAutotileBitmask8(gx: number, gy: number, check: NeighborCheck): number;
+declare function createAutotileMapping4(tileIds: number[]): AutotileMapping;
+declare function createAutotileMapping8(lookup: Record<number, number>): AutotileMapping;
+declare function createAutotileRule(memberTileIds: number[], mode: 4 | 8, mapping: AutotileMapping, fallbackTileId: number): AutotileRule;
+declare function resolveAutotile(gx: number, gy: number, rule: AutotileRule, check: NeighborCheck): number;
+declare function applyAutotile(width: number, height: number, getTileFn: (gx: number, gy: number) => number, setTileFn: (gx: number, gy: number, tileId: number) => void, rule: AutotileRule, startX?: number, startY?: number, endX?: number, endY?: number): void;
+declare function setCamera(x: number, y: number, zoom?: number): void;
+declare function getCamera(): CameraState;
+declare function followTarget(targetX: number, targetY: number, zoom?: number): void;
+declare function setCameraBounds(bounds: CameraBounds | null): void;
+declare function getCameraBounds(): CameraBounds | null;
+declare function setCameraDeadzone(deadzone: CameraDeadzone | null): void;
+declare function getCameraDeadzone(): CameraDeadzone | null;
+declare function followTargetSmooth(targetX: number, targetY: number, zoom?: number, smoothness?: number): void;
+declare function zoomTo(targetZoom: number, duration: number, easing?: (t: number) => number): void;
+declare function zoomToPoint(targetZoom: number, worldX: number, worldY: number, duration: number, easing?: (t: number) => number): void;
+declare function spawnFloatingText(x: number, y: number, text: string, options?: FloatingTextOptions): void;
+declare function updateFloatingTexts(dt: number): void;
+declare function drawFloatingTexts(): void;
+declare function getFloatingTextCount(): number;
+declare function clearFloatingTexts(): void;
+declare function _resetFloatingTexts(): void;
+declare function createHexTilemap(config: HexTilemapConfig): HexTilemap;
+declare function setHexTile(tilemap: HexTilemap, col: number, row: number, tileId: number): void;
+declare function getHexTile(tilemap: HexTilemap, col: number, row: number): HexTile | undefined;
+declare function getHexTileId(tilemap: HexTilemap, col: number, row: number): number;
+declare function fillHexTiles(tilemap: HexTilemap, startCol: number, startRow: number, endCol: number, endRow: number, tileId: number): void;
+declare function setHexTileTexture(tilemap: HexTilemap, tileId: number, textureId: number): void;
+declare function hexTilemapToCube(tilemap: HexTilemap, col: number, row: number): HexCoord;
+declare function hexTilemapFromCube(tilemap: HexTilemap, h: HexCoord): {
+declare function getHexTileAtCube(tilemap: HexTilemap, h: HexCoord): number;
+declare function setHexTileAtCube(tilemap: HexTilemap, h: HexCoord, tileId: number): void;
+declare function drawHexTilemap(tilemap: HexTilemap, camera?: CameraState, baseLayer?: number, offsetX?: number, offsetY?: number): void;
+declare function computeHexTilemapAutotile(tilemap: HexTilemap, col: number, row: number, matchFn?: (tileId: number) => boolean): number;
+declare function hex(q: number, r: number): HexCoord;
+declare function hexFromCube(q: number, r: number, s: number): HexCoord;
+declare function hexEqual(a: HexCoord, b: HexCoord): boolean;
+declare function hexAdd(a: HexCoord, b: HexCoord): HexCoord;
+declare function hexSubtract(a: HexCoord, b: HexCoord): HexCoord;
+declare function hexScale(h: HexCoord, k: number): HexCoord;
+declare function hexDirection(dir: number): HexCoord;
+declare function hexNeighbor(h: HexCoord, dir: number): HexCoord;
+declare function hexNeighbors(q: number, r: number): HexCoord[];
+declare function hexDistance(a: HexCoord, b: HexCoord): number;
+declare function hexRing(center: HexCoord, radius: number): HexCoord[];
+declare function hexSpiral(center: HexCoord, radius: number): HexCoord[];
+declare function hexRound(q: number, r: number, s: number): HexCoord;
+declare function hexLineDraw(a: HexCoord, b: HexCoord): HexCoord[];
+declare function hexToWorld(h: HexCoord, config: HexConfig): {
+declare function worldToHex(wx: number, wy: number, config: HexConfig): HexCoord;
+declare function screenToHex(sx: number, sy: number, camera: CameraState, config: HexConfig, viewportWidth: number, viewportHeight: number): HexCoord;
+declare function cubeToOffset(h: HexCoord, type: OffsetType): {
+declare function offsetToCube(col: number, row: number, type: OffsetType): HexCoord;
+declare function hexRange(center: HexCoord, range: number): HexCoord[];
+declare function hexArea(radius: number): number;
+declare function computeHexAutotileBitmask(q: number, r: number, check: (q: number, r: number) => boolean): number;
+declare function isKeyDown(key: KeyName): boolean;
+declare function isKeyPressed(key: KeyName): boolean;
+declare function getMousePosition(): MousePosition;
+declare function isMouseButtonDown(button: number): boolean;
+declare function isMouseButtonPressed(button: number): boolean;
+declare function getViewportSize(): {
+declare function getScaleFactor(): number;
+declare function setBackgroundColor(color: {
+declare function screenToWorld(screenX: number, screenY: number): MousePosition;
+declare function getMouseWorldPosition(): MousePosition;
+declare function getGamepadCount(): number;
+declare function getGamepadName(): string;
+declare function isGamepadConnected(): boolean;
+declare function isGamepadButtonDown(button: string): boolean;
+declare function isGamepadButtonPressed(button: string): boolean;
+declare function getGamepadAxis(axis: string): number;
+declare function getTouchCount(): number;
+declare function isTouchActive(): boolean;
+declare function getTouchPosition(index?: number): MousePosition;
+declare function getTouchWorldPosition(index?: number): MousePosition;
+declare function createIsoTilemap(config: IsoTilemapConfig): IsoTilemap;
+declare function setIsoTile(tilemap: IsoTilemap, gx: number, gy: number, tileId: number, elevation?: number): void;
+declare function getIsoTile(tilemap: IsoTilemap, gx: number, gy: number): IsoTile | undefined;
+declare function getIsoTileId(tilemap: IsoTilemap, gx: number, gy: number): number;
+declare function setIsoTileElevation(tilemap: IsoTilemap, gx: number, gy: number, elevation: number): void;
+declare function fillIsoTiles(tilemap: IsoTilemap, startX: number, startY: number, endX: number, endY: number, tileId: number, elevation?: number): void;
+declare function setIsoTileTexture(tilemap: IsoTilemap, tileId: number, textureId: number): void;
+declare function drawIsoTilemap(tilemap: IsoTilemap, camera?: CameraState, baseLayer?: number, offsetX?: number, offsetY?: number): void;
+declare function computeIsoAutotile4(tilemap: IsoTilemap, gx: number, gy: number, matchFn?: (tileId: number) => boolean): number;
+declare function isoToWorld(gx: number, gy: number, config: IsoConfig): {
+declare function worldToIso(wx: number, wy: number, config: IsoConfig): {
+declare function worldToGrid(wx: number, wy: number, config: IsoConfig): {
+declare function screenToIso(sx: number, sy: number, camera: CameraState, config: IsoConfig, viewportWidth: number, viewportHeight: number): {
+declare function isoDepthLayer(gy: number): number;
+declare function staggeredIsoToWorld(gx: number, gy: number, config: StaggeredIsoConfig): {
+declare function worldToStaggeredIso(wx: number, wy: number, config: StaggeredIsoConfig): {
+declare function screenToStaggeredIso(sx: number, sy: number, camera: CameraState, config: StaggeredIsoConfig, viewportWidth: number, viewportHeight: number): {
+declare function isoMapBounds(mapW: number, mapH: number, config: IsoConfig): {
+declare function isoIterateBackToFront(mapW: number, mapH: number, callback: (gx: number, gy: number) => void): void;
+declare function isoNeighbors(gx: number, gy: number): Array<{
+declare function isoDistance(ax: number, ay: number, bx: number, by: number): number;
+declare function isHitstopActive(): boolean;
+declare function getHitstopFrames(): number;
+declare function consumeHitstopFrame(): boolean;
+declare function hitstop(frames: number): void;
+declare function impact(x: number, y: number, config: ImpactConfig): void;
+declare function impactLight(x: number, y: number): void;
+declare function impactHeavy(x: number, y: number): void;
+declare function _resetJuice(): void;
+declare function setAmbientLight(r: number, g: number, b: number): void;
+declare function addPointLight(x: number, y: number, radius: number, r?: number, g?: number, b?: number, intensity?: number): void;
+declare function clearLights(): void;
+declare function enableGlobalIllumination(): void;
+declare function disableGlobalIllumination(): void;
+declare function setGIIntensity(intensity: number): void;
+declare function setGIQuality(options: GIQualityOptions): void;
+declare function addEmissive(options: EmissiveOptions): void;
+declare function clearEmissives(): void;
+declare function addOccluder(options: OccluderOptions): void;
+declare function clearOccluders(): void;
+declare function addDirectionalLight(options: DirectionalLightOptions): void;
+declare function addSpotLight(options: SpotLightOptions): void;
+declare function setDayNightCycle(options: DayNightOptions): void;
+declare function onFrame(callback: () => void): void;
+declare function getDeltaTime(): number;
+declare function drawNineSlice(textureId: TextureId, x: number, y: number, w: number, h: number, options: NineSliceOptions): void;
+declare function getNineSliceSpriteCount(w: number, h: number, border: number | NineSliceBorder): number;
+declare function drawParallaxSprite(options: ParallaxSpriteOptions): void;
+declare function addPostProcessEffect(effect: "bloom" | "blur" | "vignette" | "crt"): EffectId;
+declare function setEffectParam(effectId: EffectId, index: number, x: number, y?: number, z?: number, w?: number): void;
+declare function removeEffect(effectId: EffectId): void;
+declare function clearEffects(): void;
+declare function createShaderFromSource(name: string, wgslSource: string): ShaderId;
+declare function setShaderParam(shaderId: ShaderId, index: number, x: number, y?: number, z?: number, w?: number): void;
+declare function drawSprite(opts: SpriteOptions): void;
+declare function clearSprites(): void;
+declare function loadFont(textureId: TextureId, glyphW: number, glyphH: number, columns: number, rows: number, firstChar?: number): BitmapFont;
+declare function getDefaultFont(): BitmapFont;
+declare function getDefaultMSDFFont(): MSDFFont;
+declare function loadMSDFFont(atlasPath: string, metricsJson: string): MSDFFont;
+declare function measureText(text: string, options?: TextOptions): TextMeasurement;
+declare function drawText(text: string, x: number, y: number, options?: TextOptions): void;
+declare function loadTexture(path: string): TextureId;
+declare function createSolidTexture(name: string, color: Color): TextureId;
+declare function registerAnimatedTile(baseTileId: number, frames: number[], frameDuration: number): void;
+declare function unregisterAnimatedTile(baseTileId: number): void;
+declare function clearAnimatedTiles(): void;
+declare function updateAnimatedTiles(dt: number): void;
+declare function resolveAnimatedTile(tileId: number): number;
+declare function getAnimatedTileDefs(): ReadonlyMap<number, AnimatedTileDef>;
+declare function defineTileProperties(tileId: number, properties: TileProperties): void;
+declare function getTileProperties(tileId: number): TileProperties | undefined;
+declare function getTileProperty(tileId: number, key: string): unknown;
+declare function getTilePropertiesAt(tilemap: LayeredTilemap, layerName: string, gx: number, gy: number): TileProperties | undefined;
+declare function getTilePropertyAt(tilemap: LayeredTilemap, layerName: string, gx: number, gy: number, key: string): unknown;
+declare function clearTileProperties(): void;
+declare function createLayeredTilemap(opts: TilemapOptions, layerDefs: Array<[string, LayerOptions?]>): LayeredTilemap;
+declare function setLayerTile(tilemap: LayeredTilemap, layerName: string, gx: number, gy: number, tileId: number): void;
+declare function getLayerTile(tilemap: LayeredTilemap, layerName: string, gx: number, gy: number): number;
+declare function setLayerVisible(tilemap: LayeredTilemap, layerName: string, visible: boolean): void;
+declare function setLayerOpacity(tilemap: LayeredTilemap, layerName: string, opacity: number): void;
+declare function getLayerNames(tilemap: LayeredTilemap): string[];
+declare function drawLayeredTilemap(tilemap: LayeredTilemap, x?: number, y?: number, baseLayer?: number, cameraX?: number, cameraY?: number): void;
+declare function createTilemap(opts: TilemapOptions): TilemapId;
+declare function setTile(id: TilemapId, gx: number, gy: number, tileId: number): void;
+declare function getTile(id: TilemapId, gx: number, gy: number): number;
+declare function drawTilemap(id: TilemapId, x?: number, y?: number, layer?: number): void;
+declare function fillTiles(id: TilemapId, startX: number, startY: number, endX: number, endY: number, tileId: number): void;
+declare function fillLayerTiles(tilemap: LayeredTilemap, layerName: string, startX: number, startY: number, endX: number, endY: number, tileId: number): void;
+declare function createTrail(config?: TrailConfig): Trail;
+declare function updateTrail(trail: Trail, x: number, y: number, dt?: number): void;
+declare function drawTrail(trail: Trail): void;
+declare function clearTrail(trail: Trail): void;
+declare function pauseTrail(trail: Trail): void;
+declare function resumeTrail(trail: Trail): void;
+declare function getTrailPointCount(trail: Trail): number;
+declare function startScreenTransition(type: ScreenTransitionType, dur: number, config?: {
+declare function updateScreenTransition(dt: number): void;
+declare function drawScreenTransition(): void;
+declare function isScreenTransitionActive(): boolean;
+declare function getScreenTransitionProgress(): number;
+declare function _resetScreenTransition(): void;
+declare function createTypewriter(text: string, config?: TypewriterConfig): Typewriter;
+declare function updateTypewriter(tw: Typewriter, dt: number): void;
+declare function drawTypewriter(tw: Typewriter, x: number, y: number, options?: TypewriterDrawOptions): void;
+declare function skipTypewriter(tw: Typewriter): void;
+declare function pauseTypewriter(tw: Typewriter): void;
+declare function resumeTypewriter(tw: Typewriter): void;
+declare function resetTypewriter(tw: Typewriter, newText?: string): void;
+declare function getVisibleText(tw: Typewriter): string;
+declare function isTypewriterComplete(tw: Typewriter): boolean;
+declare const NORTH = 1;
+declare const EAST = 2;
+declare const SOUTH = 4;
+declare const WEST = 8;
+declare const NORTHEAST = 16;
+declare const SOUTHEAST = 32;
+declare const SOUTHWEST = 64;
+declare const NORTHWEST = 128;
+declare const BITMASK4_LABELS: ReadonlyArray<string>;
+declare const HEX_DIR_E = 1;
+declare const HEX_DIR_NE = 2;
+declare const HEX_DIR_NW = 4;
+declare const HEX_DIR_W = 8;
+declare const HEX_DIR_SW = 16;
+declare const HEX_DIR_SE = 32;
+declare const colorTemp: {
+
+// --- game (@arcane/runtime/game) ---
+// Types: CollisionCallback,CollisionRegistry,ColorSpriteOptions,Entity,EntityOptions,EntitySprite,FrameCallback,FrameInput,Game,GameConfig,GameContext,HUDBarOptions,HUDLabelOptions,HUDOverlayOptions,HUDTextOptions,Platform,PlatformType,PlatformerConfig,PlatformerState,PlatformerStateType,SpriteGroup,SpriteGroupDrawOptions,SpriteGroupType,SpritePart,
+declare function createCollisionRegistry(): CollisionRegistry;
+declare function onBodyCollision(registry: CollisionRegistry, bodyId: BodyId, callback: CollisionCallback): void;
+declare function onCollision(registry: CollisionRegistry, bodyA: BodyId, bodyB: BodyId, callback: CollisionCallback): void;
+declare function removeBodyCollisions(registry: CollisionRegistry, bodyId: BodyId): void;
+declare function processCollisions(registry: CollisionRegistry): void;
+declare function drawColorSprite(opts: ColorSpriteOptions): void;
+declare function _resetColorTexCache(): void;
+declare function createEntity(x: number, y: number, opts?: EntityOptions): Entity;
+declare function syncEntities(entities: Entity[]): void;
+declare function drawEntities(entities: Entity[]): void;
+declare function destroyEntity(entity: Entity): void;
+declare function findEntity(entities: Entity[], tag: string): Entity | undefined;
+declare function findEntities(entities: Entity[], tag: string): Entity[];
+declare function createGame(config?: GameConfig): Game;
+declare function createPlatformerState(x: number, y: number): PlatformerState;
+declare function platformerMove(state: PlatformerState, direction: -1 | 0 | 1, running: boolean, config: PlatformerConfig): PlatformerState;
+declare function platformerJump(state: PlatformerState, config: PlatformerConfig): PlatformerState;
+declare function platformerStep(state: PlatformerState, dt: number, platforms: Platform[], config: PlatformerConfig): PlatformerState;
+declare function platformerApplyImpulse(state: PlatformerState, vx: number, vy: number): PlatformerState;
+declare function createSpriteGroup(parts: SpritePart[], baseLayer?: number): SpriteGroup;
+declare function drawSpriteGroup(group: SpriteGroup, x: number, y: number, opts?: SpriteGroupDrawOptions): void;
+declare function getSpritePart(group: SpriteGroup, name: string): SpritePart | undefined;
+declare function setPartVisible(group: SpriteGroup, name: string, visible: boolean): void;
+declare function captureInput(): FrameInput;
+declare function autoUpdateButton(btn: ButtonState, input: FrameInput): void;
+declare function autoUpdateSlider(slider: SliderState, input: FrameInput): void;
+declare function autoUpdateCheckbox(cb: CheckboxState, input: FrameInput): void;
+declare function autoUpdateFocus(fm: FocusManagerState, input: FrameInput): void;
+declare const hud: {
+
+// --- input (@arcane/runtime/input) ---
+// Types: GamepadAxis,GamepadButton,InputBinding,InputMapDef,InputSource,
+declare function parseBinding(binding: InputBinding): InputSource;
+declare function createInputMap(def: InputMapDef): InputMap;
+declare function setActionBindings(map: InputMap, action: string, bindings: InputBinding[]): void;
+declare function removeActionBinding(map: InputMap, action: string, binding: InputBinding): boolean;
+declare function getActionBindings(map: InputMap, action: string): InputSource[];
+declare function getActionNames(map: InputMap): string[];
+declare function isActionDown(action: string, map: InputMap, poller?: InputPoller): boolean;
+declare function isActionPressed(action: string, map: InputMap, poller?: InputPoller): boolean;
+declare function getActionValue(action: string, map: InputMap, poller?: InputPoller): number;
+declare function createInputBuffer(maxAge?: number): InputBuffer;
+declare function bufferAction(buffer: InputBuffer, action: string, time: number): void;
+declare function checkCombo(buffer: InputBuffer, combo: ComboDef, time: number): boolean;
+declare function consumeCombo(buffer: InputBuffer, combo: ComboDef): void;
+declare function updateInputBuffer(buffer: InputBuffer, map: InputMap, time: number, poller?: InputPoller): void;
+
+// --- ui (@arcane/runtime/ui) ---
+// Types: Anchor,BarOptions,ButtonState,ButtonStyle,ButtonVisual,CheckboxState,CheckboxStyle,Color,FocusManagerState,Focusable,LabelOptions,LayoutPosition,LineOptions,Palette,PanelOptions,RadioGroupState,RadioGroupStyle,RectOptions,ShapeOptions,SliderState,SliderStyle,TextInputKeyEvent,TextInputState,TextInputStyle,
+declare function rgb(r: number, g: number, b: number, a?: number): Color;
+declare function createButton(x: number, y: number, w: number, h: number, label: string, style?: ButtonStyle): ButtonState;
+declare function hitTest(px: number, py: number, rx: number, ry: number, rw: number, rh: number): boolean;
+declare function updateButton(btn: ButtonState, mouseX: number, mouseY: number, mouseDown: boolean, enterPressed?: boolean): void;
+declare function drawButton(btn: ButtonState): void;
+declare function withAlpha(color: Color, alpha: number): Color;
+declare function lighten(color: Color, amount?: number): Color;
+declare function darken(color: Color, amount?: number): Color;
+declare function createFocusManager(): FocusManagerState;
+declare function registerFocusable(fm: FocusManagerState, widget: Focusable): void;
+declare function unregisterFocusable(fm: FocusManagerState, widget: Focusable): void;
+declare function updateFocus(fm: FocusManagerState, tabPressed: boolean, shiftDown: boolean): void;
+declare function clearFocus(fm: FocusManagerState): void;
+declare function setFocusTo(fm: FocusManagerState, widget: Focusable): void;
+declare function getFocusedWidget(fm: FocusManagerState): Focusable | null;
+declare function verticalStack(x: number, y: number, itemHeight: number, count: number, spacing?: number): LayoutPosition[];
+declare function horizontalRow(x: number, y: number, itemWidth: number, count: number, spacing?: number): LayoutPosition[];
+declare function anchorPosition(anchor: Anchor, viewportW: number, viewportH: number, contentW: number, contentH: number, padding?: number): LayoutPosition;
+declare function verticalStackVariableHeight(x: number, y: number, heights: number[], spacing?: number): LayoutPosition[];
+declare function horizontalRowVariableWidth(x: number, y: number, widths: number[], spacing?: number): LayoutPosition[];
+declare function verticalStackHeight(itemHeight: number, count: number, spacing?: number): number;
+declare function horizontalRowWidth(itemWidth: number, count: number, spacing?: number): number;
+declare function setPalette(palette: Record<string, Color>): void;
+declare function getPalette(): Readonly<Palette>;
+declare function paletteColor(name: string): Color;
+declare function resetPalette(): void;
+declare function drawRect(x: number, y: number, w: number, h: number, options?: RectOptions): void;
+declare function drawPanel(x: number, y: number, w: number, h: number, options?: PanelOptions): void;
+declare function drawBar(x: number, y: number, w: number, h: number, fillRatio: number, options?: BarOptions): void;
+declare function drawLabel(text: string, x: number, y: number, options?: LabelOptions): void;
+declare function drawCircle(cx: number, cy: number, radius: number, options?: ShapeOptions): void;
+declare function drawLine(x1: number, y1: number, x2: number, y2: number, options?: LineOptions): void;
+declare function drawTriangle(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, options?: ShapeOptions): void;
+declare function createSlider(x: number, y: number, w: number, min: number, max: number, value: number, label?: string, style?: SliderStyle): SliderState;
+declare function getSliderHeight(sl: SliderState): number;
+declare function updateSlider(sl: SliderState, mouseX: number, mouseY: number, mouseDown: boolean, arrowLeftPressed?: boolean, arrowRightPressed?: boolean): void;
+declare function drawSlider(sl: SliderState): void;
+declare function createTextInput(x: number, y: number, w: number, placeholder?: string, style?: TextInputStyle): TextInputState;
+declare function updateTextInput(ti: TextInputState, mouseX: number, mouseY: number, mouseDown: boolean, keys: TextInputKeyEvent[]): void;
+declare function drawTextInput(ti: TextInputState, time?: number): void;
+declare function createCheckbox(x: number, y: number, label: string, checked?: boolean, style?: CheckboxStyle): CheckboxState;
+declare function updateCheckbox(cb: CheckboxState, mouseX: number, mouseY: number, mouseDown: boolean, enterPressed?: boolean): void;
+declare function drawCheckbox(cb: CheckboxState): void;
+declare function createRadioGroup(x: number, y: number, options: string[], selectedIndex?: number, style?: RadioGroupStyle): RadioGroupState;
+declare function updateRadioGroup(rg: RadioGroupState, mouseX: number, mouseY: number, mouseDown: boolean, arrowUpPressed?: boolean, arrowDownPressed?: boolean): void;
+declare function drawRadioGroup(rg: RadioGroupState): void;
+declare const Colors: {
+declare const HUDLayout: {
+
+// --- state (@arcane/runtime/state) ---
+// Types: ArcaneError,DiceNotation,DiceSpec,Diff,DiffEntry,Effect,EntityId,ObserverContext,PRNGState,PathPattern,Unsubscribe,Vec2,
+declare function entityId(id: string): EntityId;
+declare function generateId(): EntityId;
+declare function createError(code: string, message: string, context: ArcaneError["context"]): ArcaneError;
+declare function createObserverRegistry<S>(): ObserverRegistry<S>;
+declare function seed(n: number): PRNGState;
+declare function parseDice(notation: string): DiceSpec;
+declare function rollDice(rng: PRNGState, spec: DiceSpec | string): [number, PRNGState];
+declare function randomInt(rng: PRNGState, min: number, max: number): [number, PRNGState];
+declare function randomFloat(rng: PRNGState): [number, PRNGState];
+declare function randomPick<T>(rng: PRNGState, items: readonly T[]): [T, PRNGState];
+declare function shuffle<T>(rng: PRNGState, items: readonly T[]): [readonly T[], PRNGState];
+declare function query<S, R = unknown>(state: S, path: string, filter?: Predicate<R> | Record<string, unknown>): readonly R[];
+declare function get<S, R = unknown>(state: S, path: string): R | undefined;
+declare function has<S>(state: S, path: string, predicate?: Predicate<unknown>): boolean;
+declare function lt(value: number): Predicate<number>;
+declare function gt(value: number): Predicate<number>;
+declare function lte(value: number): Predicate<number>;
+declare function gte(value: number): Predicate<number>;
+declare function eq<T>(value: T): Predicate<T>;
+declare function neq<T>(value: T): Predicate<T>;
+declare function oneOf<T>(...values: T[]): Predicate<T>;
+declare function within(center: Vec2, radius: number): Predicate<Vec2>;
+declare function allOf<T>(...predicates: Predicate<T>[]): Predicate<T>;
+declare function anyOf<T>(...predicates: Predicate<T>[]): Predicate<T>;
+declare function not<T>(predicate: Predicate<T>): Predicate<T>;
+declare function createRng(seedOrState: number | PRNGState): Rng;
+declare function createStore<S>(initialState: S): GameStore<S>;
+declare function set<S>(path: string, value: unknown): Mutation<S>;
+declare function update<S>(path: string, fn: (current: unknown) => unknown): Mutation<S>;
+declare function push<S>(path: string, item: unknown): Mutation<S>;
+declare function removeWhere<S>(path: string, predicate: (item: unknown) => boolean): Mutation<S>;
+declare function removeKey<S>(path: string): Mutation<S>;
+declare function transaction<S>(state: S, mutations: readonly Mutation<S>[]): TransactionResult<S>;
+declare function computeDiff<S>(before: S, after: S): Diff;
+
+// --- physics (@arcane/runtime/physics) ---
+// Types: AABB,BodyDef,BodyId,BodyState,BodyType,ConstraintId,Contact,MaterialDef,PhysicsWorldOptions,RayHit,ShapeDef,
+declare function aabbOverlap(a: AABB, b: AABB): boolean;
+declare function circleAABBOverlap(cx: number, cy: number, radius: number, box: AABB): boolean;
+declare function circleAABBResolve(cx: number, cy: number, radius: number, box: AABB): {
+declare function createBody(def: BodyDef): BodyId;
+declare function removeBody(id: BodyId): void;
+declare function getBodyState(id: BodyId): BodyState;
+declare function setBodyVelocity(id: BodyId, vx: number, vy: number): void;
+declare function setBodyAngularVelocity(id: BodyId, av: number): void;
+declare function applyForce(id: BodyId, fx: number, fy: number): void;
+declare function applyImpulse(id: BodyId, ix: number, iy: number): void;
+declare function setBodyPosition(id: BodyId, x: number, y: number): void;
+declare function setCollisionLayers(id: BodyId, layer: number, mask: number): void;
+declare function setKinematicVelocity(id: BodyId, vx: number, vy: number): void;
+declare function createDistanceJoint(bodyA: BodyId, bodyB: BodyId, distance: number): ConstraintId;
+declare function createRevoluteJoint(bodyA: BodyId, bodyB: BodyId, pivotX: number, pivotY: number): ConstraintId;
+declare function removeConstraint(id: ConstraintId): void;
+declare function queryAABB(minX: number, minY: number, maxX: number, maxY: number): BodyId[];
+declare function raycast(originX: number, originY: number, dirX: number, dirY: number, maxDistance?: number): RayHit | null;
+declare function getContacts(): Contact[];
+declare function createPhysicsWorld(options?: PhysicsWorldOptions): void;
+declare function stepPhysics(dt: number): void;
+declare function destroyPhysicsWorld(): void;
+
+// --- tweening (@arcane/runtime/tweening) ---
+// Types: EasingFunction,TweenCallback,TweenProps,TweenState,TweenUpdateCallback,
+declare function sequence(tweens: TweenConfig[]): Tween[];
+declare function parallel(tweens: TweenConfig[]): Tween[];
+declare function stagger(tweens: TweenConfig[], staggerDelay: number): Tween[];
+declare function shakeCamera(intensity: number, duration: number, frequency?: number): void;
+declare function getCameraShakeOffset(): {
+declare function isCameraShaking(): boolean;
+declare function stopCameraShake(): void;
+declare function flashScreen(r: number, g: number, b: number, duration: number, startOpacity?: number): void;
+declare function getScreenFlash(): {
+declare function isScreenFlashing(): boolean;
+declare function stopScreenFlash(): void;
+declare function linear(t: number): number;
+declare function tween(target: any, props: TweenProps, duration: number, options?: TweenOptions): Tween;
+declare function updateTweens(dt: number): void;
+declare function stopTween(t: Tween): void;
+declare function pauseTween(t: Tween): void;
+declare function resumeTween(t: Tween): void;
+declare function stopAllTweens(): void;
+declare function reverseTween(t: Tween): void;
+declare function getActiveTweenCount(): number;
+declare const TweenState: {
+declare const linear: EasingFunction;
+declare const easeInQuad: EasingFunction;
+declare const easeOutQuad: EasingFunction;
+declare const easeInOutQuad: EasingFunction;
+declare const easeInCubic: EasingFunction;
+declare const easeOutCubic: EasingFunction;
+declare const easeInOutCubic: EasingFunction;
+declare const easeInQuart: EasingFunction;
+declare const easeOutQuart: EasingFunction;
+declare const easeInOutQuart: EasingFunction;
+declare const easeInQuint: EasingFunction;
+declare const easeOutQuint: EasingFunction;
+declare const easeInOutQuint: EasingFunction;
+declare const easeInSine: EasingFunction;
+declare const easeOutSine: EasingFunction;
+declare const easeInOutSine: EasingFunction;
+declare const easeInExpo: EasingFunction;
+declare const easeOutExpo: EasingFunction;
+declare const easeInOutExpo: EasingFunction;
+declare const easeInCirc: EasingFunction;
+declare const easeOutCirc: EasingFunction;
+declare const easeInOutCirc: EasingFunction;
+declare const easeInBack: EasingFunction;
+declare const easeOutBack: EasingFunction;
+declare const easeInOutBack: EasingFunction;
+declare const easeInElastic: EasingFunction;
+declare const easeOutElastic: EasingFunction;
+declare const easeInOutElastic: EasingFunction;
+declare const easeOutBounce: EasingFunction;
+declare const easeInBounce: EasingFunction;
+declare const easeInOutBounce: EasingFunction;
+declare const Easing: {
+
+// --- particles (@arcane/runtime/particles) ---
+// Types: AffectorType,EmissionMode,EmitterShape,ParticleOptions,
+declare function createEmitter(config: EmitterConfig): Emitter;
+declare function removeEmitter(emitter: Emitter): void;
+declare function updateParticles(dt: number): void;
+declare function getAllParticles(): Particle[];
+declare function addAffector(emitter: Emitter, affector: Affector): void;
+declare function clearEmitters(): void;
+declare function getEmitterCount(): number;
+declare function burstParticles(x: number, y: number, options?: ParticleOptions): Emitter;
+declare function streamParticles(x: number, y: number, options?: ParticleOptions): Emitter;
+declare const ParticlePresets: {
+
+// --- pathfinding (@arcane/runtime/pathfinding) ---
+// Types: HexPathGrid,HexPathOptions,HexPathResult,PathGrid,PathOptions,PathResult,
+declare function findPath(grid: PathGrid, start: Vec2, goal: Vec2, options?: PathOptions): PathResult;
+declare function findHexPath(grid: HexPathGrid, start: HexCoord, goal: HexCoord, options?: HexPathOptions): HexPathResult;
+declare function hexReachable(grid: HexPathGrid, start: HexCoord, movement: number): Map<string, number>;
+declare function reachableToArray(reachable: Map<string, number>): HexCoord[];
+
+// --- systems (@arcane/runtime/systems) ---
+declare function system<S>(name: string, rules: readonly Rule<S>[]): SystemDef<S>;
+declare function rule<S>(name: string): RuleBuilderBase<S>;
+declare function applyRule<S>(sys: SystemDef<S>, ruleName: string, state: S, args?: Record<string, unknown>): RuleResult<S>;
+declare function getApplicableRules<S>(sys: SystemDef<S>, state: S, args?: Record<string, unknown>): string[];
+declare function extend<S>(base: SystemDef<S>, options: ExtendOptions<S>): SystemDef<S>;
+
+// --- scenes (@arcane/runtime/scenes) ---
+// Types: SceneContext,TransitionConfig,TransitionType,
+declare function createScene<S>(def: SceneDef<S>): SceneDef<S>;
+declare function createSceneInstance<S>(def: SceneDef<S>, data?: unknown): SceneInstance<S>;
+declare function startSceneManager(initial: SceneInstance<any>, options?: {
+declare function updateSceneManager(dt: number): void;
+declare function pushScene(instance: SceneInstance<any>, transition?: TransitionConfig): void;
+declare function popScene(transition?: TransitionConfig): void;
+declare function replaceScene(instance: SceneInstance<any>, transition?: TransitionConfig): void;
+declare function getActiveScene(): SceneInstance | undefined;
+declare function getSceneStackDepth(): number;
+declare function isTransitioning(): boolean;
+declare function stopSceneManager(): void;
+declare function _resetSceneManager(): void;
+
+// --- persistence (@arcane/runtime/persistence) ---
+// Types: Migration,SaveMetadata,SaveOptions,StorageBackend,
+declare function enableAutoSave<S>(config: {
+declare function disableAutoSave(): void;
+declare function updateAutoSave(dt: number): boolean;
+declare function triggerAutoSave(): void;
+declare function isAutoSaveEnabled(): boolean;
+declare function _resetAutoSave(): void;
+declare function configureSaveSystem(config: {
+declare function registerMigration(migration: Migration): void;
+declare function serialize<S>(state: S, options?: SaveOptions): string;
+declare function applyMigrations(data: unknown, fromVersion: number): unknown;
+declare function deserialize<S>(json: string): LoadResult<S>;
+declare function saveGame<S>(state: S, options?: SaveOptions): void;
+declare function loadGame<S>(slot?: string): LoadResult<S>;
+declare function deleteSave(slot?: string): void;
+declare function hasSave(slot?: string): boolean;
+declare function listSaves(): SaveMetadata[];
+declare function _resetSaveSystem(): void;
+declare function createMemoryStorage(): StorageBackend;
+declare function createFileStorage(): StorageBackend;
+
+// --- procgen (@arcane/runtime/procgen) ---
+// Types: AdjacencyRule,Constraint,Direction,GenerateAndTestConfig,GenerateAndTestResult,TileSet,WFCConfig,WFCGrid,WFCResult,
+declare function reachability(walkableFn: (tileId: number) => boolean): Constraint;
+declare function exactCount(tileId: number, n: number): Constraint;
+declare function minCount(tileId: number, n: number): Constraint;
+declare function maxCount(tileId: number, n: number): Constraint;
+declare function border(tileId: number): Constraint;
+declare function custom(fn: (grid: WFCGrid) => boolean): Constraint;
+declare function countTile(grid: WFCGrid, tileId: number): number;
+declare function findTile(grid: WFCGrid, tileId: number): {
+declare function validateLevel(grid: WFCGrid, constraints: readonly Constraint[]): boolean;
+declare function generateAndTest(config: GenerateAndTestConfig): GenerateAndTestResult;
+declare function generate(config: WFCConfig): WFCResult;
+declare const DIRECTIONS: readonly Direction[];
+declare const OPPOSITE: Record<Direction, Direction>;
+declare const DIR_OFFSET: Record<Direction, {
+
+// --- agent (@arcane/runtime/agent) ---
+// Types: ActionInfo,ArgInfo,DescribeOptions,McpRequest,McpResponse,McpToolDef,Verbosity,
+declare function defaultDescribe(state: unknown, options: DescribeOptions): string;
+declare function buildToolCallRequest(toolName: string, args?: Record<string, unknown>, id?: number): string;
+declare function buildInitializeRequest(id?: number): string;
+declare function buildToolsListRequest(id?: number): string;
+declare function getToolDef(name: string): McpToolDef | undefined;
+declare function registerAgent<S>(config: AgentConfig<S>): AgentProtocol<S>;
+declare const MCP_TOOLS: readonly McpToolDef[];
+
+// --- testing (@arcane/runtime/testing) ---
+// Types: AnimationSnapshot,BarDrawCall,BlendSnapshot,CaptureOptions,CircleDrawCall,DrawCall,DrawCallFilter,EmitterSnapshot,EmitterSnapshotInput,FSMSnapshot,FSMSnapshotRestoreData,InputFrame,InputGenerator,LabelDrawCall,LineDrawCall,PanelDrawCall,ParticleInputData,ParticleSnapshot,RectDrawCall,RestoreResult,SceneStackInput,SceneStackSnapshot,SpriteDrawCall,TextDrawCall,TilemapDrawCall,TriangleDrawCall,TweenSnapshot,TweenSnapshotInput,WorldSnapshot,
+declare function checkProperty<S>(config: PropertyConfig<S>): PropertyResult<S>;
+declare function randomKeys(keys: readonly string[]): InputGenerator;
+declare function randomClicks(width?: number, height?: number): InputGenerator;
+declare function randomActions(actions: readonly string[]): InputGenerator;
+declare function combineGenerators(...generators: readonly InputGenerator[]): InputGenerator;
+declare function assertProperty<S>(config: PropertyConfig<S>): void;
+declare function startRecording<S = unknown>(defaultDt?: number): RecordingSession<S>;
+declare function stopRecording<S = unknown>(session: RecordingSession<S>): Recording<S>;
+declare function replay<S>(recording: Recording<S>, updateFn: UpdateFn<S>, initialState: S, options?: ReplayOptions<S>): ReplayResult<S>;
+declare function diffReplays<S>(recordingA: Recording<S>, recordingB: Recording<S>, updateFn: UpdateFn<S>, initialState: S): DiffResult<S>;
+declare function createRecording<S = unknown>(frames: readonly InputFrame[], defaultDt?: number): Recording<S>;
+declare function emptyFrame(overrides?: Partial<InputFrame>): InputFrame;
+declare function replayWithSnapshots<S>(recording: Recording<S>, updateFn: UpdateFn<S>, initialState: S, options?: ReplayWithSnapshotsOptions<S>): ReplayWithSnapshotsResult<S>;
+declare function compareReplaySnapshots(snapshotsA: ReadonlyMap<number, WorldSnapshot>, snapshotsB: ReadonlyMap<number, WorldSnapshot>): {
+declare function captureWorldSnapshot(options?: CaptureOptions): WorldSnapshot;
+declare function restoreWorldSnapshot(snapshot: WorldSnapshot): RestoreResult;
+declare function applyFSMRestore(original: FSMState, restored: FSMSnapshotRestoreData): FSMState;
+declare function serializeSnapshot(snapshot: WorldSnapshot): string;
+declare function deserializeSnapshot(json: string): WorldSnapshot;
+declare function diffSnapshots(a: WorldSnapshot, b: WorldSnapshot): string[];
+declare function emptySnapshot(frame?: number): WorldSnapshot;
+declare function enableDrawCallCapture(): void;
+declare function disableDrawCallCapture(): void;
+declare function getDrawCalls(): DrawCall[];
+declare function clearDrawCalls(): void;
+declare function _logDrawCall(call: DrawCall): void;
+declare function findDrawCalls(filter: DrawCallFilter): DrawCall[];
+declare function assertSpriteDrawn(filter?: Omit<DrawCallFilter, "type">): void;
+declare function assertTextDrawn(content: string, filter?: Omit<DrawCallFilter, "type" | "content">): void;
+declare function assertDrawCallCount(type: DrawCall["type"], expected: number): void;
+declare function assertNothingDrawnAt(x: number, y: number, tolerance?: number): void;
+declare function assertLayerHasDrawCalls(layer: number): void;
+declare function assertScreenSpaceDrawn(type: "text" | "rect" | "panel" | "bar" | "label"): void;
+declare function getDrawCallSummary(): Record<string, number>;
+

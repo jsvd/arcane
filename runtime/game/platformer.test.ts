@@ -4,6 +4,7 @@ import {
   platformerMove,
   platformerJump,
   platformerStep,
+  platformerApplyImpulse,
 } from "./platformer.ts";
 import type { PlatformerConfig, PlatformerState, Platform } from "./platformer.ts";
 
@@ -350,5 +351,71 @@ describe("platformer", () => {
     const s2 = { ...createPlatformerState(100, 100), facingRight: true };
     const next2 = platformerStep(s2, dt, [], DEFAULT_CONFIG);
     assert.equal(next2.facingRight, true);
+  });
+
+  // 22
+  it("createPlatformerState initializes externalVx/Vy to zero", () => {
+    const s = createPlatformerState(50, 75);
+    assert.equal(s.externalVx, 0);
+    assert.equal(s.externalVy, 0);
+  });
+
+  // 23
+  it("platformerApplyImpulse adds to externalVx and externalVy", () => {
+    const s = createPlatformerState(0, 0);
+    const next = platformerApplyImpulse(s, 200, -150);
+    assert.equal(next.externalVx, 200);
+    assert.equal(next.externalVy, -150);
+  });
+
+  // 24
+  it("platformerApplyImpulse accumulates multiple impulses", () => {
+    let s = createPlatformerState(0, 0);
+    s = platformerApplyImpulse(s, 100, -50);
+    s = platformerApplyImpulse(s, 50, -25);
+    assert.equal(s.externalVx, 150);
+    assert.equal(s.externalVy, -75);
+  });
+
+  // 25
+  it("platformerMove includes externalVx in result vx", () => {
+    let s = createPlatformerState(0, 0);
+    s = platformerApplyImpulse(s, 100, 0);
+    const next = platformerMove(s, 1, false, DEFAULT_CONFIG);
+    // walkSpeed (160) + externalVx (100)
+    assert.equal(next.vx, 260);
+  });
+
+  // 26
+  it("platformerStep decays externalVx and externalVy by 0.85", () => {
+    let s = createPlatformerState(100, 0);
+    s = platformerApplyImpulse(s, 200, -100);
+    const dt = 1 / 60;
+    const next = platformerStep(s, dt, [], DEFAULT_CONFIG);
+    assert.ok(
+      Math.abs(next.externalVx - 200 * 0.85) < 0.001,
+      `externalVx should be ${200 * 0.85}, got ${next.externalVx}`,
+    );
+    assert.ok(
+      Math.abs(next.externalVy - (-100 * 0.85)) < 0.001,
+      `externalVy should be ${-100 * 0.85}, got ${next.externalVy}`,
+    );
+  });
+
+  // 27
+  it("platformerStep decays external velocity over multiple frames", () => {
+    let s = createPlatformerState(100, 0);
+    s = platformerApplyImpulse(s, 100, 0);
+    const dt = 1 / 60;
+
+    for (let i = 0; i < 30; i++) {
+      s = platformerStep(s, dt, [], DEFAULT_CONFIG);
+    }
+
+    // After 30 frames of 0.85 decay: 100 * 0.85^30 ≈ 0.76
+    assert.ok(
+      Math.abs(s.externalVx) < 1,
+      `externalVx should have decayed to near zero, got ${s.externalVx}`,
+    );
   });
 });

@@ -33,6 +33,7 @@ import type { HexCoord, HexConfig } from "../../runtime/rendering/index.ts";
 import type { HexPathGrid } from "../../runtime/pathfinding/index.ts";
 import { updateTweens } from "../../runtime/tweening/index.ts";
 import { createGame } from "../../runtime/game/index.ts";
+import { rgb } from "../../runtime/ui/index.ts";
 
 // --- Hex config ---
 const HEX_SIZE = 32;
@@ -43,30 +44,30 @@ const HEX_H = 2 * HEX_SIZE;     // pointy-top height
 const MAP_RADIUS = 6; // hex map radius (creates ~127 tiles)
 
 // --- Textures ---
-const TEX_GRASS = createSolidTexture("grass", 90, 160, 70);
-const TEX_GRASS_DARK = createSolidTexture("grass_dark", 70, 130, 55);
-const TEX_FOREST = createSolidTexture("forest", 40, 100, 35);
-const TEX_FOREST_TREE = createSolidTexture("forest_tree", 30, 80, 25);
-const TEX_MOUNTAIN = createSolidTexture("mountain", 140, 130, 120);
-const TEX_MOUNTAIN_PEAK = createSolidTexture("mountain_peak", 200, 195, 190);
-const TEX_WATER = createSolidTexture("water", 50, 100, 200);
-const TEX_WATER_SHINE = createSolidTexture("water_shine", 80, 140, 230);
-const TEX_SAND = createSolidTexture("sand", 220, 200, 150);
+const TEX_GRASS = createSolidTexture("grass", rgb(90, 160, 70));
+const TEX_GRASS_DARK = createSolidTexture("grass_dark", rgb(70, 130, 55));
+const TEX_FOREST = createSolidTexture("forest", rgb(40, 100, 35));
+const TEX_FOREST_TREE = createSolidTexture("forest_tree", rgb(30, 80, 25));
+const TEX_MOUNTAIN = createSolidTexture("mountain", rgb(140, 130, 120));
+const TEX_MOUNTAIN_PEAK = createSolidTexture("mountain_peak", rgb(200, 195, 190));
+const TEX_WATER = createSolidTexture("water", rgb(50, 100, 200));
+const TEX_WATER_SHINE = createSolidTexture("water_shine", rgb(80, 140, 230));
+const TEX_SAND = createSolidTexture("sand", rgb(220, 200, 150));
 
 // Unit textures
-const TEX_UNIT_BODY = createSolidTexture("unit_body", 50, 120, 220);
-const TEX_UNIT_HEAD = createSolidTexture("unit_head", 230, 190, 150);
-const TEX_UNIT_ENEMY = createSolidTexture("unit_enemy", 200, 50, 50);
-const TEX_UNIT_ENEMY_HEAD = createSolidTexture("unit_enemy_head", 180, 140, 110);
+const TEX_UNIT_BODY = createSolidTexture("unit_body", rgb(50, 120, 220));
+const TEX_UNIT_HEAD = createSolidTexture("unit_head", rgb(230, 190, 150));
+const TEX_UNIT_ENEMY = createSolidTexture("unit_enemy", rgb(200, 50, 50));
+const TEX_UNIT_ENEMY_HEAD = createSolidTexture("unit_enemy_head", rgb(180, 140, 110));
 
 // UI textures
-const TEX_HIGHLIGHT = createSolidTexture("highlight", 100, 200, 255);
-const TEX_MOVE_RANGE = createSolidTexture("move_range", 80, 220, 120);
-const TEX_PATH_DOT = createSolidTexture("path_dot", 255, 255, 100);
-const TEX_SELECT = createSolidTexture("select", 255, 220, 50);
-const TEX_HUD_BG = createSolidTexture("hud_bg", 20, 15, 30);
-const TEX_WHITE = createSolidTexture("white", 255, 255, 255);
-const TEX_BLACK = createSolidTexture("black", 0, 0, 0);
+const TEX_HIGHLIGHT = createSolidTexture("highlight", rgb(100, 200, 255));
+const TEX_MOVE_RANGE = createSolidTexture("move_range", rgb(80, 220, 120));
+const TEX_PATH_DOT = createSolidTexture("path_dot", rgb(255, 255, 100));
+const TEX_SELECT = createSolidTexture("select", rgb(255, 220, 50));
+const TEX_HUD_BG = createSolidTexture("hud_bg", rgb(20, 15, 30));
+const TEX_WHITE = createSolidTexture("white", rgb(255, 255, 255));
+const TEX_BLACK = createSolidTexture("black", rgb(0, 0, 0));
 
 // --- Terrain types ---
 type TerrainType = "grass" | "forest" | "mountain" | "water" | "sand";
@@ -488,7 +489,7 @@ function updateCamera(): void {
 // --- Game bootstrap ---
 const game = createGame({
   name: "hex-strategy",
-  background: { r: 13, g: 20, b: 38 },
+  background: { r: 13 / 255, g: 20 / 255, b: 38 / 255 },
   autoCamera: false,
 });
 

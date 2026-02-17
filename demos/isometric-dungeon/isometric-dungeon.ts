@@ -27,7 +27,7 @@ import { findPath } from "../../runtime/pathfinding/index.ts";
 import type { PathGrid } from "../../runtime/pathfinding/index.ts";
 import { updateTweens } from "../../runtime/tweening/index.ts";
 import { createGame, createSpriteGroup, drawSpriteGroup, getSpritePart } from "../../runtime/game/index.ts";
-import { drawLine } from "../../runtime/ui/index.ts";
+import { drawLine, rgb } from "../../runtime/ui/index.ts";
 
 // --- Isometric constants ---
 const TILE_W = 64; // Diamond width
@@ -62,58 +62,58 @@ function depthLayer(gy: number): number {
 
 // --- Textures (expanded palette) ---
 // Floor
-const TEX_FLOOR_A = createSolidTexture("floor_a", 185, 165, 125);
-const TEX_FLOOR_B = createSolidTexture("floor_b", 175, 155, 115);
-const TEX_FLOOR_EDGE = createSolidTexture("floor_edge", 140, 125, 95);
-const TEX_FLOOR_HI = createSolidTexture("floor_hi", 200, 180, 140);
-const TEX_FLOOR_CRACK = createSolidTexture("floor_crack", 130, 115, 85);
-const TEX_FLOOR_PEBBLE = createSolidTexture("floor_pebble", 160, 142, 108);
+const TEX_FLOOR_A = createSolidTexture("floor_a", rgb(185, 165, 125));
+const TEX_FLOOR_B = createSolidTexture("floor_b", rgb(175, 155, 115));
+const TEX_FLOOR_EDGE = createSolidTexture("floor_edge", rgb(140, 125, 95));
+const TEX_FLOOR_HI = createSolidTexture("floor_hi", rgb(200, 180, 140));
+const TEX_FLOOR_CRACK = createSolidTexture("floor_crack", rgb(130, 115, 85));
+const TEX_FLOOR_PEBBLE = createSolidTexture("floor_pebble", rgb(160, 142, 108));
 
 // Wall
-const TEX_BRICK_A = createSolidTexture("brick_a", 90, 75, 95);
-const TEX_BRICK_B = createSolidTexture("brick_b", 80, 65, 85);
-const TEX_BRICK_C = createSolidTexture("brick_c", 100, 85, 105);
-const TEX_MORTAR = createSolidTexture("mortar", 55, 50, 60);
-const TEX_WALL_SHADOW = createSolidTexture("wall_shadow", 45, 40, 55);
-const TEX_WALL_TOP_A = createSolidTexture("wall_top_a", 95, 88, 105);
-const TEX_WALL_TOP_B = createSolidTexture("wall_top_b", 85, 78, 95);
-const TEX_WALL_TOP_EDGE = createSolidTexture("wall_top_edge", 110, 100, 120);
+const TEX_BRICK_A = createSolidTexture("brick_a", rgb(90, 75, 95));
+const TEX_BRICK_B = createSolidTexture("brick_b", rgb(80, 65, 85));
+const TEX_BRICK_C = createSolidTexture("brick_c", rgb(100, 85, 105));
+const TEX_MORTAR = createSolidTexture("mortar", rgb(55, 50, 60));
+const TEX_WALL_SHADOW = createSolidTexture("wall_shadow", rgb(45, 40, 55));
+const TEX_WALL_TOP_A = createSolidTexture("wall_top_a", rgb(95, 88, 105));
+const TEX_WALL_TOP_B = createSolidTexture("wall_top_b", rgb(85, 78, 95));
+const TEX_WALL_TOP_EDGE = createSolidTexture("wall_top_edge", rgb(110, 100, 120));
 
 // Crate
-const TEX_WOOD_A = createSolidTexture("wood_a", 160, 112, 60);
-const TEX_WOOD_B = createSolidTexture("wood_b", 145, 100, 50);
-const TEX_WOOD_HI = createSolidTexture("wood_hi", 185, 135, 75);
-const TEX_WOOD_DARK = createSolidTexture("wood_dark", 120, 82, 40);
-const TEX_METAL = createSolidTexture("metal", 100, 95, 85);
-const TEX_METAL_HI = createSolidTexture("metal_hi", 140, 135, 125);
-const TEX_CRATE_TOP_A = createSolidTexture("crate_top_a", 180, 130, 70);
-const TEX_CRATE_TOP_B = createSolidTexture("crate_top_b", 170, 122, 62);
+const TEX_WOOD_A = createSolidTexture("wood_a", rgb(160, 112, 60));
+const TEX_WOOD_B = createSolidTexture("wood_b", rgb(145, 100, 50));
+const TEX_WOOD_HI = createSolidTexture("wood_hi", rgb(185, 135, 75));
+const TEX_WOOD_DARK = createSolidTexture("wood_dark", rgb(120, 82, 40));
+const TEX_METAL = createSolidTexture("metal", rgb(100, 95, 85));
+const TEX_METAL_HI = createSolidTexture("metal_hi", rgb(140, 135, 125));
+const TEX_CRATE_TOP_A = createSolidTexture("crate_top_a", rgb(180, 130, 70));
+const TEX_CRATE_TOP_B = createSolidTexture("crate_top_b", rgb(170, 122, 62));
 
 // Player
-const TEX_SKIN = createSolidTexture("skin", 230, 190, 150);
-const TEX_HAIR = createSolidTexture("hair", 60, 40, 25);
-const TEX_SHIRT = createSolidTexture("shirt", 50, 120, 220);
-const TEX_SHIRT_HI = createSolidTexture("shirt_hi", 70, 145, 240);
-const TEX_SHIRT_DARK = createSolidTexture("shirt_dark", 35, 95, 180);
-const TEX_PANTS = createSolidTexture("pants", 60, 60, 75);
-const TEX_PANTS_HI = createSolidTexture("pants_hi", 75, 75, 90);
-const TEX_BOOTS = createSolidTexture("boots", 70, 50, 35);
-const TEX_BELT = createSolidTexture("belt", 100, 70, 40);
-const TEX_EYE = createSolidTexture("eye", 255, 255, 255);
-const TEX_PUPIL = createSolidTexture("pupil", 30, 30, 40);
+const TEX_SKIN = createSolidTexture("skin", rgb(230, 190, 150));
+const TEX_HAIR = createSolidTexture("hair", rgb(60, 40, 25));
+const TEX_SHIRT = createSolidTexture("shirt", rgb(50, 120, 220));
+const TEX_SHIRT_HI = createSolidTexture("shirt_hi", rgb(70, 145, 240));
+const TEX_SHIRT_DARK = createSolidTexture("shirt_dark", rgb(35, 95, 180));
+const TEX_PANTS = createSolidTexture("pants", rgb(60, 60, 75));
+const TEX_PANTS_HI = createSolidTexture("pants_hi", rgb(75, 75, 90));
+const TEX_BOOTS = createSolidTexture("boots", rgb(70, 50, 35));
+const TEX_BELT = createSolidTexture("belt", rgb(100, 70, 40));
+const TEX_EYE = createSolidTexture("eye", rgb(255, 255, 255));
+const TEX_PUPIL = createSolidTexture("pupil", rgb(30, 30, 40));
 
 // Coin
-const TEX_GOLD_A = createSolidTexture("gold_a", 255, 210, 50);
-const TEX_GOLD_B = createSolidTexture("gold_b", 230, 185, 35);
-const TEX_GOLD_DARK = createSolidTexture("gold_dark", 190, 150, 25);
-const TEX_GOLD_HI = createSolidTexture("gold_hi", 255, 240, 130);
-const TEX_GOLD_SHINE = createSolidTexture("gold_shine", 255, 255, 220);
+const TEX_GOLD_A = createSolidTexture("gold_a", rgb(255, 210, 50));
+const TEX_GOLD_B = createSolidTexture("gold_b", rgb(230, 185, 35));
+const TEX_GOLD_DARK = createSolidTexture("gold_dark", rgb(190, 150, 25));
+const TEX_GOLD_HI = createSolidTexture("gold_hi", rgb(255, 240, 130));
+const TEX_GOLD_SHINE = createSolidTexture("gold_shine", rgb(255, 255, 220));
 
 // Utility
-const TEX_WHITE = createSolidTexture("white", 255, 255, 255);
-const TEX_BLACK = createSolidTexture("black", 0, 0, 0);
-const TEX_PATH_DOT = createSolidTexture("path_dot", 100, 200, 255);
-const TEX_HUD_BG = createSolidTexture("hud_bg", 20, 15, 30);
+const TEX_WHITE = createSolidTexture("white", rgb(255, 255, 255));
+const TEX_BLACK = createSolidTexture("black", rgb(0, 0, 0));
+const TEX_PATH_DOT = createSolidTexture("path_dot", rgb(100, 200, 255));
+const TEX_HUD_BG = createSolidTexture("hud_bg", rgb(20, 15, 30));
 
 // --- Seeded PRNG for consistent per-tile details ---
 function hashTile(gx: number, gy: number, seed: number): number {
@@ -651,7 +651,7 @@ function render(): void {
 // --- Game bootstrap ---
 const game = createGame({
   name: "isometric-dungeon",
-  background: { r: 15, g: 10, b: 26 },
+  background: { r: 15 / 255, g: 10 / 255, b: 26 / 255 },
   autoCamera: false,
 });
 

@@ -19,13 +19,7 @@ function getColorTex(color: Color): number {
   const key = `${color.r}_${color.g}_${color.b}_${color.a ?? 1}`;
   let tex = _colorTexCache.get(key);
   if (tex !== undefined) return tex;
-  tex = createSolidTexture(
-    `_color_${key}`,
-    Math.round(color.r * 255),
-    Math.round(color.g * 255),
-    Math.round(color.b * 255),
-    Math.round((color.a ?? 1) * 255),
-  );
+  tex = createSolidTexture(`_color_${key}`, { r: color.r, g: color.g, b: color.b, a: color.a ?? 1 });
   _colorTexCache.set(key, tex);
   return tex;
 }

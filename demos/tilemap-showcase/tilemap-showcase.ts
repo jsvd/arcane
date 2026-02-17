@@ -91,7 +91,7 @@ const MAP_H = 22;
 // Textures (solid-color placeholders)
 // ---------------------------------------------------------------------------
 
-const TEX_ATLAS = createSolidTexture("atlas", 128, 128, 128);
+const TEX_ATLAS = createSolidTexture("atlas", rgb(128, 128, 128));
 const COL_CURSOR = rgb(255, 255, 0);
 
 // ---------------------------------------------------------------------------

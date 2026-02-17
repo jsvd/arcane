@@ -101,6 +101,50 @@ drawColorSprite({
 
 **One-way platforms**: set `oneWay: true` — the player passes through from below and lands on top.
 
+## State Architecture: Integrating PlatformerState with Game State
+
+The platformer controller returns a `PlatformerState` (x, y, vx, vy, onGround, etc.) — but your game has more state (score, lives, enemies, phase). The recommended pattern is to embed the controller state inside your game state and sync with helper functions:
+
+```typescript
+// Your game state owns everything
+type GameState = {
+  player: PlatformerState;  // embed directly
+  score: number;
+  lives: number;
+  enemies: Enemy[];
+  phase: "playing" | "won" | "dead";
+};
+
+let state: GameState = {
+  player: createPlatformerState(100, 100),
+  score: 0,
+  lives: 3,
+  enemies: [],
+  phase: "playing",
+};
+
+// In onFrame — update the embedded controller state:
+const dir = (isKeyDown("d") ? 1 : 0) - (isKeyDown("a") ? 1 : 0);
+let p = state.player;
+p = platformerMove(p, dir as -1 | 0 | 1, false, config);
+if (isKeyPressed("Space")) p = platformerJump(p, config);
+p = platformerStep(p, dt, platforms, config);
+state = { ...state, player: p };
+
+// Apply knockback from enemy hit:
+if (hitByEnemy) {
+  state = {
+    ...state,
+    player: platformerApplyImpulse(state.player, knockbackVx, -200),
+    lives: state.lives - 1,
+  };
+}
+```
+
+**Key principle**: The controller functions are pure — they don't know about your game state. You compose them by threading the `PlatformerState` through your update loop and writing it back into your game state.
+
+**External velocity** (`externalVx`/`externalVy`): Use `platformerApplyImpulse()` for knockback, bounce pads, wind, or any force that should temporarily override player input. External velocity decays automatically each frame (×0.85).
+
 ## Seeded Random Numbers
 
 Use `createRng()` for ergonomic deterministic randomness. Same sequences as the pure `seed()`/`randomInt()` functions, but holds state in a closure so you don't need to thread state through every call.

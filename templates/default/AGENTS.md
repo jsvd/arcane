@@ -229,12 +229,40 @@ Read the **Essential** guides first, then the genre-specific guides for your gam
 | [docs/game-patterns.md](docs/game-patterns.md) | Angular movement, screen wrapping, cooldowns, entity lifecycle, platformer controller, seeded RNG |
 | [docs/assets.md](docs/assets.md) | Asset catalog, download commands, OpenGameArt.org |
 
+## API Quick Reference
+
+See [`types/cheatsheet.d.ts`](types/cheatsheet.d.ts) for every exported function as a one-liner, grouped by module. The 20 most common functions:
+
+| Function | Module | What it does |
+|----------|--------|-------------|
+| `createGame(config?)` | game | Bootstrap game loop, auto-clear, agent registration |
+| `drawSprite(opts)` | rendering | Draw a textured quad in world space |
+| `drawColorSprite(opts)` | game | Draw a colored rectangle (auto-caches texture) |
+| `drawText(text, x, y, opts?)` | rendering | Draw text (bitmap or MSDF font) |
+| `loadTexture(path)` | rendering | Load image file, returns TextureId handle |
+| `setCamera(x, y, zoom?)` | rendering | Set camera position and zoom |
+| `followTargetSmooth(x, y, zoom?, smooth?)` | rendering | Smooth camera follow with deadzone |
+| `getViewportSize()` | rendering | Returns `{ width, height }` of viewport |
+| `isKeyDown(key)` / `isKeyPressed(key)` | rendering | Check keyboard state (held / just pressed) |
+| `createInputMap(def)` | input | Map named actions to keyboard+gamepad+touch |
+| `isActionDown(action, map)` | input | Check action state (abstracts input device) |
+| `rgb(r, g, b, a?)` | ui | Create Color from 0-255 integers |
+| `drawRect(x, y, w, h, opts?)` | ui | Draw a filled rectangle (screenSpace option) |
+| `hud.text(content, x, y, opts?)` | game | Screen-space text shortcut for HUD |
+| `hud.bar(x, y, fillRatio, opts?)` | game | Screen-space health/progress bar |
+| `tween(target, props, dur, opts?)` | tweening | Animate object properties with easing |
+| `updateTweens(dt)` | tweening | Advance all active tweens (call every frame) |
+| `createEmitter(config)` | particles | Create a particle emitter |
+| `updateParticles(dt)` | particles | Advance all particles (call every frame) |
+| `shakeCamera(intensity, dur, freq?)` | tweening | Trigger camera shake effect |
+
 ## Type Declarations
 
 Per-module type files with JSDoc documentation. Check these before using unfamiliar functions.
 
 | File | Module |
 |------|--------|
+| `types/cheatsheet.d.ts` | **All modules** — compact one-liner signatures |
 | `types/rendering.d.ts` | `@arcane/runtime/rendering` |
 | `types/ui.d.ts` | `@arcane/runtime/ui` |
 | `types/physics.d.ts` | `@arcane/runtime/physics` |
@@ -275,7 +303,8 @@ File organization: `src/game.ts` (logic), `src/visual.ts` (rendering), `src/*.te
 - State functions are pure: state in, state out. Never mutate state directly.
 - `loadTexture()` and `loadSound()` cache by path — calling twice returns the same handle.
 - Layer ordering: 0 = background, 1-10 = game objects, 100+ = HUD.
-- Use `createSolidTexture(name, r, g, b)` for quick colored rectangles without image assets.
+- Use `createSolidTexture(name, color)` or `drawColorSprite()` for quick colored rectangles without image assets. Colors use 0-1 float components; use `rgb(r, g, b)` to convert from 0-255.
+- See [docs/game-patterns.md](docs/game-patterns.md) for state architecture: how to integrate PlatformerState with your game state, and how to use knockback with `platformerApplyImpulse()`.
 - Test game logic in `*.test.ts` files using `describe`, `it`, `assert` from `@arcane/runtime/testing`.
 - Tests run in both Node.js and V8 — avoid Node-specific APIs in test files.
 - Key names: `"Space"` not `" "`, `"Enter"` not `"\n"`. Check type declarations if unsure.

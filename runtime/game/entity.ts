@@ -17,13 +17,7 @@ function getEntityColorTex(color: Color): number {
   const key = `${color.r}_${color.g}_${color.b}_${color.a ?? 1}`;
   let tex = _entityColorTexCache.get(key);
   if (tex !== undefined) return tex;
-  tex = createSolidTexture(
-    `_ent_${key}`,
-    Math.round(color.r * 255),
-    Math.round(color.g * 255),
-    Math.round(color.b * 255),
-    Math.round((color.a ?? 1) * 255),
-  );
+  tex = createSolidTexture(`_ent_${key}`, { r: color.r, g: color.g, b: color.b, a: color.a ?? 1 });
   _entityColorTexCache.set(key, tex);
   return tex;
 }

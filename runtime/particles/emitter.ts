@@ -12,6 +12,10 @@ import type {
   EmitterConfig,
   Affector,
 } from "./types.ts";
+import { createSolidTexture } from "../rendering/texture.ts";
+
+/** Lazily-created default 1x1 white texture for particles. */
+let _defaultParticleTexture: number | undefined;
 
 /** Active emitters being updated each frame. */
 const emitters: Emitter[] = [];
@@ -215,8 +219,15 @@ function spawnParticle(emitter: Emitter): void {
   particle.lifetime = randomRange(config.lifetime[0], config.lifetime[1]);
   particle.age = 0;
 
-  // Set texture
-  particle.textureId = config.textureId;
+  // Set texture (lazy-create default white texture if omitted)
+  if (config.textureId !== undefined) {
+    particle.textureId = config.textureId;
+  } else {
+    if (_defaultParticleTexture === undefined) {
+      _defaultParticleTexture = createSolidTexture("__particle_default", { r: 1, g: 1, b: 1, a: 1 });
+    }
+    particle.textureId = _defaultParticleTexture;
+  }
 
   // Add to active particles
   if (!emitter.particles.includes(particle)) {

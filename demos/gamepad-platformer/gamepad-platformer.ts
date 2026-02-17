@@ -39,6 +39,7 @@ import {
   createPlatformerState, platformerMove, platformerJump, platformerStep,
 } from "../../runtime/game/index.ts";
 import type { PlatformerState, Platform as PlatPlatform } from "../../runtime/game/index.ts";
+import { rgb } from "../../runtime/ui/index.ts";
 
 // --- Game Constants ---
 const GROUND_Y = 450;
@@ -97,15 +98,15 @@ const buffer = createInputBuffer(1.0);
 const dashCombo = { sequence: ["moveRight", "moveRight", "dash"], window: 0.8 };
 
 // --- Textures ---
-const playerTex = createSolidTexture("player", 60, 150, 255, 255);
-const platformTex = createSolidTexture("platform", 100, 180, 100, 255);
-const coinTex = createSolidTexture("coin", 255, 220, 50, 255);
-const bgTex = createSolidTexture("bg", 30, 30, 50, 255);
+const playerTex = createSolidTexture("player", rgb(60, 150, 255));
+const platformTex = createSolidTexture("platform", rgb(100, 180, 100));
+const coinTex = createSolidTexture("coin", rgb(255, 220, 50));
+const bgTex = createSolidTexture("bg", rgb(30, 30, 50));
 
 // --- Game bootstrap ---
 const game = createGame({
   name: "gamepad-platformer",
-  background: { r: 20, g: 20, b: 31 },
+  background: { r: 20 / 255, g: 20 / 255, b: 31 / 255 },
 });
 
 game.state({
@@ -245,7 +246,7 @@ game.onFrame((ctx) => {
 
   // Rebind screen overlay
   if (showRebind) {
-    drawSprite(createSolidTexture("overlay", 0, 0, 0, 180), 0, 0, vpw, vph, 100);
+    drawSprite(createSolidTexture("overlay", rgb(0, 0, 0, 180)), 0, 0, vpw, vph, 100);
     hud.text("REBIND CONTROLS", vpw / 2 - 60, 100, { layer: 110 });
     hud.text("(rebinding UI placeholder)", vpw / 2 - 80, 140, { scale: 1, layer: 110 });
     hud.text("Press R to close", vpw / 2 - 50, 180, { scale: 1, layer: 110 });

@@ -76,13 +76,7 @@ function getSolidTex(r: number, g: number, b: number): number {
   const key = `trail_${r}_${g}_${b}`;
   let t = texCache.get(key);
   if (t !== undefined) return t;
-  t = createSolidTexture(
-    key,
-    Math.round(r * 255),
-    Math.round(g * 255),
-    Math.round(b * 255),
-    255,
-  );
+  t = createSolidTexture(key, { r, g, b, a: 1 });
   texCache.set(key, t);
   return t;
 }

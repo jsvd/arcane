@@ -49,18 +49,18 @@ import {
   getMousePosition,
 } from "../../runtime/rendering/index.ts";
 import { createGame, hud } from "../../runtime/game/index.ts";
-import { drawLine } from "../../runtime/ui/index.ts";
+import { drawLine, rgb } from "../../runtime/ui/index.ts";
 
 // --- Textures ---
-const TEX_WALL = createSolidTexture("wall", 80, 80, 100, 255);
-const TEX_FLOOR = createSolidTexture("floor", 60, 60, 70, 255);
-const TEX_EMISSIVE_WARM = createSolidTexture("em_warm", 255, 160, 60, 255);
-const TEX_EMISSIVE_COOL = createSolidTexture("em_cool", 60, 120, 255, 255);
-const TEX_EMISSIVE_LAVA = createSolidTexture("em_lava", 255, 80, 20, 255);
-const TEX_EMISSIVE_NEON = createSolidTexture("em_neon", 255, 50, 150, 255);
-const TEX_PLAYER = createSolidTexture("player", 220, 200, 60, 255);
-const TEX_GRASS = createSolidTexture("grass", 40, 120, 40, 255);
-const TEX_SKY = createSolidTexture("sky", 100, 150, 220, 255);
+const TEX_WALL = createSolidTexture("wall", rgb(80, 80, 100));
+const TEX_FLOOR = createSolidTexture("floor", rgb(60, 60, 70));
+const TEX_EMISSIVE_WARM = createSolidTexture("em_warm", rgb(255, 160, 60));
+const TEX_EMISSIVE_COOL = createSolidTexture("em_cool", rgb(60, 120, 255));
+const TEX_EMISSIVE_LAVA = createSolidTexture("em_lava", rgb(255, 80, 20));
+const TEX_EMISSIVE_NEON = createSolidTexture("em_neon", rgb(255, 50, 150));
+const TEX_PLAYER = createSolidTexture("player", rgb(220, 200, 60));
+const TEX_GRASS = createSolidTexture("grass", rgb(40, 120, 40));
+const TEX_SKY = createSolidTexture("sky", rgb(100, 150, 220));
 
 // Helper to reduce drawSprite boilerplate
 function sprite(textureId: number, x: number, y: number, w: number, h: number, layer: number) {
@@ -85,7 +85,7 @@ setGIQuality({ probeSpacing: 4, cascadeCount: 5 });
 
 function drawDungeonScene(dt: number) {
   const { width: VPW, height: VPH } = getViewportSize();
-  setBackgroundColor(0.02, 0.02, 0.05);
+  setBackgroundColor({ r: 0.02, g: 0.02, b: 0.05 });
   setAmbientLight(0.05, 0.05, 0.08);
 
   // Floor (covers entire room behind everything)
@@ -159,7 +159,7 @@ function drawDungeonScene(dt: number) {
 
 function drawLavaScene(dt: number) {
   const { width: VPW, height: VPH } = getViewportSize();
-  setBackgroundColor(0.05, 0.01, 0.0);
+  setBackgroundColor({ r: 0.05, g: 0.01, b: 0.0 });
   setAmbientLight(0.08, 0.03, 0.02);
 
   // Stone floor
@@ -207,11 +207,11 @@ function drawOutdoorScene(dt: number) {
 
   // Sky (clear for day, dark for night)
   const skyBrightness = Math.sin(timeOfDay * Math.PI * 2 - Math.PI / 2) * 0.5 + 0.5;
-  setBackgroundColor(
-    0.05 + skyBrightness * 0.35,
-    0.05 + skyBrightness * 0.5,
-    0.15 + skyBrightness * 0.55,
-  );
+  setBackgroundColor({
+    r: 0.05 + skyBrightness * 0.35,
+    g: 0.05 + skyBrightness * 0.5,
+    b: 0.15 + skyBrightness * 0.55,
+  });
 
   // Ground
   for (let x = 0; x < VPW; x += 32) {
@@ -261,7 +261,7 @@ function drawOutdoorScene(dt: number) {
 
 function drawNeonScene(dt: number) {
   const { width: VPW, height: VPH } = getViewportSize();
-  setBackgroundColor(0.02, 0.02, 0.04);
+  setBackgroundColor({ r: 0.02, g: 0.02, b: 0.04 });
   setAmbientLight(0.03, 0.03, 0.05);
 
   // Floor
@@ -307,7 +307,7 @@ function drawNeonScene(dt: number) {
 
 function drawComparisonScene(dt: number) {
   const { width: VPW, height: VPH } = getViewportSize();
-  setBackgroundColor(0.02, 0.02, 0.05);
+  setBackgroundColor({ r: 0.02, g: 0.02, b: 0.05 });
   setAmbientLight(0.05, 0.05, 0.08);
 
   const halfW = VPW / 2;

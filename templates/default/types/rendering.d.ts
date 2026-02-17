@@ -1517,14 +1517,16 @@ declare module "@arcane/runtime/rendering" {
   export declare function getScaleFactor(): number;
   /**
    * Set the background/clear color for the render pass.
-   * Values are in 0.0-1.0 range. Default is dark blue-gray (0.1, 0.1, 0.15).
+   * Default is dark blue-gray (0.1, 0.1, 0.15).
    * No-op in headless mode.
    *
-   * @param r - Red channel (0.0 to 1.0).
-   * @param g - Green channel (0.0 to 1.0).
-   * @param b - Blue channel (0.0 to 1.0).
+   * @param color - Background color with 0.0-1.0 RGBA components. Alpha is ignored.
    */
-  export declare function setBackgroundColor(r: number, g: number, b: number): void;
+  export declare function setBackgroundColor(color: {
+      r: number;
+      g: number;
+      b: number;
+  }): void;
   /**
    * Convert screen/window coordinates to world coordinates using the current camera.
    * Accounts for camera position and zoom.
@@ -2876,17 +2878,14 @@ declare module "@arcane/runtime/rendering" {
    * Returns 0 (no texture) in headless mode.
    *
    * @param name - Unique name for caching (e.g. "red", "health-green").
-   * @param r - Red channel, 0-255.
-   * @param g - Green channel, 0-255.
-   * @param b - Blue channel, 0-255.
-   * @param a - Alpha channel, 0-255. Default: 255 (fully opaque).
+   * @param color - Color with 0.0-1.0 RGBA components. Use rgb() to create from 0-255 values.
    * @returns Texture handle for use with drawSprite().
    *
    * @example
-   * const redTex = createSolidTexture("red", 255, 0, 0);
+   * const redTex = createSolidTexture("red", { r: 1, g: 0, b: 0, a: 1 });
    * drawSprite({ textureId: redTex, x: 10, y: 10, w: 50, h: 50 });
    */
-  export declare function createSolidTexture(name: string, r: number, g: number, b: number, a?: number): TextureId;
+  export declare function createSolidTexture(name: string, color: Color): TextureId;
 
   /** Definition for an animated tile: cycles through a sequence of tile IDs. */
   export type AnimatedTileDef = {

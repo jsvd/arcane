@@ -137,16 +137,14 @@ export function getScaleFactor(): number {
 
 /**
  * Set the background/clear color for the render pass.
- * Values are in 0.0-1.0 range. Default is dark blue-gray (0.1, 0.1, 0.15).
+ * Default is dark blue-gray (0.1, 0.1, 0.15).
  * No-op in headless mode.
  *
- * @param r - Red channel (0.0 to 1.0).
- * @param g - Green channel (0.0 to 1.0).
- * @param b - Blue channel (0.0 to 1.0).
+ * @param color - Background color with 0.0-1.0 RGBA components. Alpha is ignored.
  */
-export function setBackgroundColor(r: number, g: number, b: number): void {
+export function setBackgroundColor(color: { r: number; g: number; b: number }): void {
   if (!hasViewportOp) return;
-  (globalThis as any).Deno.core.ops.op_set_background_color(r, g, b);
+  (globalThis as any).Deno.core.ops.op_set_background_color(color.r, color.g, color.b);
 }
 
 /**

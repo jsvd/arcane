@@ -22,3 +22,7 @@ export { verticalStack, horizontalRow, anchorPosition, verticalStackVariableHeig
 
 export type { Focusable, FocusManagerState } from "./focus.ts";
 export { createFocusManager, registerFocusable, unregisterFocusable, updateFocus, clearFocus, setFocusTo, getFocusedWidget } from "./focus.ts";
+
+// Palette / theming
+export type { Palette } from "./palette.ts";
+export { setPalette, getPalette, paletteColor, resetPalette } from "./palette.ts";

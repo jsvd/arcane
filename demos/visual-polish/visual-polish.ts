@@ -27,6 +27,7 @@ import {
   getMouseWorldPosition,
 } from "../../runtime/rendering/index.ts";
 import { createGame, hud } from "../../runtime/game/index.ts";
+import { rgb } from "../../runtime/ui/index.ts";
 import { updateTweens } from "../../runtime/tweening/tween.ts";
 import { updateParticles, getAllParticles } from "../../runtime/particles/emitter.ts";
 import { getCameraShakeOffset } from "../../runtime/tweening/helpers.ts";
@@ -70,12 +71,12 @@ const VPW = 800;
 const VPH = 600;
 
 // Solid color textures
-const whiteTex = createSolidTexture("white", 255, 255, 255, 255);
-const redTex = createSolidTexture("red", 220, 60, 60, 255);
-const greenTex = createSolidTexture("green", 60, 200, 80, 255);
-const blueTex = createSolidTexture("blue", 60, 80, 220, 255);
-const panelTex = createSolidTexture("panel", 40, 40, 60, 255);
-const goldTex = createSolidTexture("gold", 255, 200, 50, 255);
+const whiteTex = createSolidTexture("white", rgb(255, 255, 255));
+const redTex = createSolidTexture("red", rgb(220, 60, 60));
+const greenTex = createSolidTexture("green", rgb(60, 200, 80));
+const blueTex = createSolidTexture("blue", rgb(60, 80, 220));
+const panelTex = createSolidTexture("panel", rgb(40, 40, 60));
+const goldTex = createSolidTexture("gold", rgb(255, 200, 50));
 
 // Trail
 const trail = createTrail({
@@ -114,7 +115,7 @@ const sceneColors = [
   { r: 0.05, g: 0.1, b: 0.05 },
 ];
 
-const game = createGame({ background: { r: 20, g: 20, b: 41 } });
+const game = createGame({ background: { r: 20 / 255, g: 20 / 255, b: 41 / 255 } });
 
 game.onFrame((ctx) => {
   const dt = ctx.dt;
@@ -139,7 +140,7 @@ game.onFrame((ctx) => {
       sceneIndex = (sceneIndex + 1) % sceneColors.length;
       const nextColor = sceneColors[sceneIndex];
       startScreenTransition(type, 0.6, { color: { r: 0, g: 0, b: 0 } }, () => {
-        setBackgroundColor(nextColor.r, nextColor.g, nextColor.b);
+        setBackgroundColor(nextColor);
       });
     }
   }

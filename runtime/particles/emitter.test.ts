@@ -291,6 +291,35 @@ describe("Particle System", () => {
     }
   });
 
+  it("should use default texture when textureId is omitted", () => {
+    clearEmitters();
+
+    const config: EmitterConfig = {
+      shape: "point",
+      x: 0,
+      y: 0,
+      mode: "burst",
+      burstCount: 3,
+      lifetime: [1, 1],
+      velocityX: [0, 0],
+      velocityY: [0, 0],
+      startColor: { r: 1, g: 0, b: 0, a: 1 },
+      endColor: { r: 1, g: 1, b: 0, a: 0 },
+      // textureId omitted — should use default
+    };
+
+    createEmitter(config);
+    updateParticles(0);
+
+    const particles = getAllParticles();
+    assert.equal(particles.length, 3);
+    // In headless mode, default texture returns 0 (no-op createSolidTexture)
+    // Just verify particles were created without error
+    for (const p of particles) {
+      assert.ok(p.alive);
+    }
+  });
+
   it("should spawn particles in ring shape", () => {
     clearEmitters();
 

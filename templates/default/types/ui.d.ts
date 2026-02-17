@@ -74,7 +74,7 @@ declare module "@arcane/runtime/ui" {
   export type ShapeOptions = {
       /** Fill color. Default: white `{ r: 1, g: 1, b: 1, a: 1 }`. */
       color?: Color;
-      /** Draw order layer. Default: 90. */
+      /** Draw order layer. Default: 0 (same as sprites). */
       layer?: number;
       /** If true, coordinates are screen pixels (HUD). If false, world units. Default: false. */
       screenSpace?: boolean;
@@ -585,6 +585,50 @@ declare module "@arcane/runtime/ui" {
    * @param spacing - Gap between items. Default: 4.
    */
   export declare function horizontalRowWidth(itemWidth: number, count: number, spacing?: number): number;
+
+  /**
+   * Color palette system for consistent theming.
+   *
+   * Provides a module-level palette that games can customize with setPalette().
+   * Not magic — users explicitly call paletteColor("primary") in draw calls.
+   *
+   * @example
+   * ```ts
+   * import { setPalette, paletteColor } from "@arcane/runtime/ui";
+   *
+   * setPalette({ primary: { r: 0.2, g: 0.6, b: 1, a: 1 } });
+   * drawRect(10, 10, 100, 50, { color: paletteColor("primary") });
+   * ```
+   */
+  /** Named color palette. Standard keys have known semantics; custom keys allowed. */
+  export type Palette = {
+      bg: Color;
+      fg: Color;
+      primary: Color;
+      secondary: Color;
+      accent: Color;
+      danger: Color;
+      success: Color;
+      warning: Color;
+      [key: string]: Color;
+  };
+  /**
+   * Set or update the current palette. Merges with existing — only override
+   * the colors you want to change.
+   */
+  export declare function setPalette(palette: Record<string, Color>): void;
+  /**
+   * Get the full current palette object.
+   */
+  export declare function getPalette(): Readonly<Palette>;
+  /**
+   * Get a palette color by name. Returns white if the name is not found.
+   */
+  export declare function paletteColor(name: string): Color;
+  /**
+   * Reset the palette to defaults.
+   */
+  export declare function resetPalette(): void;
 
   /**
    * Draw a filled rectangle.

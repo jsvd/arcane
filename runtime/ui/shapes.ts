@@ -33,13 +33,7 @@ function getColorTexture(color: Color): number {
   const key = `${color.r}_${color.g}_${color.b}_${color.a}`;
   let tex = textureCache.get(key);
   if (tex !== undefined) return tex;
-  tex = createSolidTexture(
-    key,
-    Math.round(color.r * 255),
-    Math.round(color.g * 255),
-    Math.round(color.b * 255),
-    Math.round(color.a * 255),
-  );
+  tex = createSolidTexture(key, color);
   textureCache.set(key, tex);
   return tex;
 }
@@ -78,7 +72,7 @@ export function drawCircle(
   radius: number,
   options?: ShapeOptions,
 ): void {
-  const layer = options?.layer ?? 90;
+  const layer = options?.layer ?? 0;
   const ss = options?.screenSpace ?? false;
 
   _logDrawCall({
@@ -133,7 +127,7 @@ export function drawLine(
   options?: LineOptions,
 ): void {
   const thickness = options?.thickness ?? 1;
-  const layer = options?.layer ?? 90;
+  const layer = options?.layer ?? 0;
   const ss = options?.screenSpace ?? false;
 
   _logDrawCall({
@@ -209,7 +203,7 @@ export function drawTriangle(
   y3: number,
   options?: ShapeOptions,
 ): void {
-  const layer = options?.layer ?? 90;
+  const layer = options?.layer ?? 0;
   const ss = options?.screenSpace ?? false;
 
   _logDrawCall({

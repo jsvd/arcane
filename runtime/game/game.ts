@@ -8,7 +8,7 @@
  * - Wiring up agent protocol for AI interaction
  *
  * @example
- * const game = createGame({ name: "my-game", background: { r: 30, g: 30, b: 50 } });
+ * const game = createGame({ name: "my-game", background: { r: 0.12, g: 0.12, b: 0.2 } });
  * game.onFrame((ctx) => {
  *   drawSprite({ textureId: tex, x: 100, y: 100, w: 32, h: 32 });
  * });
@@ -29,7 +29,7 @@ import type { GameConfig, GameContext, FrameCallback, GameStateConfig, Game } fr
  * - `autoCamera: true` -- on the first frame, sets the camera so (0,0) is top-left.
  * - `zoom: 1` -- default zoom level.
  *
- * If `background` is provided (0-255 RGB), converts to 0.0-1.0 and calls setBackgroundColor().
+ * If `background` is provided (0.0-1.0 RGB), calls setBackgroundColor().
  *
  * @param config - Optional configuration. All fields have sensible defaults.
  * @returns A Game object with `onFrame()` and `state()` methods.
@@ -37,7 +37,7 @@ import type { GameConfig, GameContext, FrameCallback, GameStateConfig, Game } fr
  * @example
  * const game = createGame({
  *   name: "dungeon-crawler",
- *   background: { r: 20, g: 12, b: 28 },
+ *   background: { r: 0.08, g: 0.05, b: 0.11 },
  *   zoom: 2,
  * });
  *
@@ -58,13 +58,8 @@ export function createGame(config?: GameConfig): Game {
   const zoom = cfg.zoom ?? 1;
   const name = cfg.name;
 
-  // setBackgroundColor takes 0.0-1.0 floats; GameConfig.background uses 0-255 range.
   if (cfg.background) {
-    setBackgroundColor(
-      cfg.background.r / 255,
-      cfg.background.g / 255,
-      cfg.background.b / 255,
-    );
+    setBackgroundColor(cfg.background);
   }
 
   let elapsed = 0;

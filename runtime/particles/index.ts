@@ -23,3 +23,7 @@ export {
   clearEmitters,
   getEmitterCount,
 } from "./emitter.ts";
+
+// Presets
+export type { ParticleOptions } from "./presets.ts";
+export { burstParticles, streamParticles, ParticlePresets } from "./presets.ts";

@@ -144,6 +144,10 @@ export type PlatformerStateType = {
   facingRight: boolean;
   coyoteTimer: number;
   jumpBufferTimer: number;
+  /** External velocity X (e.g., knockback). Decays by ×0.85 per step. */
+  externalVx: number;
+  /** External velocity Y (e.g., knockback). Decays by ×0.85 per step. */
+  externalVy: number;
 };
 
 /** A static platform rectangle. oneWay platforms only block from above. */
@@ -249,7 +253,7 @@ export type GameConfig = {
   zoom?: number;
   /** Auto-clear sprites each frame? Default: true. */
   autoClear?: boolean;
-  /** Background color as {r, g, b} in 0-255 range. */
+  /** Background color with 0.0-1.0 float components. Use rgb() to create from 0-255 values. */
   background?: { r: number; g: number; b: number };
 };
 

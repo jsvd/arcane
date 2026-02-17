@@ -62,10 +62,10 @@ const PLAT_CONFIG = {
 
 // --- Textures (solid colors for prototyping) ---
 // Textures used by drawParallaxSprite (require real textureId)
-const TEX_SKY_FAR = createSolidTexture("sky_far", 20, 10, 60);
-const TEX_MOUNTAINS = createSolidTexture("mountains", 40, 30, 80);
-const TEX_TREES = createSolidTexture("trees", 20, 60, 30);
-const TEX_STAR = createSolidTexture("star", 255, 255, 200);
+const TEX_SKY_FAR = createSolidTexture("sky_far", rgb(20, 10, 60));
+const TEX_MOUNTAINS = createSolidTexture("mountains", rgb(40, 30, 80));
+const TEX_TREES = createSolidTexture("trees", rgb(20, 60, 30));
+const TEX_STAR = createSolidTexture("star", rgb(255, 255, 200));
 
 // Inline colors for drawSprite-only objects
 const COL_GROUND = rgb(80, 60, 40);

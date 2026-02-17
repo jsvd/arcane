@@ -30,6 +30,7 @@ import {
   createPlatformerState, platformerMove, platformerJump, platformerStep,
 } from "../../runtime/game/index.ts";
 import type { PlatformerState, Platform as PlatPlatform } from "../../runtime/game/index.ts";
+import { rgb } from "../../runtime/ui/index.ts";
 
 // --- Constants ---
 const GROUND_Y = 400;
@@ -48,16 +49,16 @@ const PLAT_CONFIG = {
 };
 
 // --- Textures (solid colors for prototyping) ---
-const TEX_PLAYER_IDLE = createSolidTexture("player_idle", 100, 150, 255);
-const TEX_PLAYER_WALK = createSolidTexture("player_walk", 80, 130, 235);
-const TEX_PLAYER_JUMP = createSolidTexture("player_jump", 120, 170, 255);
-const TEX_PLAYER_FALL = createSolidTexture("player_fall", 90, 140, 245);
-const TEX_PLAYER_ATTACK = createSolidTexture("player_attack", 255, 100, 100);
-const TEX_GROUND = createSolidTexture("cc_ground", 60, 120, 40);
-const TEX_PLATFORM = createSolidTexture("cc_platform", 80, 60, 40);
-const TEX_BG = createSolidTexture("cc_bg", 25, 25, 45);
-const TEX_HITBOX = createSolidTexture("cc_hitbox", 255, 50, 50);
-const TEX_ENEMY = createSolidTexture("cc_enemy", 200, 50, 50);
+const TEX_PLAYER_IDLE = createSolidTexture("player_idle", rgb(100, 150, 255));
+const TEX_PLAYER_WALK = createSolidTexture("player_walk", rgb(80, 130, 235));
+const TEX_PLAYER_JUMP = createSolidTexture("player_jump", rgb(120, 170, 255));
+const TEX_PLAYER_FALL = createSolidTexture("player_fall", rgb(90, 140, 245));
+const TEX_PLAYER_ATTACK = createSolidTexture("player_attack", rgb(255, 100, 100));
+const TEX_GROUND = createSolidTexture("cc_ground", rgb(60, 120, 40));
+const TEX_PLATFORM = createSolidTexture("cc_platform", rgb(80, 60, 40));
+const TEX_BG = createSolidTexture("cc_bg", rgb(25, 25, 45));
+const TEX_HITBOX = createSolidTexture("cc_hitbox", rgb(255, 50, 50));
+const TEX_ENEMY = createSolidTexture("cc_enemy", rgb(200, 50, 50));
 
 // --- Animations ---
 // Each animation uses a solid-color texture as a 1-frame "spritesheet" for prototyping.

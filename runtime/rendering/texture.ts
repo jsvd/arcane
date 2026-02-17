@@ -1,4 +1,5 @@
 import type { TextureId } from "./types.ts";
+import type { Color } from "../ui/types.ts";
 
 const hasRenderOps =
   typeof (globalThis as any).Deno !== "undefined" &&
@@ -27,23 +28,21 @@ export function loadTexture(path: string): TextureId {
  * Returns 0 (no texture) in headless mode.
  *
  * @param name - Unique name for caching (e.g. "red", "health-green").
- * @param r - Red channel, 0-255.
- * @param g - Green channel, 0-255.
- * @param b - Blue channel, 0-255.
- * @param a - Alpha channel, 0-255. Default: 255 (fully opaque).
+ * @param color - Color with 0.0-1.0 RGBA components. Use rgb() to create from 0-255 values.
  * @returns Texture handle for use with drawSprite().
  *
  * @example
- * const redTex = createSolidTexture("red", 255, 0, 0);
+ * const redTex = createSolidTexture("red", { r: 1, g: 0, b: 0, a: 1 });
  * drawSprite({ textureId: redTex, x: 10, y: 10, w: 50, h: 50 });
  */
 export function createSolidTexture(
   name: string,
-  r: number,
-  g: number,
-  b: number,
-  a: number = 255,
+  color: Color,
 ): TextureId {
   if (!hasRenderOps) return 0;
+  const r = Math.round(color.r * 255);
+  const g = Math.round(color.g * 255);
+  const b = Math.round(color.b * 255);
+  const a = Math.round((color.a ?? 1) * 255);
   return (globalThis as any).Deno.core.ops.op_create_solid_texture(name, r, g, b, a);
 }
