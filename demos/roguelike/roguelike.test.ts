@@ -2,7 +2,7 @@
 import "./roguelike.ts";
 
 import { describe, it, assert } from "../../runtime/testing/harness.ts";
-import { seed } from "../../runtime/state/index.ts";
+import { createRng } from "../../runtime/state/index.ts";
 import { generateDungeon, isWalkable, blocksVision, WALL, FLOOR, CORRIDOR, STAIRS_DOWN } from "./dungeon.ts";
 import type { DungeonMap } from "./dungeon.ts";
 import { computeFOV, createVisibilityMap } from "./fov.ts";
@@ -15,14 +15,14 @@ import type { RoguelikeState } from "./roguelike.ts";
 
 describe("Dungeon generation", () => {
   it("generates rooms", () => {
-    const rng = seed(42);
-    const [dungeon] = generateDungeon(rng, 50, 40);
+    const rng = createRng(42);
+    const dungeon = generateDungeon(rng, 50, 40);
     assert.ok(dungeon.rooms.length > 0, "Should generate at least one room");
   });
 
   it("all rooms have positive dimensions", () => {
-    const rng = seed(42);
-    const [dungeon] = generateDungeon(rng, 50, 40);
+    const rng = createRng(42);
+    const dungeon = generateDungeon(rng, 50, 40);
     for (const room of dungeon.rooms) {
       assert.ok(room.w > 0, `Room width should be positive, got ${room.w}`);
       assert.ok(room.h > 0, `Room height should be positive, got ${room.h}`);
@@ -30,8 +30,8 @@ describe("Dungeon generation", () => {
   });
 
   it("room tiles are floor tiles", () => {
-    const rng = seed(42);
-    const [dungeon] = generateDungeon(rng, 50, 40);
+    const rng = createRng(42);
+    const dungeon = generateDungeon(rng, 50, 40);
     for (const room of dungeon.rooms) {
       for (let y = room.y; y < room.y + room.h; y++) {
         for (let x = room.x; x < room.x + room.w; x++) {
@@ -46,8 +46,8 @@ describe("Dungeon generation", () => {
   });
 
   it("rooms are within map bounds", () => {
-    const rng = seed(42);
-    const [dungeon] = generateDungeon(rng, 50, 40);
+    const rng = createRng(42);
+    const dungeon = generateDungeon(rng, 50, 40);
     for (const room of dungeon.rooms) {
       assert.ok(room.x >= 0, "Room x should be >= 0");
       assert.ok(room.y >= 0, "Room y should be >= 0");
@@ -57,8 +57,8 @@ describe("Dungeon generation", () => {
   });
 
   it("all rooms are reachable via flood fill", () => {
-    const rng = seed(42);
-    const [dungeon] = generateDungeon(rng, 50, 40);
+    const rng = createRng(42);
+    const dungeon = generateDungeon(rng, 50, 40);
 
     // Flood fill from center of first room
     const firstRoom = dungeon.rooms[0];
@@ -80,10 +80,10 @@ describe("Dungeon generation", () => {
   });
 
   it("deterministic: same seed produces same dungeon", () => {
-    const rng1 = seed(123);
-    const rng2 = seed(123);
-    const [d1] = generateDungeon(rng1, 50, 40);
-    const [d2] = generateDungeon(rng2, 50, 40);
+    const rng1 = createRng(123);
+    const rng2 = createRng(123);
+    const d1 = generateDungeon(rng1, 50, 40);
+    const d2 = generateDungeon(rng2, 50, 40);
     assert.equal(d1.rooms.length, d2.rooms.length);
     for (let y = 0; y < d1.height; y++) {
       for (let x = 0; x < d1.width; x++) {
@@ -93,8 +93,8 @@ describe("Dungeon generation", () => {
   });
 
   it("different seeds produce different dungeons", () => {
-    const [d1] = generateDungeon(seed(1), 50, 40);
-    const [d2] = generateDungeon(seed(999), 50, 40);
+    const d1 = generateDungeon(createRng(1), 50, 40);
+    const d2 = generateDungeon(createRng(999), 50, 40);
     let differences = 0;
     for (let y = 0; y < d1.height; y++) {
       for (let x = 0; x < d1.width; x++) {
@@ -105,8 +105,8 @@ describe("Dungeon generation", () => {
   });
 
   it("stairs are placed in last room", () => {
-    const rng = seed(42);
-    const [dungeon] = generateDungeon(rng, 50, 40);
+    const rng = createRng(42);
+    const dungeon = generateDungeon(rng, 50, 40);
     const lastRoom = dungeon.rooms[dungeon.rooms.length - 1];
     const cx = lastRoom.x + Math.floor(lastRoom.w / 2);
     const cy = lastRoom.y + Math.floor(lastRoom.h / 2);
@@ -133,8 +133,8 @@ describe("Dungeon generation", () => {
 
 describe("FOV", () => {
   it("origin is always visible", () => {
-    const rng = seed(42);
-    const [dungeon] = generateDungeon(rng, 50, 40);
+    const rng = createRng(42);
+    const dungeon = generateDungeon(rng, 50, 40);
     const room = dungeon.rooms[0];
     const cx = room.x + Math.floor(room.w / 2);
     const cy = room.y + Math.floor(room.h / 2);
@@ -144,8 +144,8 @@ describe("FOV", () => {
   });
 
   it("adjacent floor tiles are visible", () => {
-    const rng = seed(42);
-    const [dungeon] = generateDungeon(rng, 50, 40);
+    const rng = createRng(42);
+    const dungeon = generateDungeon(rng, 50, 40);
     const room = dungeon.rooms[0];
     const cx = room.x + Math.floor(room.w / 2);
     const cy = room.y + Math.floor(room.h / 2);
@@ -190,8 +190,8 @@ describe("FOV", () => {
   });
 
   it("explored tiles persist after recomputing", () => {
-    const rng = seed(42);
-    const [dungeon] = generateDungeon(rng, 50, 40);
+    const rng = createRng(42);
+    const dungeon = generateDungeon(rng, 50, 40);
     const room = dungeon.rooms[0];
     const cx = room.x + Math.floor(room.w / 2);
     const cy = room.y + Math.floor(room.h / 2);
@@ -221,8 +221,8 @@ describe("FOV", () => {
   });
 
   it("larger radius covers more tiles", () => {
-    const rng = seed(42);
-    const [dungeon] = generateDungeon(rng, 50, 40);
+    const rng = createRng(42);
+    const dungeon = generateDungeon(rng, 50, 40);
     const room = dungeon.rooms[0];
     const cx = room.x + Math.floor(room.w / 2);
     const cy = room.y + Math.floor(room.h / 2);

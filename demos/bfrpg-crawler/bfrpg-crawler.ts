@@ -2,8 +2,6 @@
  * BFRPG Dungeon Crawler - Movement and Exploration
  */
 
-import { rollDice } from "../../runtime/state/index.ts";
-import type { PRNGState } from "../../runtime/state/index.ts";
 import { findPath } from "../../runtime/pathfinding/index.ts";
 import type { PathGrid } from "../../runtime/pathfinding/index.ts";
 import type { BFRPGState, Vec2, Monster, VisibilityMap } from "./types.ts";
@@ -188,14 +186,14 @@ export function moveMonster(
     }
   } else {
     // Random walk
-    const [randRng, nextRng] = rollDice(state.rng, "1d4");
+    const randDir = state.rng.roll("1d4");
     const directions = [
       { x: 0, y: -1 }, // North
       { x: 1, y: 0 },  // East
       { x: 0, y: 1 },  // South
       { x: -1, y: 0 }, // West
     ];
-    const dir = directions[randRng - 1];
+    const dir = directions[randDir - 1];
     const candidate: Vec2 = {
       x: monster.pos.x + dir.x,
       y: monster.pos.y + dir.y,
@@ -221,9 +219,6 @@ export function moveMonster(
         newPos = candidate;
       }
     }
-
-    // Update RNG
-    state = { ...state, rng: nextRng };
   }
 
   // Update monster position
@@ -303,8 +298,8 @@ export function descendStairs(state: BFRPGState): BFRPGState {
 
   // Generate new floor
   const nextFloor = dungeon.floor + 1;
-  const [newDungeon, rng2] = generateDungeon(rng, 60, 40, nextFloor);
-  const [newMonsters, rng3] = spawnMonsters(rng2, newDungeon.rooms, nextFloor);
+  const newDungeon = generateDungeon(rng, 60, 40, nextFloor);
+  const newMonsters = spawnMonsters(rng, newDungeon.rooms, nextFloor);
 
   // Place character in first room
   const startPos = newDungeon.rooms[0]
@@ -328,7 +323,6 @@ export function descendStairs(state: BFRPGState): BFRPGState {
       hp: newHp,
     },
     fov: newFov,
-    rng: rng3,
     turn: state.turn + 1,
   };
 
@@ -348,19 +342,17 @@ export function rest(state: BFRPGState): BFRPGState {
   let nextState = state;
 
   // Heal 1d8 HP
-  const [healRoll, rng1] = rollDice(state.rng, "1d8");
+  const healRoll = state.rng.roll("1d8");
   const newHp = Math.min(state.character.hp + healRoll, state.character.maxHp);
 
   nextState = {
     ...nextState,
     character: { ...nextState.character, hp: newHp },
-    rng: rng1,
     turn: nextState.turn + 1,
   };
 
   // 20% chance of encounter (spawn 1 monster nearby)
-  const [encounterRoll, rng2] = rollDice(rng1, "1d100");
-  nextState = { ...nextState, rng: rng2 };
+  const encounterRoll = state.rng.roll("1d100");
 
   if (encounterRoll <= 20) {
     // TODO: Implement random encounter spawning

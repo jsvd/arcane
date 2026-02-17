@@ -14,7 +14,7 @@ import {
   setCamera,
   isKeyDown, isKeyPressed, getViewportSize,
 } from "../../runtime/rendering/index.ts";
-import { Colors, HUDLayout, rgb } from "../../runtime/ui/index.ts";
+import { Colors, HUDLayout, rgb, drawCircle } from "../../runtime/ui/index.ts";
 import {
   createGame, drawColorSprite, hud,
   createCollisionRegistry, onBodyCollision, processCollisions, removeBodyCollisions,
@@ -293,13 +293,8 @@ game.onFrame((ctx) => {
     layer: 2,
   });
 
-  // Ball
-  drawColorSprite({
-    color: COL_BALL,
-    x: state.ballX - BALL_RADIUS, y: state.ballY - BALL_RADIUS,
-    w: BALL_RADIUS * 2, h: BALL_RADIUS * 2,
-    layer: 3,
-  });
+  // Ball (circle)
+  drawCircle(state.ballX, state.ballY, BALL_RADIUS, { color: COL_BALL, layer: 3 });
 
   // --- HUD (screen space) ---
 

@@ -1,4 +1,4 @@
-import type { PRNGState } from "../../runtime/state/index.ts";
+import type { Rng } from "../../runtime/state/index.ts";
 
 // --- Core Types ---
 
@@ -135,7 +135,7 @@ export type CombatState = {
   currentIndex: number;
   round: number;
   log: LogEntry[];
-  rng: PRNGState;
+  rng: Rng;
 };
 
 // --- Log ---
@@ -151,7 +151,7 @@ export type LogEntry = {
 export type BFRPGState = {
   phase: Phase;
   turn: number;
-  rng: PRNGState;
+  rng: Rng;
 
   character: Character;
   dungeon: DungeonState;

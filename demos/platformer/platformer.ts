@@ -1,5 +1,11 @@
 import { aabbOverlap } from "../../runtime/physics/index.ts";
 import type { AABB } from "../../runtime/physics/index.ts";
+import {
+  platformerMove,
+  platformerJump,
+  platformerStep,
+} from "../../runtime/game/index.ts";
+import type { PlatformerState as ControllerState } from "../../runtime/game/index.ts";
 
 // Constants
 export const GRAVITY = 800;
@@ -8,6 +14,15 @@ export const MOVE_SPEED = 200;
 export const PLAYER_W = 24;
 export const PLAYER_H = 32;
 export const MAX_DT = 1 / 30;
+
+/** Platformer controller config matching legacy constants. */
+const PLAT_CONFIG = {
+  gravity: GRAVITY,
+  jumpForce: JUMP_VEL,
+  walkSpeed: MOVE_SPEED,
+  playerWidth: PLAYER_W,
+  playerHeight: PLAYER_H,
+};
 
 export type Platform = { x: number; y: number; w: number; h: number };
 export type Coin = { x: number; y: number; collected: boolean };
@@ -72,6 +87,33 @@ export function createPlatformerGame(): PlatformerState {
   };
 }
 
+/** Convert game state to internal controller state. */
+function toController(state: PlatformerState): ControllerState {
+  return {
+    x: state.playerX,
+    y: state.playerY,
+    vx: state.playerVX,
+    vy: state.playerVY,
+    onGround: state.onGround,
+    facingRight: state.facing === "right",
+    coyoteTimer: 0,
+    jumpBufferTimer: 0,
+  };
+}
+
+/** Sync controller state back to game state. */
+function fromController(state: PlatformerState, ctrl: ControllerState): PlatformerState {
+  return {
+    ...state,
+    playerX: ctrl.x,
+    playerY: ctrl.y,
+    playerVX: ctrl.vx,
+    playerVY: ctrl.vy,
+    onGround: ctrl.onGround,
+    facing: ctrl.facingRight ? "right" : "left",
+  };
+}
+
 export function applyGravity(state: PlatformerState, dt: number): PlatformerState {
   return {
     ...state,
@@ -82,71 +124,35 @@ export function applyGravity(state: PlatformerState, dt: number): PlatformerStat
 export function movePlayer(
   state: PlatformerState,
   direction: -1 | 0 | 1,
-  dt: number,
+  _dt: number,
 ): PlatformerState {
-  const vx = direction * MOVE_SPEED;
-  const facing: "left" | "right" =
-    direction < 0 ? "left" : direction > 0 ? "right" : state.facing;
-  return {
-    ...state,
-    playerVX: vx,
-    playerX: state.playerX + vx * dt,
-    facing,
-  };
+  const ctrl = toController(state);
+  const moved = platformerMove(ctrl, direction, false, PLAT_CONFIG);
+  return fromController(state, moved);
 }
 
 export function jump(state: PlatformerState): PlatformerState {
-  if (!state.onGround) return state;
-  return {
-    ...state,
-    playerVY: JUMP_VEL,
-    onGround: false,
-  };
-}
-
-function playerAABB(state: PlatformerState): AABB {
-  return { x: state.playerX, y: state.playerY, w: PLAYER_W, h: PLAYER_H };
+  const ctrl = toController(state);
+  const jumped = platformerJump(ctrl, PLAT_CONFIG);
+  return fromController(state, jumped);
 }
 
 export function stepPhysics(state: PlatformerState, rawDt: number): PlatformerState {
   if (state.phase !== "playing") return state;
   const dt = Math.min(rawDt, MAX_DT);
 
-  let s = applyGravity(state, dt);
-
-  // Move vertically
-  s = { ...s, playerY: s.playerY + s.playerVY * dt };
-
-  // Platform collision (vertical)
-  let onGround = false;
-  const pBox = playerAABB(s);
-  for (const plat of s.platforms) {
-    if (!aabbOverlap(pBox, plat)) continue;
-
-    if (s.playerVY > 0) {
-      // Falling: land on top
-      const prevBottom = state.playerY + PLAYER_H;
-      if (prevBottom <= plat.y + 2) {
-        s = { ...s, playerY: plat.y - PLAYER_H, playerVY: 0 };
-        onGround = true;
-      }
-    } else if (s.playerVY < 0) {
-      // Hitting head on bottom of platform
-      const prevTop = state.playerY;
-      if (prevTop >= plat.y + plat.h - 2) {
-        s = { ...s, playerY: plat.y + plat.h, playerVY: 0 };
-      }
-    }
-  }
-  s = { ...s, onGround };
+  // Use platformer controller for physics + collision
+  const ctrl = toController(state);
+  const stepped = platformerStep(ctrl, dt, state.platforms, PLAT_CONFIG);
+  let s = fromController(state, stepped);
 
   // Collect coins
-  const pBoxFinal = playerAABB(s);
+  const pBox: AABB = { x: s.playerX, y: s.playerY, w: PLAYER_W, h: PLAYER_H };
   let score = s.score;
   const coins = s.coins.map((coin) => {
     if (coin.collected) return coin;
     const coinBox: AABB = { x: coin.x, y: coin.y, w: 16, h: 16 };
-    if (aabbOverlap(pBoxFinal, coinBox)) {
+    if (aabbOverlap(pBox, coinBox)) {
       score += 100;
       return { ...coin, collected: true };
     }

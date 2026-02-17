@@ -1,5 +1,4 @@
-import { randomInt, rollDice } from "../../../runtime/state/index.ts";
-import type { PRNGState } from "../../../runtime/state/index.ts";
+import type { Rng } from "../../../runtime/state/index.ts";
 import type { Monster, MonsterType, Room, Vec2 } from "../types.ts";
 import monsterData from "../data/monsters.json" with { type: "json" };
 import { roomCenter } from "./generation.ts";
@@ -14,11 +13,11 @@ import { roomCenter } from "./generation.ts";
  * - Floor 2+: Goblin, Skeleton
  * - Floor 3+: Orc
  *
- * @param rng - Random number generator state
+ * @param rng - Mutable random number generator
  * @param floor - Current dungeon floor
- * @returns Tuple of [MonsterType, updated RNG state]
+ * @returns Selected MonsterType
  */
-export function pickMonsterType(rng: PRNGState, floor: number): [MonsterType, PRNGState] {
+export function pickMonsterType(rng: Rng, floor: number): MonsterType {
   let pool: MonsterType[] = [];
 
   if (floor === 1) {
@@ -29,8 +28,8 @@ export function pickMonsterType(rng: PRNGState, floor: number): [MonsterType, PR
     pool = ["Giant Rat", "Kobold", "Goblin", "Skeleton", "Orc"];
   }
 
-  const [index, nextRng] = randomInt(rng, 0, pool.length - 1);
-  return [pool[index], nextRng];
+  const index = rng.int(0, pool.length - 1);
+  return pool[index];
 }
 
 // --- Monster Creation ---
@@ -41,37 +40,34 @@ export function pickMonsterType(rng: PRNGState, floor: number): [MonsterType, PR
  * @param id - Unique identifier for the monster
  * @param type - Monster type (must exist in monsters.json)
  * @param pos - Position in the dungeon
- * @param rng - Random number generator state
- * @returns Tuple of [Monster, updated RNG state]
+ * @param rng - Mutable random number generator
+ * @returns Created Monster
  */
 export function createMonster(
   id: string,
   type: MonsterType,
   pos: Vec2,
-  rng: PRNGState,
-): [Monster, PRNGState] {
+  rng: Rng,
+): Monster {
   const template = monsterData[type];
   if (!template) {
     throw new Error(`Unknown monster type: ${type}`);
   }
 
   // Roll HP from hit dice
-  const [hp, nextRng] = rollDice(rng, template.hitDice);
+  const hp = rng.roll(template.hitDice);
 
-  return [
-    {
-      id,
-      type,
-      pos,
-      hp,
-      maxHp: hp,
-      ac: template.armorClass,
-      attackBonus: template.attackBonus,
-      damage: template.damage,
-      alive: true,
-    },
-    nextRng,
-  ];
+  return {
+    id,
+    type,
+    pos,
+    hp,
+    maxHp: hp,
+    ac: template.armorClass,
+    attackBonus: template.attackBonus,
+    damage: template.damage,
+    alive: true,
+  };
 }
 
 // --- Monster Spawning ---
@@ -84,18 +80,17 @@ export function createMonster(
  * - 1-2 monsters per room
  * - Never in first room (player starts there)
  *
- * @param rng - Random number generator state
+ * @param rng - Mutable random number generator
  * @param rooms - List of rooms in the dungeon
  * @param floor - Current dungeon floor
- * @returns Tuple of [Monster array, updated RNG state]
+ * @returns Array of spawned monsters
  */
 export function spawnMonsters(
-  rng: PRNGState,
+  rng: Rng,
   rooms: Room[],
   floor: number,
-): [Monster[], PRNGState] {
+): Monster[] {
   const monsters: Monster[] = [];
-  let currentRng = rng;
   let monsterId = 0;
 
   // Skip first room (player starts there)
@@ -103,24 +98,19 @@ export function spawnMonsters(
     const room = rooms[i];
 
     // 30% chance to spawn
-    const [roll, nextRng1] = randomInt(currentRng, 1, 100);
-    currentRng = nextRng1;
+    const roll = rng.int(1, 100);
 
     if (roll <= 30) {
       // Spawn 1-2 monsters
-      const [count, nextRng2] = randomInt(currentRng, 1, 2);
-      currentRng = nextRng2;
+      const count = rng.int(1, 2);
 
       for (let j = 0; j < count; j++) {
         // Pick monster type for current floor
-        const [monsterType, nextRng3] = pickMonsterType(currentRng, floor);
-        currentRng = nextRng3;
+        const monsterType = pickMonsterType(rng, floor);
 
         // Place at random position in room
-        const [offsetX, nextRng4] = randomInt(currentRng, 0, room.w - 1);
-        currentRng = nextRng4;
-        const [offsetY, nextRng5] = randomInt(currentRng, 0, room.h - 1);
-        currentRng = nextRng5;
+        const offsetX = rng.int(0, room.w - 1);
+        const offsetY = rng.int(0, room.h - 1);
 
         const pos: Vec2 = {
           x: room.x + offsetX,
@@ -128,15 +118,14 @@ export function spawnMonsters(
         };
 
         // Create monster
-        const [monster, nextRng6] = createMonster(`monster_${monsterId}`, monsterType, pos, currentRng);
-        currentRng = nextRng6;
+        const monster = createMonster(`monster_${monsterId}`, monsterType, pos, rng);
         monsters.push(monster);
         monsterId++;
       }
     }
   }
 
-  return [monsters, currentRng];
+  return monsters;
 }
 
 /**

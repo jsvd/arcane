@@ -3,7 +3,6 @@
  */
 
 import { describe, it, assert } from "../../runtime/testing/harness.ts";
-import { seed } from "../../runtime/state/prng.ts";
 import { createGame } from "./game.ts";
 import { moveCharacter, descendStairs, checkDeath, checkVictory } from "./bfrpg-crawler.ts";
 

@@ -25,18 +25,27 @@ import {
   drawFSMSprite,
 } from "../../runtime/rendering/index.ts";
 import type { FSMState } from "../../runtime/rendering/index.ts";
-import { createGame, hud } from "../../runtime/game/index.ts";
+import {
+  createGame, hud,
+  createPlatformerState, platformerMove, platformerJump, platformerStep,
+} from "../../runtime/game/index.ts";
+import type { PlatformerState, Platform as PlatPlatform } from "../../runtime/game/index.ts";
 
 // --- Constants ---
-const GRAVITY = 800;
-const JUMP_VELOCITY = -350;
-const MOVE_SPEED = 200;
 const GROUND_Y = 400;
 const PLAYER_W = 48;
 const PLAYER_H = 64;
 const ATTACK_DURATION = 0.3; // seconds
 const HITBOX_W = 40;
 const HITBOX_H = 48;
+
+const PLAT_CONFIG = {
+  gravity: 800,
+  jumpForce: -350,
+  walkSpeed: 200,
+  playerWidth: PLAYER_W,
+  playerHeight: PLAYER_H,
+};
 
 // --- Textures (solid colors for prototyping) ---
 const TEX_PLAYER_IDLE = createSolidTexture("player_idle", 100, 150, 255);
@@ -64,15 +73,14 @@ let activeHitbox: { x: number; y: number; w: number; h: number; timer: number } 
 
 addFrameEvent(attackAnim, 1, () => {
   // Spawn hitbox in front of the character
-  const hbX = facingRight
-    ? playerX + PLAYER_W
-    : playerX - HITBOX_W;
-  activeHitbox = { x: hbX, y: playerY + 8, w: HITBOX_W, h: HITBOX_H, timer: 0.1 };
+  const hbX = pState.facingRight
+    ? pState.x + PLAYER_W
+    : pState.x - HITBOX_W;
+  activeHitbox = { x: hbX, y: pState.y + 8, w: HITBOX_W, h: HITBOX_H, timer: 0.1 };
 });
 
 // --- Platforms ---
-type Platform = { x: number; y: number; w: number; h: number };
-const platforms: Platform[] = [
+const platforms: PlatPlatform[] = [
   { x: 0, y: GROUND_Y, w: 1600, h: 40 },        // ground
   { x: 200, y: 320, w: 120, h: 16 },              // platform 1
   { x: 450, y: 260, w: 150, h: 16 },              // platform 2
@@ -88,13 +96,9 @@ const enemies: Enemy[] = [
   { x: 1000, y: GROUND_Y - 40, w: 32, h: 40, alive: true },
 ];
 
-// --- Player state ---
-let playerX = 100;
-let playerY = GROUND_Y - PLAYER_H;
-let velX = 0;
-let velY = 0;
-let onGround = true;
-let facingRight = true;
+// --- Player state (uses platformer controller) ---
+let pState: PlatformerState = createPlatformerState(100, GROUND_Y - PLAYER_H);
+pState = { ...pState, onGround: true };
 let attackCooldown = 0;
 let score = 0;
 
@@ -146,7 +150,9 @@ const game = createGame({ name: "character-controller", autoCamera: false });
 
 game.state({
   get: () => ({
-    playerX, playerY, velX, velY, onGround, facingRight,
+    playerX: pState.x, playerY: pState.y,
+    velX: pState.vx, velY: pState.vy,
+    onGround: pState.onGround, facingRight: pState.facingRight,
     currentState: getCurrentState(fsm),
     isBlending: isBlending(fsm),
     blendProgress: getBlendProgress(fsm),
@@ -175,21 +181,22 @@ game.onFrame((ctx) => {
   const wantJump = isKeyPressed("Space") || isKeyPressed("ArrowUp") || isKeyPressed("w");
   const wantAttack = isKeyPressed("x") || isKeyPressed("j");
 
-  // --- Physics ---
-  // Horizontal movement
-  if (getCurrentState(fsm) !== "attack") {
-    velX = moveDir * MOVE_SPEED;
-    if (moveDir !== 0) facingRight = moveDir > 0;
+  // --- Physics (via platformer controller) ---
+  const inAttack = getCurrentState(fsm) === "attack";
+
+  // Horizontal movement (locked during attack)
+  if (!inAttack) {
+    pState = platformerMove(pState, moveDir as (-1 | 0 | 1), false, PLAT_CONFIG);
   } else {
-    velX = 0; // Lock movement during attack
+    pState = platformerMove(pState, 0, false, PLAT_CONFIG);
   }
 
   // Jump
   let triggerJump = false;
-  if (wantJump && onGround && getCurrentState(fsm) !== "attack") {
-    velY = JUMP_VELOCITY;
-    onGround = false;
-    triggerJump = true;
+  if (wantJump && !inAttack) {
+    const before = pState;
+    pState = platformerJump(pState, PLAT_CONFIG);
+    triggerJump = pState.vy < before.vy;
   }
 
   // Attack
@@ -200,40 +207,15 @@ game.onFrame((ctx) => {
   }
   if (attackCooldown > 0) attackCooldown -= dt;
 
-  // Gravity
-  if (!onGround) {
-    velY += GRAVITY * dt;
-  }
-
-  // Move
-  playerX += velX * dt;
-  playerY += velY * dt;
-
-  // Platform collision
-  onGround = false;
-  for (const plat of platforms) {
-    if (
-      velY >= 0 &&
-      playerX + PLAYER_W > plat.x &&
-      playerX < plat.x + plat.w &&
-      playerY + PLAYER_H >= plat.y &&
-      playerY + PLAYER_H <= plat.y + plat.h + velY * dt + 2
-    ) {
-      playerY = plat.y - PLAYER_H;
-      velY = 0;
-      onGround = true;
-    }
-  }
+  // Gravity + movement + platform collision
+  pState = platformerStep(pState, dt, platforms, PLAT_CONFIG);
 
   // World bounds
-  if (playerX < 0) playerX = 0;
-  if (playerX > 1560) playerX = 1560;
-  if (playerY > GROUND_Y + 100) {
+  if (pState.x < 0) pState = { ...pState, x: 0, vx: 0 };
+  if (pState.x > 1560) pState = { ...pState, x: 1560, vx: 0 };
+  if (pState.y > GROUND_Y + 100) {
     // Fell off screen, respawn
-    playerX = 100;
-    playerY = GROUND_Y - PLAYER_H;
-    velY = 0;
-    onGround = true;
+    pState = { ...pState, x: 100, y: GROUND_Y - PLAYER_H, vx: 0, vy: 0, onGround: true };
   }
 
   // --- Hitbox logic ---
@@ -241,8 +223,8 @@ game.onFrame((ctx) => {
     activeHitbox.timer -= dt;
     // Update hitbox position to follow player if attacking
     if (getCurrentState(fsm) === "attack") {
-      activeHitbox.x = facingRight ? playerX + PLAYER_W : playerX - HITBOX_W;
-      activeHitbox.y = playerY + 8;
+      activeHitbox.x = pState.facingRight ? pState.x + PLAYER_W : pState.x - HITBOX_W;
+      activeHitbox.y = pState.y + 8;
     }
     // Check enemy collision
     for (const enemy of enemies) {
@@ -263,15 +245,15 @@ game.onFrame((ctx) => {
   }
 
   // --- Update FSM ---
-  const isMoving = Math.abs(velX) > 10;
-  const isFalling = velY > 50 && !onGround;
-  const isJumping = velY < -10 && !onGround;
+  const isMoving = Math.abs(pState.vx) > 10;
+  const isFalling = pState.vy > 50 && !pState.onGround;
+  const isJumping = pState.vy < -10 && !pState.onGround;
 
   fsm = updateFSM(fsm, dt, {
     moving: isMoving,
     jumping: isJumping,
     falling: isFalling,
-    grounded: onGround,
+    grounded: pState.onGround,
     attack: triggerAttack,
   });
 
@@ -305,9 +287,9 @@ game.onFrame((ctx) => {
   }
 
   // Player (via FSM)
-  drawFSMSprite(fsm, playerX, playerY, PLAYER_W, PLAYER_H, {
+  drawFSMSprite(fsm, pState.x, pState.y, PLAYER_W, PLAYER_H, {
     layer: 2,
-    flipX: !facingRight,
+    flipX: !pState.facingRight,
   });
 
   // --- HUD ---
@@ -317,7 +299,7 @@ game.onFrame((ctx) => {
 
   hud.text(`State: ${state}${blending ? ` (blend ${(blendProg * 100).toFixed(0)}%)` : ""}`, 10, 10);
   hud.text(`Score: ${score}`, 10, 30);
-  hud.text(`Vel: (${velX.toFixed(0)}, ${velY.toFixed(0)})`, 10, 50);
-  hud.text(`Ground: ${onGround}`, 10, 70);
+  hud.text(`Vel: (${pState.vx.toFixed(0)}, ${pState.vy.toFixed(0)})`, 10, 50);
+  hud.text(`Ground: ${pState.onGround}`, 10, 70);
   hud.text("Arrows/WASD: move  |  Space/Up: jump  |  X/J: attack", 10, 560, { scale: 1.5 });
 });

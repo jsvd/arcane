@@ -5,13 +5,13 @@
  * All functions are pure: state in, state out.
  */
 
-import { seed, rollDice } from "@arcane-engine/runtime/state";
-import type { PRNGState } from "@arcane-engine/runtime/state";
+import { createRng } from "@arcane-engine/runtime/state";
+import type { Rng } from "@arcane-engine/runtime/state";
 
 // --- Types ---
 
 export type GameState = {
-  rng: PRNGState;
+  rng: Rng;
   // Add your game state here
 };
 
@@ -22,7 +22,7 @@ export type GameState = {
  */
 export function createGame(seedValue: number): GameState {
   return {
-    rng: seed(seedValue),
+    rng: createRng(seedValue),
   };
 }
 

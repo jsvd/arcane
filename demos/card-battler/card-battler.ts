@@ -9,8 +9,9 @@
  * First to 0 HP loses.
  */
 
-import type { PRNGState, Mutation, GameStore } from "../../runtime/state/index.ts";
-import { seed, shuffle, set, update, createStore } from "../../runtime/state/index.ts";
+import type { Mutation, GameStore } from "../../runtime/state/index.ts";
+import { createRng, set, update, createStore } from "../../runtime/state/index.ts";
+import type { Rng } from "../../runtime/state/index.ts";
 
 // --- Types ---
 
@@ -42,7 +43,7 @@ export type BattlerState = {
   activePlayer: 0 | 1;
   phase: Phase;
   turn: number;
-  rng: PRNGState;
+  rng: Rng;
   winner: 0 | 1 | null;
   log: string[];
 };
@@ -79,13 +80,13 @@ export function buildStarterDeck(): Card[] {
 // --- Game creation ---
 
 export function createBattlerState(seedValue: number): BattlerState {
-  let rng = seed(seedValue);
+  const rng = createRng(seedValue);
 
   const deck1 = buildStarterDeck();
   const deck2 = buildStarterDeck().map((c) => ({ ...c, id: c.id + 100 }));
 
-  const [shuffled1, rng2] = shuffle(rng, deck1);
-  const [shuffled2, rng3] = shuffle(rng2, deck2);
+  const shuffled1 = rng.shuffle(deck1);
+  const shuffled2 = rng.shuffle(deck2);
 
   return {
     players: [
@@ -113,7 +114,7 @@ export function createBattlerState(seedValue: number): BattlerState {
     activePlayer: 0,
     phase: "draw",
     turn: 1,
-    rng: rng3,
+    rng,
     winner: null,
     log: [],
   };
@@ -136,10 +137,8 @@ function drawCards(playerIndex: 0 | 1, count: number): Mutation<BattlerState> {
         if (deck.length === 0) {
           if (discard.length === 0) break; // no cards anywhere
           // Reshuffle discard into deck
-          const [shuffled, newRng] = shuffle(state.rng, discard);
-          deck = [...shuffled];
+          deck = [...state.rng.shuffle(discard)];
           discard = [];
-          state = { ...state, rng: newRng };
         }
         hand.push(deck.shift()!);
       }

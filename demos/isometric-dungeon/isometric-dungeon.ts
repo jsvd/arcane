@@ -26,7 +26,8 @@ import {
 import { findPath } from "../../runtime/pathfinding/index.ts";
 import type { PathGrid } from "../../runtime/pathfinding/index.ts";
 import { updateTweens } from "../../runtime/tweening/index.ts";
-import { createGame } from "../../runtime/game/index.ts";
+import { createGame, createSpriteGroup, drawSpriteGroup, getSpritePart } from "../../runtime/game/index.ts";
+import { drawLine } from "../../runtime/ui/index.ts";
 
 // --- Isometric constants ---
 const TILE_W = 64; // Diamond width
@@ -448,59 +449,69 @@ function drawCrate(gx: number, gy: number): void {
   drawSprite({ textureId: TEX_WOOD_DARK, x: cx + 3, y: topY + (TILE_H - 4) / 2 - 1, w: crossLen, h: 2, layer: layer + 8, opacity: 0.5 });
 }
 
+// --- Player sprite group ---
+// All part offsets are relative to group origin (player's foot position).
+// Bob animation is applied by shifting the draw Y; arm swing updates 4 parts per frame.
+const playerGroup = createSpriteGroup([
+  // Boots
+  { name: "bootL", offsetX: -5, offsetY: -6, w: 4, h: 6, textureId: TEX_BOOTS, layerOffset: 0 },
+  { name: "bootR", offsetX: 1, offsetY: -6, w: 4, h: 6, textureId: TEX_BOOTS, layerOffset: 0 },
+  // Pants
+  { name: "pantsL", offsetX: -5, offsetY: -14, w: 4, h: 9, textureId: TEX_PANTS, layerOffset: 0 },
+  { name: "pantsR", offsetX: 1, offsetY: -14, w: 4, h: 9, textureId: TEX_PANTS, layerOffset: 0 },
+  { name: "pantsHi", offsetX: -5, offsetY: -14, w: 1, h: 8, textureId: TEX_PANTS_HI, layerOffset: 1, opacity: 0.3 },
+  // Belt
+  { name: "belt", offsetX: -6, offsetY: -16, w: 12, h: 2, textureId: TEX_BELT, layerOffset: 1 },
+  { name: "buckle", offsetX: -1, offsetY: -16, w: 2, h: 2, textureId: TEX_GOLD_A, layerOffset: 2 },
+  // Torso
+  { name: "torso", offsetX: -6, offsetY: -26, w: 12, h: 10, textureId: TEX_SHIRT, layerOffset: 0 },
+  { name: "shirtHi", offsetX: -5, offsetY: -25, w: 4, h: 8, textureId: TEX_SHIRT_HI, layerOffset: 1, opacity: 0.5 },
+  { name: "shirtDark", offsetX: 2, offsetY: -24, w: 3, h: 6, textureId: TEX_SHIRT_DARK, layerOffset: 1, opacity: 0.3 },
+  // Arms (dynamic offsetY: armSwing applied per frame)
+  { name: "armL", offsetX: -9, offsetY: -24, w: 3, h: 8, textureId: TEX_SHIRT, layerOffset: -1 },
+  { name: "armR", offsetX: 6, offsetY: -24, w: 3, h: 8, textureId: TEX_SHIRT, layerOffset: -1 },
+  // Hands (dynamic offsetY: armSwing applied per frame)
+  { name: "handL", offsetX: -9, offsetY: -17, w: 3, h: 3, textureId: TEX_SKIN, layerOffset: -1 },
+  { name: "handR", offsetX: 6, offsetY: -17, w: 3, h: 3, textureId: TEX_SKIN, layerOffset: -1 },
+  // Neck
+  { name: "neck", offsetX: -2, offsetY: -29, w: 4, h: 3, textureId: TEX_SKIN, layerOffset: 0 },
+  // Head
+  { name: "head", offsetX: -5, offsetY: -38, w: 10, h: 10, textureId: TEX_SKIN, layerOffset: 2 },
+  // Hair
+  { name: "hairTop", offsetX: -5, offsetY: -39, w: 10, h: 4, textureId: TEX_HAIR, layerOffset: 3 },
+  { name: "hairSide", offsetX: -5, offsetY: -36, w: 2, h: 3, textureId: TEX_HAIR, layerOffset: 3 },
+  // Eyes
+  { name: "eyeL", offsetX: -3, offsetY: -34, w: 3, h: 2, textureId: TEX_EYE, layerOffset: 3 },
+  { name: "eyeR", offsetX: 1, offsetY: -34, w: 3, h: 2, textureId: TEX_EYE, layerOffset: 3 },
+  { name: "pupilL", offsetX: -2, offsetY: -34, w: 2, h: 2, textureId: TEX_PUPIL, layerOffset: 4 },
+  { name: "pupilR", offsetX: 2, offsetY: -34, w: 2, h: 2, textureId: TEX_PUPIL, layerOffset: 4 },
+], 0); // baseLayer set dynamically before draw
+
+// Cache part references for per-frame arm swing updates
+const armLPart = getSpritePart(playerGroup, "armL")!;
+const armRPart = getSpritePart(playerGroup, "armR")!;
+const handLPart = getSpritePart(playerGroup, "handL")!;
+const handRPart = getSpritePart(playerGroup, "handR")!;
+
 function drawPlayer(px: number, py: number, layer: number, time: number): void {
   const moving = player.path.length > 0;
-  // Subtle bob when moving
   const bob = moving ? Math.sin(time * 8) * 1.5 : 0;
+  const armSwing = moving ? Math.sin(time * 8) * 2 : 0;
 
-  // Shadow
+  // Shadow (not part of group — no bob)
   drawSprite({ textureId: TEX_BLACK, x: px - 10, y: py - 2, w: 20, h: 8, layer: layer - 1, opacity: 0.35 });
 
-  // Boots
-  drawSprite({ textureId: TEX_BOOTS, x: px - 5, y: py - 6 + bob, w: 4, h: 6, layer });
-  drawSprite({ textureId: TEX_BOOTS, x: px + 1, y: py - 6 + bob, w: 4, h: 6, layer });
+  // Update dynamic arm/hand offsets
+  armLPart.offsetY = -24 + armSwing;
+  armRPart.offsetY = -24 - armSwing;
+  handLPart.offsetY = -17 + armSwing;
+  handRPart.offsetY = -17 - armSwing;
 
-  // Pants
-  drawSprite({ textureId: TEX_PANTS, x: px - 5, y: py - 14 + bob, w: 4, h: 9, layer });
-  drawSprite({ textureId: TEX_PANTS, x: px + 1, y: py - 14 + bob, w: 4, h: 9, layer });
-  // Pants highlight
-  drawSprite({ textureId: TEX_PANTS_HI, x: px - 5, y: py - 14 + bob, w: 1, h: 8, layer: layer + 1, opacity: 0.3 });
+  // Set the group's base layer to match depth-sorted layer
+  playerGroup.baseLayer = layer;
 
-  // Belt
-  drawSprite({ textureId: TEX_BELT, x: px - 6, y: py - 16 + bob, w: 12, h: 2, layer: layer + 1 });
-  // Belt buckle
-  drawSprite({ textureId: TEX_GOLD_A, x: px - 1, y: py - 16 + bob, w: 2, h: 2, layer: layer + 2 });
-
-  // Torso / shirt
-  drawSprite({ textureId: TEX_SHIRT, x: px - 6, y: py - 26 + bob, w: 12, h: 10, layer });
-  // Shirt highlight
-  drawSprite({ textureId: TEX_SHIRT_HI, x: px - 5, y: py - 25 + bob, w: 4, h: 8, layer: layer + 1, opacity: 0.5 });
-  // Shirt shadow
-  drawSprite({ textureId: TEX_SHIRT_DARK, x: px + 2, y: py - 24 + bob, w: 3, h: 6, layer: layer + 1, opacity: 0.3 });
-
-  // Arms
-  const armSwing = moving ? Math.sin(time * 8) * 2 : 0;
-  drawSprite({ textureId: TEX_SHIRT, x: px - 9, y: py - 24 + bob + armSwing, w: 3, h: 8, layer: layer - 1 });
-  drawSprite({ textureId: TEX_SHIRT, x: px + 6, y: py - 24 + bob - armSwing, w: 3, h: 8, layer: layer - 1 });
-  // Hands
-  drawSprite({ textureId: TEX_SKIN, x: px - 9, y: py - 17 + bob + armSwing, w: 3, h: 3, layer: layer - 1 });
-  drawSprite({ textureId: TEX_SKIN, x: px + 6, y: py - 17 + bob - armSwing, w: 3, h: 3, layer: layer - 1 });
-
-  // Neck
-  drawSprite({ textureId: TEX_SKIN, x: px - 2, y: py - 29 + bob, w: 4, h: 3, layer });
-
-  // Head
-  drawSprite({ textureId: TEX_SKIN, x: px - 5, y: py - 38 + bob, w: 10, h: 10, layer: layer + 2 });
-
-  // Hair
-  drawSprite({ textureId: TEX_HAIR, x: px - 5, y: py - 39 + bob, w: 10, h: 4, layer: layer + 3 });
-  drawSprite({ textureId: TEX_HAIR, x: px - 5, y: py - 36 + bob, w: 2, h: 3, layer: layer + 3 });
-
-  // Eyes
-  drawSprite({ textureId: TEX_EYE, x: px - 3, y: py - 34 + bob, w: 3, h: 2, layer: layer + 3 });
-  drawSprite({ textureId: TEX_EYE, x: px + 1, y: py - 34 + bob, w: 3, h: 2, layer: layer + 3 });
-  drawSprite({ textureId: TEX_PUPIL, x: px - 2, y: py - 34 + bob, w: 2, h: 2, layer: layer + 4 });
-  drawSprite({ textureId: TEX_PUPIL, x: px + 2, y: py - 34 + bob, w: 2, h: 2, layer: layer + 4 });
+  // Draw group at foot position, shifted up by bob
+  drawSpriteGroup(playerGroup, px, py + bob);
 }
 
 function drawCoin(cx: number, cy: number, layer: number, time: number, seed: number): void {
@@ -581,15 +592,20 @@ function render(): void {
       ? { r: 0.3, g: 1.0, b: 0.3, a: 0.2 }
       : { r: 1.0, g: 0.3, b: 0.3, a: 0.2 };
 
-    // Diamond outline approximation
+    // Diamond fill
     const hx = hWorld.x - TILE_W / 2;
     const hy = hWorld.y - TILE_H / 2;
     drawSprite({ textureId: TEX_WHITE, x: hx, y: hy, w: TILE_W, h: TILE_H, layer: 9000, tint });
-    // Brighter border edges
-    drawSprite({ textureId: TEX_WHITE, x: hx, y: hy, w: TILE_W, h: 1, layer: 9001, tint: { ...tint, a: tint.a * 2 } });
-    drawSprite({ textureId: TEX_WHITE, x: hx, y: hy, w: 1, h: TILE_H, layer: 9001, tint: { ...tint, a: tint.a * 2 } });
-    drawSprite({ textureId: TEX_WHITE, x: hx + TILE_W - 1, y: hy, w: 1, h: TILE_H, layer: 9001, tint: { ...tint, a: tint.a * 2 } });
-    drawSprite({ textureId: TEX_WHITE, x: hx, y: hy + TILE_H - 1, w: TILE_W, h: 1, layer: 9001, tint: { ...tint, a: tint.a * 2 } });
+    // Diamond outline using drawLine (proper diamond edges)
+    const lineColor = { r: tint.r, g: tint.g, b: tint.b, a: tint.a * 2 };
+    const cx = hWorld.x;
+    const cy = hWorld.y;
+    const hw = TILE_W / 2;
+    const hh = TILE_H / 2;
+    drawLine(cx, cy - hh, cx + hw, cy, { color: lineColor, layer: 9001 }); // top -> right
+    drawLine(cx + hw, cy, cx, cy + hh, { color: lineColor, layer: 9001 }); // right -> bottom
+    drawLine(cx, cy + hh, cx - hw, cy, { color: lineColor, layer: 9001 }); // bottom -> left
+    drawLine(cx - hw, cy, cx, cy - hh, { color: lineColor, layer: 9001 }); // left -> top
   }
 
   // 6. HUD

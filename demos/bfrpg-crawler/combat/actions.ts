@@ -4,8 +4,9 @@
  * @source Basic Fantasy Role-Playing Game, 4th Edition
  */
 
-import type { PRNGState, DiceSpec } from "../../../runtime/state/index.ts";
-import { rollDice, parseDice } from "../../../runtime/state/index.ts";
+import type { DiceSpec } from "../../../runtime/state/index.ts";
+import { parseDice } from "../../../runtime/state/index.ts";
+import type { Rng } from "../../../runtime/state/index.ts";
 
 /**
  * Parse damage dice notation (e.g., "1d8", "2d6+3")
@@ -17,21 +18,19 @@ export function parseDamageDice(notation: string): DiceSpec {
 
 /**
  * Roll damage dice
- * Returns [damage, newRng]
  */
 export function rollDamage(
-  rng: PRNGState,
+  rng: Rng,
   spec: DiceSpec | string,
-): [number, PRNGState] {
-  return rollDice(rng, spec);
+): number {
+  return rng.roll(spec);
 }
 
 /**
  * Roll to-hit (1d20)
- * Returns [roll, newRng]
  */
-export function toHitRoll(rng: PRNGState): [number, PRNGState] {
-  return rollDice(rng, "1d20");
+export function toHitRoll(rng: Rng): number {
+  return rng.roll("1d20");
 }
 
 /**

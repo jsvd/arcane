@@ -28,7 +28,7 @@ import {
   countTile,
 } from "../../runtime/procgen/index.ts";
 import type { TileSet, WFCGrid, WFCResult } from "../../runtime/procgen/index.ts";
-import { seed as prngSeed, randomInt } from "../../runtime/state/prng.ts";
+import { createRng } from "../../runtime/state/rng.ts";
 import { createGame, hud } from "../../runtime/game/index.ts";
 
 // ---------------------------------------------------------------------------
@@ -112,11 +112,10 @@ function postProcess(grid: WFCGrid, placementSeed: number): WFCGrid {
   if (floors.length < 3) return grid;
 
   // 3. Place entrance, exit, decorations using seeded PRNG
-  let rng = prngSeed(placementSeed);
+  const rng = createRng(placementSeed);
 
   // Entrance — random floor tile
-  let idx: number;
-  [idx, rng] = randomInt(rng, 0, floors.length - 1);
+  let idx = rng.int(0, floors.length - 1);
   const entrance = floors[idx];
   tiles[entrance.y][entrance.x] = ENTRANCE;
   floors.splice(idx, 1);
@@ -128,7 +127,7 @@ function postProcess(grid: WFCGrid, placementSeed: number): WFCGrid {
     return db - da;
   });
   const farPool = Math.max(1, Math.floor(floors.length * 0.2));
-  [idx, rng] = randomInt(rng, 0, farPool - 1);
+  idx = rng.int(0, farPool - 1);
   const exit = floors[idx];
   tiles[exit.y][exit.x] = EXIT;
   floors.splice(idx, 1);
@@ -136,7 +135,7 @@ function postProcess(grid: WFCGrid, placementSeed: number): WFCGrid {
   // Decorations — 10% of remaining floors
   const decoCount = Math.max(1, Math.floor(floors.length * 0.1));
   for (let i = 0; i < decoCount && floors.length > 0; i++) {
-    [idx, rng] = randomInt(rng, 0, floors.length - 1);
+    idx = rng.int(0, floors.length - 1);
     const deco = floors[idx];
     tiles[deco.y][deco.x] = DECORATION;
     floors.splice(idx, 1);

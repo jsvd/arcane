@@ -1,5 +1,5 @@
 import { describe, it, assert } from "../../../runtime/testing/harness.ts";
-import { seed } from "../../../runtime/state/index.ts";
+import { createRng } from "../../../runtime/state/index.ts";
 import {
   generateDungeon,
   isWalkable,
@@ -13,8 +13,8 @@ import type { Room, TileType } from "../types.ts";
 describe("Dungeon Generation", () => {
   describe("generateDungeon", () => {
     it("should create a dungeon with specified dimensions", () => {
-      const rng = seed(42);
-      const [dungeon] = generateDungeon(rng, 60, 40, 1);
+      const rng = createRng(42);
+      const dungeon = generateDungeon(rng, 60, 40, 1);
 
       assert.equal(dungeon.width, 60);
       assert.equal(dungeon.height, 40);
@@ -23,25 +23,25 @@ describe("Dungeon Generation", () => {
     });
 
     it("should generate rooms", () => {
-      const rng = seed(42);
-      const [dungeon] = generateDungeon(rng, 60, 40, 1);
+      const rng = createRng(42);
+      const dungeon = generateDungeon(rng, 60, 40, 1);
 
       assert.ok(dungeon.rooms.length > 0);
     });
 
     it("should place stairs in last room", () => {
-      const rng = seed(42);
-      const [dungeon] = generateDungeon(rng, 60, 40, 1);
+      const rng = createRng(42);
+      const dungeon = generateDungeon(rng, 60, 40, 1);
 
       const { stairsPos } = dungeon;
       assert.equal(dungeon.tiles[stairsPos.y][stairsPos.x], "stairs");
     });
 
     it("should create rooms within size constraints", () => {
-      const rng = seed(42);
+      const rng = createRng(42);
       const minSize = 4;
       const maxSize = 10;
-      const [dungeon] = generateDungeon(rng, 60, 40, 1, { minRoomSize: minSize, maxRoomSize: maxSize });
+      const dungeon = generateDungeon(rng, 60, 40, 1, { minRoomSize: minSize, maxRoomSize: maxSize });
 
       for (const room of dungeon.rooms) {
         assert.ok(room.w >= minSize && room.w <= maxSize);
@@ -50,8 +50,8 @@ describe("Dungeon Generation", () => {
     });
 
     it("should ensure all rooms are connected (path validation)", () => {
-      const rng = seed(42);
-      const [dungeon] = generateDungeon(rng, 60, 40, 1);
+      const rng = createRng(42);
+      const dungeon = generateDungeon(rng, 60, 40, 1);
 
       // Use BFS to check connectivity from first room to all others
       const visited = new Set<string>();
@@ -100,9 +100,9 @@ describe("Dungeon Generation", () => {
     });
 
     it("should track current floor number", () => {
-      const rng = seed(42);
-      const [dungeon1] = generateDungeon(rng, 60, 40, 1);
-      const [dungeon2] = generateDungeon(rng, 60, 40, 5);
+      const rng = createRng(42);
+      const dungeon1 = generateDungeon(rng, 60, 40, 1);
+      const dungeon2 = generateDungeon(rng, 60, 40, 5);
 
       assert.equal(dungeon1.floor, 1);
       assert.equal(dungeon2.floor, 5);

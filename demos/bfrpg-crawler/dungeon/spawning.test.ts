@@ -1,5 +1,5 @@
 import { describe, it, assert } from "../../../runtime/testing/harness.ts";
-import { seed } from "../../../runtime/state/index.ts";
+import { createRng } from "../../../runtime/state/index.ts";
 import {
   pickMonsterType,
   createMonster,
@@ -12,13 +12,11 @@ import type { Room, Vec2 } from "../types.ts";
 describe("Monster Spawning", () => {
   describe("pickMonsterType", () => {
     it("should only pick Rat or Kobold on floor 1", () => {
-      const rng = seed(42);
-      let currentRng = rng;
+      const rng = createRng(42);
 
       const types = new Set<string>();
       for (let i = 0; i < 20; i++) {
-        const [monsterType, nextRng] = pickMonsterType(currentRng, 1);
-        currentRng = nextRng;
+        const monsterType = pickMonsterType(rng, 1);
         types.add(monsterType);
       }
 
@@ -30,13 +28,11 @@ describe("Monster Spawning", () => {
     });
 
     it("should include Goblin and Skeleton on floor 2", () => {
-      const rng = seed(42);
-      let currentRng = rng;
+      const rng = createRng(42);
 
       const types = new Set<string>();
       for (let i = 0; i < 50; i++) {
-        const [monsterType, nextRng] = pickMonsterType(currentRng, 2);
-        currentRng = nextRng;
+        const monsterType = pickMonsterType(rng, 2);
         types.add(monsterType);
       }
 
@@ -46,13 +42,11 @@ describe("Monster Spawning", () => {
     });
 
     it("should include Orc on floor 3+", () => {
-      const rng = seed(42);
-      let currentRng = rng;
+      const rng = createRng(42);
 
       const types = new Set<string>();
       for (let i = 0; i < 50; i++) {
-        const [monsterType, nextRng] = pickMonsterType(currentRng, 3);
-        currentRng = nextRng;
+        const monsterType = pickMonsterType(rng, 3);
         types.add(monsterType);
       }
 
@@ -63,8 +57,8 @@ describe("Monster Spawning", () => {
 
   describe("createMonster", () => {
     it("should create a monster with correct type", () => {
-      const rng = seed(42);
-      const [monster] = createMonster("test1", "Giant Rat", { x: 5, y: 5 }, rng);
+      const rng = createRng(42);
+      const monster = createMonster("test1", "Giant Rat", { x: 5, y: 5 }, rng);
 
       assert.equal(monster.id, "test1");
       assert.equal(monster.type, "Giant Rat");
@@ -74,8 +68,8 @@ describe("Monster Spawning", () => {
     });
 
     it("should roll HP from monster hit dice", () => {
-      const rng = seed(42);
-      const [monster] = createMonster("test2", "Giant Rat", { x: 0, y: 0 }, rng);
+      const rng = createRng(42);
+      const monster = createMonster("test2", "Giant Rat", { x: 0, y: 0 }, rng);
 
       // Giant Rat has 1d4 HP
       assert.ok(monster.hp >= 1 && monster.hp <= 4);
@@ -83,8 +77,8 @@ describe("Monster Spawning", () => {
     });
 
     it("should apply monster template stats", () => {
-      const rng = seed(42);
-      const [kobold] = createMonster("kobold1", "Kobold", { x: 0, y: 0 }, rng);
+      const rng = createRng(42);
+      const kobold = createMonster("kobold1", "Kobold", { x: 0, y: 0 }, rng);
 
       assert.equal(kobold.ac, 12);
       assert.equal(kobold.attackBonus, 0);
@@ -92,7 +86,7 @@ describe("Monster Spawning", () => {
     });
 
     it("should throw error for unknown monster type", () => {
-      const rng = seed(42);
+      const rng = createRng(42);
 
       assert.throws(() => {
         createMonster("invalid", "InvalidMonster" as any, { x: 0, y: 0 }, rng);
@@ -102,8 +96,6 @@ describe("Monster Spawning", () => {
 
   describe("spawnMonsters", () => {
     it("should never spawn in first room", () => {
-      const rng = seed(42);
-
       const rooms: Room[] = [
         { x: 5, y: 5, w: 4, h: 4 },
         { x: 15, y: 15, w: 4, h: 4 },
@@ -111,10 +103,9 @@ describe("Monster Spawning", () => {
       ];
 
       // Run multiple times to be sure
-      let currentRng = rng;
       for (let i = 0; i < 10; i++) {
-        const [monsters, nextRng] = spawnMonsters(currentRng, rooms, 1);
-        currentRng = nextRng;
+        const rng = createRng(42 + i);
+        const monsters = spawnMonsters(rng, rooms, 1);
 
         const firstRoom = rooms[0];
         for (const monster of monsters) {
@@ -125,7 +116,7 @@ describe("Monster Spawning", () => {
     });
 
     it("should spawn 0-2 monsters per room", () => {
-      const rng = seed(123); // Use different seed to get spawns
+      const rng = createRng(123); // Use different seed to get spawns
 
       const rooms: Room[] = [
         { x: 5, y: 5, w: 4, h: 4 },   // First room (skip)
@@ -135,7 +126,7 @@ describe("Monster Spawning", () => {
         { x: 15, y: 15, w: 4, h: 4 },
       ];
 
-      const [monsters] = spawnMonsters(rng, rooms, 1);
+      const monsters = spawnMonsters(rng, rooms, 1);
 
       // Count monsters per room
       const monstersPerRoom = new Map<number, number>();
@@ -158,7 +149,7 @@ describe("Monster Spawning", () => {
     });
 
     it("should generate unique monster IDs", () => {
-      const rng = seed(456);
+      const rng = createRng(456);
 
       const rooms: Room[] = [
         { x: 5, y: 5, w: 4, h: 4 },
@@ -167,7 +158,7 @@ describe("Monster Spawning", () => {
         { x: 5, y: 25, w: 4, h: 4 },
       ];
 
-      const [monsters] = spawnMonsters(rng, rooms, 1);
+      const monsters = spawnMonsters(rng, rooms, 1);
 
       const ids = monsters.map((m) => m.id);
       const uniqueIds = new Set(ids);
@@ -176,7 +167,7 @@ describe("Monster Spawning", () => {
     });
 
     it("should respect floor-based monster types", () => {
-      const rng = seed(789);
+      const rng = createRng(789);
 
       const rooms: Room[] = Array.from({ length: 10 }, (_, i) => ({
         x: i * 10,
@@ -186,7 +177,7 @@ describe("Monster Spawning", () => {
       }));
 
       // Floor 1 should only have Rat/Kobold
-      const [monsters1] = spawnMonsters(rng, rooms, 1);
+      const monsters1 = spawnMonsters(rng, rooms, 1);
       for (const monster of monsters1) {
         assert.ok(
           monster.type === "Giant Rat" || monster.type === "Kobold",
@@ -196,7 +187,7 @@ describe("Monster Spawning", () => {
     });
 
     it("should place monsters within room bounds", () => {
-      const rng = seed(999);
+      const rng = createRng(999);
 
       const rooms: Room[] = [
         { x: 5, y: 5, w: 4, h: 4 },
@@ -204,7 +195,7 @@ describe("Monster Spawning", () => {
         { x: 25, y: 25, w: 5, h: 5 },
       ];
 
-      const [monsters] = spawnMonsters(rng, rooms, 1);
+      const monsters = spawnMonsters(rng, rooms, 1);
 
       for (const monster of monsters) {
         let foundRoom = false;

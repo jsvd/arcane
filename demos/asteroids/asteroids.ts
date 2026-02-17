@@ -29,8 +29,10 @@ import {
   setEffectParam,
 } from "../../runtime/rendering/index.ts";
 import { rgb } from "../../runtime/ui/types.ts";
+import { drawCircle } from "../../runtime/ui/index.ts";
 import { createGame, drawColorSprite } from "../../runtime/game/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
+import { createRng } from "../../runtime/state/index.ts";
 
 // --- Constants ---
 const SHIP_SIZE = 20;
@@ -125,6 +127,9 @@ type GameState = {
   postProcessEnabled: boolean;
 };
 
+// --- Deterministic PRNG ---
+const rng = createRng(42);
+
 // --- State ---
 const { width: vpW, height: vpH } = getViewportSize();
 let state = createInitialState(vpW, vpH);
@@ -162,10 +167,10 @@ function createInitialState(w: number, h: number): GameState {
   const stars: Star[] = [];
   for (let i = 0; i < 80; i++) {
     stars.push({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      brightness: 0.3 + Math.random() * 0.7,
-      twinklePhase: Math.random() * Math.PI * 2,
+      x: rng.float() * w,
+      y: rng.float() * h,
+      brightness: 0.3 + rng.float() * 0.7,
+      twinklePhase: rng.float() * Math.PI * 2,
     });
   }
 
@@ -203,20 +208,20 @@ function spawnLevel(s: GameState): void {
     // Spawn away from ship
     let x: number, y: number;
     do {
-      x = Math.random() * s.fieldW;
-      y = Math.random() * s.fieldH;
+      x = rng.float() * s.fieldW;
+      y = rng.float() * s.fieldH;
     } while (dist(x, y, s.ship.x, s.ship.y) < 150);
 
-    const angle = Math.random() * Math.PI * 2;
-    const speed = ASTEROID_SPEEDS[0] + Math.random() * 20;
+    const angle = rng.float() * Math.PI * 2;
+    const speed = ASTEROID_SPEEDS[0] + rng.float() * 20;
     s.asteroids.push({
       x,
       y,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       size: 0,
-      angle: Math.random() * Math.PI * 2,
-      spin: (Math.random() - 0.5) * ASTEROID_SPIN[0] * 2,
+      angle: rng.float() * Math.PI * 2,
+      spin: (rng.float() - 0.5) * ASTEROID_SPIN[0] * 2,
     });
   }
 }
@@ -266,17 +271,17 @@ function update(s: GameState, dt: number): void {
       ship.vy += Math.sin(ship.angle) * SHIP_THRUST * dt;
 
       // Thrust particles
-      if (Math.random() < 0.6) {
+      if (rng.float() < 0.6) {
         const backAngle = ship.angle + Math.PI;
-        const spread = (Math.random() - 0.5) * 0.6;
+        const spread = (rng.float() - 0.5) * 0.6;
         s.particles.push({
           x: ship.x + Math.cos(backAngle) * SHIP_SIZE * 0.4,
           y: ship.y + Math.sin(backAngle) * SHIP_SIZE * 0.4,
-          vx: Math.cos(backAngle + spread) * (80 + Math.random() * 60),
-          vy: Math.sin(backAngle + spread) * (80 + Math.random() * 60),
-          life: PARTICLE_LIFETIME * (0.5 + Math.random() * 0.5),
+          vx: Math.cos(backAngle + spread) * (80 + rng.float() * 60),
+          vy: Math.sin(backAngle + spread) * (80 + rng.float() * 60),
+          life: PARTICLE_LIFETIME * (0.5 + rng.float() * 0.5),
           maxLife: PARTICLE_LIFETIME,
-          size: 3 + Math.random() * 4,
+          size: 3 + rng.float() * 4,
           isExplosion: false,
         });
       }
@@ -382,16 +387,16 @@ function update(s: GameState, dt: number): void {
         if (a.size < 2) {
           const newSize = a.size + 1;
           for (let k = 0; k < 2; k++) {
-            const angle = Math.random() * Math.PI * 2;
-            const speed = ASTEROID_SPEEDS[newSize] + Math.random() * 20;
+            const angle = rng.float() * Math.PI * 2;
+            const speed = ASTEROID_SPEEDS[newSize] + rng.float() * 20;
             s.asteroids.push({
               x: a.x,
               y: a.y,
               vx: Math.cos(angle) * speed,
               vy: Math.sin(angle) * speed,
               size: newSize,
-              angle: Math.random() * Math.PI * 2,
-              spin: (Math.random() - 0.5) * ASTEROID_SPIN[newSize] * 2,
+              angle: rng.float() * Math.PI * 2,
+              spin: (rng.float() - 0.5) * ASTEROID_SPIN[newSize] * 2,
             });
           }
         }
@@ -439,16 +444,16 @@ function update(s: GameState, dt: number): void {
 function spawnExplosion(s: GameState, x: number, y: number, radius: number): void {
   const count = 8 + Math.floor(radius * 0.5);
   for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 30 + Math.random() * 120;
+    const angle = rng.float() * Math.PI * 2;
+    const speed = 30 + rng.float() * 120;
     s.particles.push({
-      x: x + (Math.random() - 0.5) * radius * 0.5,
-      y: y + (Math.random() - 0.5) * radius * 0.5,
+      x: x + (rng.float() - 0.5) * radius * 0.5,
+      y: y + (rng.float() - 0.5) * radius * 0.5,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
-      life: 0.3 + Math.random() * 0.5,
+      life: 0.3 + rng.float() * 0.5,
       maxLife: 0.8,
-      size: 2 + Math.random() * 6,
+      size: 2 + rng.float() * 6,
       isExplosion: true,
     });
   }
@@ -494,35 +499,15 @@ function render(s: GameState): void {
     });
   }
 
-  // Asteroids (rotation)
+  // Asteroids (circles)
   for (const a of s.asteroids) {
     const r = ASTEROID_SIZES[a.size];
-    drawColorSprite({
-      color: COL_ASTEROID,
-      x: a.x - r,
-      y: a.y - r,
-      w: r * 2,
-      h: r * 2,
-      layer: 2,
-      rotation: a.angle,
-      originX: 0.5,
-      originY: 0.5,
-    });
+    drawCircle(a.x, a.y, r, { color: COL_ASTEROID, layer: 2 });
   }
 
-  // Bullets
+  // Bullets (circles)
   for (const b of s.bullets) {
-    const opacity = Math.min(b.life / 0.3, 1);
-    drawColorSprite({
-      color: COL_BULLET,
-      x: b.x - BULLET_SIZE / 2,
-      y: b.y - BULLET_SIZE / 2,
-      w: BULLET_SIZE,
-      h: BULLET_SIZE,
-      layer: 3,
-      opacity,
-      blendMode: "additive",
-    });
+    drawCircle(b.x, b.y, BULLET_SIZE / 2, { color: COL_BULLET, layer: 3 });
   }
 
   // Ship

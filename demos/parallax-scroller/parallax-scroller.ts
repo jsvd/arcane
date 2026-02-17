@@ -38,16 +38,27 @@ import {
   drawParallaxSprite,
 } from "../../runtime/rendering/index.ts";
 import { updateTweens, easeOutCubic } from "../../runtime/tweening/index.ts";
-import { createGame, drawColorSprite } from "../../runtime/game/index.ts";
+import {
+  createGame, drawColorSprite,
+  createPlatformerState, platformerMove, platformerJump, platformerStep,
+} from "../../runtime/game/index.ts";
+import type { PlatformerState, Platform as PlatPlatform } from "../../runtime/game/index.ts";
 import { rgb } from "../../runtime/ui/types.ts";
 
 // --- Map constants ---
 const MAP_WIDTH = 3200;
 const MAP_HEIGHT = 800;
 const GROUND_Y = MAP_HEIGHT - 64;
-const GRAVITY = 1200;
-const PLAYER_SPEED = 300;
-const JUMP_VELOCITY = -500;
+const PLAYER_W = 24;
+const PLAYER_H = 32;
+
+const PLAT_CONFIG = {
+  gravity: 1200,
+  jumpForce: -500,
+  walkSpeed: 300,
+  playerWidth: PLAYER_W,
+  playerHeight: PLAYER_H,
+};
 
 // --- Textures (solid colors for prototyping) ---
 // Textures used by drawParallaxSprite (require real textureId)
@@ -63,16 +74,8 @@ const COL_PLAYER = rgb(80, 180, 255);
 const COL_COIN = rgb(255, 220, 50);
 
 // --- State ---
-const player = {
-  x: 200,
-  y: GROUND_Y - 32,
-  vx: 0,
-  vy: 0,
-  w: 24,
-  h: 32,
-  onGround: false,
-  coins: 0,
-};
+let pState: PlatformerState = createPlatformerState(200, GROUND_Y - PLAYER_H);
+let playerCoins = 0;
 
 // Toggle states
 let useSmoothFollow = true;
@@ -80,8 +83,9 @@ let useDeadzone = true;
 let useBounds = true;
 let currentZoom = 1.0;
 
-// Platforms
-const platforms = [
+// Platforms (including ground as a platform for the controller)
+const groundPlat: PlatPlatform = { x: 0, y: GROUND_Y, w: MAP_WIDTH, h: MAP_HEIGHT - GROUND_Y };
+const floatingPlats: PlatPlatform[] = [
   { x: 400, y: GROUND_Y - 100, w: 128, h: 16 },
   { x: 700, y: GROUND_Y - 160, w: 96, h: 16 },
   { x: 1000, y: GROUND_Y - 120, w: 160, h: 16 },
@@ -91,9 +95,10 @@ const platforms = [
   { x: 2350, y: GROUND_Y - 100, w: 128, h: 16 },
   { x: 2700, y: GROUND_Y - 160, w: 96, h: 16 },
 ];
+const allPlatforms: PlatPlatform[] = [groundPlat, ...floatingPlats];
 
-// Coins (placed above platforms)
-const coins = platforms.map((p) => ({
+// Coins (placed above floating platforms)
+const coins = floatingPlats.map((p) => ({
   x: p.x + p.w / 2 - 8,
   y: p.y - 24,
   w: 16,
@@ -143,65 +148,34 @@ setCameraDeadzone({ width: 200, height: 100 });
 // --- Game logic ---
 function updatePlayer(dt: number): void {
   // Horizontal movement
-  if (isKeyDown("ArrowLeft") || isKeyDown("a")) {
-    player.vx = -PLAYER_SPEED;
-  } else if (isKeyDown("ArrowRight") || isKeyDown("d")) {
-    player.vx = PLAYER_SPEED;
-  } else {
-    player.vx *= 0.85; // friction
-  }
+  let dir: -1 | 0 | 1 = 0;
+  if (isKeyDown("ArrowLeft") || isKeyDown("a")) dir = -1;
+  if (isKeyDown("ArrowRight") || isKeyDown("d")) dir = 1;
+  pState = platformerMove(pState, dir, false, PLAT_CONFIG);
 
   // Jump
-  if ((isKeyPressed("ArrowUp") || isKeyPressed("w") || isKeyPressed(" ")) && player.onGround) {
-    player.vy = JUMP_VELOCITY;
-    player.onGround = false;
+  if (isKeyPressed("ArrowUp") || isKeyPressed("w") || isKeyPressed(" ")) {
+    pState = platformerJump(pState, PLAT_CONFIG);
   }
 
-  // Gravity
-  player.vy += GRAVITY * dt;
-
-  // Move
-  player.x += player.vx * dt;
-  player.y += player.vy * dt;
-
-  // Ground collision
-  if (player.y + player.h > GROUND_Y) {
-    player.y = GROUND_Y - player.h;
-    player.vy = 0;
-    player.onGround = true;
-  }
-
-  // Platform collision (only when falling)
-  if (player.vy >= 0) {
-    for (const p of platforms) {
-      if (
-        player.x + player.w > p.x &&
-        player.x < p.x + p.w &&
-        player.y + player.h >= p.y &&
-        player.y + player.h <= p.y + p.h + player.vy * dt + 2
-      ) {
-        player.y = p.y - player.h;
-        player.vy = 0;
-        player.onGround = true;
-      }
-    }
-  }
+  // Physics + collision (ground is included in allPlatforms)
+  pState = platformerStep(pState, dt, allPlatforms, PLAT_CONFIG);
 
   // Clamp to map
-  if (player.x < 0) player.x = 0;
-  if (player.x + player.w > MAP_WIDTH) player.x = MAP_WIDTH - player.w;
+  if (pState.x < 0) pState = { ...pState, x: 0, vx: 0 };
+  if (pState.x + PLAYER_W > MAP_WIDTH) pState = { ...pState, x: MAP_WIDTH - PLAYER_W, vx: 0 };
 
   // Collect coins
   for (const coin of coins) {
     if (coin.collected) continue;
     if (
-      player.x + player.w > coin.x &&
-      player.x < coin.x + coin.w &&
-      player.y + player.h > coin.y &&
-      player.y < coin.y + coin.h
+      pState.x + PLAYER_W > coin.x &&
+      pState.x < coin.x + coin.w &&
+      pState.y + PLAYER_H > coin.y &&
+      pState.y < coin.y + coin.h
     ) {
       coin.collected = true;
-      player.coins++;
+      playerCoins++;
     }
   }
 }
@@ -243,15 +217,15 @@ function updateCamera(): void {
 
   if (useSmoothFollow) {
     followTargetSmooth(
-      player.x + player.w / 2,
-      player.y + player.h / 2,
+      pState.x + PLAYER_W / 2,
+      pState.y + PLAYER_H / 2,
       targetZoom,
       0.05,
     );
   } else {
     followTarget(
-      player.x + player.w / 2,
-      player.y + player.h / 2,
+      pState.x + PLAYER_W / 2,
+      pState.y + PLAYER_H / 2,
       targetZoom,
     );
   }
@@ -324,7 +298,7 @@ function render(): void {
   });
 
   // Layer 5: Platforms
-  for (const p of platforms) {
+  for (const p of floatingPlats) {
     drawColorSprite({
       color: COL_PLATFORM,
       x: p.x,
@@ -353,10 +327,10 @@ function render(): void {
   // Layer 7: Player
   drawColorSprite({
     color: COL_PLAYER,
-    x: player.x,
-    y: player.y,
-    w: player.w,
-    h: player.h,
+    x: pState.x,
+    y: pState.y,
+    w: PLAYER_W,
+    h: PLAYER_H,
     layer: 7,
   });
 
@@ -377,7 +351,7 @@ function render(): void {
   });
 
   const textScale = scale;
-  drawText(`Coins: ${player.coins}/${coins.length}`, hudX + 10 * scale, hudY + 10 * scale, {
+  drawText(`Coins: ${playerCoins}/${coins.length}`, hudX + 10 * scale, hudY + 10 * scale, {
     scale: textScale,
     layer: 101,
   });
@@ -442,7 +416,7 @@ type ParallaxState = {
 
 app.state<ParallaxState>({
   get: () => ({
-    player: { x: player.x, y: player.y, coins: player.coins },
+    player: { x: pState.x, y: pState.y, coins: playerCoins },
     camera: getCamera(),
     bounds: getCameraBounds(),
     deadzone: getCameraDeadzone(),
@@ -450,8 +424,7 @@ app.state<ParallaxState>({
     settings: { useSmoothFollow, useDeadzone, useBounds, currentZoom },
   }),
   set: (s) => {
-    player.x = s.player.x;
-    player.y = s.player.y;
-    player.coins = s.player.coins;
+    pState = { ...pState, x: s.player.x, y: s.player.y };
+    playerCoins = s.player.coins;
   },
 });

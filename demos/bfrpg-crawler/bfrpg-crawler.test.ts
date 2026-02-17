@@ -6,7 +6,7 @@
 import "./bfrpg-crawler.ts";
 
 import { describe, it, assert } from "../../runtime/testing/harness.ts";
-import { seed } from "../../runtime/state/prng.ts";
+import { createRng } from "../../runtime/state/index.ts";
 import {
   createVisibilityMap,
   updateVisibility,
@@ -27,8 +27,8 @@ import type { BFRPGState, Monster } from "./types.ts";
 // --- Test Helpers ---
 
 function createTestState(): BFRPGState {
-  const rng = seed(42);
-  const [dungeon, rng2] = generateDungeon(rng, 20, 20, 1);
+  const rng = createRng(42);
+  const dungeon = generateDungeon(rng, 20, 20, 1);
   const fov = createVisibilityMap(dungeon.width, dungeon.height);
 
   // Place character in first room (guaranteed walkable)
@@ -40,7 +40,7 @@ function createTestState(): BFRPGState {
   return {
     phase: "exploration",
     turn: 0,
-    rng: rng2,
+    rng,
     character: {
       name: "TestHero",
       class: "Fighter",
@@ -242,7 +242,7 @@ describe("Movement and Exploration", () => {
 
     it("should trigger combat if adjacent to living monster", () => {
       const state = createTestState();
-      const [monster] = createMonster(
+      const monster = createMonster(
         "test1",
         "Kobold",
         { x: state.character.pos.x + 1, y: state.character.pos.y },
@@ -261,7 +261,7 @@ describe("Movement and Exploration", () => {
 
     it("should not trigger combat if monster is dead", () => {
       const state = createTestState();
-      const [monster] = createMonster(
+      const monster = createMonster(
         "test1",
         "Kobold",
         { x: state.character.pos.x + 1, y: state.character.pos.y },
@@ -309,7 +309,7 @@ describe("Movement and Exploration", () => {
 
     it("should mark monster positions as obstacles", () => {
       const state = createTestState();
-      const [monster] = createMonster("m1", "Kobold", { x: 5, y: 5 }, state.rng);
+      const monster = createMonster("m1", "Kobold", { x: 5, y: 5 }, state.rng);
 
       const grid = createPathGrid(state.dungeon.tiles, [monster]);
 
@@ -318,7 +318,7 @@ describe("Movement and Exploration", () => {
 
     it("should not mark moving monster position as obstacle", () => {
       const state = createTestState();
-      const [monster] = createMonster("m1", "Kobold", { x: 5, y: 5 }, state.rng);
+      const monster = createMonster("m1", "Kobold", { x: 5, y: 5 }, state.rng);
 
       const grid = createPathGrid(state.dungeon.tiles, [monster], "m1");
 
@@ -332,7 +332,7 @@ describe("Movement and Exploration", () => {
   describe("moveMonster", () => {
     it("should not move dead monsters", () => {
       const state = createTestState();
-      const [monster] = createMonster("m1", "Kobold", { x: 7, y: 7 }, state.rng);
+      const monster = createMonster("m1", "Kobold", { x: 7, y: 7 }, state.rng);
       const deadMonster = { ...monster, alive: false };
 
       const withMonster: BFRPGState = {
@@ -349,7 +349,7 @@ describe("Movement and Exploration", () => {
 
     it("should move monster randomly if player not visible", () => {
       const state = createTestState();
-      const [monster] = createMonster("m1", "Kobold", { x: 15, y: 15 }, state.rng);
+      const monster = createMonster("m1", "Kobold", { x: 15, y: 15 }, state.rng);
 
       const withMonster: BFRPGState = {
         ...state,
@@ -375,8 +375,8 @@ describe("Movement and Exploration", () => {
   describe("tickMonsters", () => {
     it("should move all living monsters", () => {
       const state = createTestState();
-      const [m1] = createMonster("m1", "Kobold", { x: 10, y: 10 }, state.rng);
-      const [m2] = createMonster("m2", "Goblin", { x: 12, y: 12 }, state.rng);
+      const m1 = createMonster("m1", "Kobold", { x: 10, y: 10 }, state.rng);
+      const m2 = createMonster("m2", "Goblin", { x: 12, y: 12 }, state.rng);
 
       const withMonsters: BFRPGState = {
         ...state,
@@ -391,7 +391,7 @@ describe("Movement and Exploration", () => {
 
     it("should check for combat after all monsters move", () => {
       const state = createTestState();
-      const [monster] = createMonster(
+      const monster = createMonster(
         "m1",
         "Kobold",
         { x: state.character.pos.x + 1, y: state.character.pos.y },
@@ -537,12 +537,14 @@ describe("Movement and Exploration", () => {
     it("should have chance of encounter", () => {
       // Test multiple times to verify encounter logic runs
       let state = createTestState();
-      state = { ...state, rng: seed(999) }; // Use seed that triggers encounter
+      state = { ...state, rng: createRng(999) }; // Use seed that triggers encounter
 
+      const snapshotBefore = state.rng.snapshot();
       const rested = rest(state);
+      const snapshotAfter = rested.rng.snapshot();
 
       // RNG should have advanced (encounter check happened)
-      assert.notEqual(rested.rng, state.rng);
+      assert.notEqual(snapshotBefore.s0, snapshotAfter.s0);
     });
   });
 

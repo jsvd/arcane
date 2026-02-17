@@ -49,6 +49,7 @@ import {
   getMousePosition,
 } from "../../runtime/rendering/index.ts";
 import { createGame, hud } from "../../runtime/game/index.ts";
+import { drawLine } from "../../runtime/ui/index.ts";
 
 // --- Textures ---
 const TEX_WALL = createSolidTexture("wall", 80, 80, 100, 255);
@@ -312,7 +313,7 @@ function drawComparisonScene(dt: number) {
   const halfW = VPW / 2;
 
   // Divider line
-  sprite(TEX_EMISSIVE_WARM, halfW - 1, 0, 2, VPH, 10);
+  drawLine(halfW, 0, halfW, VPH, { color: { r: 1, g: 0.63, b: 0.24, a: 1 }, thickness: 2, layer: 10 });
 
   // Both sides: same dungeon layout
   for (const side of [0, halfW]) {

@@ -45,6 +45,7 @@ import {
   autoUpdateSlider,
   autoUpdateCheckbox,
   autoUpdateFocus,
+  hud,
 } from "../../runtime/game/index.ts";
 import type { FrameInput } from "../../runtime/game/index.ts";
 
@@ -180,11 +181,7 @@ game.onFrame((ctx) => {
   autoUpdateFocus(focus, input);
 
   // Background
-  drawRect(0, 0, ctx.viewport.width, ctx.viewport.height, {
-    color: { r: 0.08, g: 0.08, b: 0.12, a: 1 },
-    layer: 0,
-    screenSpace: true,
-  });
+  hud.overlay({ r: 0.08, g: 0.08, b: 0.12, a: 1 }, { layer: 0 });
 
   // Title
   drawText("UI Showcase", 10, 10, {

@@ -395,12 +395,7 @@ game.onFrame((ctx) => {
   // Screen flash overlay
   const flash = getScreenFlash();
   if (flash) {
-    drawPanel(0, 0, VPW, VPH, {
-      fillColor: { ...flash, a: flash.opacity },
-      borderWidth: 0,
-      layer: 100,
-      screenSpace: true,
-    });
+    hud.overlay({ ...flash, a: flash.opacity }, { layer: 100 });
   }
 
   // --- HUD ---

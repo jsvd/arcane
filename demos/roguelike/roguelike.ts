@@ -1,5 +1,5 @@
-import type { PRNGState } from "../../runtime/state/index.ts";
-import { seed, randomInt, randomPick } from "../../runtime/state/index.ts";
+import { createRng } from "../../runtime/state/index.ts";
+import type { Rng } from "../../runtime/state/index.ts";
 import type { DungeonMap, Room } from "./dungeon.ts";
 import { generateDungeon, isWalkable, FLOOR, STAIRS_DOWN } from "./dungeon.ts";
 import type { VisibilityMap } from "./fov.ts";
@@ -29,7 +29,7 @@ export type RoguelikeState = {
   fov: VisibilityMap;
   messages: string[];
   turn: number;
-  rng: PRNGState;
+  rng: Rng;
   phase: "playing" | "dead" | "won";
 };
 
@@ -48,10 +48,9 @@ const ENEMY_STATS: Record<string, { hp: number; attack: number; glyph: string }>
 };
 
 export function createRoguelikeGame(gameSeed: number): RoguelikeState {
-  let rng = seed(gameSeed);
+  const rng = createRng(gameSeed);
 
-  const [dungeon, rng2] = generateDungeon(rng, 50, 40);
-  rng = rng2;
+  const dungeon = generateDungeon(rng, 50, 40);
 
   // Place player in first room
   const firstRoom = dungeon.rooms[0];
@@ -75,16 +74,13 @@ export function createRoguelikeGame(gameSeed: number): RoguelikeState {
     const room = dungeon.rooms[i];
 
     // 1-2 enemies per room
-    let numEnemies: number;
-    [numEnemies, rng] = randomInt(rng, 1, 2);
+    const numEnemies = rng.int(1, 2);
 
     for (let j = 0; j < numEnemies; j++) {
-      let ex: number, ey: number;
-      [ex, rng] = randomInt(rng, room.x, room.x + room.w - 1);
-      [ey, rng] = randomInt(rng, room.y, room.y + room.h - 1);
+      const ex = rng.int(room.x, room.x + room.w - 1);
+      const ey = rng.int(room.y, room.y + room.h - 1);
 
-      const [kind, rng3] = randomPick(rng, ["goblin", "rat", "skeleton"] as const);
-      rng = rng3;
+      const kind = rng.pick(["goblin", "rat", "skeleton"] as const);
 
       const stats = ENEMY_STATS[kind];
       entities.push({

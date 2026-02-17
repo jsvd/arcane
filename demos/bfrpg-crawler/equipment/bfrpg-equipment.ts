@@ -1,4 +1,4 @@
-import { rollDice, type PRNGState } from "../../../runtime/state/index.ts";
+import type { Rng } from "../../../runtime/state/index.ts";
 import type { Item, MonsterType } from "../types.ts";
 import bfrpgEquipmentData from "../data/bfrpg-equipment.json" with { type: "json" };
 
@@ -239,7 +239,7 @@ export const LOOT_TABLES: Record<MonsterType, LootTable> = {
  */
 export function generateLoot(
   monsterType: MonsterType,
-  rng: PRNGState,
+  rng: Rng,
 ): { items: Item[]; gold: number } {
   const table = LOOT_TABLES[monsterType];
   if (!table) {
@@ -247,14 +247,13 @@ export function generateLoot(
   }
 
   // Check drop chance
-  let [roll, newRng] = rollDice(rng, "1d100");
+  const roll = rng.roll("1d100");
   if (roll > table.chance) {
     return { items: [], gold: 0 };
   }
 
   const items: Item[] = [];
   let gold = 0;
-  let currentRng = newRng;
 
   for (const entry of table.loot) {
     if (entry.itemId) {
@@ -264,9 +263,7 @@ export function generateLoot(
       }
     }
     if (entry.goldDice) {
-      const [goldRoll, nextRng] = rollDice(currentRng, entry.goldDice);
-      gold += goldRoll;
-      currentRng = nextRng;
+      gold += rng.roll(entry.goldDice);
     }
   }
 

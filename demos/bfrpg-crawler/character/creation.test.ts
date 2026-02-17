@@ -3,7 +3,7 @@
  */
 
 import { describe, it, assert } from "../../../runtime/testing/harness.ts";
-import { seed } from "../../../runtime/state/prng.ts";
+import { createRng } from "../../../runtime/state/index.ts";
 import {
   abilityModifier,
   rollAbility,
@@ -72,27 +72,27 @@ describe("abilityModifier", () => {
 
 describe("rollAbility", () => {
   it("rolls a score between 3 and 18", () => {
-    const rng = seed(42);
-    const [score, _] = rollAbility(rng);
+    const rng = createRng(42);
+    const score = rollAbility(rng);
     assertRange(score, 3, 18);
   });
 
   it("produces deterministic results", () => {
-    const rng1 = seed(100);
-    const [score1, _] = rollAbility(rng1);
+    const rng1 = createRng(100);
+    const score1 = rollAbility(rng1);
 
-    const rng2 = seed(100);
-    const [score2, __] = rollAbility(rng2);
+    const rng2 = createRng(100);
+    const score2 = rollAbility(rng2);
 
     assert.equal(score1, score2);
   });
 
   it("produces different results with different seeds", () => {
-    const rng1 = seed(100);
-    const [score1, _] = rollAbility(rng1);
+    const rng1 = createRng(100);
+    const score1 = rollAbility(rng1);
 
-    const rng2 = seed(200);
-    const [score2, __] = rollAbility(rng2);
+    const rng2 = createRng(200);
+    const score2 = rollAbility(rng2);
 
     // Note: This could theoretically fail if both seeds produce the same result
     // but with deterministic RNG it's consistent
@@ -103,8 +103,8 @@ describe("rollAbility", () => {
 
 describe("rollAbilities", () => {
   it("rolls all six ability scores", () => {
-    const rng = seed(42);
-    const [scores, _] = rollAbilities(rng);
+    const rng = createRng(42);
+    const scores = rollAbilities(rng);
 
     assertRange(scores.strength, 3, 18);
     assertRange(scores.dexterity, 3, 18);
@@ -115,11 +115,11 @@ describe("rollAbilities", () => {
   });
 
   it("produces deterministic results", () => {
-    const rng1 = seed(123);
-    const [scores1, _] = rollAbilities(rng1);
+    const rng1 = createRng(123);
+    const scores1 = rollAbilities(rng1);
 
-    const rng2 = seed(123);
-    const [scores2, __] = rollAbilities(rng2);
+    const rng2 = createRng(123);
+    const scores2 = rollAbilities(rng2);
 
     assert.equal(scores1.strength, scores2.strength);
     assert.equal(scores1.dexterity, scores2.dexterity);
@@ -284,8 +284,8 @@ describe("calculateBAB", () => {
 
 describe("createCharacter", () => {
   it("creates a basic human fighter", () => {
-    const rng = seed(42);
-    const [character, _] = createCharacter(rng, {
+    const rng = createRng(42);
+    const character = createCharacter(rng, {
       name: "Thorin",
       race: "Human",
       class: "Fighter",
@@ -302,8 +302,8 @@ describe("createCharacter", () => {
   });
 
   it("creates a dwarf cleric with proper racial modifiers", () => {
-    const rng = seed(100);
-    const [character, _] = createCharacter(rng, {
+    const rng = createRng(100);
+    const character = createCharacter(rng, {
       name: "Gimli",
       race: "Dwarf",
       class: "Cleric",
@@ -319,8 +319,8 @@ describe("createCharacter", () => {
   });
 
   it("creates an elf magic user", () => {
-    const rng = seed(200);
-    const [character, _] = createCharacter(rng, {
+    const rng = createRng(200);
+    const character = createCharacter(rng, {
       name: "Elrond",
       race: "Elf",
       class: "MagicUser",
@@ -333,8 +333,8 @@ describe("createCharacter", () => {
   });
 
   it("creates a halfling thief", () => {
-    const rng = seed(300);
-    const [character, _] = createCharacter(rng, {
+    const rng = createRng(300);
+    const character = createCharacter(rng, {
       name: "Bilbo",
       race: "Halfling",
       class: "Thief",
@@ -347,7 +347,7 @@ describe("createCharacter", () => {
   });
 
   it("accepts pre-rolled abilities", () => {
-    const rng = seed(42);
+    const rng = createRng(42);
     const customAbilities: AbilityScores = {
       strength: 16,
       dexterity: 14,
@@ -357,7 +357,7 @@ describe("createCharacter", () => {
       charisma: 8,
     };
 
-    const [character, _] = createCharacter(rng, {
+    const character = createCharacter(rng, {
       name: "Custom",
       race: "Human",
       class: "Fighter",
@@ -374,7 +374,7 @@ describe("createCharacter", () => {
   });
 
   it("calculates AC correctly based on class equipment", () => {
-    const rng = seed(500);
+    const rng = createRng(500);
     const abilities: AbilityScores = {
       strength: 12,
       dexterity: 14, // +1 modifier
@@ -384,7 +384,7 @@ describe("createCharacter", () => {
       charisma: 12,
     };
 
-    const [fighter, _] = createCharacter(rng, {
+    const fighter = createCharacter(rng, {
       name: "Tank",
       race: "Human",
       class: "Fighter",
@@ -396,8 +396,8 @@ describe("createCharacter", () => {
   });
 
   it("supports higher level characters", () => {
-    const rng = seed(600);
-    const [character, _] = createCharacter(rng, {
+    const rng = createRng(600);
+    const character = createCharacter(rng, {
       name: "Veteran",
       race: "Human",
       class: "Fighter",
@@ -409,15 +409,15 @@ describe("createCharacter", () => {
   });
 
   it("produces deterministic characters with same seed", () => {
-    const rng1 = seed(777);
-    const [char1, _] = createCharacter(rng1, {
+    const rng1 = createRng(777);
+    const char1 = createCharacter(rng1, {
       name: "Twin1",
       race: "Human",
       class: "Fighter",
     });
 
-    const rng2 = seed(777);
-    const [char2, __] = createCharacter(rng2, {
+    const rng2 = createRng(777);
+    const char2 = createCharacter(rng2, {
       name: "Twin2",
       race: "Human",
       class: "Fighter",
@@ -434,7 +434,7 @@ describe("createCharacter", () => {
   });
 
   it("ensures minimum 1 HP even with negative CON modifier", () => {
-    const rng = seed(999);
+    const rng = createRng(999);
     const lowConAbilities: AbilityScores = {
       strength: 10,
       dexterity: 10,
@@ -444,7 +444,7 @@ describe("createCharacter", () => {
       charisma: 10,
     };
 
-    const [character, _] = createCharacter(rng, {
+    const character = createCharacter(rng, {
       name: "Sickly",
       race: "Human",
       class: "MagicUser", // d4 hit die

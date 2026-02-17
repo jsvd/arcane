@@ -4,8 +4,7 @@
  * @source Basic Fantasy Role-Playing Game, 4th Edition
  */
 
-import type { PRNGState } from "../../../runtime/state/index.ts";
-import { rollDice } from "../../../runtime/state/index.ts";
+import type { Rng } from "../../../runtime/state/index.ts";
 import racesData from "../data/races.json" with { type: "json" };
 
 /** Six core abilities */
@@ -45,42 +44,23 @@ export function abilityModifier(score: number): number {
 
 /**
  * Roll 3d6 for a single ability score
- * Returns [score, newRng]
  */
-export function rollAbility(rng: PRNGState): [number, PRNGState] {
-  return rollDice(rng, "3d6");
+export function rollAbility(rng: Rng): number {
+  return rng.roll("3d6");
 }
 
 /**
  * Roll all six ability scores using 3d6 method
- * Returns [scores, newRng]
  */
-export function rollAbilities(rng: PRNGState): [AbilityScores, PRNGState] {
-  let current = rng;
-  const [strength, rng1] = rollAbility(current);
-  current = rng1;
-  const [dexterity, rng2] = rollAbility(current);
-  current = rng2;
-  const [constitution, rng3] = rollAbility(current);
-  current = rng3;
-  const [intelligence, rng4] = rollAbility(current);
-  current = rng4;
-  const [wisdom, rng5] = rollAbility(current);
-  current = rng5;
-  const [charisma, rng6] = rollAbility(current);
-  current = rng6;
-
-  return [
-    {
-      strength,
-      dexterity,
-      constitution,
-      intelligence,
-      wisdom,
-      charisma,
-    },
-    current,
-  ];
+export function rollAbilities(rng: Rng): AbilityScores {
+  return {
+    strength: rollAbility(rng),
+    dexterity: rollAbility(rng),
+    constitution: rollAbility(rng),
+    intelligence: rollAbility(rng),
+    wisdom: rollAbility(rng),
+    charisma: rollAbility(rng),
+  };
 }
 
 /**

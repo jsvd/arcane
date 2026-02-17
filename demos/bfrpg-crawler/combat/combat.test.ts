@@ -3,7 +3,7 @@
  */
 
 import { describe, it, assert } from "../../../runtime/testing/harness.ts";
-import { seed } from "../../../runtime/state/prng.ts";
+import { createRng } from "../../../runtime/state/index.ts";
 import {
   parseDamageDice,
   rollDamage,
@@ -52,24 +52,24 @@ describe("parseDamageDice", () => {
 
 describe("rollDamage", () => {
   it("rolls damage in valid range", () => {
-    const rng = seed(42);
-    const [damage, _] = rollDamage(rng, "1d8");
+    const rng = createRng(42);
+    const damage = rollDamage(rng, "1d8");
     assertRange(damage, 1, 8);
   });
 
   it("applies modifiers to damage", () => {
-    const rng = seed(100);
+    const rng = createRng(100);
     const spec = parseDamageDice("1d6+3");
-    const [damage, _] = rollDamage(rng, spec);
+    const damage = rollDamage(rng, spec);
     assertRange(damage, 4, 9); // 1-6 + 3
   });
 
   it("produces deterministic results", () => {
-    const rng1 = seed(777);
-    const [damage1, _] = rollDamage(rng1, "1d8");
+    const rng1 = createRng(777);
+    const damage1 = rollDamage(rng1, "1d8");
 
-    const rng2 = seed(777);
-    const [damage2, __] = rollDamage(rng2, "1d8");
+    const rng2 = createRng(777);
+    const damage2 = rollDamage(rng2, "1d8");
 
     assert.equal(damage1, damage2);
   });
@@ -77,17 +77,17 @@ describe("rollDamage", () => {
 
 describe("toHitRoll", () => {
   it("rolls 1d20", () => {
-    const rng = seed(42);
-    const [roll, _] = toHitRoll(rng);
+    const rng = createRng(42);
+    const roll = toHitRoll(rng);
     assertRange(roll, 1, 20);
   });
 
   it("produces deterministic results", () => {
-    const rng1 = seed(333);
-    const [roll1, _] = toHitRoll(rng1);
+    const rng1 = createRng(333);
+    const roll1 = toHitRoll(rng1);
 
-    const rng2 = seed(333);
-    const [roll2, __] = toHitRoll(rng2);
+    const rng2 = createRng(333);
+    const roll2 = toHitRoll(rng2);
 
     assert.equal(roll1, roll2);
   });
@@ -160,7 +160,7 @@ describe("BFRPGCombat system", () => {
       currentIndex: 0,
       round: 1,
       log: [],
-      rng: seed(seedValue),
+      rng: createRng(seedValue),
     };
   }
 

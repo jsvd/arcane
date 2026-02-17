@@ -2,7 +2,7 @@
  * BFRPG Dungeon Crawler - Game Initialization
  */
 
-import { seed } from "../../runtime/state/index.ts";
+import { createRng } from "../../runtime/state/index.ts";
 import type { BFRPGState } from "./types.ts";
 import { generateDungeon } from "./dungeon/generation.ts";
 import { spawnMonsters } from "./dungeon/spawning.ts";
@@ -18,24 +18,21 @@ export function createGame(
   raceName: "Human" | "Dwarf" | "Elf" | "Halfling",
   gameSeed: number,
 ): BFRPGState {
-  let rng = seed(gameSeed);
+  const rng = createRng(gameSeed);
 
   // Create character
-  const [character, rng2] = createCharacter(rng, {
+  const character = createCharacter(rng, {
     name,
     race: raceName,
     class: className,
     level: 1,
   });
-  rng = rng2;
 
   // Generate dungeon
-  const [dungeon, rng3] = generateDungeon(rng, 60, 40, 1);
-  rng = rng3;
+  const dungeon = generateDungeon(rng, 60, 40, 1);
 
   // Spawn monsters
-  const [monsters, rng4] = spawnMonsters(rng, dungeon.rooms, 1);
-  rng = rng4;
+  const monsters = spawnMonsters(rng, dungeon.rooms, 1);
 
   // Place character in first room
   const startPos = dungeon.rooms[0]

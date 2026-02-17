@@ -1,5 +1,5 @@
 import { describe, it, assert } from "../../../runtime/testing/harness.ts";
-import { seed } from "../../../runtime/state/index.ts";
+import { createRng } from "../../../runtime/state/index.ts";
 import {
   getArmorClassBonus,
   getWeaponAttackBonus,
@@ -304,7 +304,7 @@ describe("Equipment - Loot Tables", () => {
 
 describe("Equipment - Loot Generation", () => {
   it("generates no loot when roll fails", () => {
-    const rng = seed(12345); // Seed that produces roll > 10
+    const rng = createRng(12345); // Seed that produces roll > 10
     const loot = generateLoot("Giant Rat", rng);
 
     // Giant Rat has 10% chance, so most rolls fail
@@ -316,7 +316,7 @@ describe("Equipment - Loot Generation", () => {
     // Try multiple seeds to find one that succeeds
     let foundSuccess = false;
     for (let i = 0; i < 200; i++) {
-      const rng = seed(i);
+      const rng = createRng(i);
       const loot = generateLoot("Kobold", rng);
 
       if (loot.items.length > 0 || loot.gold > 0) {
@@ -335,7 +335,7 @@ describe("Equipment - Loot Generation", () => {
 
   it("generates correct loot for Skeleton on success", () => {
     for (let i = 0; i < 100; i++) {
-      const rng = seed(i);
+      const rng = createRng(i);
       const loot = generateLoot("Skeleton", rng);
 
       if (loot.items.length > 0) {
@@ -348,7 +348,7 @@ describe("Equipment - Loot Generation", () => {
     }
 
     // Verify failures are valid
-    const rng = seed(0);
+    const rng = createRng(0);
     const loot = generateLoot("Skeleton", rng);
     assert.equal(loot.gold, 0);
   });
@@ -356,7 +356,7 @@ describe("Equipment - Loot Generation", () => {
   it("generates correct loot for Orc on success", () => {
     let foundSuccess = false;
     for (let i = 0; i < 200; i++) {
-      const rng = seed(i);
+      const rng = createRng(i);
       const loot = generateLoot("Orc", rng);
 
       if (loot.items.length > 0 || loot.gold > 0) {
@@ -374,10 +374,10 @@ describe("Equipment - Loot Generation", () => {
   });
 
   it("generates deterministic loot with same seed", () => {
-    const rng1 = seed(42);
+    const rng1 = createRng(42);
     const loot1 = generateLoot("Goblin", rng1);
 
-    const rng2 = seed(42);
+    const rng2 = createRng(42);
     const loot2 = generateLoot("Goblin", rng2);
 
     assert.equal(loot1.items.length, loot2.items.length);

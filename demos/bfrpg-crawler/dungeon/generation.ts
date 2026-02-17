@@ -1,5 +1,4 @@
-import { randomInt } from "../../../runtime/state/index.ts";
-import type { PRNGState } from "../../../runtime/state/index.ts";
+import type { Rng } from "../../../runtime/state/index.ts";
 import type { DungeonState, Room, TileType, Vec2 } from "../types.ts";
 
 // --- BSP Node ---
@@ -38,15 +37,15 @@ const DEFAULT_OPTIONS: Required<DungeonOptions> = {
  * @param height - Dungeon height in tiles
  * @param floor - Current floor number (affects monster spawning)
  * @param options - Optional dungeon parameters
- * @returns Tuple of [DungeonState, updated RNG state]
+ * @returns Generated DungeonState
  */
 export function generateDungeon(
-  rng: PRNGState,
+  rng: Rng,
   width: number,
   height: number,
   floor: number,
   options?: DungeonOptions,
-): [DungeonState, PRNGState] {
+): DungeonState {
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
   // Initialize all walls
@@ -57,13 +56,12 @@ export function generateDungeon(
 
   // BSP split
   const root: BSPNode = { x: 1, y: 1, w: width - 2, h: height - 2 };
-  let currentRng = rng;
 
-  currentRng = splitNode(root, 0, opts.splitDepth, opts.minRoomSize, currentRng);
+  splitNode(root, 0, opts.splitDepth, opts.minRoomSize, rng);
 
   // Place rooms
   const rooms: Room[] = [];
-  currentRng = placeRooms(root, rooms, tiles, opts.minRoomSize, opts.maxRoomSize, currentRng);
+  placeRooms(root, rooms, tiles, opts.minRoomSize, opts.maxRoomSize, rng);
 
   // Connect rooms with corridors
   connectRooms(root, tiles);
@@ -78,17 +76,14 @@ export function generateDungeon(
     stairsPos = { x: cx, y: cy };
   }
 
-  return [
-    {
-      width,
-      height,
-      tiles,
-      rooms,
-      stairsPos,
-      floor,
-    },
-    currentRng,
-  ];
+  return {
+    width,
+    height,
+    tiles,
+    rooms,
+    stairsPos,
+    floor,
+  };
 }
 
 // --- BSP Algorithm ---
@@ -98,9 +93,9 @@ function splitNode(
   depth: number,
   maxDepth: number,
   minSize: number,
-  rng: PRNGState,
-): PRNGState {
-  if (depth >= maxDepth) return rng;
+  rng: Rng,
+): void {
+  if (depth >= maxDepth) return;
 
   const minDim = minSize * 2 + 3; // Need space for two rooms + wall between
 
@@ -111,29 +106,23 @@ function splitNode(
   } else if (node.h > node.w * 1.25) {
     splitH = true; // split horizontally (tall)
   } else {
-    const [val, nextRng] = randomInt(rng, 0, 1);
-    rng = nextRng;
-    splitH = val === 0;
+    splitH = rng.int(0, 1) === 0;
   }
 
   if (splitH) {
-    if (node.h < minDim) return rng;
-    const [splitAt, nextRng] = randomInt(rng, minSize + 1, node.h - minSize - 1);
-    rng = nextRng;
+    if (node.h < minDim) return;
+    const splitAt = rng.int(minSize + 1, node.h - minSize - 1);
     node.left = { x: node.x, y: node.y, w: node.w, h: splitAt };
     node.right = { x: node.x, y: node.y + splitAt, w: node.w, h: node.h - splitAt };
   } else {
-    if (node.w < minDim) return rng;
-    const [splitAt, nextRng] = randomInt(rng, minSize + 1, node.w - minSize - 1);
-    rng = nextRng;
+    if (node.w < minDim) return;
+    const splitAt = rng.int(minSize + 1, node.w - minSize - 1);
     node.left = { x: node.x, y: node.y, w: splitAt, h: node.h };
     node.right = { x: node.x + splitAt, y: node.y, w: node.w - splitAt, h: node.h };
   }
 
-  rng = splitNode(node.left, depth + 1, maxDepth, minSize, rng);
-  rng = splitNode(node.right, depth + 1, maxDepth, minSize, rng);
-
-  return rng;
+  splitNode(node.left, depth + 1, maxDepth, minSize, rng);
+  splitNode(node.right, depth + 1, maxDepth, minSize, rng);
 }
 
 function placeRooms(
@@ -142,26 +131,24 @@ function placeRooms(
   tiles: TileType[][],
   minSize: number,
   maxSize: number,
-  rng: PRNGState,
-): PRNGState {
+  rng: Rng,
+): void {
   if (node.left && node.right) {
-    rng = placeRooms(node.left, rooms, tiles, minSize, maxSize, rng);
-    rng = placeRooms(node.right, rooms, tiles, minSize, maxSize, rng);
-    return rng;
+    placeRooms(node.left, rooms, tiles, minSize, maxSize, rng);
+    placeRooms(node.right, rooms, tiles, minSize, maxSize, rng);
+    return;
   }
 
   // Leaf node: place a room
   const maxW = Math.min(maxSize, node.w - 1);
   const maxH = Math.min(maxSize, node.h - 1);
 
-  if (maxW < minSize || maxH < minSize) return rng;
+  if (maxW < minSize || maxH < minSize) return;
 
-  let roomW: number, roomH: number, roomX: number, roomY: number;
-
-  [roomW, rng] = randomInt(rng, minSize, maxW);
-  [roomH, rng] = randomInt(rng, minSize, maxH);
-  [roomX, rng] = randomInt(rng, node.x, node.x + node.w - roomW - 1);
-  [roomY, rng] = randomInt(rng, node.y, node.y + node.h - roomH - 1);
+  const roomW = rng.int(minSize, maxW);
+  const roomH = rng.int(minSize, maxH);
+  const roomX = rng.int(node.x, node.x + node.w - roomW - 1);
+  const roomY = rng.int(node.y, node.y + node.h - roomH - 1);
 
   const room: Room = { x: roomX, y: roomY, w: roomW, h: roomH };
   node.room = room;
@@ -169,8 +156,6 @@ function placeRooms(
 
   // Carve room
   carveRoom(tiles, room);
-
-  return rng;
 }
 
 /**

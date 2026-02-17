@@ -34,56 +34,41 @@ import {
   consumeCombo,
 } from "../../runtime/input/index.ts";
 
-import { createGame, hud } from "../../runtime/game/index.ts";
+import {
+  createGame, hud,
+  createPlatformerState, platformerMove, platformerJump, platformerStep,
+} from "../../runtime/game/index.ts";
+import type { PlatformerState, Platform as PlatPlatform } from "../../runtime/game/index.ts";
 
 // --- Game Constants ---
-const GRAVITY = 800;
-const JUMP_SPEED = -350;
-const MOVE_SPEED = 200;
 const GROUND_Y = 450;
 const PLATFORM_H = 20;
+const PLAYER_W = 32;
+const PLAYER_H = 32;
+
+const PLAT_CONFIG = {
+  gravity: 800,
+  jumpForce: -350,
+  walkSpeed: 200,
+  playerWidth: PLAYER_W,
+  playerHeight: PLAYER_H,
+};
 
 // --- State ---
-interface Player {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  grounded: boolean;
-  facing: number; // 1 or -1
-  width: number;
-  height: number;
-}
-
-interface Platform {
-  x: number;
-  y: number;
-  w: number;
-}
-
 interface Coin {
   x: number;
   y: number;
   collected: boolean;
 }
 
-let player: Player = {
-  x: 100,
-  y: 400,
-  vx: 0,
-  vy: 0,
-  grounded: false,
-  facing: 1,
-  width: 32,
-  height: 32,
-};
+let pState: PlatformerState = createPlatformerState(100, 400);
 
-const platforms: Platform[] = [
-  { x: 0, y: GROUND_Y, w: 800 },
-  { x: 200, y: 350, w: 120 },
-  { x: 400, y: 280, w: 120 },
-  { x: 600, y: 210, w: 120 },
-  { x: 150, y: 150, w: 150 },
+const platforms: PlatPlatform[] = [
+  { x: 0, y: GROUND_Y, w: 800, h: PLATFORM_H },
+  { x: 200, y: 350, w: 120, h: PLATFORM_H },
+  { x: 400, y: 280, w: 120, h: PLATFORM_H },
+  { x: 600, y: 210, w: 120, h: PLATFORM_H },
+  { x: 150, y: 150, w: 150, h: PLATFORM_H },
 ];
 
 const coins: Coin[] = [
@@ -124,14 +109,11 @@ const game = createGame({
 });
 
 game.state({
-  get: () => ({ player, score, coins, showRebind }),
+  get: () => ({ player: pState, score, coins, showRebind }),
   set: () => {},
   actions: {
     jump: { description: "Make player jump", handler: (s: any) => {
-      if (player.grounded) {
-        player.vy = JUMP_SPEED;
-        player.grounded = false;
-      }
+      pState = platformerJump(pState, PLAT_CONFIG);
       return s;
     }},
     toggleRebind: { description: "Toggle rebind screen", handler: (s: any) => {
@@ -159,20 +141,20 @@ game.onFrame((ctx) => {
     consumeCombo(buffer, dashCombo);
     comboTriggered = true;
     comboTimer = 1.0;
-    player.vx = player.facing * 600;
+    pState = { ...pState, vx: (pState.facingRight ? 1 : -1) * 600 };
   }
 
   if (comboTimer > 0) comboTimer -= dt;
 
   // --- Movement ---
-  let moveX = 0;
-  if (isActionDown("moveLeft", inputMap)) moveX -= 1;
-  if (isActionDown("moveRight", inputMap)) moveX += 1;
+  let moveX: -1 | 0 | 1 = 0;
+  if (isActionDown("moveLeft", inputMap)) moveX = -1;
+  if (isActionDown("moveRight", inputMap)) moveX = 1;
 
   // Also blend gamepad analog stick (gives smoother control)
   const stickX = getGamepadAxis("LeftStickX");
   if (Math.abs(stickX) > 0.3) {
-    moveX = stickX;
+    moveX = stickX > 0 ? 1 : -1;
   }
 
   // Touch movement (left half = left, right half = right)
@@ -180,53 +162,31 @@ game.onFrame((ctx) => {
     const touch = getTouchPosition(0);
     if (touch.x < vpw / 3) moveX = -1;
     else if (touch.x > vpw * 2 / 3) moveX = 1;
-    else if (player.grounded) {
+    else {
       // Touch center = jump
-      player.vy = JUMP_SPEED;
-      player.grounded = false;
+      pState = platformerJump(pState, PLAT_CONFIG);
     }
   }
 
-  player.vx = moveX * MOVE_SPEED;
-  if (moveX > 0) player.facing = 1;
-  if (moveX < 0) player.facing = -1;
+  pState = platformerMove(pState, moveX, false, PLAT_CONFIG);
 
   // Jump
-  if (isActionPressed("jump", inputMap) && player.grounded) {
-    player.vy = JUMP_SPEED;
-    player.grounded = false;
+  if (isActionPressed("jump", inputMap)) {
+    pState = platformerJump(pState, PLAT_CONFIG);
   }
 
-  // Physics
-  player.vy += GRAVITY * dt;
-  player.x += player.vx * dt;
-  player.y += player.vy * dt;
-
-  // Platform collision
-  player.grounded = false;
-  for (const plat of platforms) {
-    if (
-      player.x + player.width / 2 > plat.x &&
-      player.x - player.width / 2 < plat.x + plat.w &&
-      player.y + player.height > plat.y &&
-      player.y + player.height < plat.y + PLATFORM_H + player.vy * dt + 5 &&
-      player.vy >= 0
-    ) {
-      player.y = plat.y - player.height;
-      player.vy = 0;
-      player.grounded = true;
-    }
-  }
+  // Physics + platform collision
+  pState = platformerStep(pState, dt, platforms, PLAT_CONFIG);
 
   // Clamp to screen
-  if (player.x < 0) player.x = 0;
-  if (player.x > vpw - player.width) player.x = vpw - player.width;
+  if (pState.x < 0) pState = { ...pState, x: 0, vx: 0 };
+  if (pState.x > vpw - PLAYER_W) pState = { ...pState, x: vpw - PLAYER_W, vx: 0 };
 
   // Coin collection
   for (const coin of coins) {
     if (coin.collected) continue;
-    const dx = player.x + player.width / 2 - coin.x;
-    const dy = player.y + player.height / 2 - coin.y;
+    const dx = pState.x + PLAYER_W / 2 - coin.x;
+    const dy = pState.y + PLAYER_H / 2 - coin.y;
     if (Math.sqrt(dx * dx + dy * dy) < 24) {
       coin.collected = true;
       score += 10;
@@ -252,11 +212,11 @@ game.onFrame((ctx) => {
 
   // Player
   const flashColor = comboTimer > 0 ? 0.5 + Math.sin(comboTimer * 20) * 0.5 : 0;
-  drawSprite(playerTex, player.x, player.y, player.width, player.height, 2, {
+  drawSprite(playerTex, pState.x, pState.y, PLAYER_W, PLAYER_H, 2, {
     tintR: 1,
     tintG: comboTimer > 0 ? flashColor : 1,
     tintB: comboTimer > 0 ? flashColor : 1,
-    flipX: player.facing < 0,
+    flipX: !pState.facingRight,
   });
 
   // --- HUD ---
@@ -271,7 +231,7 @@ game.onFrame((ctx) => {
 
   if (comboTriggered && comboTimer > 0) {
     // "DASH!" is world-space text above the player, not HUD
-    drawText("DASH!", player.x - 10, player.y - 20, {
+    drawText("DASH!", pState.x - 10, pState.y - 20, {
       font,
       scale: 2,
       tint: { r: 1, g: 0.8, b: 0.2, a: 1 },

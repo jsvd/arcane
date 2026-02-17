@@ -41,17 +41,14 @@ import {
 } from "../../runtime/ui/index.ts";
 import type { ButtonState } from "../../runtime/ui/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
-import { captureInput, autoUpdateButton } from "../../runtime/game/index.ts";
+import { captureInput, autoUpdateButton, hud } from "../../runtime/game/index.ts";
+import { createRng } from "../../runtime/state/index.ts";
 
 // --- Shared transition config ---
 const FADE: TransitionConfig = { type: "fade", duration: 0.4 };
 
-// --- Simple PRNG for target placement ---
-let rngState = 12345;
-function nextRandom(): number {
-  rngState = (rngState * 1664525 + 1013904223) & 0x7fffffff;
-  return rngState / 0x7fffffff;
-}
+// --- Deterministic PRNG for target placement ---
+let rng = createRng(12345);
 
 // --- Persistence setup ---
 configureSaveSystem({ storage: createFileStorage(), version: 1 });
@@ -191,7 +188,7 @@ const MenuScene = createScene<MenuState>({
 
 function activateMenuItem(action: string, ctx: SceneContext): void {
   if (action === "new") {
-    rngState = Date.now() & 0x7fffffff;
+    rng = createRng(Date.now() & 0x7fffffff);
     ctx.replace(createSceneInstance(GameplayScene), FADE);
   } else if (action === "continue") {
     const result = loadGame<GameplayState>("gameplay");
@@ -222,13 +219,13 @@ function createGameplayState(): GameplayState {
 }
 
 function spawnTarget(vpW: number, vpH: number): Target {
-  const size = 30 + nextRandom() * 30;
+  const size = 30 + rng.float() * 30;
   return {
-    x: 60 + nextRandom() * (vpW - 120),
-    y: 80 + nextRandom() * (vpH - 160),
+    x: 60 + rng.float() * (vpW - 120),
+    y: 80 + rng.float() * (vpH - 160),
     size,
     timer: 0,
-    maxTimer: 1.5 + nextRandom() * 2,
+    maxTimer: 1.5 + rng.float() * 2,
   };
 }
 
@@ -417,10 +414,7 @@ const PauseScene = createScene<PauseState>({
   },
   onRender: (state) => {
     const vp = getViewportSize();
-    drawRect(0, 0, vp.width, vp.height, {
-      color: withAlpha(Colors.BLACK, 0.6),
-      layer: 100, screenSpace: true,
-    });
+    hud.overlay(withAlpha(Colors.BLACK, 0.6), { layer: 100 });
     const pw = 220;
     const ph = 160;
     const px = (vp.width - pw) / 2;
@@ -502,7 +496,7 @@ const GameOverScene = createScene<GameOverState>({
     if (state.menuBtn.hovered && goInput.mouseDown) sel = 1;
 
     if (state.playAgainBtn.clicked) {
-      rngState = Date.now() & 0x7fffffff;
+      rng = createRng(Date.now() & 0x7fffffff);
       ctx.replace(createSceneInstance(GameplayScene), FADE);
     }
     if (state.menuBtn.clicked) {

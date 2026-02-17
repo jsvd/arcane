@@ -22,8 +22,9 @@ import {
   getMouseWorldPosition,
   getViewportSize,
 } from "../../runtime/rendering/index.ts";
-import { Colors, HUDLayout, rgb } from "../../runtime/ui/index.ts";
+import { Colors, HUDLayout, rgb, drawCircle } from "../../runtime/ui/index.ts";
 import { createGame, drawColorSprite, hud } from "../../runtime/game/index.ts";
+import { createRng } from "../../runtime/state/index.ts";
 import {
   createPhysicsWorld,
   stepPhysics,
@@ -46,6 +47,9 @@ const COL_PIVOT = rgb(200, 200, 50);
 const COL_ROPE = rgb(100, 60, 40);
 const COL_SLEEP = rgb(100, 100, 120);
 const COL_BG = rgb(25, 25, 35);
+
+// Deterministic PRNG for spawn sizing
+const rng = createRng(42);
 
 // Body tracking
 type TrackedBody = {
@@ -104,8 +108,8 @@ function setupWorld(): void {
 }
 
 function spawnBox(x: number, y: number): void {
-  const halfW = 15 + Math.random() * 15;
-  const halfH = 15 + Math.random() * 15;
+  const halfW = 15 + rng.float() * 15;
+  const halfH = 15 + rng.float() * 15;
   const id = createBody({
     type: "dynamic",
     shape: { type: "aabb", halfW, halfH },
@@ -118,7 +122,7 @@ function spawnBox(x: number, y: number): void {
   bodyCount++;
 }
 
-function spawnBall(x: number, y: number, radius = 10 + Math.random() * 10): BodyId {
+function spawnBall(x: number, y: number, radius = 10 + rng.float() * 10): BodyId {
   const id = createBody({
     type: "dynamic",
     shape: { type: "circle", radius },
@@ -134,9 +138,9 @@ function spawnBall(x: number, y: number, radius = 10 + Math.random() * 10): Body
 
 function spawnCluster(x: number, y: number): void {
   for (let i = 0; i < 5; i++) {
-    const ox = (Math.random() - 0.5) * 30;
-    const oy = (Math.random() - 0.5) * 30;
-    spawnBall(x + ox, y + oy, 6 + Math.random() * 6);
+    const ox = (rng.float() - 0.5) * 30;
+    const oy = (rng.float() - 0.5) * 30;
+    spawnBall(x + ox, y + oy, 6 + rng.float() * 6);
   }
 }
 
@@ -316,7 +320,7 @@ game.onFrame((ctx) => {
   // Space: fast ball upward
   if (isKeyPressed("Space")) {
     const ballId = spawnBall(VPW / 2, VPH - 60, 8);
-    setBodyVelocity(ballId, (Math.random() - 0.5) * 100, -600);
+    setBodyVelocity(ballId, (rng.float() - 0.5) * 100, -600);
   }
 
   // Step physics
@@ -336,16 +340,8 @@ game.onFrame((ctx) => {
     const col = bodyColor(tracked, bs.sleeping);
 
     if (tracked.radius) {
-      // Circle: draw as square centered on position
-      const r = tracked.radius;
-      drawColorSprite({
-        color: col,
-        x: bs.x - r,
-        y: bs.y - r,
-        w: r * 2,
-        h: r * 2,
-        layer: 2,
-      });
+      // Circle: proper circular rendering
+      drawCircle(bs.x, bs.y, tracked.radius, { color: col, layer: 2 });
     } else {
       // AABB: draw from center
       drawColorSprite({

@@ -191,8 +191,7 @@ const bfrpgAttackRule = rule<BFRPGCombatState>("attack")
     if (!attacker || !target || !target.alive) return state;
 
     // Roll to-hit
-    const [d20Roll, rng1] = toHitRoll(state.rng);
-    let currentRng = rng1;
+    const d20Roll = toHitRoll(state.rng);
 
     // Calculate modifiers
     const strMod = abilityModifier(attacker.strength);
@@ -201,7 +200,7 @@ const bfrpgAttackRule = rule<BFRPGCombatState>("attack")
     // Check if hit
     const hit = checkHit(d20Roll, attacker.baseAttackBonus, strMod, effectiveAC);
 
-    let s: BFRPGCombatState = { ...state, rng: currentRng };
+    let s: BFRPGCombatState = state;
 
     if (!hit) {
       // Miss
@@ -214,8 +213,7 @@ const bfrpgAttackRule = rule<BFRPGCombatState>("attack")
     }
 
     // Hit - roll damage
-    const [damage, rng2] = rollDamage(currentRng, attacker.damageDice);
-    currentRng = rng2;
+    const damage = rollDamage(state.rng, attacker.damageDice);
 
     const newHp = Math.max(0, target.hp - damage);
     const killed = newHp <= 0;
@@ -225,7 +223,7 @@ const bfrpgAttackRule = rule<BFRPGCombatState>("attack")
       alive: !killed,
     });
 
-    s = { ...s, combatants, rng: currentRng };
+    s = { ...s, combatants };
     s = addLog(
       s,
       `${attacker.name} hits ${target.name} for ${damage} damage!${killed ? ` ${target.name} falls!` : ""}`,

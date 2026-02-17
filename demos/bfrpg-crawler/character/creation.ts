@@ -4,8 +4,7 @@
  * @source Basic Fantasy Role-Playing Game, 4th Edition
  */
 
-import type { PRNGState } from "../../../runtime/state/index.ts";
-import { rollDice } from "../../../runtime/state/index.ts";
+import type { Rng } from "../../../runtime/state/index.ts";
 import type { AbilityScores, RaceName } from "./abilities.ts";
 import {
   abilityModifier,
@@ -80,13 +79,12 @@ export function calculateBAB(characterClass: ClassName, level: number): number {
  * Minimum 1 HP per level
  */
 function rollHitPoints(
-  rng: PRNGState,
+  rng: Rng,
   hitDie: number,
   conMod: number,
-): [number, PRNGState] {
-  const [roll, next] = rollDice(rng, `1d${hitDie}`);
-  const hp = Math.max(1, roll + conMod);
-  return [hp, next];
+): number {
+  const roll = rng.roll(`1d${hitDie}`);
+  return Math.max(1, roll + conMod);
 }
 
 /** Character creation options */
@@ -102,12 +100,11 @@ export type CharacterOptions = Readonly<{
 
 /**
  * Create a new character
- * Returns [character, newRng]
  */
 export function createCharacter(
-  rng: PRNGState,
+  rng: Rng,
   options: CharacterOptions,
-): [Character, PRNGState] {
+): Character {
   const { name, race, class: characterClass, level = 1 } = options;
 
   const classData = classes[characterClass];
@@ -116,14 +113,11 @@ export function createCharacter(
   }
 
   // Roll or use provided abilities
-  let current = rng;
   let baseAbilities: AbilityScores;
   if (options.abilities) {
     baseAbilities = options.abilities;
   } else {
-    const [rolled, next] = rollAbilities(current);
-    baseAbilities = rolled;
-    current = next;
+    baseAbilities = rollAbilities(rng);
   }
 
   // Apply racial modifiers
@@ -131,27 +125,23 @@ export function createCharacter(
 
   // Roll HP
   const conMod = abilityModifier(abilities.constitution);
-  const [maxHp, nextRng] = rollHitPoints(current, classData.hitDie, conMod);
-  current = nextRng;
+  const maxHp = rollHitPoints(rng, classData.hitDie, conMod);
 
   // Calculate derived stats
   const baseAttackBonus = calculateBAB(characterClass, level);
   const equipment = [...classData.startingEquipment];
   const armorClass = calculateAC(abilities, equipment);
 
-  return [
-    {
-      name,
-      race,
-      class: characterClass,
-      level,
-      abilities,
-      maxHp,
-      currentHp: maxHp,
-      armorClass,
-      baseAttackBonus,
-      equipment,
-    },
-    current,
-  ];
+  return {
+    name,
+    race,
+    class: characterClass,
+    level,
+    abilities,
+    maxHp,
+    currentHp: maxHp,
+    armorClass,
+    baseAttackBonus,
+    equipment,
+  };
 }
