@@ -22,7 +22,7 @@ import {
   getMouseWorldPosition,
   getViewportSize,
 } from "../../runtime/rendering/index.ts";
-import { Colors, HUDLayout, rgb, drawCircle } from "../../runtime/ui/index.ts";
+import { Colors, HUDLayout, rgb } from "../../runtime/ui/index.ts";
 import { createGame, drawColorSprite, hud } from "../../runtime/game/index.ts";
 import { createRng } from "../../runtime/state/index.ts";
 import {
@@ -340,8 +340,16 @@ game.onFrame((ctx) => {
     const col = bodyColor(tracked, bs.sleeping);
 
     if (tracked.radius) {
-      // Circle: proper circular rendering
-      drawCircle(bs.x, bs.y, tracked.radius, { color: col, layer: 2 });
+      // Circle: draw as square centered on position
+      const r = tracked.radius;
+      drawColorSprite({
+        color: col,
+        x: bs.x - r,
+        y: bs.y - r,
+        w: r * 2,
+        h: r * 2,
+        layer: 2,
+      });
     } else {
       // AABB: draw from center
       drawColorSprite({
