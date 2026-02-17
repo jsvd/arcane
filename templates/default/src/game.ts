@@ -1,50 +1,31 @@
 /**
  * {{PROJECT_NAME}} - Game Logic
  *
- * This file contains your game's pure logic functions.
- * All functions are pure: state in, state out.
+ * Pure functions only: state in, state out. No rendering imports.
+ * This file runs headlessly in tests — keep it free of side effects.
  */
 
-import { seed } from "@arcane/runtime/state";
-import type { PRNGState } from "@arcane/runtime/state";
+import { createRng } from "@arcane/runtime/state";
+import type { Rng } from "@arcane/runtime/state";
 
 // --- Types ---
 
 export type GameState = {
-  viewportW: number;
-  viewportH: number;
-  player: { x: number; y: number };
-  score: number;
-  rng: PRNGState;
+  rng: Rng;
+  // Add your game state here
 };
 
 // --- Functions ---
 
-/**
- * Create initial game state.
- * Accepts viewport dimensions to build resolution-independent games.
- */
-export function createGame(
-  seedValue: number,
-  viewportW = 800,
-  viewportH = 600,
-): GameState {
+/** Create initial game state. */
+export function initGame(seedValue: number): GameState {
   return {
-    viewportW,
-    viewportH,
-    player: { x: 0, y: 0 }, // Start at world origin
-    score: 0,
-    rng: seed(seedValue),
+    rng: createRng(seedValue),
   };
 }
 
-/** Move the player by a delta. Pure function: returns new state. */
-export function movePlayer(state: GameState, dx: number, dy: number): GameState {
-  return {
-    ...state,
-    player: {
-      x: state.player.x + dx,
-      y: state.player.y + dy,
-    },
-  };
+/** Advance game logic by one tick. Pure function: returns new state. */
+export function tick(state: GameState, _dt: number): GameState {
+  // Update your game logic here
+  return state;
 }

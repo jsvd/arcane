@@ -1,39 +1,44 @@
 /**
  * {{PROJECT_NAME}} - Visual Layer
- * Entry point for `arcane dev`.
+ *
+ * Entry point for `arcane dev`. Handles rendering, input, camera, audio.
+ * Game logic lives in game.ts — import pure functions from there.
  */
 
 import { createGame, drawColorSprite, hud } from "@arcane/runtime/game";
-import { followTargetSmooth, getViewportSize } from "@arcane/runtime/rendering";
-import { updateTweens } from "@arcane/runtime/tweening";
+import {
+  followTargetSmooth, setCameraBounds, getViewportSize,
+  updateScreenTransition, drawScreenTransition,
+} from "@arcane/runtime/rendering";
+import { updateTweens, getCameraShakeOffset } from "@arcane/runtime/tweening";
 import { updateParticles } from "@arcane/runtime/particles";
-import { updateScreenTransition, drawScreenTransition } from "@arcane/runtime/rendering";
-import { createInputMap, isActionDown } from "@arcane/runtime/input";
+import { createInputMap, isActionDown, isActionPressed } from "@arcane/runtime/input";
 import { rgb } from "@arcane/runtime/ui";
-import { createGame as newGame, movePlayer } from "./game.ts";
+import { initGame, tick } from "./game.ts";
 import type { GameState } from "./game.ts";
 
 // --- Constants ---
 
-const CAMERA_ZOOM = 4.0;
-const MOVE_SPEED = 100; // pixels per second
+const ZOOM = 2.0;
 
 // --- Bootstrap ---
 
-const game = createGame({ name: "{{PROJECT_NAME}}", zoom: CAMERA_ZOOM });
+const game = createGame({ name: "{{PROJECT_NAME}}", zoom: ZOOM });
 
-// Input actions — supports keyboard + gamepad + touch in one place
+const { width: VPW, height: VPH } = getViewportSize();
+
+// Input actions — keyboard + gamepad + touch in one place
 const input = createInputMap({
-  left:  ["ArrowLeft", "a", { type: "gamepadAxis", axis: "LeftStickX", direction: -1 }],
-  right: ["ArrowRight", "d", { type: "gamepadAxis", axis: "LeftStickX", direction: 1 }],
-  up:    ["ArrowUp", "w", { type: "gamepadAxis", axis: "LeftStickY", direction: -1 }],
-  down:  ["ArrowDown", "s", { type: "gamepadAxis", axis: "LeftStickY", direction: 1 }],
+  left:   ["ArrowLeft", "a", { type: "gamepadAxis", axis: "LeftStickX", direction: -1 }],
+  right:  ["ArrowRight", "d", { type: "gamepadAxis", axis: "LeftStickX", direction: 1 }],
+  up:     ["ArrowUp", "w", { type: "gamepadAxis", axis: "LeftStickY", direction: -1 }],
+  down:   ["ArrowDown", "s", { type: "gamepadAxis", axis: "LeftStickY", direction: 1 }],
+  action: ["Space", "Enter", "GamepadA"],
 });
 
 // --- State ---
 
-const { width, height } = getViewportSize();
-let state: GameState = newGame(42, width, height);
+let state: GameState = initGame(42);
 
 game.state<GameState>({
   get: () => state,
@@ -43,49 +48,35 @@ game.state<GameState>({
 // --- Game Loop ---
 
 game.onFrame((ctx) => {
-  // 1. Input — use action map, not raw keys
-  let dx = 0, dy = 0;
-  if (isActionDown("left", input)) dx -= 1;
-  if (isActionDown("right", input)) dx += 1;
-  if (isActionDown("up", input)) dy -= 1;
-  if (isActionDown("down", input)) dy += 1;
+  // 1. Input — use action map (supports keyboard, gamepad, touch)
+  //    isActionDown("left", input)    — held this frame
+  //    isActionPressed("action", input) — just pressed this frame
 
-  // 2. Update (pure functions from game.ts)
-  if (dx !== 0 || dy !== 0) {
-    state = movePlayer(state, dx * MOVE_SPEED * ctx.dt, dy * MOVE_SPEED * ctx.dt);
-  }
+  // 2. Update game logic (pure functions from game.ts)
+  state = tick(state, ctx.dt);
 
-  // 3. Camera — smooth follow with bounds
-  followTargetSmooth(state.player.x, state.player.y, CAMERA_ZOOM, 0.08);
+  // 3. Camera — smooth follow with shake support
+  //    For scrolling worlds, add bounds: setCameraBounds({ minX: 0, minY: 0, maxX: WORLD_W, maxY: WORLD_H });
+  const shake = getCameraShakeOffset();
+  followTargetSmooth(VPW / 2 + shake.x, VPH / 2 + shake.y, ZOOM, 0.08);
 
-  // 4. Update subsystems — always call these, they're no-ops when idle
+  // 4. Subsystem updates — always call, they're no-ops when idle
   updateTweens(ctx.dt);
   updateParticles(ctx.dt);
   updateScreenTransition(ctx.dt);
 
   // 5. Render
-  const groundSize = Math.max(ctx.viewport.width, ctx.viewport.height) / CAMERA_ZOOM;
-  drawColorSprite({
-    color: rgb(80, 80, 80),
-    x: -groundSize / 2,
-    y: -groundSize / 2,
-    w: groundSize,
-    h: groundSize,
-    layer: 0,
-  });
+  //    drawColorSprite({ color: rgb(60, 180, 255), x: 10, y: 10, w: 32, h: 32, layer: 1 });
+  //    drawCircle(x, y, radius, { color: rgb(255, 80, 80) });
+  //    For sprites: loadTexture("player.png") then drawSprite({ textureId, x, y, w, h, layer: 1 });
+  //    For hit effects: impact({ shake: true, flash: true }); — one call, multiple effects
+  //    For particles: createEmitter({ x, y, count: 20, speed: 100 });
 
-  drawColorSprite({
-    color: rgb(60, 180, 255),
-    x: state.player.x - 16,
-    y: state.player.y - 16,
-    w: 32,
-    h: 32,
-    layer: 1,
-  });
-
-  // 6. Transitions overlay (no-op if inactive)
+  // 6. Transitions — no-op if inactive
+  //    Start one with: startScreenTransition("fade", 0.5, {}, () => { /* midpoint */ });
   drawScreenTransition();
 
-  // 7. HUD (screen-space by default)
-  hud.text(`Score: ${state.score}`, 10, 10);
+  // 7. HUD (screen-space, not affected by camera)
+  hud.text("{{PROJECT_NAME}}", 10, 10);
+  hud.text(`${ctx.viewport.width}x${ctx.viewport.height}`, 10, 30, { scale: 0.8 });
 });
