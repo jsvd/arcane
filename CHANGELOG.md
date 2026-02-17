@@ -2,6 +2,11 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.10.2] - 2026-02-17
+
+### Fixed
+- **Radiance GI crash with off-screen occluders/emissives** — negative pixel coordinates in `build_scene_data` were cast from `i32` to `usize` without a lower-bound clamp, wrapping to ~2^64 and causing an index-out-of-bounds panic when any occluder or emissive was positioned left of or above the viewport
+
 ## [0.10.1] - 2026-02-17
 
 ### Added
@@ -13,7 +18,6 @@ All notable changes to Arcane are documented here.
 - 60 new tests (15 rng + 10 shapes + 12 sprite-group + 20 platformer + 3 overlay)
 
 ### Fixed
-- **Radiance GI crash with off-screen occluders/emissives** — negative pixel coordinates in `build_scene_data` were cast from `i32` to `usize` without a lower-bound clamp, wrapping to ~2^64 and causing an index-out-of-bounds panic when any occluder or emissive was positioned left of or above the viewport
 - **Physics: bodies sticking together midair** — velocity clamping had an inverted sign for body A, removing separation velocity instead of approach velocity; overlapping dynamic bodies now correctly push apart
 - **Physics: collision events missed during sub-stepping** — `getContacts()` now accumulates contacts across all 4 sub-steps (de-duplicated by body pair), fixing breakout bricks not popping and similar collision callback issues
 - **Physics: bodies clipping through static ground** — sub-stepping (Box2D v3 approach: 4 sub-steps/frame) with Box2D-standard Baumgarte factor (0.2) and max correction clamping dramatically reduces penetration
