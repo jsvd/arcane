@@ -306,7 +306,7 @@ declare const __reportTest: (
         }
       } catch (e) {
         failed++;
-        const errMsg = e instanceof Error ? e.message : String(e);
+        const errMsg = e instanceof Error ? (e.stack ?? e.message) : String(e);
         if (hasReporter) {
           (globalThis as any).__reportTest(suite.name, test.name, false, errMsg);
         }

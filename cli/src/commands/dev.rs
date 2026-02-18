@@ -490,7 +490,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
         // Poll inspector requests (if inspector is active)
         if let Some(ref rx) = inspector_rx {
             while let Ok((req, resp_tx)) = rx.try_recv() {
-                let response = process_inspector_request(rt, req);
+                let response = process_inspector_request(rt, req, &reload_flag);
                 let _ = resp_tx.send(response);
             }
         }
@@ -498,7 +498,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
         // Poll MCP requests (if MCP server is active)
         if let Some(ref rx) = mcp_rx {
             while let Ok((req, resp_tx)) = rx.try_recv() {
-                let response = process_inspector_request(rt, req);
+                let response = process_inspector_request(rt, req, &reload_flag);
                 let _ = resp_tx.send(response);
             }
         }
@@ -518,6 +518,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
 fn process_inspector_request(
     runtime: &mut ArcaneRuntime,
     req: arcane_core::agent::InspectorRequest,
+    reload_flag: &Arc<AtomicBool>,
 ) -> arcane_core::agent::InspectorResponse {
     use arcane_core::agent::{InspectorRequest, InspectorResponse};
 
@@ -566,6 +567,12 @@ fn process_inspector_request(
             )
         }
         InspectorRequest::Simulate { action } => {
+            if action == "__hot_reload__" {
+                reload_flag.store(true, Ordering::SeqCst);
+                return arcane_core::agent::InspectorResponse::json(
+                    r#"{"ok":true,"reloading":true}"#.into(),
+                );
+            }
             let escaped = escape_js(&action);
             eval_json(
                 runtime,

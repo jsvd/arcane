@@ -32,6 +32,8 @@ let emitterIdCounter = 0;
  * @param config - Emitter configuration describing shape, mode, particle properties, and colors.
  * @returns The created {@link Emitter} instance.
  *
+ * To move the emitter after creation, update `emitter.config.x` and `emitter.config.y`.
+ *
  * @example
  * ```ts
  * const sparks = createEmitter({

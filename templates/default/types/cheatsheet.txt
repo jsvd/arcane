@@ -276,6 +276,11 @@ declare function platformerMove(state: PlatformerState, direction: -1 | 0 | 1, r
 declare function platformerJump(state: PlatformerState, config: PlatformerConfig): PlatformerState;
 declare function platformerStep(state: PlatformerState, dt: number, platforms: Platform[], config: PlatformerConfig): PlatformerState;
 declare function platformerApplyImpulse(state: PlatformerState, vx: number, vy: number): PlatformerState;
+declare function getJumpHeight(config: PlatformerConfig): number;
+declare function getAirtime(config: PlatformerConfig): number;
+declare function getJumpReach(config: PlatformerConfig, running?: boolean): number;
+declare function gridToPlatforms(grid: number[][], tileSize: number, solidTileIds: number[] | Set<number>, startX?: number, startY?: number): Platform[];
+declare function platformsFromTilemap(tilemap: LayeredTilemap, layerName: string, isSolid?: (tileId: number) => boolean, startX?: number, startY?: number): Platform[];
 declare function createSpriteGroup(parts: SpritePart[], baseLayer?: number): SpriteGroup;
 declare function drawSpriteGroup(group: SpriteGroup, x: number, y: number, opts?: SpriteGroupDrawOptions): void;
 declare function getSpritePart(group: SpriteGroup, name: string): SpritePart | undefined;

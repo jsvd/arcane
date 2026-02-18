@@ -19,6 +19,8 @@
  */
 
 import { aabbOverlap } from "../physics/aabb.ts";
+import type { LayeredTilemap } from "../rendering/tilemap.ts";
+import { getLayerTile, getTileProperty } from "../rendering/tilemap.ts";
 
 /** Configuration for the platformer controller. All optional fields have sensible defaults. */
 export type PlatformerConfig = {
@@ -289,4 +291,231 @@ export function platformerApplyImpulse(
     externalVx: state.externalVx + vx,
     externalVy: state.externalVy + vy,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Jump physics helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Maximum jump height on flat ground: h = v^2 / (2g).
+ *
+ * Uses the absolute value of jumpForce and gravity from the config.
+ * Useful for level design: checking whether a gap is clearable.
+ *
+ * @param config - Platformer configuration.
+ * @returns Maximum height in pixels.
+ *
+ * @example
+ * ```ts
+ * const h = getJumpHeight({ playerWidth: 16, playerHeight: 24, gravity: 980, jumpForce: -400 });
+ * // h ≈ 81.6 pixels
+ * ```
+ */
+export function getJumpHeight(config: PlatformerConfig): number {
+  const v = Math.abs(config.jumpForce ?? -400);
+  const g = Math.abs(config.gravity ?? 980);
+  if (g === 0) return Infinity;
+  return (v * v) / (2 * g);
+}
+
+/**
+ * Total airtime for a jump on flat ground: t = 2v / g.
+ *
+ * This is the time from leaving the ground to landing back at the same height.
+ * Assumes no terminal velocity capping.
+ *
+ * @param config - Platformer configuration.
+ * @returns Airtime in seconds.
+ *
+ * @example
+ * ```ts
+ * const t = getAirtime({ playerWidth: 16, playerHeight: 24, gravity: 980, jumpForce: -400 });
+ * // t ≈ 0.816 seconds
+ * ```
+ */
+export function getAirtime(config: PlatformerConfig): number {
+  const v = Math.abs(config.jumpForce ?? -400);
+  const g = Math.abs(config.gravity ?? 980);
+  if (g === 0) return Infinity;
+  return (2 * v) / g;
+}
+
+/**
+ * Horizontal distance covered during a full jump on flat ground.
+ *
+ * reach = speed * airtime, where speed is walkSpeed or runSpeed.
+ *
+ * @param config - Platformer configuration.
+ * @param running - If true, use runSpeed instead of walkSpeed. Default: false.
+ * @returns Horizontal jump reach in pixels.
+ *
+ * @example
+ * ```ts
+ * const reach = getJumpReach({ playerWidth: 16, playerHeight: 24, gravity: 980, jumpForce: -400, walkSpeed: 160, runSpeed: 280 });
+ * // walking: 160 * 0.816 ≈ 130.6 pixels
+ * const runReach = getJumpReach(config, true);
+ * // running: 280 * 0.816 ≈ 228.6 pixels
+ * ```
+ */
+export function getJumpReach(config: PlatformerConfig, running?: boolean): number {
+  const speed = running ? (config.runSpeed ?? 280) : (config.walkSpeed ?? 160);
+  return speed * getAirtime(config);
+}
+
+// ---------------------------------------------------------------------------
+// Grid-to-platforms utility
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert a 2D number grid into merged Platform rectangles.
+ *
+ * Uses greedy rectangle merging: scans rows left-to-right to find horizontal
+ * spans of consecutive solid tiles, then extends each span downward as far as
+ * possible. Produces fewer, larger rectangles than one-per-tile.
+ *
+ * @param grid - 2D array of tile IDs (grid[row][col]). Row 0 = top.
+ * @param tileSize - Size of each tile in world units.
+ * @param solidTileIds - Tile IDs considered solid. 0 is typically empty.
+ * @param startX - World X offset for the grid origin. Default: 0.
+ * @param startY - World Y offset for the grid origin. Default: 0.
+ * @returns Array of merged Platform rectangles in world coordinates.
+ *
+ * @example
+ * ```ts
+ * const grid = [
+ *   [0, 0, 0, 0],
+ *   [1, 1, 0, 0],
+ *   [1, 1, 1, 0],
+ * ];
+ * const platforms = gridToPlatforms(grid, 16, [1]);
+ * // Produces merged rectangles instead of one per tile
+ * ```
+ */
+export function gridToPlatforms(
+  grid: number[][],
+  tileSize: number,
+  solidTileIds: number[] | Set<number>,
+  startX: number = 0,
+  startY: number = 0,
+): Platform[] {
+  const rows = grid.length;
+  if (rows === 0) return [];
+  const cols = grid[0].length;
+  if (cols === 0) return [];
+
+  const solidSet = solidTileIds instanceof Set ? solidTileIds : new Set(solidTileIds);
+  const visited: boolean[][] = [];
+  for (let r = 0; r < rows; r++) {
+    visited[r] = new Array(cols).fill(false);
+  }
+
+  const platforms: Platform[] = [];
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (visited[r][c]) continue;
+      if (!solidSet.has(grid[r][c])) continue;
+
+      // Find horizontal span starting at (r, c)
+      let spanEnd = c;
+      while (spanEnd + 1 < cols && !visited[r][spanEnd + 1] && solidSet.has(grid[r][spanEnd + 1])) {
+        spanEnd++;
+      }
+
+      // Extend span downward
+      let rowEnd = r;
+      outer: while (rowEnd + 1 < rows) {
+        for (let cc = c; cc <= spanEnd; cc++) {
+          if (visited[rowEnd + 1][cc] || !solidSet.has(grid[rowEnd + 1][cc])) {
+            break outer;
+          }
+        }
+        rowEnd++;
+      }
+
+      // Mark cells as visited
+      for (let rr = r; rr <= rowEnd; rr++) {
+        for (let cc = c; cc <= spanEnd; cc++) {
+          visited[rr][cc] = true;
+        }
+      }
+
+      // Convert to world coordinates
+      platforms.push({
+        x: startX + c * tileSize,
+        y: startY + r * tileSize,
+        w: (spanEnd - c + 1) * tileSize,
+        h: (rowEnd - r + 1) * tileSize,
+      });
+    }
+  }
+
+  return platforms;
+}
+
+/**
+ * Read a tilemap layer and convert solid tiles to Platform rectangles.
+ *
+ * Extracts the tile grid from a LayeredTilemap layer, determines which tiles
+ * are solid, and delegates to gridToPlatforms for greedy merging.
+ *
+ * By default, a tile is considered solid if getTileProperty(tileId, "solid")
+ * returns a truthy value. Pass a custom isSolid function to override.
+ *
+ * @param tilemap - A LayeredTilemap from the rendering module.
+ * @param layerName - Name of the layer to read.
+ * @param isSolid - Optional predicate: returns true if a tile ID is solid.
+ *   Default checks getTileProperty(tileId, "solid").
+ * @param startX - World X offset. Default: 0.
+ * @param startY - World Y offset. Default: 0.
+ * @returns Array of merged Platform rectangles in world coordinates.
+ *
+ * @example
+ * ```ts
+ * // Using tile properties (define solid tiles beforehand)
+ * defineTileProperties(1, { solid: true });
+ * defineTileProperties(2, { solid: true });
+ * const platforms = platformsFromTilemap(myMap, "collision");
+ *
+ * // Using a custom predicate
+ * const platforms = platformsFromTilemap(myMap, "ground", (id) => id >= 1 && id <= 10);
+ * ```
+ */
+export function platformsFromTilemap(
+  tilemap: LayeredTilemap,
+  layerName: string,
+  isSolid?: (tileId: number) => boolean,
+  startX: number = 0,
+  startY: number = 0,
+): Platform[] {
+  const layer = tilemap.layers.get(layerName);
+  if (!layer) return [];
+
+  const { width, height, tileSize } = tilemap;
+
+  // Build grid from tilemap layer
+  const grid: number[][] = [];
+  for (let r = 0; r < height; r++) {
+    grid[r] = [];
+    for (let c = 0; c < width; c++) {
+      grid[r][c] = getLayerTile(tilemap, layerName, c, r);
+    }
+  }
+
+  // Determine solid set
+  const solidCheck = isSolid ?? ((tileId: number) => !!getTileProperty(tileId, "solid"));
+
+  // Collect all unique non-zero tile IDs and filter by solidCheck
+  const solidIds = new Set<number>();
+  for (let r = 0; r < height; r++) {
+    for (let c = 0; c < width; c++) {
+      const id = grid[r][c];
+      if (id !== 0 && solidCheck(id)) {
+        solidIds.add(id);
+      }
+    }
+  }
+
+  return gridToPlatforms(grid, tileSize, solidIds, startX, startY);
 }

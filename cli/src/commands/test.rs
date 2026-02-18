@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use arcane_core::scripting::{run_test_file_with_import_map, TestSummary};
+use arcane_core::scripting::{run_test_file_with_import_map, TestResult, TestSummary};
 
 use super::{create_import_map, type_check};
 
@@ -32,9 +32,11 @@ pub fn run(path: Option<String>) -> anyhow::Result<()> {
         total: 0,
         passed: 0,
         failed: 0,
+        results: Vec::new(),
     };
 
     let mut any_failure = false;
+    let mut all_failures: Vec<TestResult> = Vec::new();
 
     for file in &test_files {
         let display = file
@@ -52,6 +54,11 @@ pub fn run(path: Option<String>) -> anyhow::Result<()> {
                 if summary.failed > 0 {
                     any_failure = true;
                     println!("FAIL ({} passed, {} failed)", summary.passed, summary.failed);
+                    for result in &summary.results {
+                        if !result.passed {
+                            all_failures.push(result.clone());
+                        }
+                    }
                 } else {
                     println!("ok ({} tests)", summary.total);
                 }
@@ -60,6 +67,20 @@ pub fn run(path: Option<String>) -> anyhow::Result<()> {
                 any_failure = true;
                 println!("ERROR: {e}");
             }
+        }
+    }
+
+    // Print failure details
+    if !all_failures.is_empty() {
+        println!("\n--- Failures ---\n");
+        for failure in &all_failures {
+            println!("\x1b[1;31mFAIL\x1b[0m {} > {}", failure.suite, failure.name);
+            if let Some(ref error) = failure.error {
+                for line in error.lines() {
+                    println!("  {line}");
+                }
+            }
+            println!();
         }
     }
 

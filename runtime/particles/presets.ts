@@ -20,7 +20,14 @@ import type { EmitterConfig, Emitter } from "./types.ts";
 import type { Color } from "../ui/types.ts";
 import { createEmitter, addAffector } from "./emitter.ts";
 
-/** Options for quick particle functions. Unset fields use preset defaults. */
+/**
+ * Options for quick particle functions. Unset fields use preset defaults.
+ *
+ * This is a simplified interface — not the same as {@link EmitterConfig}.
+ * Use the `speed` multiplier (not `velocityX`/`velocityY` ranges directly).
+ * For full control over emitter shape, affectors, and all config fields,
+ * use {@link createEmitter} directly.
+ */
 export type ParticleOptions = {
   /** Number of particles (burst) or rate (stream). */
   count?: number;

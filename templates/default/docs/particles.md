@@ -82,7 +82,8 @@ createEmitter({
 ```typescript
 createEmitter({
   shape: "area", x: player.x - 8, y: player.y + player.h,
-  shapeParams: { width: 16, height: 2 }, mode: "burst", burstCount: 6,
+  shapeParams: { width: 16, height: 2 },
+  mode: "burst", burstCount: 6,
   lifetime: [0.2, 0.4],
   velocityX: [-40, 40], velocityY: [-30, -10],
   startColor: { r: 0.6, g: 0.5, b: 0.5, a: 0.6 },

@@ -5,6 +5,10 @@ import {
   platformerJump,
   platformerStep,
   platformerApplyImpulse,
+  getJumpHeight,
+  getAirtime,
+  getJumpReach,
+  gridToPlatforms,
 } from "./platformer.ts";
 import type { PlatformerConfig, PlatformerState, Platform } from "./platformer.ts";
 
@@ -417,5 +421,315 @@ describe("platformer", () => {
       Math.abs(s.externalVx) < 1,
       `externalVx should have decayed to near zero, got ${s.externalVx}`,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Jump physics helpers
+// ---------------------------------------------------------------------------
+
+describe("jump physics helpers", () => {
+  const PHYSICS_CONFIG: PlatformerConfig = {
+    playerWidth: 16,
+    playerHeight: 24,
+    gravity: 980,
+    jumpForce: -400,
+    walkSpeed: 160,
+    runSpeed: 280,
+  };
+
+  // 28
+  it("getJumpHeight computes h = v^2 / (2g)", () => {
+    const h = getJumpHeight(PHYSICS_CONFIG);
+    // 400^2 / (2 * 980) = 160000 / 1960 ≈ 81.632...
+    const expected = (400 * 400) / (2 * 980);
+    assert.ok(Math.abs(h - expected) < 0.001, `Expected ~${expected}, got ${h}`);
+  });
+
+  // 29
+  it("getAirtime computes t = 2v / g", () => {
+    const t = getAirtime(PHYSICS_CONFIG);
+    // 2 * 400 / 980 ≈ 0.8163...
+    const expected = (2 * 400) / 980;
+    assert.ok(Math.abs(t - expected) < 0.001, `Expected ~${expected}, got ${t}`);
+  });
+
+  // 30
+  it("getJumpReach computes reach = walkSpeed * airtime", () => {
+    const reach = getJumpReach(PHYSICS_CONFIG);
+    const airtime = (2 * 400) / 980;
+    const expected = 160 * airtime;
+    assert.ok(Math.abs(reach - expected) < 0.001, `Expected ~${expected}, got ${reach}`);
+  });
+
+  // 31
+  it("getJumpReach with running uses runSpeed", () => {
+    const reach = getJumpReach(PHYSICS_CONFIG, true);
+    const airtime = (2 * 400) / 980;
+    const expected = 280 * airtime;
+    assert.ok(Math.abs(reach - expected) < 0.001, `Expected ~${expected}, got ${reach}`);
+  });
+
+  // 32
+  it("getJumpHeight uses defaults when config fields are omitted", () => {
+    const minConfig: PlatformerConfig = { playerWidth: 16, playerHeight: 24 };
+    const h = getJumpHeight(minConfig);
+    // defaults: jumpForce=-400, gravity=980
+    const expected = (400 * 400) / (2 * 980);
+    assert.ok(Math.abs(h - expected) < 0.001, `Expected ~${expected}, got ${h}`);
+  });
+
+  // 33
+  it("getAirtime uses defaults when config fields are omitted", () => {
+    const minConfig: PlatformerConfig = { playerWidth: 16, playerHeight: 24 };
+    const t = getAirtime(minConfig);
+    const expected = (2 * 400) / 980;
+    assert.ok(Math.abs(t - expected) < 0.001, `Expected ~${expected}, got ${t}`);
+  });
+
+  // 34
+  it("getJumpReach uses defaults when config fields are omitted", () => {
+    const minConfig: PlatformerConfig = { playerWidth: 16, playerHeight: 24 };
+    const reach = getJumpReach(minConfig);
+    const expected = 160 * (2 * 400) / 980;
+    assert.ok(Math.abs(reach - expected) < 0.001, `Expected ~${expected}, got ${reach}`);
+  });
+
+  // 35
+  it("getJumpHeight returns Infinity for zero gravity", () => {
+    const cfg: PlatformerConfig = { playerWidth: 16, playerHeight: 24, gravity: 0 };
+    assert.equal(getJumpHeight(cfg), Infinity);
+  });
+
+  // 36
+  it("getAirtime returns Infinity for zero gravity", () => {
+    const cfg: PlatformerConfig = { playerWidth: 16, playerHeight: 24, gravity: 0 };
+    assert.equal(getAirtime(cfg), Infinity);
+  });
+
+  // 37
+  it("jump reach is always greater with running than walking", () => {
+    const walk = getJumpReach(PHYSICS_CONFIG, false);
+    const run = getJumpReach(PHYSICS_CONFIG, true);
+    assert.ok(run > walk, `Running reach (${run}) should exceed walking reach (${walk})`);
+  });
+
+  // 38
+  it("higher jumpForce produces higher jump", () => {
+    const low: PlatformerConfig = { ...PHYSICS_CONFIG, jumpForce: -200 };
+    const high: PlatformerConfig = { ...PHYSICS_CONFIG, jumpForce: -600 };
+    assert.ok(getJumpHeight(high) > getJumpHeight(low), "Higher jump force should yield higher jump");
+  });
+
+  // 39
+  it("higher gravity reduces jump height", () => {
+    const lowG: PlatformerConfig = { ...PHYSICS_CONFIG, gravity: 500 };
+    const highG: PlatformerConfig = { ...PHYSICS_CONFIG, gravity: 1500 };
+    assert.ok(getJumpHeight(lowG) > getJumpHeight(highG), "Lower gravity should yield higher jump");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Grid-to-platforms
+// ---------------------------------------------------------------------------
+
+describe("gridToPlatforms", () => {
+  // 40
+  it("returns empty array for empty grid", () => {
+    const result = gridToPlatforms([], 16, [1]);
+    assert.equal(result.length, 0);
+  });
+
+  // 41
+  it("returns empty array for grid with no solid tiles", () => {
+    const grid = [
+      [0, 0, 0],
+      [0, 0, 0],
+    ];
+    const result = gridToPlatforms(grid, 16, [1]);
+    assert.equal(result.length, 0);
+  });
+
+  // 42
+  it("single solid tile produces one platform", () => {
+    const grid = [
+      [0, 0, 0],
+      [0, 1, 0],
+      [0, 0, 0],
+    ];
+    const result = gridToPlatforms(grid, 16, [1]);
+    assert.equal(result.length, 1);
+    assert.equal(result[0].x, 16);
+    assert.equal(result[0].y, 16);
+    assert.equal(result[0].w, 16);
+    assert.equal(result[0].h, 16);
+  });
+
+  // 43
+  it("horizontal span merges into one wide platform", () => {
+    const grid = [
+      [1, 1, 1, 1],
+    ];
+    const result = gridToPlatforms(grid, 16, [1]);
+    assert.equal(result.length, 1);
+    assert.equal(result[0].x, 0);
+    assert.equal(result[0].y, 0);
+    assert.equal(result[0].w, 64);
+    assert.equal(result[0].h, 16);
+  });
+
+  // 44
+  it("vertical span merges downward", () => {
+    const grid = [
+      [1],
+      [1],
+      [1],
+    ];
+    const result = gridToPlatforms(grid, 16, [1]);
+    assert.equal(result.length, 1);
+    assert.equal(result[0].x, 0);
+    assert.equal(result[0].y, 0);
+    assert.equal(result[0].w, 16);
+    assert.equal(result[0].h, 48);
+  });
+
+  // 45
+  it("2x2 block merges into one platform", () => {
+    const grid = [
+      [1, 1],
+      [1, 1],
+    ];
+    const result = gridToPlatforms(grid, 16, [1]);
+    assert.equal(result.length, 1);
+    assert.equal(result[0].w, 32);
+    assert.equal(result[0].h, 32);
+  });
+
+  // 46
+  it("L-shape produces multiple platforms", () => {
+    const grid = [
+      [1, 0],
+      [1, 1],
+    ];
+    const result = gridToPlatforms(grid, 16, [1]);
+    // Greedy: row 0 col 0 -> tries to extend down, col 0 row 1 is also solid -> forms 1x2
+    // Then row 1 col 1 -> 1x1
+    assert.equal(result.length, 2);
+
+    // First platform: column 0, rows 0-1
+    const p0 = result[0];
+    assert.equal(p0.x, 0);
+    assert.equal(p0.y, 0);
+    assert.equal(p0.w, 16);
+    assert.equal(p0.h, 32);
+
+    // Second platform: column 1, row 1
+    const p1 = result[1];
+    assert.equal(p1.x, 16);
+    assert.equal(p1.y, 16);
+    assert.equal(p1.w, 16);
+    assert.equal(p1.h, 16);
+  });
+
+  // 47
+  it("respects startX and startY offsets", () => {
+    const grid = [[1]];
+    const result = gridToPlatforms(grid, 16, [1], 100, 200);
+    assert.equal(result[0].x, 100);
+    assert.equal(result[0].y, 200);
+  });
+
+  // 48
+  it("accepts Set<number> for solidTileIds", () => {
+    const grid = [[1, 2, 3]];
+    const result = gridToPlatforms(grid, 16, new Set([1, 2]));
+    // 1 and 2 are solid and adjacent, 3 is not -> one 2-wide platform
+    assert.equal(result.length, 1);
+    assert.equal(result[0].w, 32);
+  });
+
+  // 49
+  it("multiple solid tile IDs all count as solid", () => {
+    const grid = [
+      [1, 2, 3, 0],
+    ];
+    const result = gridToPlatforms(grid, 16, [1, 2, 3]);
+    assert.equal(result.length, 1);
+    assert.equal(result[0].w, 48);
+  });
+
+  // 50
+  it("gap in row produces two platforms", () => {
+    const grid = [
+      [1, 1, 0, 1, 1],
+    ];
+    const result = gridToPlatforms(grid, 16, [1]);
+    assert.equal(result.length, 2);
+    assert.equal(result[0].w, 32);
+    assert.equal(result[1].w, 32);
+    assert.equal(result[1].x, 48);
+  });
+
+  // 51
+  it("large rectangular block merges fully", () => {
+    const grid = [
+      [1, 1, 1],
+      [1, 1, 1],
+      [1, 1, 1],
+    ];
+    const result = gridToPlatforms(grid, 8, [1]);
+    assert.equal(result.length, 1);
+    assert.equal(result[0].w, 24);
+    assert.equal(result[0].h, 24);
+  });
+
+  // 52
+  it("checkerboard pattern produces individual 1x1 platforms", () => {
+    const grid = [
+      [1, 0, 1],
+      [0, 1, 0],
+      [1, 0, 1],
+    ];
+    const result = gridToPlatforms(grid, 16, [1]);
+    assert.equal(result.length, 5);
+    // Each should be 16x16
+    for (const p of result) {
+      assert.equal(p.w, 16);
+      assert.equal(p.h, 16);
+    }
+  });
+
+  // 53
+  it("different tile size scales world coordinates", () => {
+    const grid = [[1, 1]];
+    const result = gridToPlatforms(grid, 32, [1]);
+    assert.equal(result[0].w, 64);
+    assert.equal(result[0].h, 32);
+  });
+
+  // 54
+  it("grid with only zero tiles returns empty", () => {
+    const grid = [[0, 0], [0, 0]];
+    const result = gridToPlatforms(grid, 16, [1]);
+    assert.equal(result.length, 0);
+  });
+
+  // 55
+  it("greedy merging extends rectangle downward correctly", () => {
+    // The top row has 3 wide, second row only 2 wide at same position
+    // Should NOT merge into a single rect because row 2 doesn't match full span
+    const grid = [
+      [1, 1, 1],
+      [1, 1, 0],
+    ];
+    const result = gridToPlatforms(grid, 16, [1]);
+    // Row 0: span is cols 0-2 (3 wide). Can it extend down? Row 1 cols 0-2: [1,1,0] -> no.
+    // So platform 1: (0,0) 48x16
+    // Then row 1: col 0-1 are unvisited and solid -> span 0-1, no more rows -> (0,16) 32x16
+    assert.equal(result.length, 2);
+    assert.equal(result[0].w, 48);
+    assert.equal(result[0].h, 16);
+    assert.equal(result[1].w, 32);
+    assert.equal(result[1].h, 16);
   });
 });

@@ -206,6 +206,67 @@ rng.restore(checkpoint);  // replay exact same sequence
 const combatRng = rng.fork();  // parent advances, child is independent
 ```
 
+## Jump Physics Helpers
+
+Three utility functions for reasoning about platformer jump geometry. Useful for level design validation -- checking whether gaps are clearable, sizing platforms, and tuning jump feel.
+
+**Formulas:**
+- Jump height: `h = v^2 / (2g)` -- maximum height above launch point
+- Airtime: `t = 2v / g` -- total time in the air (up + down)
+- Jump reach: `reach = speed * airtime` -- horizontal distance covered
+
+```typescript
+import { getJumpHeight, getAirtime, getJumpReach } from "@arcane/runtime/game";
+
+const config = {
+  playerWidth: 16, playerHeight: 24,
+  gravity: 980, jumpForce: -400,
+  walkSpeed: 160, runSpeed: 280,
+};
+
+const height = getJumpHeight(config);    // ~81.6 px
+const airtime = getAirtime(config);      // ~0.816 sec
+const walkReach = getJumpReach(config);  // ~130.6 px
+const runReach = getJumpReach(config, true); // ~228.6 px
+
+// Level design check: can the player clear this gap?
+const gapWidth = 200;
+if (runReach > gapWidth) {
+  // Clearable at full run speed
+}
+```
+
+All three functions use the existing `PlatformerConfig` type and respect its defaults (gravity=980, jumpForce=-400, walkSpeed=160, runSpeed=280).
+
+## Grid-to-Platforms
+
+Convert a tile grid (2D number array or tilemap layer) into merged `Platform[]` rectangles for use with the platformer controller. Uses greedy rectangle merging to produce fewer, larger rectangles instead of one per tile.
+
+```typescript
+import { gridToPlatforms, platformsFromTilemap } from "@arcane/runtime/game";
+import { defineTileProperties } from "@arcane/runtime/rendering";
+
+// From a raw grid
+const grid = [
+  [0, 0, 0, 0, 0],
+  [1, 1, 0, 0, 0],
+  [1, 1, 1, 0, 0],
+  [1, 1, 1, 1, 1],
+];
+const platforms = gridToPlatforms(grid, 16, [1]);
+// Merges adjacent solid tiles into larger rectangles
+
+// From a LayeredTilemap layer
+defineTileProperties(1, { solid: true });
+defineTileProperties(2, { solid: true });
+const tilemapPlatforms = platformsFromTilemap(myMap, "collision");
+
+// Custom solid check
+const customPlatforms = platformsFromTilemap(myMap, "ground", (id) => id >= 1 && id <= 10);
+```
+
+**Algorithm:** Scan each row left-to-right finding horizontal spans of consecutive solid tiles. For each span, extend it downward as far as all columns remain solid. Mark merged cells as visited. This produces optimal horizontal merges.
+
 ## Particle Effects for Game Feel
 
 Use additive blending for fire/explosions:

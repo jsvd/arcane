@@ -24,6 +24,7 @@ pub struct TestSummary {
     pub total: usize,
     pub passed: usize,
     pub failed: usize,
+    pub results: Vec<TestResult>,
 }
 
 // Shared state between the op and the test runner.
@@ -158,6 +159,8 @@ async fn run_test_file_async(path: &Path, import_map: ImportMap) -> anyhow::Resu
     resolve.await.map_err(|e| anyhow::anyhow!("{e}"))?;
 
     // Retrieve results from shared state
-    let summary = state.borrow().summary.clone();
+    let s = state.borrow();
+    let mut summary = s.summary.clone();
+    summary.results = s.results.clone();
     Ok(summary)
 }

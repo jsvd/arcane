@@ -647,6 +647,111 @@ declare module "@arcane/runtime/game" {
    * @returns New state with impulse added to external velocity.
    */
   export declare function platformerApplyImpulse(state: PlatformerState, vx: number, vy: number): PlatformerState;
+  /**
+   * Maximum jump height on flat ground: h = v^2 / (2g).
+   *
+   * Uses the absolute value of jumpForce and gravity from the config.
+   * Useful for level design: checking whether a gap is clearable.
+   *
+   * @param config - Platformer configuration.
+   * @returns Maximum height in pixels.
+   *
+   * @example
+   * ```ts
+   * const h = getJumpHeight({ playerWidth: 16, playerHeight: 24, gravity: 980, jumpForce: -400 });
+   * // h ≈ 81.6 pixels
+   * ```
+   */
+  export declare function getJumpHeight(config: PlatformerConfig): number;
+  /**
+   * Total airtime for a jump on flat ground: t = 2v / g.
+   *
+   * This is the time from leaving the ground to landing back at the same height.
+   * Assumes no terminal velocity capping.
+   *
+   * @param config - Platformer configuration.
+   * @returns Airtime in seconds.
+   *
+   * @example
+   * ```ts
+   * const t = getAirtime({ playerWidth: 16, playerHeight: 24, gravity: 980, jumpForce: -400 });
+   * // t ≈ 0.816 seconds
+   * ```
+   */
+  export declare function getAirtime(config: PlatformerConfig): number;
+  /**
+   * Horizontal distance covered during a full jump on flat ground.
+   *
+   * reach = speed * airtime, where speed is walkSpeed or runSpeed.
+   *
+   * @param config - Platformer configuration.
+   * @param running - If true, use runSpeed instead of walkSpeed. Default: false.
+   * @returns Horizontal jump reach in pixels.
+   *
+   * @example
+   * ```ts
+   * const reach = getJumpReach({ playerWidth: 16, playerHeight: 24, gravity: 980, jumpForce: -400, walkSpeed: 160, runSpeed: 280 });
+   * // walking: 160 * 0.816 ≈ 130.6 pixels
+   * const runReach = getJumpReach(config, true);
+   * // running: 280 * 0.816 ≈ 228.6 pixels
+   * ```
+   */
+  export declare function getJumpReach(config: PlatformerConfig, running?: boolean): number;
+  /**
+   * Convert a 2D number grid into merged Platform rectangles.
+   *
+   * Uses greedy rectangle merging: scans rows left-to-right to find horizontal
+   * spans of consecutive solid tiles, then extends each span downward as far as
+   * possible. Produces fewer, larger rectangles than one-per-tile.
+   *
+   * @param grid - 2D array of tile IDs (grid[row][col]). Row 0 = top.
+   * @param tileSize - Size of each tile in world units.
+   * @param solidTileIds - Tile IDs considered solid. 0 is typically empty.
+   * @param startX - World X offset for the grid origin. Default: 0.
+   * @param startY - World Y offset for the grid origin. Default: 0.
+   * @returns Array of merged Platform rectangles in world coordinates.
+   *
+   * @example
+   * ```ts
+   * const grid = [
+   *   [0, 0, 0, 0],
+   *   [1, 1, 0, 0],
+   *   [1, 1, 1, 0],
+   * ];
+   * const platforms = gridToPlatforms(grid, 16, [1]);
+   * // Produces merged rectangles instead of one per tile
+   * ```
+   */
+  export declare function gridToPlatforms(grid: number[][], tileSize: number, solidTileIds: number[] | Set<number>, startX?: number, startY?: number): Platform[];
+  /**
+   * Read a tilemap layer and convert solid tiles to Platform rectangles.
+   *
+   * Extracts the tile grid from a LayeredTilemap layer, determines which tiles
+   * are solid, and delegates to gridToPlatforms for greedy merging.
+   *
+   * By default, a tile is considered solid if getTileProperty(tileId, "solid")
+   * returns a truthy value. Pass a custom isSolid function to override.
+   *
+   * @param tilemap - A LayeredTilemap from the rendering module.
+   * @param layerName - Name of the layer to read.
+   * @param isSolid - Optional predicate: returns true if a tile ID is solid.
+   *   Default checks getTileProperty(tileId, "solid").
+   * @param startX - World X offset. Default: 0.
+   * @param startY - World Y offset. Default: 0.
+   * @returns Array of merged Platform rectangles in world coordinates.
+   *
+   * @example
+   * ```ts
+   * // Using tile properties (define solid tiles beforehand)
+   * defineTileProperties(1, { solid: true });
+   * defineTileProperties(2, { solid: true });
+   * const platforms = platformsFromTilemap(myMap, "collision");
+   *
+   * // Using a custom predicate
+   * const platforms = platformsFromTilemap(myMap, "ground", (id) => id >= 1 && id <= 10);
+   * ```
+   */
+  export declare function platformsFromTilemap(tilemap: LayeredTilemap, layerName: string, isSolid?: (tileId: number) => boolean, startX?: number, startY?: number): Platform[];
 
   /**
    * Sprite group: bundle multiple sprite parts with relative offsets.

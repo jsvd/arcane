@@ -107,21 +107,21 @@ const font = getDefaultMSDFFont();
 // Basic crisp text
 drawText("Hello World", 100, 100, { msdfFont: font, scale: 2.0, layer: 10 });
 
-// With outline
+// With outline — note: outline is a nested object, not flat fields
 drawText("Outlined", 100, 140, {
   msdfFont: font, scale: 2.0, layer: 10,
-  outlineWidth: 0.15, outlineColor: { r: 0, g: 0, b: 0, a: 1 },
+  outline: { width: 2, color: { r: 0, g: 0, b: 0, a: 1 } },
 });
 
 // With drop shadow
 drawText("Shadowed", 100, 180, {
   msdfFont: font, scale: 2.0, layer: 10,
-  shadowOffsetX: 2, shadowOffsetY: 2, shadowColor: { r: 0, g: 0, b: 0, a: 0.5 },
+  shadow: { offsetX: 2, offsetY: 2, color: { r: 0, g: 0, b: 0, a: 0.5 } },
 });
 
 // Measure width for centering
 const { width: VPW } = getViewportSize();
-const textW = measureText("Centered", font, 2.0);
+const { width: textW } = measureText("Centered", { msdfFont: font, scale: 2.0 });
 drawText("Centered", (VPW - textW) / 2, 50, { msdfFont: font, scale: 2.0, screenSpace: true, layer: 100 });
 
 // Load external MSDF font

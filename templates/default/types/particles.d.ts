@@ -206,6 +206,8 @@ declare module "@arcane/runtime/particles" {
    * @param config - Emitter configuration describing shape, mode, particle properties, and colors.
    * @returns The created {@link Emitter} instance.
    *
+   * To move the emitter after creation, update `emitter.config.x` and `emitter.config.y`.
+   *
    * @example
    * ```ts
    * const sparks = createEmitter({
@@ -288,7 +290,14 @@ declare module "@arcane/runtime/particles" {
    * const fire = streamParticles(x, y, { preset: "fire" });
    * ```
    */
-  /** Options for quick particle functions. Unset fields use preset defaults. */
+  /**
+   * Options for quick particle functions. Unset fields use preset defaults.
+   *
+   * This is a simplified interface — not the same as {@link EmitterConfig}.
+   * Use the `speed` multiplier (not `velocityX`/`velocityY` ranges directly).
+   * For full control over emitter shape, affectors, and all config fields,
+   * use {@link createEmitter} directly.
+   */
   export type ParticleOptions = {
       /** Number of particles (burst) or rate (stream). */
       count?: number;
