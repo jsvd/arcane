@@ -1,7 +1,7 @@
-export type { Color, RectOptions, PanelOptions, BarOptions, LabelOptions, ShapeOptions, LineOptions } from "./types.ts";
+export type { Color, RectOptions, PanelOptions, BarOptions, LabelOptions, ShapeOptions, LineOptions, ArcOptions } from "./types.ts";
 export { rgb } from "./types.ts";
 export { drawRect, drawPanel, drawBar, drawLabel } from "./primitives.ts";
-export { drawCircle, drawLine, drawTriangle } from "./shapes.ts";
+export { drawCircle, drawLine, drawTriangle, drawArc } from "./shapes.ts";
 export { Colors, HUDLayout, withAlpha, lighten, darken } from "./colors.ts";
 
 // Interactive UI widgets (Phase 16)

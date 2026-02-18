@@ -94,4 +94,53 @@ describe("Particle Presets", () => {
     const particles = getAllParticles();
     assert.ok(particles.length > 0, "should have spawned particles after 0.1 second");
   });
+
+  it("burstParticles accepts velocityX/velocityY overrides", () => {
+    clearEmitters();
+    const emitter = burstParticles(0, 0, {
+      velocityX: [0, 50],
+      velocityY: [-200, -100],
+    });
+    assert.equal(emitter.config.velocityX[0], 0);
+    assert.equal(emitter.config.velocityX[1], 50);
+    assert.equal(emitter.config.velocityY[0], -200);
+    assert.equal(emitter.config.velocityY[1], -100);
+  });
+
+  it("burstParticles velocity overrides are affected by speed multiplier", () => {
+    clearEmitters();
+    const emitter = burstParticles(0, 0, {
+      velocityX: [0, 50],
+      speed: 2,
+    });
+    assert.equal(emitter.config.velocityX[0], 0);
+    assert.equal(emitter.config.velocityX[1], 100);
+  });
+
+  it("burstParticles accepts scale override", () => {
+    clearEmitters();
+    const emitter = burstParticles(0, 0, { scale: [2, 4] });
+    assert.ok(emitter.config.scale);
+    assert.equal(emitter.config.scale![0], 2);
+    assert.equal(emitter.config.scale![1], 4);
+  });
+
+  it("streamParticles accepts velocityY override for directional effects", () => {
+    clearEmitters();
+    const emitter = streamParticles(0, 0, {
+      velocityX: [-5, 5],
+      velocityY: [50, 100],
+    });
+    // Should use the overridden values, not the fire preset
+    assert.equal(emitter.config.velocityY[0], 50);
+    assert.equal(emitter.config.velocityY[1], 100);
+  });
+
+  it("streamParticles accepts scale override", () => {
+    clearEmitters();
+    const emitter = streamParticles(0, 0, { scale: [0.1, 0.3] });
+    assert.ok(emitter.config.scale);
+    assert.equal(emitter.config.scale![0], 0.1);
+    assert.equal(emitter.config.scale![1], 0.3);
+  });
 });

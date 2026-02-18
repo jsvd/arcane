@@ -178,7 +178,7 @@ for (const p of particles) {
   drawSprite({
     textureId: TEX_PARTICLE, x: p.x - 2, y: p.y - 2,
     w: 4 * p.scale, h: 4 * p.scale,
-    opacity: p.lifetime / p.maxLifetime,
+    opacity: 1 - p.age / p.lifetime,
     blendMode: "additive",
     layer: 5,
   });

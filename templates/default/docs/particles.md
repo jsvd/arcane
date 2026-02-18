@@ -30,7 +30,7 @@ for (const p of getAllParticles()) {
   drawSprite({
     textureId: p.textureId, x: p.x - 2, y: p.y - 2,
     w: 4 * p.scale, h: 4 * p.scale,
-    opacity: p.lifetime / p.maxLifetime,
+    opacity: 1 - p.age / p.lifetime,
     blendMode: "additive",
     layer: 5,
   });
@@ -40,8 +40,9 @@ for (const p of getAllParticles()) {
 ## Emitter Shapes
 
 - `"point"` — all particles spawn at (x, y)
-- `"circle"` — spawn within a radius: `{ shape: "circle", radius: 20, ... }`
-- `"rect"` — spawn within a rectangle: `{ shape: "rect", w: 100, h: 50, ... }`
+- `"line"` — spawn along a line: `{ shape: "line", shapeParams: { x2: 100, y2: 50 }, ... }`
+- `"area"` — spawn within a rectangle: `{ shape: "area", shapeParams: { width: 100, height: 50 }, ... }`
+- `"ring"` — spawn in an annular region: `{ shape: "ring", shapeParams: { innerRadius: 10, outerRadius: 30 }, ... }`
 
 ## Seeded Randomness in Particle Spawning
 
@@ -80,8 +81,8 @@ createEmitter({
 **Landing dust:**
 ```typescript
 createEmitter({
-  shape: "rect", x: player.x - 8, y: player.y + player.h, w: 16, h: 2,
-  mode: "burst", burstCount: 6,
+  shape: "area", x: player.x - 8, y: player.y + player.h,
+  shapeParams: { width: 16, height: 2 }, mode: "burst", burstCount: 6,
   lifetime: [0.2, 0.4],
   velocityX: [-40, 40], velocityY: [-30, -10],
   startColor: { r: 0.6, g: 0.5, b: 0.5, a: 0.6 },
@@ -92,7 +93,8 @@ createEmitter({
 **Fire / torch:**
 ```typescript
 createEmitter({
-  shape: "rect", x: torch.x, y: torch.y, w: 8, h: 2,
+  shape: "area", x: torch.x, y: torch.y,
+  shapeParams: { width: 8, height: 2 },
   mode: "continuous", rate: 15,
   lifetime: [0.3, 0.6],
   velocityX: [-10, 10], velocityY: [-60, -30],

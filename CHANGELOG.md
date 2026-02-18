@@ -4,8 +4,18 @@ All notable changes to Arcane are documented here.
 
 ## [0.12.1] - 2026-02-18
 
+### Added
+- **`drawArc()` primitive** — draw arc/partial circle outlines via line segments. Supports startAngle/endAngle, thickness, screenSpace. Available from `@arcane/runtime/ui` and `@arcane/runtime/rendering`.
+- **`sweepCircleAABB()` helper** — continuous collision detection for moving circles vs static AABBs. Returns hit time, normal, and contact point. Useful for bullet/projectile collision.
+- **ParticleOptions velocity/scale overrides** — `burstParticles()` and `streamParticles()` now accept optional `velocityX`, `velocityY`, and `scale` range overrides, bridging the gap between presets and full `createEmitter()`.
+- **`flashScreen` re-exported from rendering** — `flashScreen()` now importable from `@arcane/runtime/rendering` (alongside `shakeCamera` and `getCameraShakeOffset`).
+- **Top-Down / Simulation genre** in AGENTS.md recommended reading order.
+
 ### Fixed
 - **Cheatsheet breaks type-checking** — renamed `cheatsheet.d.ts` to `cheatsheet.txt` so it's never type-checked. Fixed multi-line signature collapsing in the generator script. Added scaffolded-project type-check verification to the release process.
+- **Particle doc examples** — fixed `p.maxLifetime` (doesn't exist) → `1 - p.age / p.lifetime`, fixed shape names (`"circle"` → `"ring"`, `"rect"` → `"area"`), fixed shape params (`w, h` → `shapeParams: { width, height }`).
+- **AGENTS.md common mistakes** — added 5 new entries: color range confusion (#20), spread+null narrowing (#21), phase narrowing (#22), stale closures in transitions (#23), module location for shake/flash (#24).
+- **Transitions doc** — added stale-closure pattern guidance for midpoint callbacks.
 
 ## [0.12.0] - 2026-02-18
 

@@ -91,6 +91,12 @@ export type LineOptions = ShapeOptions & {
   thickness?: number;
 };
 
+/** Options for {@link drawArc}. Extends {@link ShapeOptions} with thickness. */
+export type ArcOptions = ShapeOptions & {
+  /** Arc stroke thickness in pixels (screenSpace) or world units. Default: 2. */
+  thickness?: number;
+};
+
 /** Options for {@link drawLabel}. */
 export type LabelOptions = {
   /** Text color. Default: white. */

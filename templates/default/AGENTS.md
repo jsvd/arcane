@@ -72,7 +72,7 @@ game.onFrame((ctx) => {
     drawSprite({
       textureId: p.textureId, x: p.x - 2, y: p.y - 2,
       w: 4 * p.scale, h: 4 * p.scale,
-      opacity: p.lifetime / p.maxLifetime,
+      opacity: 1 - p.age / p.lifetime,
       blendMode: "additive", layer: 5,
     });
   }
@@ -184,7 +184,17 @@ followTargetSmooth(player.x, player.y, 2.0, 0.08);
 
 **18. Multiple drawSprite() calls for multi-part characters** — Use `createSpriteGroup()` + `drawSpriteGroup()`. Handles offsets, flip mirroring, opacity, per-part visibility. See [docs/entities.md](docs/entities.md).
 
-**19. Using drawRect() for circles/lines** — Use `drawCircle()`, `drawLine()`, `drawTriangle()` from `@arcane/runtime/ui`. See [docs/ui.md](docs/ui.md).
+**19. Using drawRect() for circles/lines/arcs** — Use `drawCircle()`, `drawLine()`, `drawTriangle()`, `drawArc()` from `@arcane/runtime/ui`. See [docs/ui.md](docs/ui.md).
+
+**20. Mixing up color ranges** — `rgb(r, g, b)` takes **0-255 integers** and returns a `Color`. All other APIs (`setBackgroundColor`, `flashScreen`, particle `startColor`/`endColor`, `createSolidTexture`) expect a `Color` with **0.0-1.0 float** components. Always use `rgb()` to convert from 0-255: `rgb(255, 0, 0)` not `{ r: 255, g: 0, b: 0 }`.
+
+**21. TypeScript narrowing with spread + null unions** — When you write `let st = { ...s, field: null }`, TypeScript narrows `field` to `null` (not `T | null`). Later assigning `st = { ...st, field: someValue }` is a type error. Fix: add an explicit type annotation: `let st: GameState = { ...s, field: null };`. This affects any pure-function state pattern where you reset union-typed fields via spreads.
+
+**22. TypeScript narrowing narrows `let` bindings from union types** — Inside `if (state.phase === "playing")`, writing `let phase = state.phase` narrows `phase` to `"playing"` (not `GamePhase`). Reassigning `phase = "dead"` is then a type error. Fix: `let phase: GamePhase = state.phase;`.
+
+**23. Stale closures in transition midpoint callbacks** — `startScreenTransition()` callbacks fire asynchronously. State may change between starting the transition and the midpoint. Capture values at call time: `const level = state.level; startScreenTransition("fade", 0.5, {}, () => { state = loadLevel(level + 1); });`. Don't reference mutable state directly.
+
+**24. Importing shakeCamera/flashScreen from the wrong module** — `shakeCamera()`, `flashScreen()`, and `getCameraShakeOffset()` are defined in `@arcane/runtime/tweening` but also re-exported from `@arcane/runtime/rendering` for convenience. Both imports work. `impact()` (which calls them internally) is in `@arcane/runtime/rendering`.
 
 ## Recommended Reading by Genre
 
@@ -195,6 +205,8 @@ Read the **Essential** guides first, then the genre-specific guides for your gam
 **RPG / Roguelike:** [tilemaps.md](docs/tilemaps.md) (grid maps) → [scenes.md](docs/scenes.md) (menu flow, save/load) → [procgen.md](docs/procgen.md) (WFC dungeons) → [juice.md](docs/juice.md) (floating damage text, impact) → [tweening.md](docs/tweening.md) (menu animations)
 
 **Action / Shooter:** [physics.md](docs/physics.md) (rigid bodies, raycast) → [particles.md](docs/particles.md) (explosions, muzzle flash) → [juice.md](docs/juice.md) (hitstop, shake, impact) → [input.md](docs/input.md) (gamepad + touch) → [audio.md](docs/audio.md) (spatial audio)
+
+**Top-Down / Simulation:** [coordinates.md](docs/coordinates.md) (camera follow + bounds) → [entities.md](docs/entities.md) (sprite groups, entity handles) → [particles.md](docs/particles.md) (weather, ambient effects) → [tweening.md](docs/tweening.md) (UI animations, popups) → [tilemaps.md](docs/tilemaps.md) (world maps, auto-tiling) → [input.md](docs/input.md) (movement, interactions)
 
 **Puzzle:** [rendering.md](docs/rendering.md) (sprites, text) → [tweening.md](docs/tweening.md) (piece movement, pop effects) → [scenes.md](docs/scenes.md) (level select, save) → [ui.md](docs/ui.md) (menus, buttons)
 

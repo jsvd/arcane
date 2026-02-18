@@ -84,6 +84,11 @@ declare module "@arcane/runtime/ui" {
       /** Line thickness in pixels (screenSpace) or world units. Default: 1. */
       thickness?: number;
   };
+  /** Options for {@link drawArc}. Extends {@link ShapeOptions} with thickness. */
+  export type ArcOptions = ShapeOptions & {
+      /** Arc stroke thickness in pixels (screenSpace) or world units. Default: 2. */
+      thickness?: number;
+  };
   /** Options for {@link drawLabel}. */
   export type LabelOptions = {
       /** Text color. Default: white. */
@@ -751,6 +756,27 @@ declare module "@arcane/runtime/ui" {
    * drawTriangle(100, 10, 50, 90, 150, 90, { color: { r: 0, g: 0, b: 1, a: 1 } });
    */
   export declare function drawTriangle(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, options?: ShapeOptions): void;
+  /**
+   * Draw an arc (partial circle outline) using line segments.
+   * No-op in headless mode.
+   *
+   * Angles are in radians, measured clockwise from the positive X axis
+   * (right). A full circle is `0` to `Math.PI * 2`.
+   *
+   * @param cx - Center X position (screen pixels if screenSpace, world units otherwise).
+   * @param cy - Center Y position (screen pixels if screenSpace, world units otherwise).
+   * @param radius - Arc radius in pixels (screenSpace) or world units.
+   * @param startAngle - Start angle in radians (0 = right, PI/2 = down).
+   * @param endAngle - End angle in radians. Must be >= startAngle.
+   * @param options - Color, thickness, layer, and screenSpace options.
+   *
+   * @example
+   * // Shield indicator (90-degree arc above player)
+   * drawArc(player.x, player.y, 24, -Math.PI * 0.75, -Math.PI * 0.25, {
+   *   color: { r: 0.3, g: 0.8, b: 1, a: 0.8 }, thickness: 3,
+   * });
+   */
+  export declare function drawArc(cx: number, cy: number, radius: number, startAngle: number, endAngle: number, options?: ArcOptions): void;
 
   /**
    * Immediate-mode horizontal slider widget.

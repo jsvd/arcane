@@ -306,6 +306,12 @@ declare module "@arcane/runtime/particles" {
       textureId?: number;
       /** Preset name to use as base config. Default: "sparks". */
       preset?: keyof typeof ParticlePresets;
+      /** Override X velocity range [min, max] in pixels/second. Replaces preset velocity (speed multiplier still applies). */
+      velocityX?: [number, number];
+      /** Override Y velocity range [min, max] in pixels/second. Replaces preset velocity (speed multiplier still applies). */
+      velocityY?: [number, number];
+      /** Override scale range [min, max]. 1.0 = original size. */
+      scale?: [number, number];
   };
   /** Pre-built emitter configurations for common effects. */
   export declare const ParticlePresets: {

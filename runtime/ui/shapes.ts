@@ -14,7 +14,7 @@
  * ```
  */
 
-import type { Color, ShapeOptions, LineOptions } from "./types.ts";
+import type { Color, ShapeOptions, LineOptions, ArcOptions } from "./types.ts";
 import { drawSprite } from "../rendering/sprites.ts";
 import { createSolidTexture } from "../rendering/texture.ts";
 import { getCamera } from "../rendering/camera.ts";
@@ -276,5 +276,95 @@ export function drawTriangle(
     const posW = pos.w;
     const posH = pos.h;
     drawSprite({ textureId: tex, x: posX, y: posY, w: posW, h: posH, layer });
+  }
+}
+
+/**
+ * Draw an arc (partial circle outline) using line segments.
+ * No-op in headless mode.
+ *
+ * Angles are in radians, measured clockwise from the positive X axis
+ * (right). A full circle is `0` to `Math.PI * 2`.
+ *
+ * @param cx - Center X position (screen pixels if screenSpace, world units otherwise).
+ * @param cy - Center Y position (screen pixels if screenSpace, world units otherwise).
+ * @param radius - Arc radius in pixels (screenSpace) or world units.
+ * @param startAngle - Start angle in radians (0 = right, PI/2 = down).
+ * @param endAngle - End angle in radians. Must be >= startAngle.
+ * @param options - Color, thickness, layer, and screenSpace options.
+ *
+ * @example
+ * // Shield indicator (90-degree arc above player)
+ * drawArc(player.x, player.y, 24, -Math.PI * 0.75, -Math.PI * 0.25, {
+ *   color: { r: 0.3, g: 0.8, b: 1, a: 0.8 }, thickness: 3,
+ * });
+ */
+export function drawArc(
+  cx: number,
+  cy: number,
+  radius: number,
+  startAngle: number,
+  endAngle: number,
+  options?: ArcOptions,
+): void {
+  const layer = options?.layer ?? 0;
+  const ss = options?.screenSpace ?? false;
+  const thickness = options?.thickness ?? 2;
+
+  _logDrawCall({
+    type: "arc",
+    cx,
+    cy,
+    radius,
+    startAngle,
+    endAngle,
+    thickness,
+    layer,
+    screenSpace: ss,
+  } as any);
+
+  if (!hasRenderOps) return;
+
+  const color = options?.color ?? WHITE;
+  const tex = getColorTexture(color);
+
+  // Number of segments scales with arc length for smooth appearance
+  const sweep = Math.abs(endAngle - startAngle);
+  const segments = Math.max(8, Math.ceil(sweep * radius * 0.5));
+  const step = (endAngle - startAngle) / segments;
+
+  let prevX = cx + Math.cos(startAngle) * radius;
+  let prevY = cy + Math.sin(startAngle) * radius;
+
+  for (let i = 1; i <= segments; i++) {
+    const angle = startAngle + step * i;
+    const nextX = cx + Math.cos(angle) * radius;
+    const nextY = cy + Math.sin(angle) * radius;
+
+    const dx = nextX - prevX;
+    const dy = nextY - prevY;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    const segAngle = Math.atan2(dy, dx);
+
+    const midX = (prevX + nextX) / 2;
+    const midY = (prevY + nextY) / 2;
+
+    const rectX = midX - length / 2;
+    const rectY = midY - thickness / 2;
+    const pos = toWorld(rectX, rectY, length, thickness, ss);
+    drawSprite({
+      textureId: tex,
+      x: pos.x,
+      y: pos.y,
+      w: pos.w,
+      h: pos.h,
+      layer,
+      rotation: segAngle,
+      originX: 0.5,
+      originY: 0.5,
+    });
+
+    prevX = nextX;
+    prevY = nextY;
   }
 }

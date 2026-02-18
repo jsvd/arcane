@@ -1,6 +1,6 @@
 // Existing pure-TS collision helpers
 export type { AABB } from "./aabb.ts";
-export { aabbOverlap, circleAABBOverlap, circleAABBResolve } from "./aabb.ts";
+export { aabbOverlap, circleAABBOverlap, circleAABBResolve, sweepCircleAABB } from "./aabb.ts";
 
 // Physics engine types
 export type {

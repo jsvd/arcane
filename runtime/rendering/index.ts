@@ -390,7 +390,7 @@ export { rgb } from "../ui/types.ts";
 export type { Color } from "../ui/types.ts";
 
 // Shape primitives (canonical home: ui/shapes.ts)
-export { drawCircle, drawLine, drawTriangle } from "../ui/shapes.ts";
+export { drawCircle, drawLine, drawTriangle, drawArc } from "../ui/shapes.ts";
 
-// Camera shake (canonical home: tweening/helpers.ts)
-export { shakeCamera, getCameraShakeOffset } from "../tweening/helpers.ts";
+// Camera shake + screen flash (canonical home: tweening/helpers.ts)
+export { shakeCamera, getCameraShakeOffset, flashScreen } from "../tweening/helpers.ts";

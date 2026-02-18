@@ -1236,8 +1236,8 @@ Fixed: Added `msdf_texture_load_queue` on `RenderBridgeState`. `op_load_msdf_fon
 **Discovered:** Phase 19 audit
 **Severity:** Low — all code works, just lacks dedicated test files
 
-19 runtime modules have no dedicated `*.test.ts` file:
-- `runtime/physics/` — world, body, constraints, query (7 files)
+18 runtime modules have no dedicated `*.test.ts` file:
+- `runtime/physics/` — world, body, constraints, query (6 files — aabb.test.ts now exists)
 - `runtime/persistence/` — save, storage, autosave (3 files)
 - `runtime/rendering/` — sprites, loop, texture, postprocess, shader (5 files)
 - `runtime/procgen/` — constraints, validate (2 files)
@@ -1245,3 +1245,19 @@ Fixed: Added `msdf_texture_load_queue` on `RenderBridgeState`. `op_load_msdf_fon
 - `runtime/agent/` — protocol (1 file, though agent.test.ts covers it partially)
 
 These modules are exercised indirectly by demo tests and integration tests. Adding targeted unit tests would improve confidence for future refactors.
+
+### Type-Check-Only CLI Mode
+
+**Status:** Open
+**Discovered:** User feedback (v0.12.1)
+**Severity:** Medium — affects developer iteration speed
+
+`arcane test` runs the full test suite to surface type errors. A fast `arcane typecheck` (or `arcane dev --type-check-only`) command that only transpiles and type-checks without discovering/executing tests would speed up the edit-check loop significantly. Implementation would require a new CLI subcommand in `cli/src/commands/` that loads the TS module through deno_ast transpilation but skips test discovery and execution.
+
+### MCP Screenshot / Frame Capture Tool
+
+**Status:** Open
+**Discovered:** User feedback (v0.12.1)
+**Severity:** Medium — biggest gap for non-visual AI iteration
+
+A `capture_frame` or `capture_screenshot` MCP tool that returns a base64-encoded image of the current game window would enable AI agents to visually verify game state without requiring a human to look at the screen. Implementation would require a Rust-side framebuffer readback (`wgpu` buffer copy from the surface texture), encoding to PNG, and exposing as a new MCP tool. This is the single most impactful missing feature for agent-driven development workflows.

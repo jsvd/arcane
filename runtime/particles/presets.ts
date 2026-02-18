@@ -38,6 +38,12 @@ export type ParticleOptions = {
   textureId?: number;
   /** Preset name to use as base config. Default: "sparks". */
   preset?: keyof typeof ParticlePresets;
+  /** Override X velocity range [min, max] in pixels/second. Replaces preset velocity (speed multiplier still applies). */
+  velocityX?: [number, number];
+  /** Override Y velocity range [min, max] in pixels/second. Replaces preset velocity (speed multiplier still applies). */
+  velocityY?: [number, number];
+  /** Override scale range [min, max]. 1.0 = original size. */
+  scale?: [number, number];
 };
 
 /** Pre-built emitter configurations for common effects. */
@@ -104,6 +110,8 @@ export const ParticlePresets = {
 export function burstParticles(x: number, y: number, options?: ParticleOptions): Emitter {
   const preset = ParticlePresets[options?.preset ?? "sparks"];
   const speed = options?.speed ?? 1;
+  const vx = options?.velocityX ?? preset.velocityX;
+  const vy = options?.velocityY ?? preset.velocityY;
 
   const config: EmitterConfig = {
     shape: "point",
@@ -112,12 +120,12 @@ export function burstParticles(x: number, y: number, options?: ParticleOptions):
     mode: "burst",
     burstCount: options?.count ?? preset.count,
     lifetime: options?.lifetime ?? [...preset.lifetime],
-    velocityX: [preset.velocityX[0] * speed, preset.velocityX[1] * speed],
-    velocityY: [preset.velocityY[0] * speed, preset.velocityY[1] * speed],
+    velocityX: [vx[0] * speed, vx[1] * speed],
+    velocityY: [vy[0] * speed, vy[1] * speed],
     startColor: options?.color ?? { ...preset.startColor },
     endColor: options?.endColor ?? { ...preset.endColor },
     textureId: options?.textureId,
-    scale: [...preset.scale],
+    scale: options?.scale ? [...options.scale] : [...preset.scale],
   };
 
   const emitter = createEmitter(config);
@@ -144,6 +152,8 @@ export function burstParticles(x: number, y: number, options?: ParticleOptions):
 export function streamParticles(x: number, y: number, options?: ParticleOptions): Emitter {
   const preset = ParticlePresets[options?.preset ?? "fire"];
   const speed = options?.speed ?? 1;
+  const vx = options?.velocityX ?? preset.velocityX;
+  const vy = options?.velocityY ?? preset.velocityY;
 
   const config: EmitterConfig = {
     shape: "point",
@@ -152,12 +162,12 @@ export function streamParticles(x: number, y: number, options?: ParticleOptions)
     mode: "continuous",
     rate: options?.count ?? preset.count,
     lifetime: options?.lifetime ?? [...preset.lifetime],
-    velocityX: [preset.velocityX[0] * speed, preset.velocityX[1] * speed],
-    velocityY: [preset.velocityY[0] * speed, preset.velocityY[1] * speed],
+    velocityX: [vx[0] * speed, vx[1] * speed],
+    velocityY: [vy[0] * speed, vy[1] * speed],
     startColor: options?.color ?? { ...preset.startColor },
     endColor: options?.endColor ?? { ...preset.endColor },
     textureId: options?.textureId,
-    scale: [...preset.scale],
+    scale: options?.scale ? [...options.scale] : [...preset.scale],
   };
 
   const emitter = createEmitter(config);

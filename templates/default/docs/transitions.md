@@ -49,6 +49,23 @@ if (touchingPortal) {
 }
 ```
 
+## Avoiding Stale Closures
+
+The midpoint callback fires asynchronously — state may change between when you start the transition and when the callback runs (especially under hot-reload). Capture values at call time:
+
+```typescript
+// BAD — state.level may have changed by the time midpoint fires
+startScreenTransition("fade", 0.5, {}, () => {
+  state = loadLevel(state.level + 1);  // stale reference
+});
+
+// GOOD — capture the value upfront
+const nextLevel = state.level + 1;
+startScreenTransition("fade", 0.5, {}, () => {
+  state = loadLevel(nextLevel);
+});
+```
+
 ## With Scene Manager
 
 Transitions integrate with the scene manager automatically:

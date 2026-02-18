@@ -5,7 +5,7 @@ import {
   getDrawCalls,
   clearDrawCalls,
 } from "../testing/visual.ts";
-import { drawCircle, drawLine, drawTriangle } from "./shapes.ts";
+import { drawCircle, drawLine, drawTriangle, drawArc } from "./shapes.ts";
 
 describe("shapes", () => {
   describe("drawCircle", () => {
@@ -132,12 +132,64 @@ describe("shapes", () => {
     });
   });
 
+  describe("drawArc", () => {
+    it("logs an arc draw call with correct parameters", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      drawArc(100, 200, 30, 0, Math.PI);
+      const calls = getDrawCalls();
+      const arcCalls = calls.filter((c: any) => c.type === "arc");
+      assert.equal(arcCalls.length, 1, "expected one arc draw call");
+      const call = arcCalls[0] as any;
+      assert.equal(call.cx, 100);
+      assert.equal(call.cy, 200);
+      assert.equal(call.radius, 30);
+      assert.equal(call.startAngle, 0);
+      assert.equal(call.endAngle, Math.PI);
+      disableDrawCallCapture();
+    });
+
+    it("uses default thickness 2, layer 0, screenSpace false", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      drawArc(50, 50, 10, 0, Math.PI / 2);
+      const calls = getDrawCalls();
+      const arcCalls = calls.filter((c: any) => c.type === "arc");
+      assert.equal(arcCalls.length, 1);
+      const call = arcCalls[0] as any;
+      assert.equal(call.thickness, 2);
+      assert.equal(call.layer, 0);
+      assert.equal(call.screenSpace, false);
+      disableDrawCallCapture();
+    });
+
+    it("accepts custom options", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      drawArc(0, 0, 20, 0, Math.PI * 2, {
+        color: { r: 1, g: 0, b: 0, a: 1 },
+        thickness: 5,
+        layer: 42,
+        screenSpace: true,
+      });
+      const calls = getDrawCalls();
+      const arcCalls = calls.filter((c: any) => c.type === "arc");
+      assert.equal(arcCalls.length, 1);
+      const call = arcCalls[0] as any;
+      assert.equal(call.thickness, 5);
+      assert.equal(call.layer, 42);
+      assert.equal(call.screenSpace, true);
+      disableDrawCallCapture();
+    });
+  });
+
   describe("headless safety", () => {
     it("all shape functions are safe in headless mode (no crash)", () => {
       // hasRenderOps is false in tests, so these should all early-return after logging
       drawCircle(100, 100, 50);
       drawLine(0, 0, 200, 200);
       drawTriangle(10, 10, 50, 80, 90, 10);
+      drawArc(100, 100, 30, 0, Math.PI);
       // If we get here without throwing, the test passes
       assert.ok(true, "all shapes returned without error in headless mode");
     });

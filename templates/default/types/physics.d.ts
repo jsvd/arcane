@@ -135,6 +135,36 @@ declare module "@arcane/runtime/physics" {
       nx: number;
       ny: number;
   } | null;
+  /**
+   * Sweep a moving circle against a static AABB and return the first hit.
+   *
+   * Expands the AABB by the circle's radius (Minkowski sum), then raycasts
+   * from the circle center along its velocity. Handles edge and corner cases.
+   *
+   * @param cx - Circle center X at start of frame.
+   * @param cy - Circle center Y at start of frame.
+   * @param vx - Circle X velocity (pixels per frame or per second — same units as box).
+   * @param vy - Circle Y velocity.
+   * @param radius - Circle radius. Must be >= 0.
+   * @param box - The static AABB to sweep against.
+   * @returns Hit result with `t` (fraction 0..1 along velocity), `nx`/`ny` (surface normal),
+   *          and `hitX`/`hitY` (contact point on AABB surface). Returns null if no hit.
+   *
+   * @example
+   * const hit = sweepCircleAABB(bullet.x, bullet.y, bullet.vx * dt, bullet.vy * dt, 4, wall);
+   * if (hit) {
+   *   bullet.x += bullet.vx * dt * hit.t;
+   *   bullet.y += bullet.vy * dt * hit.t;
+   *   // Reflect: bullet.vx -= 2 * (bullet.vx * hit.nx) * hit.nx;
+   * }
+   */
+  export declare function sweepCircleAABB(cx: number, cy: number, vx: number, vy: number, radius: number, box: AABB): {
+      t: number;
+      nx: number;
+      ny: number;
+      hitX: number;
+      hitY: number;
+  } | null;
 
   /**
    * Create a rigid body in the physics world.
