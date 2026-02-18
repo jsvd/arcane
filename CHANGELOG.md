@@ -2,7 +2,7 @@
 
 All notable changes to Arcane are documented here.
 
-## [0.12.1] - 2026-02-18
+## [0.12.2] - 2026-02-18
 
 ### Added
 - **`drawArc()` primitive** — draw arc/partial circle outlines via line segments. Supports startAngle/endAngle, thickness, screenSpace. Available from `@arcane/runtime/ui` and `@arcane/runtime/rendering`.
