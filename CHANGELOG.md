@@ -2,6 +2,11 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.12.1] - 2026-02-18
+
+### Fixed
+- **Cheatsheet breaks type-checking** — renamed `cheatsheet.d.ts` to `cheatsheet.txt` so it's never type-checked. Fixed multi-line signature collapsing in the generator script. Added scaffolded-project type-check verification to the release process.
+
 ## [0.12.0] - 2026-02-18
 
 ### Added

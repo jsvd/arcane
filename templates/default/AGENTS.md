@@ -231,7 +231,7 @@ Read the **Essential** guides first, then the genre-specific guides for your gam
 
 ## API Quick Reference
 
-See [`types/cheatsheet.d.ts`](types/cheatsheet.d.ts) for every exported function as a one-liner, grouped by module. The 20 most common functions:
+See [`types/cheatsheet.txt`](types/cheatsheet.txt) for every exported function as a one-liner, grouped by module. The 20 most common functions:
 
 | Function | Module | What it does |
 |----------|--------|-------------|
@@ -262,7 +262,7 @@ Per-module type files with JSDoc documentation. Check these before using unfamil
 
 | File | Module |
 |------|--------|
-| `types/cheatsheet.d.ts` | **All modules** — compact one-liner signatures |
+| `types/cheatsheet.txt` | **All modules** — compact one-liner signatures |
 | `types/rendering.d.ts` | `@arcane/runtime/rendering` |
 | `types/ui.d.ts` | `@arcane/runtime/ui` |
 | `types/physics.d.ts` | `@arcane/runtime/physics` |

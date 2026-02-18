@@ -47,6 +47,21 @@ cargo check --no-default-features 2>&1 | tail -3  # Headless check
 
 All must pass before proceeding. Record the test counts (e.g., "2028 Node + 2125 V8 + 292 Rust").
 
+Also verify that generated declaration files type-check correctly in a scaffolded project:
+
+```bash
+# Regenerate declarations (ensures cheatsheet is fresh)
+scripts/generate-declarations.sh
+
+# Create a temp project and type-check it
+TMPDIR=$(mktemp -d)
+cargo run -- new "$TMPDIR/release-check" 2>&1
+cd "$TMPDIR/release-check" && npx -p typescript tsc --noEmit 2>&1
+cd - && rm -rf "$TMPDIR"
+```
+
+If type-checking fails, fix the generated files before proceeding.
+
 ### 4. Update status docs with fresh test counts
 
 #### a. `README.md`

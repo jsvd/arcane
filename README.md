@@ -96,7 +96,7 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**v0.12.0 — DX improvements: color API, particle presets, knockback, palette!**
+**v0.12.1 — DX improvements: color API, particle presets, knockback, palette!**
 
 Install: [`cargo install arcane-engine`](https://crates.io/crates/arcane-engine)
 
