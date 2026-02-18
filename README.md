@@ -173,7 +173,7 @@ arcane assets download tiny-dungeon
 
 ```bash
 # Clone the repository
-git clone https://github.com/anthropics/arcane.git
+git clone https://github.com/jsvd/arcane.git
 cd arcane
 
 # Create a new game project
