@@ -1092,6 +1092,47 @@ Gamepad support (gilrs), multi-touch, and input action mapping system.
 
 ---
 
+## Phase 25.5: Performance & Architecture
+
+**Status: COMPLETE ✅**
+
+Targeted performance optimizations and architectural improvements. GPU geometry pipeline, Rust-native particle simulation, bulk data submission, transform hierarchy, component indexing, text layout, and async asset loading.
+
+### Deliverables
+- [x] **GPU geometry pipeline** (`core/src/renderer/geometry.rs`, `shaders/geom.wgsl`, `core/src/scripting/geometry_ops.rs`)
+  - [x] Dedicated `TriangleList` render pipeline for colored shapes (circles, lines, polygons, arcs, sectors, ellipses, rings, capsules)
+  - [x] Shares sprite pipeline camera bind group, renders after sprites via `LoadOp::Load`
+  - [x] New shapes: `drawEllipse()`, `drawRing()`, `drawCapsule()`, `drawPolygon()`
+  - [x] GeoState in OpState, separate from RenderBridgeState
+- [x] **Rust-native particle simulation** (`core/src/scripting/particle_ops.rs`)
+  - [x] Emitter lifecycle: `op_create_emitter`, `op_update_emitter`, `op_get_emitter_sprite_data`, `op_destroy_emitter`
+  - [x] xorshift32 RNG, semi-implicit Euler, alpha decay, gravity
+  - [x] Packed float array readback: one op call regardless of particle count
+- [x] **Bulk sprite submission** (`op_submit_sprite_batch`)
+  - [x] All frame sprites packed into `Float32Array`, submitted in one op call
+- [x] **Bulk physics readback** (`getAllBodyStates()`)
+  - [x] Read all body states in one op call instead of N `getBodyState()` calls
+- [x] **Transform hierarchy** (`runtime/game/transform.ts`)
+  - [x] SceneNode system with parent-child relationships
+  - [x] `createNode()`, `setParent()`, `getWorldTransform()` (walks parent chain), `applyToSprite()`
+  - [x] No caching/dirty flags — simple walk for typical 3-5 level depths
+- [x] **Component index** (`runtime/state/store.ts`)
+  - [x] `query()` now O(matching entities) not O(all entities) via maintained component index
+- [x] **Text layout** (`runtime/rendering/text.ts`)
+  - [x] `wrapText()`, `drawTextWrapped()`, `drawTextAligned()`, `TextAlign`
+- [x] **Async asset loading** (`runtime/rendering/texture.ts`)
+  - [x] `preloadAssets()`, `isTextureLoaded()`, `getLoadingProgress()`
+
+### Success Criteria
+- [x] Shape drawing uses GPU geometry pipeline instead of scanline sprites
+- [x] Particle simulation runs in Rust with packed readback
+- [x] Bulk sprite submission reduces per-frame op overhead
+- [x] Transform hierarchy enables parent-child sprite relationships
+- [x] Component index improves query performance for large entity counts
+- [x] Text layout supports wrapping and alignment
+
+---
+
 ## Phase 26: Atmosphere
 
 **Status: Planned**

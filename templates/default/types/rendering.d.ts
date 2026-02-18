@@ -2643,9 +2643,18 @@ declare module "@arcane/runtime/rendering" {
    */
   export declare function drawSprite(opts: SpriteOptions): void;
   /**
+   * Flush the sprite batch buffer to the Rust renderer.
+   * Called automatically by clearSprites() at the frame boundary.
+   * Can also be called manually if needed (e.g., mid-frame flush).
+   */
+  export declare function _flushSpriteBatch(): void;
+  /**
    * Clear all queued sprites for this frame.
    * Normally not needed -- the renderer clears automatically at frame start.
    * No-op in headless mode.
+   *
+   * When batch mode is active, flushes the accumulated batch to Rust first,
+   * then clears the Rust-side sprite command list.
    */
   export declare function clearSprites(): void;
 
@@ -2875,6 +2884,51 @@ declare module "@arcane/runtime/rendering" {
    * drawText("No effects", 10, 70, { msdfFont: font });
    */
   export declare function drawText(text: string, x: number, y: number, options?: TextOptions): void;
+  /** Horizontal text alignment. */
+  export type TextAlign = "left" | "center" | "right";
+  /** Options for {@link drawTextWrapped}. */
+  export type TextLayoutOptions = TextOptions & {
+      /** Maximum width in pixels before wrapping. Required for wrapping to take effect. */
+      maxWidth?: number;
+      /** Line height multiplier. Default: 1.2. */
+      lineHeight?: number;
+      /** Horizontal alignment within the wrapped area. Default: "left". */
+      layoutAlign?: TextAlign;
+  };
+  /**
+   * Split text into lines that fit within maxWidth pixels.
+   * Word-wraps at space boundaries. Words longer than maxWidth are placed on their own line.
+   *
+   * @param text - The text to wrap.
+   * @param maxWidth - Maximum line width in pixels.
+   * @param scale - Text scale multiplier. Default: 1.
+   * @param options - Font options for measuring. Default: built-in bitmap font.
+   * @returns Array of lines.
+   */
+  export declare function wrapText(text: string, maxWidth: number, scale?: number, options?: TextOptions): string[];
+  /**
+   * Draw text with automatic word wrapping and optional alignment.
+   * Wraps text at maxWidth pixels, drawing each line at the appropriate y offset.
+   *
+   * @param text - The text to draw.
+   * @param x - X position (screen pixels if screenSpace, world units otherwise).
+   * @param y - Y position of the first line.
+   * @param opts - Layout and text options (maxWidth, lineHeight, layoutAlign, plus all TextOptions).
+   */
+  export declare function drawTextWrapped(text: string, x: number, y: number, opts?: TextLayoutOptions): void;
+  /**
+   * Draw text aligned within a fixed-width box.
+   * Unlike drawTextWrapped, this does NOT wrap -- it only adjusts horizontal position.
+   *
+   * @param text - The text to draw.
+   * @param x - Left edge X position of the alignment box.
+   * @param y - Y position.
+   * @param width - Width of the alignment box in pixels.
+   * @param opts - TextOptions plus optional align.
+   */
+  export declare function drawTextAligned(text: string, x: number, y: number, width: number, opts?: TextOptions & {
+      layoutAlign?: TextAlign;
+  }): void;
   export {};
 
   /**
@@ -2916,6 +2970,33 @@ declare module "@arcane/runtime/rendering" {
    * @returns Texture handle for use with drawSprite().
    */
   export declare function uploadRgbaTexture(name: string, w: number, h: number, pixels: Uint8Array): TextureId;
+  /**
+   * Preload multiple texture assets. Calls loadTexture() for each path and
+   * tracks progress. The API is async for forward compatibility with a
+   * truly async backend; the current implementation loads synchronously.
+   *
+   * @param paths - Array of texture file paths to preload.
+   * @returns Promise that resolves when all textures are loaded.
+   *
+   * @example
+   * await preloadAssets(["assets/player.png", "assets/enemy.png", "assets/tileset.png"]);
+   * // All textures are now cached and ready for drawSprite()
+   */
+  export declare function preloadAssets(paths: string[]): Promise<void>;
+  /**
+   * Check if a texture at the given path has been loaded via loadTexture() or preloadAssets().
+   *
+   * @param path - File path to check.
+   * @returns True if the texture has been loaded.
+   */
+  export declare function isTextureLoaded(path: string): boolean;
+  /**
+   * Get the loading progress (0.0-1.0) of the most recent preloadAssets() call.
+   * Returns 1.0 if no preload is in progress or the last preload has completed.
+   *
+   * @returns Progress ratio between 0.0 and 1.0.
+   */
+  export declare function getLoadingProgress(): number;
 
   /** Definition for an animated tile: cycles through a sequence of tile IDs. */
   export type AnimatedTileDef = {

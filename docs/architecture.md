@@ -17,6 +17,7 @@ The Rust core owns everything performance-critical and platform-specific:
 - wgpu-based 2D renderer
 - Tile-based rendering with multiple layers, autotiling, animated tiles
 - Sprite system with atlases, animation state machines, blend trees
+- GPU geometry pipeline for colored shapes (circles, lines, polygons, arcs, capsules, rings)
 - Custom shaders in WGSL, hot-reloadable, with typed parameter binding
 - Post-processing: bloom, blur, vignette, CRT scanlines
 - MSDF text rendering for resolution-independent text with outlines and shadows
@@ -55,6 +56,24 @@ MSDF (Multi-channel Signed Distance Field) text uses a custom fragment shader fo
 - **External fonts**: Loaded via `loadMSDFFont(atlasPath, metricsJson)`, atlas uploaded with linear (not sRGB) texture format
 - **Shader params** (per uniform buffer): slot 0 = SDF metrics, slots 1-2 = outline, slots 3-4 = shadow
 
+#### Rendering Pipeline — Pass Order
+
+The full per-frame GPU rendering pipeline executes in this order:
+
+```
+1. Radiance GI (compute)     — seed emissives/occluders, cascade ray-march, merge
+2. Sprite batch (instanced)  — instanced quad rendering, sorted by layer + texture
+3. Geometry batch (triangles) — colored triangles/lines, LoadOp::Load (overlay, no clear)
+4. GI compose                — sample GI texture, additive blend onto scene
+5. Post-process              — bloom, blur, vignette, CRT, custom effects
+```
+
+The geometry pipeline (`core/renderer/geometry.rs`, `shaders/geom.wgsl`) draws all shape primitives (circles, lines, triangles, arcs, sectors, ellipses, rings, capsules, polygons) as colored triangles via a dedicated `TriangleList` render pipeline. It shares the sprite pipeline's camera bind group and renders after the sprite batch using `LoadOp::Load` (overlay on top of sprites, no clear). Lines are expanded into quads (2 triangles) on the CPU side.
+
+#### Particle Simulation (Rust-Native)
+
+Particle simulation runs in Rust (`core/src/scripting/particle_ops.rs`) for performance. TS creates emitters via `op_create_emitter(configJSON)`, then each frame calls `op_update_emitter(id, dt, cx, cy)` which runs integration, spawning, and killing in Rust using xorshift32 RNG and semi-implicit Euler. TS reads back packed sprite data via `op_get_emitter_sprite_data(id)` and renders via `drawSprite()`. This eliminates the O(N) per-particle op-crossing overhead of the previous pure-TS simulation.
+
 ### Physics (`core/physics/`)
 - Homebrew 2D rigid body physics (NOT feature-gated — runs headless too)
 - Shapes: AABB, circle, convex polygon
@@ -72,6 +91,7 @@ MSDF (Multi-channel Signed Distance Field) text uses a custom fragment shader fo
 - V8 embedding via deno_core
 - Script hot-reload (creates fresh V8 isolate on file change)
 - FFI bridge between TS game logic and Rust systems
+- Op files: `render_ops.rs` (sprites, camera, tilemap, lighting, audio), `physics_ops.rs` (bodies, constraints, queries), `geometry_ops.rs` (triangles, line segments via GeoState), `particle_ops.rs` (emitter lifecycle, simulation via ParticleState), `replay_ops.rs` (physics snapshots)
 
 ### Platform (`core/platform/`)
 - Windowing (winit)
@@ -107,10 +127,17 @@ The bridge translates high-level TypeScript commands into renderer instructions:
 TypeScript                          Rust
 ─────────                          ────
 drawSprite({...})           →      Batch sprite draw
+submitSpriteBatch(f32arr)   →      Bulk sprite submission (one op, N sprites)
+drawCircle(x, y, r, color) →      Geometry pipeline: colored triangles
 setCamera(x, y, zoom)      →      Update view matrix
 addPointLight(x, y, ...)   →      Update light uniform
 drawText(str, x, y, opts)  →      Emit text command
+updateParticles(id, dt)     →      Rust-native particle simulation + packed readback
 ```
+
+For performance-critical paths, bulk submission is available:
+- **Bulk sprite submission** (`op_submit_sprite_batch`): all frame sprites packed into a `Float32Array` and submitted in one op call instead of N individual calls.
+- **Bulk physics readback** (`getAllBodyStates()`): read all body states in one op call instead of N `getBodyState()` calls.
 
 ### Procedural Generation (`runtime/procgen/`)
 - Wave Function Collapse (WFC) algorithm for tile-based level generation
@@ -142,6 +169,7 @@ arcane/
 │   ├── renderer/            # wgpu-based 2D renderer
 │   │   ├── mod.rs           # Renderer: GPU, sprites, textures, camera, lighting
 │   │   ├── sprite.rs        # Instanced quad rendering + lighting
+│   │   ├── geometry.rs      # GPU geometry batch: colored triangles/lines for shapes
 │   │   ├── tilemap.rs       # Tile data, atlas UV, camera culling
 │   │   ├── lighting.rs      # Point lights, ambient, GPU uniform
 │   │   ├── radiance.rs      # Radiance Cascades 2D GI compute pipeline
@@ -150,12 +178,13 @@ arcane/
 │   │   ├── postprocess.rs   # Bloom, blur, vignette, CRT effects
 │   │   └── shaders/
 │   │       ├── sprite.wgsl
+│   │       ├── geom.wgsl    # Geometry pipeline vertex/fragment shader
 │   │       ├── radiance.wgsl
 │   │       └── msdf.wgsl
 │   ├── audio/               # rodio-based sound loading + playback
 │   ├── physics/             # Homebrew 2D rigid body physics
 │   ├── agent/               # HTTP inspector + MCP server
-│   ├── scripting/           # V8 embedding, hot-reload, render/physics/replay ops
+│   ├── scripting/           # V8 embedding, hot-reload, render/physics/geometry/particle/replay ops
 │   └── platform/            # Windowing (winit), input handling
 │
 ├── runtime/                 # TypeScript game runtime
@@ -207,9 +236,12 @@ Game logic never talks to the GPU directly. Instead, it issues high-level render
 TypeScript                          Rust
 ─────────                          ────
 drawSprite({...})           →      Batch sprite draw
+submitSpriteBatch(f32arr)   →      Bulk sprite submission (one op, N sprites)
+drawCircle(x, y, r, color) →      Geometry pipeline: colored triangles
 setCamera(x, y, zoom)      →      Update view matrix
 addPointLight(x, y, ...)   →      Update light uniform
 drawText(str, x, y, opts)  →      Emit text command
+updateParticles(id, dt)     →      Rust particle simulation + packed readback
 ```
 
 This separation means:

@@ -1,7 +1,8 @@
 /**
- * Physics Playground Demo - Phase 11
+ * Physics Playground Demo - Phase 11 (updated for Phase 26)
  *
- * Interactive physics sandbox demonstrating the Rust physics engine.
+ * Interactive physics sandbox demonstrating the Rust physics engine
+ * with geometry-pipeline debug visualization.
  *
  * Controls:
  * - 1: Spawn box
@@ -21,8 +22,9 @@ import {
   isMouseButtonPressed,
   getMouseWorldPosition,
   getViewportSize,
+  drawTextWrapped,
 } from "../../runtime/rendering/index.ts";
-import { Colors, HUDLayout, rgb, drawCircle } from "../../runtime/ui/index.ts";
+import { Colors, HUDLayout, rgb, drawCircle, drawRing, drawCapsule, drawLine } from "../../runtime/ui/index.ts";
 import { createGame, drawColorSprite, hud } from "../../runtime/game/index.ts";
 import { createRng } from "../../runtime/state/index.ts";
 import {
@@ -45,8 +47,10 @@ const COL_GROUND = rgb(80, 80, 80);
 const COL_SEESAW = rgb(160, 100, 60);
 const COL_PIVOT = rgb(200, 200, 50);
 const COL_ROPE = rgb(100, 60, 40);
+const COL_ROPE_LINK = rgb(140, 100, 70);
 const COL_SLEEP = rgb(100, 100, 120);
 const COL_BG = rgb(25, 25, 35);
+const COL_JOINT = rgb(220, 200, 80);
 
 // Deterministic PRNG for spawn sizing
 const rng = createRng(42);
@@ -60,17 +64,28 @@ type TrackedBody = {
   radius?: number;
 };
 
+// Joint tracking for visual debug
+type TrackedJoint = {
+  bodyA: BodyId;
+  bodyB: BodyId;
+  kind: "distance" | "revolute";
+};
+
 let bodies: TrackedBody[] = [];
+let joints: TrackedJoint[] = [];
 let spawnMode = 1;
 let gravityOn = true;
 let bodyCount = 0;
+let sleepingCount = 0;
 
 const { width: VPW, height: VPH } = getViewportSize();
 
 function setupWorld(): void {
   destroyPhysicsWorld();
   bodies = [];
+  joints = [];
   bodyCount = 0;
+  sleepingCount = 0;
 
   createPhysicsWorld({ gravityX: 0, gravityY: 400 });
 
@@ -170,6 +185,7 @@ function spawnSeesaw(x: number, y: number): void {
 
   // Revolute joint
   createRevoluteJoint(plankId, pivotId, x, y);
+  joints.push({ bodyA: plankId, bodyB: pivotId, kind: "revolute" });
 }
 
 function spawnRope(x: number, y: number): void {
@@ -201,6 +217,7 @@ function spawnRope(x: number, y: number): void {
     bodyCount++;
 
     createDistanceJoint(prevId, segId, segDist);
+    joints.push({ bodyA: prevId, bodyB: segId, kind: "distance" });
     prevId = segId;
   }
 }
@@ -283,6 +300,7 @@ game.onFrame((ctx) => {
     gravityOn = !gravityOn;
     destroyPhysicsWorld();
     bodies = [];
+    joints = [];
     createPhysicsWorld({ gravityX: 0, gravityY: gravityOn ? 400 : 0 });
     // Recreating world clears bodies, so reset
     setupWorld();
@@ -299,6 +317,7 @@ game.onFrame((ctx) => {
         y: VPH - groundHH,
       });
       bodies = [{ id: groundId, kind: "box", halfW: groundHW, halfH: groundHH }];
+      joints = [];
       bodyCount = 0;
     }
   }
@@ -334,13 +353,37 @@ game.onFrame((ctx) => {
   // Background
   drawColorSprite({ color: COL_BG, x: 0, y: 0, w: VPW, h: VPH, layer: 0 });
 
+  // Draw joint/constraint connections
+  for (const joint of joints) {
+    const stateA = getBodyState(joint.bodyA);
+    const stateB = getBodyState(joint.bodyB);
+
+    if (joint.kind === "distance") {
+      // Rope links: draw capsule between body centers
+      drawCapsule(stateA.x, stateA.y, stateB.x, stateB.y, 2, {
+        color: COL_ROPE_LINK,
+        layer: 1,
+      });
+    } else {
+      // Revolute joint: draw ring at pivot + connecting lines
+      drawRing(stateB.x, stateB.y, 6, 10, { color: COL_JOINT, layer: 3 });
+      drawLine(stateA.x, stateA.y, stateB.x, stateB.y, {
+        color: COL_JOINT,
+        thickness: 2,
+        layer: 1,
+      });
+    }
+  }
+
   // Draw all tracked bodies
+  sleepingCount = 0;
   for (const tracked of bodies) {
     const bs = getBodyState(tracked.id);
+    if (bs.sleeping) sleepingCount++;
     const col = bodyColor(tracked, bs.sleeping);
 
     if (tracked.radius) {
-      // Circle: render as filled circle
+      // Circle: render via geometry pipeline (efficient triangle fan)
       drawCircle(bs.x, bs.y, tracked.radius, { color: col, layer: 2 });
     } else {
       // AABB: draw from center
@@ -372,23 +415,34 @@ game.onFrame((ctx) => {
 
   hud.text("Physics Playground", hudX, hudY);
 
-  hud.text(`Bodies: ${bodyCount}  Contacts: ${contacts.length}`, hudX, hudY + lh, {
-    scale: HUDLayout.SMALL_TEXT_SCALE,
-    tint: Colors.INFO,
-  });
-
-  hud.text(`Mode [1-5]: ${MODE_NAMES[spawnMode]}`, hudX, hudY + lh * 2, {
+  hud.text(`Mode [1-5]: ${MODE_NAMES[spawnMode]}`, hudX, hudY + lh, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
     tint: Colors.WARNING,
   });
 
-  hud.text(`Gravity: ${gravityOn ? "ON" : "OFF"} [G]`, hudX, hudY + lh * 3, {
+  hud.text(`Gravity: ${gravityOn ? "ON" : "OFF"} [G]`, hudX, hudY + lh * 2, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
     tint: gravityOn ? Colors.SUCCESS : Colors.LOSE,
   });
 
-  hud.text("[R] Reset  [Space] Launch  [Click] Spawn", hudX, hudY + lh * 4, {
+  hud.text("[R] Reset  [Space] Launch  [Click] Spawn", hudX, hudY + lh * 3, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
     tint: Colors.LIGHT_GRAY,
+  });
+
+  // Physics info panel (top-right) using drawTextWrapped
+  const infoX = VPW - 200;
+  const infoY = HUDLayout.TOP_LEFT.y;
+  const infoText =
+    `Bodies: ${bodyCount}\n` +
+    `Sleeping: ${sleepingCount}\n` +
+    `Contacts: ${contacts.length}\n` +
+    `Joints: ${joints.length}`;
+  drawTextWrapped(infoText, infoX, infoY, {
+    maxWidth: 190,
+    scale: HUDLayout.SMALL_TEXT_SCALE,
+    tint: Colors.INFO,
+    screenSpace: true,
+    layer: 100,
   });
 });

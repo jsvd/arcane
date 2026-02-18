@@ -71,3 +71,57 @@ export function uploadRgbaTexture(
   if (!hasUploadOp) return 0;
   return (globalThis as any).Deno.core.ops.op_upload_rgba_texture(name, w, h, pixels);
 }
+
+// --- Async preloading ---
+
+/** Set of paths that have been successfully loaded via loadTexture(). */
+const loadedPaths = new Set<string>();
+
+/** Loading progress (0.0-1.0) for the most recent preloadAssets call. */
+let loadingProgress = 1.0;
+
+/**
+ * Preload multiple texture assets. Calls loadTexture() for each path and
+ * tracks progress. The API is async for forward compatibility with a
+ * truly async backend; the current implementation loads synchronously.
+ *
+ * @param paths - Array of texture file paths to preload.
+ * @returns Promise that resolves when all textures are loaded.
+ *
+ * @example
+ * await preloadAssets(["assets/player.png", "assets/enemy.png", "assets/tileset.png"]);
+ * // All textures are now cached and ready for drawSprite()
+ */
+export async function preloadAssets(paths: string[]): Promise<void> {
+  if (paths.length === 0) {
+    loadingProgress = 1.0;
+    return;
+  }
+
+  loadingProgress = 0;
+  for (let i = 0; i < paths.length; i++) {
+    loadTexture(paths[i]);
+    loadedPaths.add(paths[i]);
+    loadingProgress = (i + 1) / paths.length;
+  }
+}
+
+/**
+ * Check if a texture at the given path has been loaded via loadTexture() or preloadAssets().
+ *
+ * @param path - File path to check.
+ * @returns True if the texture has been loaded.
+ */
+export function isTextureLoaded(path: string): boolean {
+  return loadedPaths.has(path);
+}
+
+/**
+ * Get the loading progress (0.0-1.0) of the most recent preloadAssets() call.
+ * Returns 1.0 if no preload is in progress or the last preload has completed.
+ *
+ * @returns Progress ratio between 0.0 and 1.0.
+ */
+export function getLoadingProgress(): number {
+  return loadingProgress;
+}

@@ -184,7 +184,7 @@ followTargetSmooth(player.x, player.y, 2.0, 0.08);
 
 **18. Multiple drawSprite() calls for multi-part characters** — Use `createSpriteGroup()` + `drawSpriteGroup()`. Handles offsets, flip mirroring, opacity, per-part visibility. See [docs/entities.md](docs/entities.md).
 
-**19. Using drawRect() for circles/lines/arcs** — Use `drawCircle()`, `drawLine()`, `drawTriangle()`, `drawArc()` from `@arcane/runtime/ui`. See [docs/ui.md](docs/ui.md).
+**19. Using drawRect() for circles/lines/arcs** — Use `drawCircle()`, `drawEllipse()`, `drawRing()`, `drawLine()`, `drawTriangle()`, `drawArc()`, `drawSector()`, `drawCapsule()`, `drawPolygon()` from `@arcane/runtime/ui`. See [docs/ui.md](docs/ui.md).
 
 **20. Mixing up color ranges** — `rgb(r, g, b)` takes **0-255 integers** and returns a `Color`. All other APIs (`setBackgroundColor`, `flashScreen`, particle `startColor`/`endColor`, `createSolidTexture`) expect a `Color` with **0.0-1.0 float** components. Always use `rgb()` to convert from 0-255: `rgb(255, 0, 0)` not `{ r: 255, g: 0, b: 0 }`.
 
@@ -325,3 +325,6 @@ File organization: `src/game.ts` (logic), `src/visual.ts` (rendering), `src/*.te
 - Use `impact()` or `impactLight()` when something hits — one call gives you shake + flash + particles.
 - Use `createEmitter()` for any visual effect that spawns many short-lived objects (fire, dust, sparks, explosions).
 - Use `startScreenTransition()` for level changes — don't hand-roll fade overlays.
+- Use `wrapText()` / `drawTextWrapped()` for multi-line text with word wrapping. Use `drawTextAligned()` for horizontal alignment within a fixed-width area.
+- Use `createNode()` / `setNodeTransform()` / `getWorldTransform()` / `applyToSprite()` from `@arcane/runtime/game` for parent-child transform hierarchies (weapons on characters, UI grouping).
+- Use `preloadAssets()` to batch-load textures upfront. Check progress with `getLoadingProgress()` for loading screens.

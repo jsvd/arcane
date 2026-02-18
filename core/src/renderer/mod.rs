@@ -9,6 +9,7 @@ pub mod msdf;
 pub mod shader;
 pub mod postprocess;
 pub mod radiance;
+pub mod geometry;
 
 pub use gpu::GpuContext;
 pub use sprite::{SpriteCommand, SpritePipeline};
@@ -20,6 +21,7 @@ pub use msdf::{MsdfFont, MsdfFontStore, MsdfGlyph};
 pub use shader::ShaderStore;
 pub use postprocess::PostProcessPipeline;
 pub use radiance::{RadiancePipeline, RadianceState, EmissiveSurface, Occluder, DirectionalLight, SpotLight};
+pub use geometry::GeometryBatch;
 
 use anyhow::Result;
 
@@ -27,6 +29,7 @@ use anyhow::Result;
 pub struct Renderer {
     pub gpu: GpuContext,
     pub sprites: SpritePipeline,
+    pub geometry: GeometryBatch,
     pub shaders: ShaderStore,
     pub postprocess: PostProcessPipeline,
     pub textures: TextureStore,
@@ -48,6 +51,7 @@ impl Renderer {
         let scale_factor = window.scale_factor() as f32;
         let gpu = GpuContext::new(window)?;
         let sprites = SpritePipeline::new(&gpu);
+        let geometry = GeometryBatch::new(&gpu);
         let shaders = ShaderStore::new(&gpu);
         let postprocess = PostProcessPipeline::new(&gpu);
         let radiance_pipeline = RadiancePipeline::new(&gpu);
@@ -62,6 +66,7 @@ impl Renderer {
         Ok(Self {
             gpu,
             sprites,
+            geometry,
             shaders,
             postprocess,
             radiance: radiance_pipeline,
@@ -131,6 +136,9 @@ impl Renderer {
                     &mut encoder,
                     clear_color,
                 );
+                // Geometry overlays on sprites before post-processing
+                let camera_bg = self.sprites.camera_bind_group();
+                self.geometry.flush(&self.gpu, &mut encoder, sprite_target, camera_bg);
             }
             // Apply GI light texture to the offscreen target before post-processing
             if gi_active {
@@ -151,6 +159,9 @@ impl Renderer {
                 &mut encoder,
                 clear_color,
             );
+            // Geometry overlays on sprites
+            let camera_bg = self.sprites.camera_bind_group();
+            self.geometry.flush(&self.gpu, &mut encoder, &view, camera_bg);
             // Apply GI light texture to the surface
             if gi_active {
                 self.radiance.compose(&mut encoder, &view);

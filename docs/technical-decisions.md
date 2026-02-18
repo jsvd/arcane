@@ -517,3 +517,58 @@ This caused:
 - Release process drops from 7 files + 4 packages to 3 files + 2 crates
 - Users who already have Rust toolchain (required for `arcane-engine` anyway) need nothing else
 - Backward compatibility: import prefixes `@arcane/runtime` and `@arcane-engine/runtime` both still work via the import map
+
+---
+
+## ADR-017: Geometry Pipeline over Texture-Based Shapes
+
+### Context
+
+Shape drawing (circles, lines, arcs, etc.) was implemented by rasterizing shapes into scanline sprites. `drawCircle()` used ~80 scanline sprites per call. Other shapes (rings, arcs, ellipses) were similarly expensive. This approach consumed sprite batch capacity, scaled poorly with shape complexity, and produced aliasing artifacts.
+
+### Options Considered
+1. **Pre-bake RGBA textures per shape** — render each shape to a texture at creation time, draw as a single sprite
+   - Pro: One sprite per shape after bake
+   - Con: Blurry when scaled (fixed resolution), wastes VRAM, caching complexity
+2. **Geometry pipeline with colored triangles** — dedicated GPU pass using a `TriangleList` render pipeline
+   - Pro: Triangles are the native GPU primitive; no caching, no textures
+   - Pro: Dynamic shapes are naturally O(N triangles), scales cleanly
+   - Con: New render pipeline and shader
+
+### Decision
+**Geometry pipeline** (`core/src/renderer/geometry.rs`, `shaders/geom.wgsl`).
+
+### Rationale
+- Texture approach is architecturally wrong for a GPU renderer. Triangles are the native GPU primitive.
+- No caching complexity — shapes are submitted per-frame like sprites.
+- Dynamic shapes (varying radius, arc angle, etc.) are free — just different vertex data.
+- Pre-baked textures blur at scale and waste VRAM.
+- The geometry pipeline shares the sprite pipeline's camera bind group and renders after sprites using `LoadOp::Load` (overlay, no clear). New shapes added: `drawEllipse()`, `drawRing()`, `drawCapsule()`, `drawPolygon()`, plus improved `drawCircle()`, `drawLine()`, `drawTriangle()`, `drawArc()`, `drawSector()`.
+- Geometry ops use their own `GeoState` in `OpState`, separate from `RenderBridgeState`.
+
+---
+
+## ADR-018: Rust-Native Particle Simulation
+
+### Context
+
+The TS particle system (`runtime/particles/emitter.ts`) ran simulation (integrate, spawn, kill) entirely in TypeScript, then issued one `drawSprite()` op call per particle per frame. At 200 particles and 60 FPS, that's 12,000 op crossings per second — the per-op overhead dominates.
+
+### Options Considered
+1. **Keep TS simulation** — simple, headless-testable, already works
+   - Con: O(N) op crossings per frame, poor scaling past ~200 particles
+2. **Move simulation to Rust with packed float array readback**
+   - Pro: Simulation is pure math, ideal for Rust
+   - Pro: Readback is one op call regardless of particle count
+   - Con: TS loses direct particle access during simulation
+
+### Decision
+**Rust simulation with packed float array readback** (`core/src/scripting/particle_ops.rs`).
+
+### Rationale
+- Particle simulation is pure math (integrate position, decay alpha, kill expired) — no game logic, no state queries, no decisions. It belongs in the engine core.
+- One `op_update_emitter(id, dt, cx, cy)` call replaces N `drawSprite()` calls. Readback via `op_get_emitter_sprite_data(id)` returns a packed `Float32Array` that TS renders.
+- Uses xorshift32 RNG and semi-implicit Euler integration.
+- TS retains full rendering control — it reads the packed data and draws via `drawSprite()`.
+- The original TS particle system remains as a headless-compatible fallback.
+- ParticleState in OpState manages emitter lifecycle independently from RenderBridgeState.

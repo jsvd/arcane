@@ -104,6 +104,8 @@ One binary. No npm required. The CLI embeds the TypeScript runtime and copies it
 
 **Current features:**
 - ✅ Core engine: rendering, audio, text, UI, animation, pathfinding, tweening, particles
+- ✅ GPU geometry pipeline: circles, lines, triangles, polygons, arcs, ellipses, rings, capsules via dedicated colored-triangle pass
+- ✅ Rust-native particle simulation: emitter lifecycle and physics in Rust with packed float array readback
 - ✅ Sprite transforms: rotation, origin point, flip, opacity, blend modes (additive, multiply, screen)
 - ✅ Custom WGSL shaders: user-defined fragment shaders with 16 vec4 uniform slots
 - ✅ Post-processing pipeline: offscreen render targets, effect chaining, built-in bloom/blur/vignette/CRT
@@ -112,6 +114,10 @@ One binary. No npm required. The CLI embeds the TypeScript runtime and copies it
 - ✅ Animation polish: state machine (states, transitions, conditions), crossfade blending, frame events
 - ✅ Interactive UI: buttons, checkboxes, radio groups, sliders, text input, layout helpers, focus/tab navigation
 - ✅ Rust physics engine: rigid bodies, circle/AABB shapes, spatial hash broadphase, SAT narrowphase, sequential impulse solver, distance + revolute joints, sleep system, raycast, AABB queries
+- ✅ Scene node transform hierarchy: parent-child relationships, world transforms, `applyToSprite()`
+- ✅ Text layout: `wrapText()`, `drawTextWrapped()`, `drawTextAligned()` with alignment options
+- ✅ Bulk data submission: `op_submit_sprite_batch` (sprites) and `getAllBodyStates()` (physics) for reduced op overhead
+- ✅ Async asset loading: `preloadAssets()`, `isTextureLoaded()`, `getLoadingProgress()`
 - ✅ Scene management: scene stack, transitions, lifecycle hooks
 - ✅ Save/load: serialization, schema migrations, auto-save, file I/O ops
 - ✅ Recipe framework with 5 recipes (turn-based combat, inventory, grid movement, fog of war, actor patrol)

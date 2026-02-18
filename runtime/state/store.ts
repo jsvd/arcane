@@ -1,4 +1,4 @@
-import type { DeepReadonly } from "./types.ts";
+import type { DeepReadonly, EntityId } from "./types.ts";
 import type { Mutation, Diff, TransactionResult } from "./transaction.ts";
 import { transaction } from "./transaction.ts";
 import type { Predicate } from "./query.ts";
@@ -19,6 +19,8 @@ import { createObserverRegistry } from "./observe.ts";
  * - `has(path, predicate?)` - Check existence in current state.
  * - `replaceState(state)` - Replace the entire state (for deserialization / time travel).
  * - `getHistory()` - Get the transaction history for recording/replay.
+ * - `enableComponentIndex(collectionPath)` - Enable fast component lookups for an entity collection.
+ * - `getEntitiesWithComponent(component)` - Get entity IDs that have a given component key.
  */
 export type GameStore<S> = Readonly<{
   /** Returns the current state as a deep readonly snapshot. */
@@ -50,6 +52,25 @@ export type GameStore<S> = Readonly<{
 
   /** Get the transaction history as an ordered list of TransactionRecords. */
   getHistory: () => readonly TransactionRecord<S>[];
+
+  /**
+   * Enable component indexing for an entity collection stored at the given path.
+   * The collection must be a Record<EntityId, object> (entity map keyed by ID).
+   * After enabling, query() will use the index for faster lookups when filtering
+   * by component presence, and getEntitiesWithComponent() becomes available.
+   *
+   * @param collectionPath - Dot-separated path to the entity collection (e.g., "entities").
+   */
+  enableComponentIndex: (collectionPath: string) => void;
+
+  /**
+   * Get entity IDs that have a specific component (property key) in any indexed collection.
+   * Returns an empty set if no component index is enabled or no entities have the component.
+   *
+   * @param component - The component/property name to look up.
+   * @returns ReadonlySet of entity IDs that have this component.
+   */
+  getEntitiesWithComponent: (component: string) => ReadonlySet<EntityId>;
 }>;
 
 /**
@@ -83,6 +104,31 @@ export function createStore<S>(initialState: S): GameStore<S> {
   const observers = createObserverRegistry<S>();
   const history: TransactionRecord<S>[] = [];
 
+  // Component index: tracks which entities have which component keys.
+  // Key = component name, Value = set of entity IDs that have it.
+  const componentIndex = new Map<string, Set<EntityId>>();
+  let indexedCollectionPath: string | null = null;
+
+  /** Rebuild the component index from the current state. */
+  function rebuildIndex(): void {
+    componentIndex.clear();
+    if (indexedCollectionPath === null) return;
+    const collection = get(state, indexedCollectionPath) as Record<string, unknown> | undefined;
+    if (!collection || typeof collection !== "object") return;
+    for (const [entityIdStr, entity] of Object.entries(collection)) {
+      if (entity && typeof entity === "object") {
+        for (const key of Object.keys(entity as Record<string, unknown>)) {
+          let set = componentIndex.get(key);
+          if (!set) {
+            set = new Set();
+            componentIndex.set(key, set);
+          }
+          set.add(entityIdStr as EntityId);
+        }
+      }
+    }
+  }
+
   return {
     getState(): DeepReadonly<S> {
       return state as DeepReadonly<S>;
@@ -100,6 +146,17 @@ export function createStore<S>(initialState: S): GameStore<S> {
           mutations,
           diff: result.diff,
         });
+
+        // Update component index if enabled and relevant paths changed
+        if (indexedCollectionPath !== null) {
+          const prefix = indexedCollectionPath + ".";
+          const needsUpdate = result.diff.entries.some(
+            (e) => e.path === indexedCollectionPath || e.path.startsWith(prefix),
+          );
+          if (needsUpdate) {
+            rebuildIndex();
+          }
+        }
 
         observers.notify(oldState, state, result.diff);
       }
@@ -131,10 +188,23 @@ export function createStore<S>(initialState: S): GameStore<S> {
 
     replaceState(newState: S): void {
       state = newState;
+      if (indexedCollectionPath !== null) {
+        rebuildIndex();
+      }
     },
 
     getHistory(): readonly TransactionRecord<S>[] {
       return history;
+    },
+
+    enableComponentIndex(collectionPath: string): void {
+      indexedCollectionPath = collectionPath;
+      rebuildIndex();
+    },
+
+    getEntitiesWithComponent(component: string): ReadonlySet<EntityId> {
+      const set = componentIndex.get(component);
+      return set ?? new Set();
     },
   };
 }

@@ -523,6 +523,29 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
             let _ = process_audio_command(&audio_tx, cmd, &bridge_for_loop);
         }
 
+        // Drain geometry commands from GeoState into renderer.geometry
+        {
+            use arcane_core::scripting::geometry_ops::{GeoCommand, GeoState};
+            let geo_cmds: Vec<GeoCommand> = {
+                let op_state = rt.inner().op_state();
+                let op_state = op_state.borrow();
+                let geo = op_state.borrow::<Rc<RefCell<GeoState>>>();
+                std::mem::take(&mut geo.borrow_mut().commands)
+            };
+            if !geo_cmds.is_empty() {
+                if let Some(ref mut renderer) = state.renderer {
+                    for cmd in geo_cmds {
+                        match cmd {
+                            GeoCommand::Triangle { x1, y1, x2, y2, x3, y3, r, g, b, a, .. } =>
+                                renderer.geometry.add_triangle(x1, y1, x2, y2, x3, y3, r, g, b, a),
+                            GeoCommand::LineSeg { x1, y1, x2, y2, thickness, r, g, b, a, .. } =>
+                                renderer.geometry.add_line(x1, y1, x2, y2, thickness, r, g, b, a),
+                        }
+                    }
+                }
+            }
+        }
+
         // Collect sprite commands and lighting from bridge
         {
             let mut bridge = bridge_for_loop.borrow_mut();

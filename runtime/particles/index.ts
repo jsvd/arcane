@@ -25,7 +25,17 @@ export {
   setMaxTotalParticles,
   getMaxTotalParticles,
   getTotalParticleCount,
+  // Rust-native emitters (high-performance backend)
+  createRustEmitter,
+  updateRustEmitter,
+  getRustEmitterParticleCount,
+  getRustEmitterSpriteData,
+  drawRustEmitter,
+  destroyRustEmitter,
+  updateAllRustEmitters,
+  setRustEmitterPosition,
 } from "./emitter.ts";
+export type { RustEmitterConfig } from "./emitter.ts";
 
 // Presets
 export type { ParticleOptions } from "./presets.ts";

@@ -178,6 +178,9 @@ impl ArcaneRuntime {
                 arcane_ext::init(),
                 super::render_ops::render_ext::init(),
                 super::physics_ops::physics_ext::init(),
+                super::geometry_ops::geometry_ext::init(),
+                super::particle_ops::particle_ext::init(),
+                super::target_ops::target_ext::init(),
             ],
             ..Default::default()
         });
@@ -190,6 +193,9 @@ impl ArcaneRuntime {
             let mut state = op_state.borrow_mut();
             state.put(bridge);
             state.put(Rc::new(RefCell::new(super::physics_ops::PhysicsState(None))));
+            state.put(Rc::new(RefCell::new(super::geometry_ops::GeoState::new())));
+            state.put(Rc::new(RefCell::new(super::particle_ops::ParticleState::new())));
+            state.put(Rc::new(RefCell::new(super::target_ops::TargetState::new())));
         }
 
         rt.runtime

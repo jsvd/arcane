@@ -1,7 +1,8 @@
 import { describe, it, assert } from "../testing/harness.ts";
 import { createStore } from "./store.ts";
-import { set, update, push } from "./transaction.ts";
+import { set, update, push, removeKey } from "./transaction.ts";
 import { lt } from "./query.ts";
+import type { EntityId } from "./types.ts";
 
 type GameState = {
   turn: number;
@@ -207,5 +208,131 @@ describe("integration: full dispatch → observe → query cycle", () => {
     assert.equal(store.getState().turn, 2);
     assert.equal(store.get("party.0.hp"), 15);
     assert.equal(store.get("party.1.hp"), 12);
+  });
+});
+
+// --- Component index tests ---
+
+type ECSState = {
+  entities: Record<string, Record<string, unknown>>;
+  meta: { count: number };
+};
+
+describe("component index", () => {
+  it("getEntitiesWithComponent returns empty set before enabling index", () => {
+    const store = createStore<ECSState>({
+      entities: {
+        e1: { hp: 100, position: { x: 0, y: 0 } },
+      },
+      meta: { count: 1 },
+    });
+    const result = store.getEntitiesWithComponent("hp");
+    assert.equal(result.size, 0);
+  });
+
+  it("enableComponentIndex builds index from initial state", () => {
+    const store = createStore<ECSState>({
+      entities: {
+        e1: { hp: 100, position: { x: 0, y: 0 } },
+        e2: { hp: 50, name: "goblin" },
+        e3: { name: "door", locked: true },
+      },
+      meta: { count: 3 },
+    });
+    store.enableComponentIndex("entities");
+
+    const withHp = store.getEntitiesWithComponent("hp");
+    assert.equal(withHp.size, 2);
+    assert.ok(withHp.has("e1" as EntityId));
+    assert.ok(withHp.has("e2" as EntityId));
+
+    const withName = store.getEntitiesWithComponent("name");
+    assert.equal(withName.size, 2);
+    assert.ok(withName.has("e2" as EntityId));
+    assert.ok(withName.has("e3" as EntityId));
+
+    const withLocked = store.getEntitiesWithComponent("locked");
+    assert.equal(withLocked.size, 1);
+    assert.ok(withLocked.has("e3" as EntityId));
+
+    const withPosition = store.getEntitiesWithComponent("position");
+    assert.equal(withPosition.size, 1);
+    assert.ok(withPosition.has("e1" as EntityId));
+  });
+
+  it("index updates after dispatch that changes indexed collection", () => {
+    const store = createStore<ECSState>({
+      entities: {
+        e1: { hp: 100 },
+      },
+      meta: { count: 1 },
+    });
+    store.enableComponentIndex("entities");
+
+    assert.equal(store.getEntitiesWithComponent("hp").size, 1);
+    assert.equal(store.getEntitiesWithComponent("name").size, 0);
+
+    // Add a new component to e1
+    store.dispatch([set<ECSState>("entities.e1.name", "hero")]);
+    assert.equal(store.getEntitiesWithComponent("name").size, 1);
+    assert.ok(store.getEntitiesWithComponent("name").has("e1" as EntityId));
+  });
+
+  it("index updates after adding a new entity", () => {
+    const store = createStore<ECSState>({
+      entities: {
+        e1: { hp: 100 },
+      },
+      meta: { count: 1 },
+    });
+    store.enableComponentIndex("entities");
+
+    store.dispatch([set<ECSState>("entities.e2", { hp: 50, armor: 10 })]);
+    assert.equal(store.getEntitiesWithComponent("hp").size, 2);
+    assert.equal(store.getEntitiesWithComponent("armor").size, 1);
+  });
+
+  it("index rebuilds on replaceState", () => {
+    const store = createStore<ECSState>({
+      entities: {
+        e1: { hp: 100 },
+      },
+      meta: { count: 1 },
+    });
+    store.enableComponentIndex("entities");
+    assert.equal(store.getEntitiesWithComponent("hp").size, 1);
+
+    store.replaceState({
+      entities: {
+        e5: { speed: 10 },
+        e6: { speed: 20, hp: 50 },
+      },
+      meta: { count: 2 },
+    });
+
+    assert.equal(store.getEntitiesWithComponent("hp").size, 1);
+    assert.ok(store.getEntitiesWithComponent("hp").has("e6" as EntityId));
+    assert.equal(store.getEntitiesWithComponent("speed").size, 2);
+  });
+
+  it("returns empty set for unknown component", () => {
+    const store = createStore<ECSState>({
+      entities: { e1: { hp: 100 } },
+      meta: { count: 1 },
+    });
+    store.enableComponentIndex("entities");
+    assert.equal(store.getEntitiesWithComponent("nonexistent").size, 0);
+  });
+
+  it("dispatch that doesn't touch indexed path doesn't break index", () => {
+    const store = createStore<ECSState>({
+      entities: { e1: { hp: 100 } },
+      meta: { count: 1 },
+    });
+    store.enableComponentIndex("entities");
+
+    // Change meta, not entities
+    store.dispatch([set<ECSState>("meta.count", 5)]);
+    assert.equal(store.getEntitiesWithComponent("hp").size, 1);
   });
 });

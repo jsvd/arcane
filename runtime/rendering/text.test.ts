@@ -6,8 +6,11 @@ import {
   loadMSDFFont,
   measureText,
   drawText,
+  wrapText,
+  drawTextWrapped,
+  drawTextAligned,
 } from "./text.ts";
-import type { BitmapFont, MSDFFont, TextOutline, TextShadow } from "./text.ts";
+import type { BitmapFont, MSDFFont, TextOutline, TextShadow, TextAlign, TextLayoutOptions } from "./text.ts";
 import {
   enableDrawCallCapture,
   disableDrawCallCapture,
@@ -400,5 +403,152 @@ describe("msdf text", () => {
       scale: 2,
     });
     assert.ok(true, "multiple drawText calls with different params completed");
+  });
+});
+
+// --- Text layout tests ---
+
+describe("wrapText", () => {
+  it("returns single line when text fits within maxWidth", () => {
+    // "Hi" = 2 chars * 8px = 16px wide
+    const lines = wrapText("Hi", 100);
+    assert.equal(lines.length, 1);
+    assert.equal(lines[0], "Hi");
+  });
+
+  it("wraps long text into multiple lines", () => {
+    // Default font: 8px per char. "Hello World" = 88px
+    // maxWidth 50px should force a wrap after "Hello" (40px)
+    const lines = wrapText("Hello World", 50);
+    assert.equal(lines.length, 2);
+    assert.equal(lines[0], "Hello");
+    assert.equal(lines[1], "World");
+  });
+
+  it("wraps multiple words correctly", () => {
+    // "A B C D" with maxWidth = 24px (3 chars fit)
+    // "A B" = 24px, fits. "A B C" = 40px, doesn't fit.
+    const lines = wrapText("A B C D", 24);
+    assert.equal(lines.length, 2);
+    assert.equal(lines[0], "A B");
+    assert.equal(lines[1], "C D");
+  });
+
+  it("handles empty text", () => {
+    const lines = wrapText("", 100);
+    assert.equal(lines.length, 1);
+    assert.equal(lines[0], "");
+  });
+
+  it("single long word stays on one line", () => {
+    // "Supercalifragilistic" = 20 chars * 8 = 160px, maxWidth 50
+    // Should stay on one line since it's a single word
+    const lines = wrapText("Supercalifragilistic", 50);
+    assert.equal(lines.length, 1);
+    assert.equal(lines[0], "Supercalifragilistic");
+  });
+
+  it("respects scale parameter", () => {
+    // "AB CD" at scale 2: "AB" = 2*8*2 = 32px, "AB CD" = 5*8*2 = 80px
+    // maxWidth 50 at scale 2 should split after "AB"
+    const lines = wrapText("AB CD", 50, 2);
+    assert.equal(lines.length, 2);
+    assert.equal(lines[0], "AB");
+    assert.equal(lines[1], "CD");
+  });
+
+  it("returns text as-is when maxWidth is 0 or negative", () => {
+    const lines = wrapText("Hello World", 0);
+    assert.equal(lines.length, 1);
+    assert.equal(lines[0], "Hello World");
+  });
+});
+
+describe("drawTextWrapped", () => {
+  it("does not throw in headless mode", () => {
+    drawTextWrapped("Hello World, this is a long text that should wrap.", 10, 10, {
+      maxWidth: 100,
+    });
+    assert.ok(true, "drawTextWrapped completed without error");
+  });
+
+  it("handles empty text", () => {
+    drawTextWrapped("", 10, 10, { maxWidth: 100 });
+    assert.ok(true, "drawTextWrapped with empty text completed");
+  });
+
+  it("works with layoutAlign option", () => {
+    drawTextWrapped("Center aligned text", 10, 10, {
+      maxWidth: 200,
+      layoutAlign: "center",
+    });
+    drawTextWrapped("Right aligned text", 10, 10, {
+      maxWidth: 200,
+      layoutAlign: "right",
+    });
+    assert.ok(true, "drawTextWrapped with alignment completed");
+  });
+
+  it("captures draw calls with correct y offsets", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    // "AA BB" at scale 1 with 8px font, maxWidth 24
+    // "AA" = 16px fits in 24, "AA BB" = 40px doesn't
+    // Should draw 2 lines
+    drawTextWrapped("AA BB", 10, 10, { maxWidth: 24 });
+    const calls = getDrawCalls().filter((c) => c.type === "text") as TextDrawCall[];
+    assert.equal(calls.length, 2);
+    assert.equal(calls[0].content, "AA");
+    assert.equal(calls[1].content, "BB");
+    // First line at y=10, second at y=10 + lineHeight
+    assert.equal(calls[0].y, 10);
+    // lineHeight = 8 * 1.2 = 9.6
+    const expectedY = 10 + 8 * 1.2;
+    assert.ok(
+      Math.abs(calls[1].y - expectedY) < 0.01,
+      `expected y near ${expectedY}, got ${calls[1].y}`,
+    );
+    disableDrawCallCapture();
+  });
+});
+
+describe("drawTextAligned", () => {
+  it("does not throw in headless mode", () => {
+    drawTextAligned("Hello", 10, 10, 200);
+    assert.ok(true, "drawTextAligned completed without error");
+  });
+
+  it("left alignment: text starts at x", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawTextAligned("Hi", 10, 20, 200, { layoutAlign: "left" });
+    const calls = getDrawCalls().filter((c) => c.type === "text") as TextDrawCall[];
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].x, 10);
+    disableDrawCallCapture();
+  });
+
+  it("center alignment: text is centered in box", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    // "Hi" = 16px wide, box width = 200
+    // center x = 10 + (200 - 16) / 2 = 10 + 92 = 102
+    drawTextAligned("Hi", 10, 20, 200, { layoutAlign: "center" });
+    const calls = getDrawCalls().filter((c) => c.type === "text") as TextDrawCall[];
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].x, 102);
+    disableDrawCallCapture();
+  });
+
+  it("right alignment: text is right-aligned in box", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    // "Hi" = 16px wide, box width = 200
+    // right x = 10 + 200 - 16 = 194
+    drawTextAligned("Hi", 10, 20, 200, { layoutAlign: "right" });
+    const calls = getDrawCalls().filter((c) => c.type === "text") as TextDrawCall[];
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].x, 194);
+    disableDrawCallCapture();
   });
 });

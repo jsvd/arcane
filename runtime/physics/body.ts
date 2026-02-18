@@ -138,3 +138,40 @@ export function setCollisionLayers(id: BodyId, layer: number, mask: number): voi
 export function setKinematicVelocity(id: BodyId, vx: number, vy: number): void {
   setBodyVelocity(id, vx, vy);
 }
+
+/**
+ * Get the state of all bodies in the physics world in a single call.
+ * Much more efficient than calling getBodyState() per body when you have many bodies.
+ * Returns an empty array in headless mode or if no physics world exists.
+ *
+ * @returns Array of BodyState objects for every active body in the world.
+ */
+export function getAllBodyStates(): (BodyState & { id: BodyId })[] {
+  if (!hasPhysicsOps) return [];
+  const hasOp = typeof (globalThis as any).Deno?.core?.ops?.op_get_all_body_states === "function";
+  if (!hasOp) return [];
+
+  const arr: number[] = (globalThis as any).Deno.core.ops.op_get_all_body_states();
+  if (!arr || arr.length === 0) return [];
+
+  // Layout per body: [id, x, y, vx, vy, angle, angular_velocity, is_sleeping] = 8 f64s
+  const STRIDE = 8;
+  const count = Math.floor(arr.length / STRIDE);
+  const result: (BodyState & { id: BodyId })[] = new Array(count);
+
+  for (let i = 0; i < count; i++) {
+    const base = i * STRIDE;
+    result[i] = {
+      id: arr[base],
+      x: arr[base + 1],
+      y: arr[base + 2],
+      vx: arr[base + 3],
+      vy: arr[base + 4],
+      angle: arr[base + 5],
+      angularVelocity: arr[base + 6],
+      sleeping: arr[base + 7] === 1.0,
+    };
+  }
+
+  return result;
+}

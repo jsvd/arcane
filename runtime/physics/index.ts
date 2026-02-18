@@ -24,6 +24,7 @@ export {
   createBody,
   removeBody,
   getBodyState,
+  getAllBodyStates,
   setBodyVelocity,
   setBodyAngularVelocity,
   applyForce,

@@ -379,6 +379,12 @@ impl SpritePipeline {
         }
     }
 
+    /// Return the camera uniform bind group (group 0).
+    /// Used by other pipelines (e.g. GeometryBatch) that share the same view-proj matrix.
+    pub fn camera_bind_group(&self) -> &wgpu::BindGroup {
+        &self.camera_bind_group
+    }
+
     /// Render a sorted list of sprite commands.
     /// Commands should be sorted by layer → shader_id → blend_mode → texture_id.
     pub fn render(

@@ -94,6 +94,14 @@ declare module "@arcane/runtime/ui" {
   };
   /** Options for {@link drawSector}. Same as {@link ShapeOptions} (filled shape). */
   export type SectorOptions = ShapeOptions;
+  /** Options for {@link drawEllipse}. Same as {@link ShapeOptions}. */
+  export type EllipseOptions = ShapeOptions;
+  /** Options for {@link drawRing}. Same as {@link ShapeOptions}. */
+  export type RingOptions = ShapeOptions;
+  /** Options for {@link drawCapsule}. Same as {@link ShapeOptions}. */
+  export type CapsuleOptions = ShapeOptions;
+  /** Options for {@link drawPolygon}. Same as {@link ShapeOptions}. */
+  export type PolygonOptions = ShapeOptions;
   /** Options for {@link drawLabel}. */
   export type LabelOptions = {
       /** Text color. Default: white. */
@@ -740,10 +748,13 @@ declare module "@arcane/runtime/ui" {
   export declare function drawLabel(text: string, x: number, y: number, options?: LabelOptions): void;
 
   /**
-   * Shape drawing primitives: circle, line, and triangle.
+   * Shape drawing primitives: circle, ellipse, ring, line, triangle, arc,
+   * sector, capsule, and polygon.
    *
-   * Rendered via drawSprite() with cached solid textures — same pattern
-   * as the rectangle/panel/bar primitives in primitives.ts.
+   * When running with the renderer (`arcane dev`), shapes are drawn via the
+   * geometry GPU pipeline (op_geo_triangle / op_geo_line) for efficient
+   * triangle-list rendering. In headless mode, all functions are no-ops
+   * (after logging draw calls for visual testing).
    *
    * @example
    * ```ts
@@ -755,35 +766,63 @@ declare module "@arcane/runtime/ui" {
    * ```
    */
   /**
-   * Draw a filled circle as a single tinted sprite (GPU-efficient).
+   * Draw a filled circle as a triangle fan via the geometry pipeline.
    * No-op in headless mode.
    *
-   * @param cx - Center X position (screen pixels if screenSpace, world units otherwise).
-   * @param cy - Center Y position (screen pixels if screenSpace, world units otherwise).
-   * @param radius - Circle radius in pixels (screenSpace) or world units.
-   * @param options - Color, layer, and screenSpace options.
+   * @param cx - Center X position.
+   * @param cy - Center Y position.
+   * @param radius - Circle radius.
+   * @param options - Color, layer, screenSpace.
    *
    * @example
    * drawCircle(200, 150, 40, { color: { r: 1, g: 0, b: 0, a: 1 } });
    */
   export declare function drawCircle(cx: number, cy: number, radius: number, options?: ShapeOptions): void;
   /**
-   * Draw a line between two points as a rotated rectangle.
+   * Draw a filled ellipse as a triangle fan via the geometry pipeline.
    * No-op in headless mode.
    *
-   * @param x1 - Start X position (screen pixels if screenSpace, world units otherwise).
-   * @param y1 - Start Y position (screen pixels if screenSpace, world units otherwise).
-   * @param x2 - End X position.
-   * @param y2 - End Y position.
-   * @param options - Color, thickness, layer, and screenSpace options.
+   * @param cx - Center X position.
+   * @param cy - Center Y position.
+   * @param rx - Horizontal radius.
+   * @param ry - Vertical radius.
+   * @param options - Color, layer, screenSpace.
+   *
+   * @example
+   * drawEllipse(200, 150, 60, 30, { color: { r: 0, g: 0.5, b: 1, a: 1 } });
+   */
+  export declare function drawEllipse(cx: number, cy: number, rx: number, ry: number, options?: EllipseOptions): void;
+  /**
+   * Draw a filled ring (annulus) via the geometry pipeline.
+   * The ring is the area between innerRadius and outerRadius.
+   * No-op in headless mode.
+   *
+   * @param cx - Center X position.
+   * @param cy - Center Y position.
+   * @param innerRadius - Inner radius (hole).
+   * @param outerRadius - Outer radius.
+   * @param options - Color, layer, screenSpace.
+   *
+   * @example
+   * drawRing(200, 200, 30, 50, { color: { r: 1, g: 1, b: 0, a: 0.8 } });
+   */
+  export declare function drawRing(cx: number, cy: number, innerRadius: number, outerRadius: number, options?: RingOptions): void;
+  /**
+   * Draw a line between two points as a thick quad via the geometry pipeline.
+   * No-op in headless mode.
+   *
+   * @param x1 - Start X.
+   * @param y1 - Start Y.
+   * @param x2 - End X.
+   * @param y2 - End Y.
+   * @param options - Color, thickness, layer, screenSpace.
    *
    * @example
    * drawLine(10, 10, 200, 150, { color: { r: 0, g: 1, b: 0, a: 1 }, thickness: 2 });
    */
   export declare function drawLine(x1: number, y1: number, x2: number, y2: number, options?: LineOptions): void;
   /**
-   * Draw a filled triangle using scanline fill.
-   * Vertices are sorted by Y, then edges are interpolated per row.
+   * Draw a filled triangle via the geometry pipeline (single triangle).
    * No-op in headless mode.
    *
    * @param x1 - First vertex X.
@@ -792,7 +831,7 @@ declare module "@arcane/runtime/ui" {
    * @param y2 - Second vertex Y.
    * @param x3 - Third vertex X.
    * @param y3 - Third vertex Y.
-   * @param options - Color, layer, and screenSpace options.
+   * @param options - Color, layer, screenSpace.
    *
    * @example
    * drawTriangle(100, 10, 50, 90, 150, 90, { color: { r: 0, g: 0, b: 1, a: 1 } });
@@ -802,18 +841,16 @@ declare module "@arcane/runtime/ui" {
    * Draw an arc (partial circle outline) using line segments.
    * No-op in headless mode.
    *
-   * Angles are in radians, measured clockwise from the positive X axis
-   * (right). A full circle is `0` to `Math.PI * 2`.
+   * Angles are in radians, measured clockwise from the positive X axis.
    *
-   * @param cx - Center X position (screen pixels if screenSpace, world units otherwise).
-   * @param cy - Center Y position (screen pixels if screenSpace, world units otherwise).
-   * @param radius - Arc radius in pixels (screenSpace) or world units.
-   * @param startAngle - Start angle in radians (0 = right, PI/2 = down).
-   * @param endAngle - End angle in radians. Must be >= startAngle.
-   * @param options - Color, thickness, layer, and screenSpace options.
+   * @param cx - Center X.
+   * @param cy - Center Y.
+   * @param radius - Arc radius.
+   * @param startAngle - Start angle in radians.
+   * @param endAngle - End angle in radians.
+   * @param options - Color, thickness, layer, screenSpace.
    *
    * @example
-   * // Shield indicator (90-degree arc above player)
    * drawArc(player.x, player.y, 24, -Math.PI * 0.75, -Math.PI * 0.25, {
    *   color: { r: 0.3, g: 0.8, b: 1, a: 0.8 }, thickness: 3,
    * });
@@ -823,26 +860,52 @@ declare module "@arcane/runtime/ui" {
    * Draw a filled sector (pie/cone shape) using a triangle fan.
    * No-op in headless mode.
    *
-   * A sector is a "pie slice" from the center to the arc — useful for
-   * FOV cones, attack arcs, and minimap indicators.
+   * Angles are in radians, measured clockwise from the positive X axis.
    *
-   * Angles are in radians, measured clockwise from the positive X axis
-   * (right). A full circle is `0` to `Math.PI * 2`.
-   *
-   * @param cx - Center X position (screen pixels if screenSpace, world units otherwise).
-   * @param cy - Center Y position (screen pixels if screenSpace, world units otherwise).
-   * @param radius - Sector radius in pixels (screenSpace) or world units.
-   * @param startAngle - Start angle in radians (0 = right, PI/2 = down).
-   * @param endAngle - End angle in radians. Must be >= startAngle.
-   * @param options - Color, layer, and screenSpace options.
+   * @param cx - Center X.
+   * @param cy - Center Y.
+   * @param radius - Sector radius.
+   * @param startAngle - Start angle in radians.
+   * @param endAngle - End angle in radians.
+   * @param options - Color, layer, screenSpace.
    *
    * @example
-   * // Attack cone indicator
    * drawSector(player.x, player.y, 60, -Math.PI / 4, Math.PI / 4, {
    *   color: { r: 1, g: 0.2, b: 0.2, a: 0.3 }, layer: 2,
    * });
    */
   export declare function drawSector(cx: number, cy: number, radius: number, startAngle: number, endAngle: number, options?: SectorOptions): void;
+  /**
+   * Draw a filled capsule (rectangle with half-circle caps).
+   * No-op in headless mode.
+   *
+   * The capsule extends from (x1,y1) to (x2,y2) with the given radius.
+   *
+   * @param x1 - Start center X.
+   * @param y1 - Start center Y.
+   * @param x2 - End center X.
+   * @param y2 - End center Y.
+   * @param radius - Cap radius (and half-width of the body).
+   * @param options - Color, layer, screenSpace.
+   *
+   * @example
+   * drawCapsule(100, 200, 300, 200, 15, { color: { r: 0, g: 0.8, b: 0.2, a: 1 } });
+   */
+  export declare function drawCapsule(x1: number, y1: number, x2: number, y2: number, radius: number, options?: CapsuleOptions): void;
+  /**
+   * Draw a filled convex polygon via triangle fan.
+   * No-op in headless mode.
+   *
+   * Vertices should be in order (CW or CCW). The polygon is triangulated
+   * as a fan from the first vertex.
+   *
+   * @param vertices - Array of [x, y] pairs.
+   * @param options - Color, layer, screenSpace.
+   *
+   * @example
+   * drawPolygon([[100,50],[150,150],[50,150]], { color: { r: 1, g: 0.5, b: 0, a: 1 } });
+   */
+  export declare function drawPolygon(vertices: [number, number][], options?: PolygonOptions): void;
 
   /**
    * Immediate-mode horizontal slider widget.

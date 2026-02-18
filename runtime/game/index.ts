@@ -61,3 +61,18 @@ export {
 
 // Game bootstrap
 export { createGame } from "./game.ts";
+
+// Transform hierarchy
+export type { SceneNodeId, SceneNode, WorldTransform } from "./transform.ts";
+export {
+  createNode,
+  destroyNode,
+  setNodeTransform,
+  setParent,
+  detachFromParent,
+  getWorldTransform,
+  getNode,
+  getChildren,
+  applyToSprite,
+  _resetTransformSystem,
+} from "./transform.ts";

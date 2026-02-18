@@ -303,6 +303,54 @@ pub fn op_clear_sprites(state: &mut OpState) {
     bridge.borrow_mut().sprite_commands.clear();
 }
 
+/// Number of f32 values per sprite in the batch buffer.
+/// Layout: [texture_id, x, y, w, h, layer, uv_x, uv_y, uv_w, uv_h,
+///          tint_r, tint_g, tint_b, tint_a, rotation, origin_x, origin_y,
+///          flip_x, flip_y, opacity, blend_mode, shader_id]
+pub const SPRITE_STRIDE: usize = 22;
+
+/// Submit a batch of sprites from a packed Float32Array.
+/// Each sprite is SPRITE_STRIDE (22) f32 values. See layout above.
+/// Called from TS sprites.ts flush path for bulk submission.
+#[deno_core::op2(fast)]
+pub fn op_submit_sprite_batch(state: &mut OpState, #[buffer] data: &[u8]) {
+    let floats: &[f32] = bytemuck::cast_slice(data);
+    let sprite_count = floats.len() / SPRITE_STRIDE;
+
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let mut b = bridge.borrow_mut();
+    b.sprite_commands.reserve(sprite_count);
+
+    for i in 0..sprite_count {
+        let base = i * SPRITE_STRIDE;
+        let s = &floats[base..base + SPRITE_STRIDE];
+        b.sprite_commands.push(SpriteCommand {
+            texture_id: s[0].to_bits(),
+            x: s[1],
+            y: s[2],
+            w: s[3],
+            h: s[4],
+            layer: s[5].to_bits() as i32,
+            uv_x: s[6],
+            uv_y: s[7],
+            uv_w: s[8],
+            uv_h: s[9],
+            tint_r: s[10],
+            tint_g: s[11],
+            tint_b: s[12],
+            tint_a: s[13],
+            rotation: s[14],
+            origin_x: s[15],
+            origin_y: s[16],
+            flip_x: s[17] != 0.0,
+            flip_y: s[18] != 0.0,
+            opacity: s[19],
+            blend_mode: (s[20] as u8).min(3),
+            shader_id: s[21].to_bits(),
+        });
+    }
+}
+
 /// Update the camera position and zoom.
 /// Accepts f64 (JavaScript's native number type), converts to f32 for GPU.
 #[deno_core::op2(fast)]
@@ -1382,6 +1430,7 @@ deno_core::extension!(
     ops = [
         op_draw_sprite,
         op_clear_sprites,
+        op_submit_sprite_batch,
         op_set_camera,
         op_get_camera,
         op_load_texture,

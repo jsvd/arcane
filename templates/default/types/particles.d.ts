@@ -292,6 +292,113 @@ declare module "@arcane/runtime/particles" {
    * @returns Count of registered emitters (active or inactive).
    */
   export declare function getEmitterCount(): number;
+  /**
+   * Rust emitter configuration for op_create_emitter.
+   * Matches the JSON fields expected by the Rust parser.
+   */
+  export interface RustEmitterConfig {
+      /** Spawn rate in particles per second. Default: 10. */
+      spawnRate?: number;
+      /** Minimum particle lifetime in seconds. Default: 0.5. */
+      lifetimeMin?: number;
+      /** Maximum particle lifetime in seconds. Default: 1.5. */
+      lifetimeMax?: number;
+      /** Minimum initial speed in pixels/second. Default: 20. */
+      speedMin?: number;
+      /** Maximum initial speed in pixels/second. Default: 80. */
+      speedMax?: number;
+      /** Emission direction in radians. Default: -PI/2 (upward). */
+      direction?: number;
+      /** Spread angle in radians. Default: PI. */
+      spread?: number;
+      /** Minimum scale. Default: 1. */
+      scaleMin?: number;
+      /** Maximum scale. Default: 1. */
+      scaleMax?: number;
+      /** Starting alpha. Default: 1. */
+      alphaStart?: number;
+      /** Ending alpha (at death). Default: 0. */
+      alphaEnd?: number;
+      /** Gravity X acceleration. Default: 0. */
+      gravityX?: number;
+      /** Gravity Y acceleration. Default: 0. */
+      gravityY?: number;
+      /** Texture ID for particle rendering. Default: 0. */
+      textureId?: number;
+      /** Initial world X position. Default: 0. */
+      x?: number;
+      /** Initial world Y position. Default: 0. */
+      y?: number;
+  }
+  /**
+   * Create a Rust-native particle emitter for high-performance simulation.
+   * The simulation runs entirely in Rust; TS reads back sprite data for rendering.
+   *
+   * Returns a numeric emitter ID. Use updateRustEmitter() and drawRustEmitter()
+   * each frame.
+   *
+   * @param config - Emitter configuration.
+   * @returns Numeric emitter ID, or 0 if Rust ops are not available.
+   */
+  export declare function createRustEmitter(config: RustEmitterConfig): number;
+  /**
+   * Update a Rust-native emitter's simulation (spawn, integrate, cull).
+   *
+   * @param id - Emitter ID from createRustEmitter().
+   * @param dt - Delta time in seconds.
+   * @param x - Current emitter world X position (for spawning).
+   * @param y - Current emitter world Y position (for spawning).
+   */
+  export declare function updateRustEmitter(id: number, dt: number, x?: number, y?: number): void;
+  /**
+   * Get the number of live particles in a Rust-native emitter.
+   *
+   * @param id - Emitter ID from createRustEmitter().
+   * @returns Number of alive particles, or 0 if unavailable.
+   */
+  export declare function getRustEmitterParticleCount(id: number): number;
+  /**
+   * Read packed sprite data from a Rust-native emitter.
+   * Returns a Float32Array with 6 floats per particle:
+   * [x, y, angle, scale, alpha, texture_id_bits]
+   *
+   * @param id - Emitter ID from createRustEmitter().
+   * @returns Float32Array of particle sprite data, or null if unavailable.
+   */
+  export declare function getRustEmitterSpriteData(id: number): Float32Array | null;
+  /**
+   * Draw all particles from a Rust-native emitter using drawSprite().
+   * Reads the packed sprite data from Rust and issues one drawSprite() per particle.
+   *
+   * @param id - Emitter ID from createRustEmitter().
+   * @param opts - Optional overrides for particle size and layer.
+   */
+  export declare function drawRustEmitter(id: number, opts?: {
+      w?: number;
+      h?: number;
+      layer?: number;
+  }): void;
+  /**
+   * Destroy a Rust-native emitter and free its resources.
+   *
+   * @param id - Emitter ID from createRustEmitter().
+   */
+  export declare function destroyRustEmitter(id: number): void;
+  /**
+   * Update all registered Rust-native emitters.
+   * Convenience function that calls updateRustEmitter for each active emitter.
+   *
+   * @param dt - Delta time in seconds.
+   */
+  export declare function updateAllRustEmitters(dt: number): void;
+  /**
+   * Set the world position of a Rust-native emitter (for spawning).
+   *
+   * @param id - Emitter ID from createRustEmitter().
+   * @param x - World X position.
+   * @param y - World Y position.
+   */
+  export declare function setRustEmitterPosition(id: number, x: number, y: number): void;
 
   /**
    * Particle preset configurations and convenience functions.

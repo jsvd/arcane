@@ -103,6 +103,18 @@ export type ArcOptions = ShapeOptions & {
 /** Options for {@link drawSector}. Same as {@link ShapeOptions} (filled shape). */
 export type SectorOptions = ShapeOptions;
 
+/** Options for {@link drawEllipse}. Same as {@link ShapeOptions}. */
+export type EllipseOptions = ShapeOptions;
+
+/** Options for {@link drawRing}. Same as {@link ShapeOptions}. */
+export type RingOptions = ShapeOptions;
+
+/** Options for {@link drawCapsule}. Same as {@link ShapeOptions}. */
+export type CapsuleOptions = ShapeOptions;
+
+/** Options for {@link drawPolygon}. Same as {@link ShapeOptions}. */
+export type PolygonOptions = ShapeOptions;
+
 /** Options for {@link drawLabel}. */
 export type LabelOptions = {
   /** Text color. Default: white. */

@@ -745,3 +745,128 @@ function drawMSDFTextInternal(
     cursorX += g.advance * scale;
   }
 }
+
+// --- Text layout ---
+
+/** Horizontal text alignment. */
+export type TextAlign = "left" | "center" | "right";
+
+/** Options for {@link drawTextWrapped}. */
+export type TextLayoutOptions = TextOptions & {
+  /** Maximum width in pixels before wrapping. Required for wrapping to take effect. */
+  maxWidth?: number;
+  /** Line height multiplier. Default: 1.2. */
+  lineHeight?: number;
+  /** Horizontal alignment within the wrapped area. Default: "left". */
+  layoutAlign?: TextAlign;
+};
+
+/**
+ * Split text into lines that fit within maxWidth pixels.
+ * Word-wraps at space boundaries. Words longer than maxWidth are placed on their own line.
+ *
+ * @param text - The text to wrap.
+ * @param maxWidth - Maximum line width in pixels.
+ * @param scale - Text scale multiplier. Default: 1.
+ * @param options - Font options for measuring. Default: built-in bitmap font.
+ * @returns Array of lines.
+ */
+export function wrapText(
+  text: string,
+  maxWidth: number,
+  scale?: number,
+  options?: TextOptions,
+): string[] {
+  if (!text) return [""];
+  if (maxWidth <= 0) return [text];
+
+  const measureOpts = { ...options, scale: scale ?? options?.scale ?? 1 };
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let currentLine = "";
+
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    const testLine = currentLine ? currentLine + " " + word : word;
+    const measured = measureText(testLine, measureOpts);
+
+    if (measured.width <= maxWidth || !currentLine) {
+      // Fits, or it's the first word on the line (don't create empty lines)
+      currentLine = testLine;
+    } else {
+      // Doesn't fit, push current line and start new one
+      lines.push(currentLine);
+      currentLine = word;
+    }
+  }
+
+  lines.push(currentLine);
+  return lines;
+}
+
+/**
+ * Draw text with automatic word wrapping and optional alignment.
+ * Wraps text at maxWidth pixels, drawing each line at the appropriate y offset.
+ *
+ * @param text - The text to draw.
+ * @param x - X position (screen pixels if screenSpace, world units otherwise).
+ * @param y - Y position of the first line.
+ * @param opts - Layout and text options (maxWidth, lineHeight, layoutAlign, plus all TextOptions).
+ */
+export function drawTextWrapped(
+  text: string,
+  x: number,
+  y: number,
+  opts?: TextLayoutOptions,
+): void {
+  const maxWidth = opts?.maxWidth ?? 200;
+  const lineHeightMult = opts?.lineHeight ?? 1.2;
+  const layoutAlign = opts?.layoutAlign ?? "left";
+  const scale = opts?.scale ?? 1;
+
+  const lines = wrapText(text, maxWidth, scale, opts);
+  const lineH = measureText("M", opts).height * lineHeightMult;
+
+  for (let i = 0; i < lines.length; i++) {
+    let lineX = x;
+    if (layoutAlign !== "left") {
+      const lineWidth = measureText(lines[i], opts).width;
+      if (layoutAlign === "center") {
+        lineX = x + (maxWidth - lineWidth) / 2;
+      } else {
+        lineX = x + (maxWidth - lineWidth);
+      }
+    }
+    drawText(lines[i], lineX, y + i * lineH, opts);
+  }
+}
+
+/**
+ * Draw text aligned within a fixed-width box.
+ * Unlike drawTextWrapped, this does NOT wrap -- it only adjusts horizontal position.
+ *
+ * @param text - The text to draw.
+ * @param x - Left edge X position of the alignment box.
+ * @param y - Y position.
+ * @param width - Width of the alignment box in pixels.
+ * @param opts - TextOptions plus optional align.
+ */
+export function drawTextAligned(
+  text: string,
+  x: number,
+  y: number,
+  width: number,
+  opts?: TextOptions & { layoutAlign?: TextAlign },
+): void {
+  const align = opts?.layoutAlign ?? "left";
+  const measured = measureText(text, opts);
+
+  let drawX = x;
+  if (align === "center") {
+    drawX = x + (width - measured.width) / 2;
+  } else if (align === "right") {
+    drawX = x + width - measured.width;
+  }
+
+  drawText(text, drawX, y, opts);
+}

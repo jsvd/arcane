@@ -13,6 +13,7 @@ import type {
   Affector,
 } from "./types.ts";
 import { createSolidTexture } from "../rendering/texture.ts";
+import { drawSprite as _drawSprite } from "../rendering/sprites.ts";
 import { lerpColorInto } from "../ui/colors.ts";
 
 /** Lazily-created default 1x1 white texture for particles. */
@@ -463,3 +464,230 @@ export function clearEmitters(): void {
 export function getEmitterCount(): number {
   return emitters.length;
 }
+
+// --- Rust-native particle emitters ---
+// These use the Rust particle simulation backend for better performance.
+// The TS-native emitters above are still available for headless mode and tests.
+
+const hasParticleOps =
+  typeof (globalThis as any).Deno !== "undefined" &&
+  typeof (globalThis as any).Deno?.core?.ops?.op_create_emitter === "function";
+
+/** Active Rust emitter IDs for bulk update. */
+const _rustEmitterIds: number[] = [];
+
+/** Cached positions for Rust emitters: id -> { x, y }. */
+const _rustEmitterPositions: Map<number, { x: number; y: number }> = new Map();
+
+/**
+ * Rust emitter configuration for op_create_emitter.
+ * Matches the JSON fields expected by the Rust parser.
+ */
+export interface RustEmitterConfig {
+  /** Spawn rate in particles per second. Default: 10. */
+  spawnRate?: number;
+  /** Minimum particle lifetime in seconds. Default: 0.5. */
+  lifetimeMin?: number;
+  /** Maximum particle lifetime in seconds. Default: 1.5. */
+  lifetimeMax?: number;
+  /** Minimum initial speed in pixels/second. Default: 20. */
+  speedMin?: number;
+  /** Maximum initial speed in pixels/second. Default: 80. */
+  speedMax?: number;
+  /** Emission direction in radians. Default: -PI/2 (upward). */
+  direction?: number;
+  /** Spread angle in radians. Default: PI. */
+  spread?: number;
+  /** Minimum scale. Default: 1. */
+  scaleMin?: number;
+  /** Maximum scale. Default: 1. */
+  scaleMax?: number;
+  /** Starting alpha. Default: 1. */
+  alphaStart?: number;
+  /** Ending alpha (at death). Default: 0. */
+  alphaEnd?: number;
+  /** Gravity X acceleration. Default: 0. */
+  gravityX?: number;
+  /** Gravity Y acceleration. Default: 0. */
+  gravityY?: number;
+  /** Texture ID for particle rendering. Default: 0. */
+  textureId?: number;
+  /** Initial world X position. Default: 0. */
+  x?: number;
+  /** Initial world Y position. Default: 0. */
+  y?: number;
+}
+
+/**
+ * Create a Rust-native particle emitter for high-performance simulation.
+ * The simulation runs entirely in Rust; TS reads back sprite data for rendering.
+ *
+ * Returns a numeric emitter ID. Use updateRustEmitter() and drawRustEmitter()
+ * each frame.
+ *
+ * @param config - Emitter configuration.
+ * @returns Numeric emitter ID, or 0 if Rust ops are not available.
+ */
+export function createRustEmitter(config: RustEmitterConfig): number {
+  if (!hasParticleOps) return 0;
+
+  const json = JSON.stringify({
+    spawnRate: config.spawnRate ?? 10,
+    lifetimeMin: config.lifetimeMin ?? 0.5,
+    lifetimeMax: config.lifetimeMax ?? 1.5,
+    speedMin: config.speedMin ?? 20,
+    speedMax: config.speedMax ?? 80,
+    direction: config.direction ?? -Math.PI / 2,
+    spread: config.spread ?? Math.PI,
+    scaleMin: config.scaleMin ?? 1,
+    scaleMax: config.scaleMax ?? 1,
+    alphaStart: config.alphaStart ?? 1,
+    alphaEnd: config.alphaEnd ?? 0,
+    gravityX: config.gravityX ?? 0,
+    gravityY: config.gravityY ?? 0,
+    textureId: config.textureId ?? 0,
+  });
+
+  const id: number = (globalThis as any).Deno.core.ops.op_create_emitter(json);
+  _rustEmitterIds.push(id);
+  _rustEmitterPositions.set(id, { x: config.x ?? 0, y: config.y ?? 0 });
+  return id;
+}
+
+/**
+ * Update a Rust-native emitter's simulation (spawn, integrate, cull).
+ *
+ * @param id - Emitter ID from createRustEmitter().
+ * @param dt - Delta time in seconds.
+ * @param x - Current emitter world X position (for spawning).
+ * @param y - Current emitter world Y position (for spawning).
+ */
+export function updateRustEmitter(id: number, dt: number, x?: number, y?: number): void {
+  if (!hasParticleOps || id === 0) return;
+
+  const pos = _rustEmitterPositions.get(id);
+  const cx = x ?? pos?.x ?? 0;
+  const cy = y ?? pos?.y ?? 0;
+  if (pos) {
+    pos.x = cx;
+    pos.y = cy;
+  }
+
+  (globalThis as any).Deno.core.ops.op_update_emitter(id, dt, cx, cy);
+}
+
+/**
+ * Get the number of live particles in a Rust-native emitter.
+ *
+ * @param id - Emitter ID from createRustEmitter().
+ * @returns Number of alive particles, or 0 if unavailable.
+ */
+export function getRustEmitterParticleCount(id: number): number {
+  if (!hasParticleOps || id === 0) return 0;
+  return (globalThis as any).Deno.core.ops.op_get_emitter_particle_count(id) as number;
+}
+
+/**
+ * Read packed sprite data from a Rust-native emitter.
+ * Returns a Float32Array with 6 floats per particle:
+ * [x, y, angle, scale, alpha, texture_id_bits]
+ *
+ * @param id - Emitter ID from createRustEmitter().
+ * @returns Float32Array of particle sprite data, or null if unavailable.
+ */
+export function getRustEmitterSpriteData(id: number): Float32Array | null {
+  if (!hasParticleOps || id === 0) return null;
+
+  const bytes: Uint8Array = (globalThis as any).Deno.core.ops.op_get_emitter_sprite_data(id);
+  if (!bytes || bytes.length === 0) return null;
+
+  return new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
+}
+
+/**
+ * Draw all particles from a Rust-native emitter using drawSprite().
+ * Reads the packed sprite data from Rust and issues one drawSprite() per particle.
+ *
+ * @param id - Emitter ID from createRustEmitter().
+ * @param opts - Optional overrides for particle size and layer.
+ */
+export function drawRustEmitter(
+  id: number,
+  opts?: { w?: number; h?: number; layer?: number },
+): void {
+  const data = getRustEmitterSpriteData(id);
+  if (!data) return;
+
+  const pSize = opts?.w ?? 8;
+  const pSizeH = opts?.h ?? pSize;
+  const pLayer = opts?.layer ?? 0;
+  const PARTICLE_STRIDE = 6;
+  const count = data.length / PARTICLE_STRIDE;
+
+  for (let i = 0; i < count; i++) {
+    const base = i * PARTICLE_STRIDE;
+    const x = data[base];
+    const y = data[base + 1];
+    const angle = data[base + 2];
+    const scale = data[base + 3];
+    const alpha = data[base + 4];
+    // texture_id stored as f32 bit pattern
+    const view = new DataView(data.buffer, data.byteOffset);
+    const texId = view.getUint32((base + 5) * 4, true);
+
+    _drawSprite({
+      textureId: texId,
+      x: x - (pSize * scale) / 2,
+      y: y - (pSizeH * scale) / 2,
+      w: pSize * scale,
+      h: pSizeH * scale,
+      layer: pLayer,
+      rotation: angle,
+      opacity: alpha,
+      tint: { r: 1, g: 1, b: 1, a: alpha },
+    });
+  }
+}
+
+/**
+ * Destroy a Rust-native emitter and free its resources.
+ *
+ * @param id - Emitter ID from createRustEmitter().
+ */
+export function destroyRustEmitter(id: number): void {
+  if (!hasParticleOps || id === 0) return;
+  (globalThis as any).Deno.core.ops.op_destroy_emitter(id);
+
+  const idx = _rustEmitterIds.indexOf(id);
+  if (idx !== -1) _rustEmitterIds.splice(idx, 1);
+  _rustEmitterPositions.delete(id);
+}
+
+/**
+ * Update all registered Rust-native emitters.
+ * Convenience function that calls updateRustEmitter for each active emitter.
+ *
+ * @param dt - Delta time in seconds.
+ */
+export function updateAllRustEmitters(dt: number): void {
+  for (const id of _rustEmitterIds) {
+    const pos = _rustEmitterPositions.get(id);
+    updateRustEmitter(id, dt, pos?.x ?? 0, pos?.y ?? 0);
+  }
+}
+
+/**
+ * Set the world position of a Rust-native emitter (for spawning).
+ *
+ * @param id - Emitter ID from createRustEmitter().
+ * @param x - World X position.
+ * @param y - World Y position.
+ */
+export function setRustEmitterPosition(id: number, x: number, y: number): void {
+  const pos = _rustEmitterPositions.get(id);
+  if (pos) {
+    pos.x = x;
+    pos.y = y;
+  }
+}
+

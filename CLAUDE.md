@@ -4,7 +4,7 @@
 
 Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for performance, TypeScript scripting for game logic.
 
-**Current status: v0.12.3 — Performance & polish. Text alignment, frame profiler, hot-reload watchdog, circle batching. 2164 TS (Node) + 2288 (V8) + 292 Rust tests passing. Next: Phase 26 (Atmosphere).**
+**Current status: v0.12.3 — Performance & polish. Geometry pipeline, shape primitives, text layout, scene transforms, Rust particles, asset preloading. 2164 TS (Node) + 2288 (V8) + 292 Rust tests passing. Next: Phase 26 (Atmosphere).**
 
 ## Repository Structure
 
@@ -42,6 +42,9 @@ arcane/
 │   │   │   ├── test_runner.rs     — V8 test runner with #[op2] result reporting
 │   │   │   ├── render_ops.rs      — #[op2] ops: sprites, camera, tilemap, lighting, input, audio, font, viewport
 │   │   │   ├── replay_ops.rs     — #[op2] ops: physics snapshot, recording, replay
+│   │   │   ├── geometry_ops.rs   — #[op2] ops: op_geo_triangle, op_geo_line → GeoState
+│   │   │   ├── particle_ops.rs   — #[op2] ops: Rust-native particle simulation
+│   │   │   ├── target_ops.rs     — #[op2] ops: render-to-texture (stub, future)
 │   │   │   └── physics_ops.rs    — #[op2] ops: physics world, bodies, constraints, queries (NOT feature-gated)
 │   │   ├── physics/               — Homebrew rigid body physics (NOT feature-gated)
 │   │   │   ├── mod.rs             — Module declarations
@@ -65,10 +68,12 @@ arcane/
 │   │   │   ├── radiance.rs          — Radiance Cascades 2D GI compute pipeline
 │   │   │   ├── shader.rs            — ShaderStore: custom WGSL fragment shaders, 16 vec4 uniforms
 │   │   │   ├── postprocess.rs       — PostProcessPipeline: offscreen targets, bloom/blur/vignette/CRT
+│   │   │   ├── geometry.rs          — GeometryBatch: colored geometry GPU pipeline (triangles, lines)
 │   │   │   ├── font.rs            — CP437 8×8 bitmap font data, generate_builtin_font()
 │   │   │   └── shaders/
 │   │   │       ├── sprite.wgsl    — Instanced sprite shader with lighting (3 bind groups)
 │   │   │       ├── radiance.wgsl    — GI compute shader (3-pass)
+│   │   │       ├── geom.wgsl        — Geometry vertex+color shader
 │   │   │       └── msdf.wgsl        — MSDF distance field text fragment shader
 │   │   ├── platform/              — [feature = "renderer"]
 │   │   │   ├── mod.rs             — Platform public API
@@ -134,15 +139,16 @@ arcane/
 │   │   ├── input.ts               — isKeyDown(), isKeyPressed(), getMousePosition()
 │   │   ├── tilemap.ts             — createTilemap(), setTile(), getTile(), drawTilemap()
 │   │   ├── lighting.ts            — setAmbientLight(), addPointLight(), clearLights()
-│   │   ├── texture.ts             — loadTexture(), createSolidTexture()
+│   │   ├── texture.ts             — loadTexture(), createSolidTexture(), preloadAssets(), isTextureLoaded(), getLoadingProgress()
 │   │   ├── loop.ts                — onFrame(), getDeltaTime()
-│   │   ├── text.ts                — drawText(), measureText(), loadFont(), getDefaultFont(), MSDF font support
+│   │   ├── text.ts                — drawText(), measureText(), loadFont(), getDefaultFont(), MSDF font support, wrapText(), drawTextWrapped(), drawTextAligned()
 │   │   ├── animation.ts           — createAnimation(), updateAnimation(), drawAnimatedSprite()
 │   │   ├── audio.ts               — loadSound(), playSound(), playMusic(), stopSound(), setVolume(), instance-based playback, spatial audio, bus mixing, crossfade, pooling
 │   │   └── index.ts               — Barrel export
 │   ├── ui/
 │   │   ├── types.ts               — Color, RectOptions, PanelOptions, BarOptions, LabelOptions
 │   │   ├── primitives.ts          — drawRect(), drawPanel(), drawBar(), drawLabel()
+│   │   ├── shapes.ts              — drawCircle(), drawEllipse(), drawRing(), drawLine(), drawTriangle(), drawArc(), drawSector(), drawCapsule(), drawPolygon()
 │   │   ├── button.ts              — createButton(), updateButton(), drawButton()
 │   │   ├── toggle.ts              — createCheckbox(), createRadioGroup(), updateCheckbox(), updateRadioGroup()
 │   │   ├── slider.ts              — createSlider(), updateSlider(), drawSlider()
@@ -183,6 +189,7 @@ arcane/
 │       ├── collision.ts           — Collision event registry + callbacks
 │       ├── entity.ts              — Lightweight entity handles (sprite+physics)
 │       ├── game.ts                — createGame() bootstrap
+│       ├── transform.ts           — Scene node hierarchy: createNode(), setNodeTransform(), getWorldTransform(), applyToSprite()
 │       └── index.ts               — Barrel export
 ├── demos/
 │   ├── agent-testing/             — Phase 17 demo: MCP tools, snapshot replay, property testing

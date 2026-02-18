@@ -6,7 +6,7 @@ One-liner signatures for every exported function, grouped by module.
 For full JSDoc, argument types, and examples, see the per-module .d.ts files in types/.
 
 === rendering (@arcane/runtime/rendering) ===
-Types: AnimatedTileDef,AnimationDef,AnimationFinishedCondition,AnimationId,AnimationState,AudioBus,AutotileMapping,AutotileRule,BitmapFont,BlendState,BooleanCondition,CameraBounds,CameraDeadzone,CameraState,EffectId,FSMConfig,FSMParams,FSMState,FSMStateDef,FSMTransition,FloatingTextOptions,FrameEvent,FrameEventCallback,HexConfig,HexCoord,HexOrientation,HexTile,HexTilemap,HexTilemapConfig,ImpactConfig,ImpactFlash,ImpactParticles,ImpactShake,ImpactSound,InstanceId,IsoConfig,IsoTile,IsoTilemap,IsoTilemapConfig,KeyName,LayerOptions,LayeredTilemap,MSDFFont,MSDFGlyph,MousePosition,NeighborCheck,NineSliceBorder,NineSliceOptions,OffsetType,ParallaxSpriteOptions,PlayOptions,PoolConfig,ScreenTransitionConfig,ScreenTransitionType,ShaderId,SoundId,SpatialOptions,SpriteOptions,StaggeredIsoConfig,TextMeasurement,TextOptions,TextOutline,TextShadow,TextureId,ThresholdCondition,TileProperties,TilemapId,TilemapLayer,TilemapOptions,Trail,TrailConfig,TrailPoint,TransitionCondition,TriggerCondition,Typewriter,TypewriterConfig,TypewriterDrawOptions,
+Types: AnimatedTileDef,AnimationDef,AnimationFinishedCondition,AnimationId,AnimationState,AudioBus,AutotileMapping,AutotileRule,BitmapFont,BlendState,BooleanCondition,CameraBounds,CameraDeadzone,CameraState,EffectId,FSMConfig,FSMParams,FSMState,FSMStateDef,FSMTransition,FloatingTextOptions,FrameEvent,FrameEventCallback,HexConfig,HexCoord,HexOrientation,HexTile,HexTilemap,HexTilemapConfig,ImpactConfig,ImpactFlash,ImpactParticles,ImpactShake,ImpactSound,InstanceId,IsoConfig,IsoTile,IsoTilemap,IsoTilemapConfig,KeyName,LayerOptions,LayeredTilemap,MSDFFont,MSDFGlyph,MousePosition,NeighborCheck,NineSliceBorder,NineSliceOptions,OffsetType,ParallaxSpriteOptions,PlayOptions,PoolConfig,ScreenTransitionConfig,ScreenTransitionType,ShaderId,SoundId,SpatialOptions,SpriteOptions,StaggeredIsoConfig,TextAlign,TextLayoutOptions,TextMeasurement,TextOptions,TextOutline,TextShadow,TextureId,ThresholdCondition,TileProperties,TilemapId,TilemapLayer,TilemapOptions,Trail,TrailConfig,TrailPoint,TransitionCondition,TriggerCondition,Typewriter,TypewriterConfig,TypewriterDrawOptions,
 declare function createAnimationFSM(config: FSMConfig): FSMState;
 declare function getCurrentState(fsm: FSMState): string;
 declare function isBlending(fsm: FSMState): boolean;
@@ -195,6 +195,7 @@ declare function clearEffects(): void;
 declare function createShaderFromSource(name: string, wgslSource: string): ShaderId;
 declare function setShaderParam(shaderId: ShaderId, index: number, x: number, y?: number, z?: number, w?: number): void;
 declare function drawSprite(opts: SpriteOptions): void;
+declare function _flushSpriteBatch(): void;
 declare function clearSprites(): void;
 declare function loadFont(textureId: TextureId, glyphW: number, glyphH: number, columns: number, rows: number, firstChar?: number): BitmapFont;
 declare function getDefaultFont(): BitmapFont;
@@ -202,9 +203,15 @@ declare function getDefaultMSDFFont(): MSDFFont;
 declare function loadMSDFFont(atlasPath: string, metricsJson: string): MSDFFont;
 declare function measureText(text: string, options?: TextOptions): TextMeasurement;
 declare function drawText(text: string, x: number, y: number, options?: TextOptions): void;
+declare function wrapText(text: string, maxWidth: number, scale?: number, options?: TextOptions): string[];
+declare function drawTextWrapped(text: string, x: number, y: number, opts?: TextLayoutOptions): void;
+declare function drawTextAligned(text: string, x: number, y: number, width: number, opts?: TextOptions & { layoutAlign?: TextAlign; }): void;
 declare function loadTexture(path: string): TextureId;
 declare function createSolidTexture(name: string, color: Color): TextureId;
 declare function uploadRgbaTexture(name: string, w: number, h: number, pixels: Uint8Array): TextureId;
+declare function preloadAssets(paths: string[]): Promise<void>;
+declare function isTextureLoaded(path: string): boolean;
+declare function getLoadingProgress(): number;
 declare function registerAnimatedTile(baseTileId: number, frames: number[], frameDuration: number): void;
 declare function unregisterAnimatedTile(baseTileId: number): void;
 declare function clearAnimatedTiles(): void;
@@ -254,7 +261,7 @@ declare function getVisibleText(tw: Typewriter): string;
 declare function isTypewriterComplete(tw: Typewriter): boolean;
 
 === game (@arcane/runtime/game) ===
-Types: CollisionCallback,CollisionRegistry,ColorSpriteOptions,Entity,EntityOptions,EntitySprite,FrameCallback,FrameInput,Game,GameConfig,GameContext,HUDBarOptions,HUDLabelOptions,HUDOverlayOptions,HUDTextOptions,Platform,PlatformType,PlatformerConfig,PlatformerState,PlatformerStateType,SpriteGroup,SpriteGroupDrawOptions,SpriteGroupType,SpritePart,
+Types: CollisionCallback,CollisionRegistry,ColorSpriteOptions,Entity,EntityOptions,EntitySprite,FrameCallback,FrameInput,Game,GameConfig,GameContext,HUDBarOptions,HUDLabelOptions,HUDOverlayOptions,HUDTextOptions,Platform,PlatformType,PlatformerConfig,PlatformerState,PlatformerStateType,SceneNode,SceneNodeId,SpriteGroup,SpriteGroupDrawOptions,SpriteGroupType,SpritePart,WorldTransform,
 declare function createCollisionRegistry(): CollisionRegistry;
 declare function onBodyCollision(registry: CollisionRegistry, bodyId: BodyId, callback: CollisionCallback): void;
 declare function onCollision(registry: CollisionRegistry, bodyA: BodyId, bodyB: BodyId, callback: CollisionCallback): void;
@@ -286,6 +293,16 @@ declare function createSpriteGroup(parts: SpritePart[], baseLayer?: number): Spr
 declare function drawSpriteGroup(group: SpriteGroup, x: number, y: number, opts?: SpriteGroupDrawOptions): void;
 declare function getSpritePart(group: SpriteGroup, name: string): SpritePart | undefined;
 declare function setPartVisible(group: SpriteGroup, name: string, visible: boolean): void;
+declare function createNode(parentId?: SceneNodeId): SceneNodeId;
+declare function destroyNode(id: SceneNodeId): void;
+declare function setNodeTransform(id: SceneNodeId, x: number, y: number, rotation?: number, scaleX?: number, scaleY?: number): void;
+declare function setParent(childId: SceneNodeId, parentId: SceneNodeId): void;
+declare function detachFromParent(childId: SceneNodeId): void;
+declare function getWorldTransform(id: SceneNodeId): WorldTransform;
+declare function getNode(id: SceneNodeId): SceneNode | undefined;
+declare function getChildren(id: SceneNodeId): ReadonlySet<SceneNodeId>;
+declare function applyToSprite(nodeId: SceneNodeId, opts: { x: number; y: number; w: number; h: number; rotation?: number; [key: string]: unknown; }): { x: number; y: number; w: number; h: number; rotation: number; [key: string]: unknown; };
+declare function _resetTransformSystem(): void;
 declare function captureInput(): FrameInput;
 declare function autoUpdateButton(btn: ButtonState, input: FrameInput): void;
 declare function autoUpdateSlider(slider: SliderState, input: FrameInput): void;
@@ -310,7 +327,7 @@ declare function consumeCombo(buffer: InputBuffer, combo: ComboDef): void;
 declare function updateInputBuffer(buffer: InputBuffer, map: InputMap, time: number, poller?: InputPoller): void;
 
 === ui (@arcane/runtime/ui) ===
-Types: Anchor,ArcOptions,BarOptions,ButtonState,ButtonStyle,ButtonVisual,CheckboxState,CheckboxStyle,Color,FocusManagerState,Focusable,LabelOptions,LayoutPosition,LineOptions,Palette,PanelOptions,RadioGroupState,RadioGroupStyle,RectOptions,SectorOptions,ShapeOptions,SliderState,SliderStyle,TextInputKeyEvent,TextInputState,TextInputStyle,
+Types: Anchor,ArcOptions,BarOptions,ButtonState,ButtonStyle,ButtonVisual,CapsuleOptions,CheckboxState,CheckboxStyle,Color,EllipseOptions,FocusManagerState,Focusable,LabelOptions,LayoutPosition,LineOptions,Palette,PanelOptions,PolygonOptions,RadioGroupState,RadioGroupStyle,RectOptions,RingOptions,SectorOptions,ShapeOptions,SliderState,SliderStyle,TextInputKeyEvent,TextInputState,TextInputStyle,
 declare function rgb(r: number, g: number, b: number, a?: number): Color;
 declare function createButton(x: number, y: number, w: number, h: number, label: string, style?: ButtonStyle): ButtonState;
 declare function hitTest(px: number, py: number, rx: number, ry: number, rw: number, rh: number): boolean;
@@ -349,10 +366,14 @@ declare function drawPanel(x: number, y: number, w: number, h: number, options?:
 declare function drawBar(x: number, y: number, w: number, h: number, fillRatio: number, options?: BarOptions): void;
 declare function drawLabel(text: string, x: number, y: number, options?: LabelOptions): void;
 declare function drawCircle(cx: number, cy: number, radius: number, options?: ShapeOptions): void;
+declare function drawEllipse(cx: number, cy: number, rx: number, ry: number, options?: EllipseOptions): void;
+declare function drawRing(cx: number, cy: number, innerRadius: number, outerRadius: number, options?: RingOptions): void;
 declare function drawLine(x1: number, y1: number, x2: number, y2: number, options?: LineOptions): void;
 declare function drawTriangle(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, options?: ShapeOptions): void;
 declare function drawArc(cx: number, cy: number, radius: number, startAngle: number, endAngle: number, options?: ArcOptions): void;
 declare function drawSector(cx: number, cy: number, radius: number, startAngle: number, endAngle: number, options?: SectorOptions): void;
+declare function drawCapsule(x1: number, y1: number, x2: number, y2: number, radius: number, options?: CapsuleOptions): void;
+declare function drawPolygon(vertices: [number, number][], options?: PolygonOptions): void;
 declare function createSlider(x: number, y: number, w: number, min: number, max: number, value: number, label?: string, style?: SliderStyle): SliderState;
 declare function getSliderHeight(sl: SliderState): number;
 declare function updateSlider(sl: SliderState, mouseX: number, mouseY: number, mouseDown: boolean, arrowLeftPressed?: boolean, arrowRightPressed?: boolean): void;
@@ -420,6 +441,7 @@ declare function applyImpulse(id: BodyId, ix: number, iy: number): void;
 declare function setBodyPosition(id: BodyId, x: number, y: number): void;
 declare function setCollisionLayers(id: BodyId, layer: number, mask: number): void;
 declare function setKinematicVelocity(id: BodyId, vx: number, vy: number): void;
+declare function getAllBodyStates(): (BodyState & { id: BodyId; })[];
 declare function createDistanceJoint(bodyA: BodyId, bodyB: BodyId, distance: number): ConstraintId;
 declare function createRevoluteJoint(bodyA: BodyId, bodyB: BodyId, pivotX: number, pivotY: number): ConstraintId;
 declare function removeConstraint(id: ConstraintId): void;
@@ -503,6 +525,14 @@ declare function getAllParticles(): Particle[];
 declare function addAffector(emitter: Emitter, affector: Affector): void;
 declare function clearEmitters(): void;
 declare function getEmitterCount(): number;
+declare function createRustEmitter(config: RustEmitterConfig): number;
+declare function updateRustEmitter(id: number, dt: number, x?: number, y?: number): void;
+declare function getRustEmitterParticleCount(id: number): number;
+declare function getRustEmitterSpriteData(id: number): Float32Array | null;
+declare function drawRustEmitter(id: number, opts?: { w?: number; h?: number; layer?: number; }): void;
+declare function destroyRustEmitter(id: number): void;
+declare function updateAllRustEmitters(dt: number): void;
+declare function setRustEmitterPosition(id: number, x: number, y: number): void;
 -- Constants (read-only data, not function parameters) --
 declare const ParticlePresets: { /** Small brown/tan particles, fast fade. Good for footsteps, impacts on ground. */ readonly dust: { readonly startColor: { readonly r: 0.6; readonly g: 0.5; readonly b: 0.3; readonly a: 0.8; }; readonly endColor: { readonly r: 0.5; readonly g: 0.4; readonly b: 0.3; readonly a: 0; }; readonly lifetime: [number, number]; readonly velocityX: [number, number]; readonly velocityY: [number, number]; readonly scale: [number, number]; readonly count: 8; }; /** Orange-to-red, rising particles with additive feel. */ readonly fire: { readonly startColor: { readonly r: 1; readonly g: 0.7; readonly b: 0.1; readonly a: 1; }; readonly endColor: { readonly r: 0.8; readonly g: 0.1; readonly b: 0; readonly a: 0; }; readonly lifetime: [number, number]; readonly velocityX: [number, number]; readonly velocityY: [number, number]; readonly scale: [number, number]; readonly count: 15; }; /** Bright yellow-to-red, fast, scattered. Good for hits and explosions. */ readonly sparks: { readonly startColor: { readonly r: 1; readonly g: 0.9; readonly b: 0.3; readonly a: 1; }; readonly endColor: { readonly r: 1; readonly g: 0.2; readonly b: 0; readonly a: 0; }; readonly lifetime: [number, number]; readonly velocityX: [number, number]; readonly velocityY: [number, number]; readonly scale: [number, number]; readonly count: 12; }; /** Gray, slow, rising. Good for chimneys, aftermath of fire. */ readonly smoke: { readonly startColor: { readonly r: 0.5; readonly g: 0.5; readonly b: 0.5; readonly a: 0.6; }; readonly endColor: { readonly r: 0.3; readonly g: 0.3; readonly b: 0.3; readonly a: 0; }; readonly lifetime: [number, number]; readonly velocityX: [number, number]; readonly velocityY: [number, number]; readonly scale: [number, number]; readonly scaleSpeed: [number, number]; readonly count: 6; }; };
 -- Functions --

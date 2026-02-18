@@ -290,6 +290,34 @@ fn op_get_contacts(state: &mut OpState) -> Vec<f64> {
     }
 }
 
+/// Get all body states as a packed f64 array for bulk readback.
+/// Layout per body: [id, x, y, vx, vy, angle, angular_velocity, is_sleeping(0/1)] = 8 f64s.
+/// Only includes bodies that exist (skips removed/empty slots).
+#[deno_core::op2]
+#[serde]
+fn op_get_all_body_states(state: &mut OpState) -> Vec<f64> {
+    let physics = state.borrow_mut::<Rc<RefCell<PhysicsState>>>();
+    let ps = physics.borrow();
+    match ps.0.as_ref() {
+        Some(world) => {
+            let bodies = world.all_bodies();
+            let mut result = Vec::with_capacity(bodies.len() * 8);
+            for body in bodies {
+                result.push(body.id as f64);
+                result.push(body.x as f64);
+                result.push(body.y as f64);
+                result.push(body.vx as f64);
+                result.push(body.vy as f64);
+                result.push(body.angle as f64);
+                result.push(body.angular_velocity as f64);
+                result.push(if body.sleeping { 1.0 } else { 0.0 });
+            }
+            result
+        }
+        None => vec![],
+    }
+}
+
 deno_core::extension!(
     physics_ext,
     ops = [
@@ -311,5 +339,6 @@ deno_core::extension!(
         op_query_aabb,
         op_raycast,
         op_get_contacts,
+        op_get_all_body_states,
     ],
 );

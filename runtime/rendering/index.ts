@@ -8,7 +8,7 @@ export type {
 } from "./types.ts";
 
 // Sprites
-export { drawSprite, clearSprites } from "./sprites.ts";
+export { drawSprite, clearSprites, _flushSpriteBatch } from "./sprites.ts";
 
 // Camera
 export type { CameraBounds, CameraDeadzone } from "./camera.ts";
@@ -52,7 +52,7 @@ export {
 } from "./input.ts";
 
 // Textures
-export { loadTexture, createSolidTexture, uploadRgbaTexture } from "./texture.ts";
+export { loadTexture, createSolidTexture, uploadRgbaTexture, preloadAssets, isTextureLoaded, getLoadingProgress } from "./texture.ts";
 
 // Game loop
 export { onFrame, getDeltaTime } from "./loop.ts";
@@ -150,8 +150,8 @@ export {
 } from "./lighting.ts";
 
 // Text
-export type { BitmapFont, TextOptions, TextMeasurement, TextOutline, TextShadow, MSDFFont, MSDFGlyph } from "./text.ts";
-export { loadFont, getDefaultFont, getDefaultMSDFFont, loadMSDFFont, measureText, drawText } from "./text.ts";
+export type { BitmapFont, TextOptions, TextMeasurement, TextOutline, TextShadow, MSDFFont, MSDFGlyph, TextAlign, TextLayoutOptions } from "./text.ts";
+export { loadFont, getDefaultFont, getDefaultMSDFFont, loadMSDFFont, measureText, drawText, wrapText, drawTextWrapped, drawTextAligned } from "./text.ts";
 
 // Animation
 export type { AnimationId, AnimationDef, AnimationState, FrameEvent, FrameEventCallback } from "./animation.ts";

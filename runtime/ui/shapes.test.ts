@@ -5,7 +5,7 @@ import {
   getDrawCalls,
   clearDrawCalls,
 } from "../testing/visual.ts";
-import { drawCircle, drawLine, drawTriangle, drawArc, drawSector } from "./shapes.ts";
+import { drawCircle, drawEllipse, drawRing, drawLine, drawTriangle, drawArc, drawSector, drawCapsule, drawPolygon } from "./shapes.ts";
 
 describe("shapes", () => {
   describe("drawCircle", () => {
@@ -231,14 +231,138 @@ describe("shapes", () => {
     });
   });
 
+  describe("drawEllipse", () => {
+    it("logs an ellipse draw call with correct parameters", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      drawEllipse(100, 200, 60, 30);
+      const calls = getDrawCalls();
+      const ellipseCalls = calls.filter((c: any) => c.type === "ellipse");
+      assert.equal(ellipseCalls.length, 1, "expected one ellipse draw call");
+      const call = ellipseCalls[0] as any;
+      assert.equal(call.cx, 100);
+      assert.equal(call.cy, 200);
+      assert.equal(call.rx, 60);
+      assert.equal(call.ry, 30);
+      disableDrawCallCapture();
+    });
+
+    it("uses default layer 0 and screenSpace false", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      drawEllipse(50, 50, 20, 10);
+      const calls = getDrawCalls();
+      const ellipseCalls = calls.filter((c: any) => c.type === "ellipse");
+      assert.equal(ellipseCalls.length, 1);
+      const call = ellipseCalls[0] as any;
+      assert.equal(call.layer, 0);
+      assert.equal(call.screenSpace, false);
+      disableDrawCallCapture();
+    });
+  });
+
+  describe("drawRing", () => {
+    it("logs a ring draw call with correct parameters", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      drawRing(200, 200, 30, 50);
+      const calls = getDrawCalls();
+      const ringCalls = calls.filter((c: any) => c.type === "ring");
+      assert.equal(ringCalls.length, 1, "expected one ring draw call");
+      const call = ringCalls[0] as any;
+      assert.equal(call.cx, 200);
+      assert.equal(call.cy, 200);
+      assert.equal(call.innerRadius, 30);
+      assert.equal(call.outerRadius, 50);
+      disableDrawCallCapture();
+    });
+
+    it("uses default layer 0 and screenSpace false", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      drawRing(50, 50, 10, 20);
+      const calls = getDrawCalls();
+      const ringCalls = calls.filter((c: any) => c.type === "ring");
+      assert.equal(ringCalls.length, 1);
+      const call = ringCalls[0] as any;
+      assert.equal(call.layer, 0);
+      assert.equal(call.screenSpace, false);
+      disableDrawCallCapture();
+    });
+  });
+
+  describe("drawCapsule", () => {
+    it("logs a capsule draw call with correct parameters", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      drawCapsule(100, 200, 300, 200, 15);
+      const calls = getDrawCalls();
+      const capsuleCalls = calls.filter((c: any) => c.type === "capsule");
+      assert.equal(capsuleCalls.length, 1, "expected one capsule draw call");
+      const call = capsuleCalls[0] as any;
+      assert.equal(call.x1, 100);
+      assert.equal(call.y1, 200);
+      assert.equal(call.x2, 300);
+      assert.equal(call.y2, 200);
+      assert.equal(call.radius, 15);
+      disableDrawCallCapture();
+    });
+
+    it("uses default layer 0 and screenSpace false", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      drawCapsule(0, 0, 100, 0, 10);
+      const calls = getDrawCalls();
+      const capsuleCalls = calls.filter((c: any) => c.type === "capsule");
+      assert.equal(capsuleCalls.length, 1);
+      const call = capsuleCalls[0] as any;
+      assert.equal(call.layer, 0);
+      assert.equal(call.screenSpace, false);
+      disableDrawCallCapture();
+    });
+  });
+
+  describe("drawPolygon", () => {
+    it("logs a polygon draw call with correct vertices", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      drawPolygon([[100, 50], [150, 150], [50, 150]]);
+      const calls = getDrawCalls();
+      const polygonCalls = calls.filter((c: any) => c.type === "polygon");
+      assert.equal(polygonCalls.length, 1, "expected one polygon draw call");
+      const call = polygonCalls[0] as any;
+      assert.equal(call.vertices.length, 3);
+      assert.equal(call.vertices[0][0], 100);
+      assert.equal(call.vertices[0][1], 50);
+      disableDrawCallCapture();
+    });
+
+    it("uses default layer 0 and screenSpace false", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      drawPolygon([[0, 0], [10, 0], [10, 10], [0, 10]]);
+      const calls = getDrawCalls();
+      const polygonCalls = calls.filter((c: any) => c.type === "polygon");
+      assert.equal(polygonCalls.length, 1);
+      const call = polygonCalls[0] as any;
+      assert.equal(call.layer, 0);
+      assert.equal(call.screenSpace, false);
+      disableDrawCallCapture();
+    });
+  });
+
   describe("headless safety", () => {
     it("all shape functions are safe in headless mode (no crash)", () => {
-      // hasRenderOps is false in tests, so these should all early-return after logging
+      // hasGeoOps is false in tests, so these should all early-return after logging
       drawCircle(100, 100, 50);
+      drawEllipse(100, 100, 60, 30);
+      drawRing(100, 100, 20, 40);
       drawLine(0, 0, 200, 200);
       drawTriangle(10, 10, 50, 80, 90, 10);
       drawArc(100, 100, 30, 0, Math.PI);
       drawSector(100, 100, 40, 0, Math.PI / 2);
+      drawCapsule(0, 0, 100, 0, 10);
+      drawPolygon([[0, 0], [10, 0], [5, 10]]);
       // If we get here without throwing, the test passes
       assert.ok(true, "all shapes returned without error in headless mode");
     });

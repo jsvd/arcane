@@ -846,6 +846,128 @@ declare module "@arcane/runtime/game" {
   export declare function setPartVisible(group: SpriteGroup, name: string, visible: boolean): void;
 
   /**
+   * Lightweight scene node / transform hierarchy.
+   *
+   * Provides parent-child relationships with local transforms that compose
+   * into world transforms. Useful for attaching weapons to characters,
+   * UI element grouping, or any hierarchical positioning.
+   *
+   * No caching or dirty flags -- getWorldTransform() walks the parent chain
+   * each call. This is fine for typical scene depths of 3-5 levels.
+   */
+  /** Opaque handle to a scene node. */
+  export type SceneNodeId = number;
+  /** A node in the scene hierarchy with a local transform relative to its parent. */
+  export type SceneNode = {
+      id: SceneNodeId;
+      parentId: SceneNodeId | null;
+      localX: number;
+      localY: number;
+      localRotation: number;
+      localScaleX: number;
+      localScaleY: number;
+  };
+  /** World-space transform computed by walking the parent chain. */
+  export type WorldTransform = {
+      x: number;
+      y: number;
+      rotation: number;
+      scaleX: number;
+      scaleY: number;
+  };
+  /**
+   * Create a new scene node, optionally parented to an existing node.
+   * Starts at position (0,0), rotation 0, scale (1,1).
+   *
+   * @param parentId - Parent node ID. If omitted, the node is a root node.
+   * @returns The new node's ID.
+   */
+  export declare function createNode(parentId?: SceneNodeId): SceneNodeId;
+  /**
+   * Destroy a scene node. Children are detached (become roots), not destroyed.
+   *
+   * @param id - The node to destroy.
+   */
+  export declare function destroyNode(id: SceneNodeId): void;
+  /**
+   * Set the local transform of a node.
+   *
+   * @param id - Node to update.
+   * @param x - Local X position.
+   * @param y - Local Y position.
+   * @param rotation - Local rotation in radians. Default: 0.
+   * @param scaleX - Local X scale. Default: 1.
+   * @param scaleY - Local Y scale. Default: 1.
+   */
+  export declare function setNodeTransform(id: SceneNodeId, x: number, y: number, rotation?: number, scaleX?: number, scaleY?: number): void;
+  /**
+   * Reparent a node to a new parent.
+   *
+   * @param childId - The node to reparent.
+   * @param parentId - The new parent node ID.
+   */
+  export declare function setParent(childId: SceneNodeId, parentId: SceneNodeId): void;
+  /**
+   * Detach a node from its parent, making it a root node.
+   *
+   * @param childId - The node to detach.
+   */
+  export declare function detachFromParent(childId: SceneNodeId): void;
+  /**
+   * Compute the world-space transform by walking the parent chain
+   * and composing local transforms.
+   *
+   * Transform composition order: parent scale -> parent rotation -> parent translation.
+   * Each child's local position is scaled and rotated by its parent's world transform.
+   *
+   * @param id - Node to compute world transform for.
+   * @returns World-space transform, or identity if node not found.
+   */
+  export declare function getWorldTransform(id: SceneNodeId): WorldTransform;
+  /**
+   * Get the node data for a scene node.
+   *
+   * @param id - Node ID to look up.
+   * @returns The SceneNode, or undefined if not found.
+   */
+  export declare function getNode(id: SceneNodeId): SceneNode | undefined;
+  /**
+   * Get the children of a node.
+   *
+   * @param id - Parent node ID.
+   * @returns ReadonlySet of child node IDs, or empty set if not found.
+   */
+  export declare function getChildren(id: SceneNodeId): ReadonlySet<SceneNodeId>;
+  /**
+   * Merge a node's world transform into sprite options.
+   * Returns a new object with x, y, rotation, w, h adjusted by the world transform.
+   *
+   * @param nodeId - Scene node whose world transform to apply.
+   * @param opts - Sprite options to merge into (must have x, y, w, h).
+   * @returns New sprite options with world transform applied.
+   */
+  export declare function applyToSprite(nodeId: SceneNodeId, opts: {
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      rotation?: number;
+      [key: string]: unknown;
+  }): {
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      rotation: number;
+      [key: string]: unknown;
+  };
+  /**
+   * Reset the transform system (for testing).
+   * Clears all nodes and resets the ID counter.
+   */
+  export declare function _resetTransformSystem(): void;
+
+  /**
    * Widget auto-wiring: capture input once per frame, pass to all widgets.
    * Eliminates the repetitive (mouseX, mouseY, mouseDown, enterPressed) args.
    */

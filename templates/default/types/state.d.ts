@@ -438,6 +438,8 @@ declare module "@arcane/runtime/state" {
    * - `has(path, predicate?)` - Check existence in current state.
    * - `replaceState(state)` - Replace the entire state (for deserialization / time travel).
    * - `getHistory()` - Get the transaction history for recording/replay.
+   * - `enableComponentIndex(collectionPath)` - Enable fast component lookups for an entity collection.
+   * - `getEntitiesWithComponent(component)` - Get entity IDs that have a given component key.
    */
   export type GameStore<S> = Readonly<{
       /** Returns the current state as a deep readonly snapshot. */
@@ -456,6 +458,23 @@ declare module "@arcane/runtime/state" {
       replaceState: (state: S) => void;
       /** Get the transaction history as an ordered list of TransactionRecords. */
       getHistory: () => readonly TransactionRecord<S>[];
+      /**
+       * Enable component indexing for an entity collection stored at the given path.
+       * The collection must be a Record<EntityId, object> (entity map keyed by ID).
+       * After enabling, query() will use the index for faster lookups when filtering
+       * by component presence, and getEntitiesWithComponent() becomes available.
+       *
+       * @param collectionPath - Dot-separated path to the entity collection (e.g., "entities").
+       */
+      enableComponentIndex: (collectionPath: string) => void;
+      /**
+       * Get entity IDs that have a specific component (property key) in any indexed collection.
+       * Returns an empty set if no component index is enabled or no entities have the component.
+       *
+       * @param component - The component/property name to look up.
+       * @returns ReadonlySet of entity IDs that have this component.
+       */
+      getEntitiesWithComponent: (component: string) => ReadonlySet<EntityId>;
   }>;
   /**
    * A recorded transaction for replay and debugging.

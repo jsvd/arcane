@@ -28,7 +28,7 @@ import {
   removeEffect,
   setEffectParam,
 } from "../../runtime/rendering/index.ts";
-import { rgb } from "../../runtime/ui/types.ts";
+import { rgb, drawPolygon, drawTriangle, drawCircle } from "../../runtime/ui/index.ts";
 import { createGame, drawColorSprite } from "../../runtime/game/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 import { createRng } from "../../runtime/state/index.ts";
@@ -82,6 +82,8 @@ type Asteroid = {
   size: number; // 0=large, 1=medium, 2=small
   angle: number;
   spin: number;
+  verts: number; // number of polygon vertices (5-9)
+  radii: number[]; // per-vertex radius offsets for jaggedness
 };
 
 type Bullet = {
@@ -200,6 +202,16 @@ function createInitialState(w: number, h: number): GameState {
   };
 }
 
+/** Generate random polygon parameters for an asteroid. */
+function randomAsteroidShape(): { verts: number; radii: number[] } {
+  const verts = 5 + Math.floor(rng.float() * 5); // 5-9 sides
+  const radii: number[] = [];
+  for (let i = 0; i < verts; i++) {
+    radii.push(0.7 + rng.float() * 0.3); // 70-100% of base radius for jaggedness
+  }
+  return { verts, radii };
+}
+
 function spawnLevel(s: GameState): void {
   s.level++;
   const count = 3 + s.level;
@@ -213,6 +225,7 @@ function spawnLevel(s: GameState): void {
 
     const angle = rng.float() * Math.PI * 2;
     const speed = ASTEROID_SPEEDS[0] + rng.float() * 20;
+    const shape = randomAsteroidShape();
     s.asteroids.push({
       x,
       y,
@@ -221,6 +234,8 @@ function spawnLevel(s: GameState): void {
       size: 0,
       angle: rng.float() * Math.PI * 2,
       spin: (rng.float() - 0.5) * ASTEROID_SPIN[0] * 2,
+      verts: shape.verts,
+      radii: shape.radii,
     });
   }
 }
@@ -388,6 +403,7 @@ function update(s: GameState, dt: number): void {
           for (let k = 0; k < 2; k++) {
             const angle = rng.float() * Math.PI * 2;
             const speed = ASTEROID_SPEEDS[newSize] + rng.float() * 20;
+            const shape = randomAsteroidShape();
             s.asteroids.push({
               x: a.x,
               y: a.y,
@@ -396,6 +412,8 @@ function update(s: GameState, dt: number): void {
               size: newSize,
               angle: rng.float() * Math.PI * 2,
               spin: (rng.float() - 0.5) * ASTEROID_SPIN[newSize] * 2,
+              verts: shape.verts,
+              radii: shape.radii,
             });
           }
         }
@@ -498,38 +516,28 @@ function render(s: GameState): void {
     });
   }
 
-  // Asteroids (rotation)
+  // Asteroids as polygons (random N-gon shapes with rotation)
   for (const a of s.asteroids) {
-    const r = ASTEROID_SIZES[a.size];
-    drawColorSprite({
-      color: COL_ASTEROID,
-      x: a.x - r,
-      y: a.y - r,
-      w: r * 2,
-      h: r * 2,
-      layer: 2,
-      rotation: a.angle,
-      originX: 0.5,
-      originY: 0.5,
-    });
+    const baseR = ASTEROID_SIZES[a.size];
+    const verts: [number, number][] = [];
+    for (let i = 0; i < a.verts; i++) {
+      const vertAngle = a.angle + (i / a.verts) * Math.PI * 2;
+      const r = baseR * a.radii[i];
+      verts.push([a.x + Math.cos(vertAngle) * r, a.y + Math.sin(vertAngle) * r]);
+    }
+    drawPolygon(verts, { color: COL_ASTEROID, layer: 2 });
   }
 
-  // Bullets
+  // Bullets as small circles
   for (const b of s.bullets) {
-    const opacity = Math.min(b.life / 0.3, 1);
-    drawColorSprite({
-      color: COL_BULLET,
-      x: b.x - BULLET_SIZE / 2,
-      y: b.y - BULLET_SIZE / 2,
-      w: BULLET_SIZE,
-      h: BULLET_SIZE,
+    const alpha = Math.min(b.life / 0.3, 1);
+    drawCircle(b.x, b.y, BULLET_SIZE / 2, {
+      color: { ...COL_BULLET, a: alpha },
       layer: 3,
-      opacity,
-      blendMode: "additive",
     });
   }
 
-  // Ship
+  // Ship as a triangle
   const ship = s.ship;
   if (ship.alive) {
     // Invulnerability blink
@@ -538,7 +546,7 @@ function render(s: GameState): void {
       Math.floor(s.time * 8) % 2 === 0;
 
     if (visible) {
-      // Thrust glow behind ship (additive)
+      // Thrust glow behind ship (additive sprite)
       if (ship.thrusting) {
         const backAngle = ship.angle + Math.PI;
         const glowX = ship.x + Math.cos(backAngle) * SHIP_SIZE * 0.5;
@@ -559,25 +567,22 @@ function render(s: GameState): void {
         });
       }
 
-      // Ship body (rotation + flip when going backward)
-      const speed = Math.sqrt(ship.vx * ship.vx + ship.vy * ship.vy);
-      const movingBackward =
-        speed > 30 &&
-        Math.cos(ship.angle) * ship.vx + Math.sin(ship.angle) * ship.vy <
-          -30;
+      // Ship body as a triangle pointing in its direction
+      const nose = SHIP_SIZE * 0.6;
+      const wing = SHIP_SIZE * 0.45;
+      const tail = SHIP_SIZE * 0.35;
+      const nx = ship.x + Math.cos(ship.angle) * nose;
+      const ny = ship.y + Math.sin(ship.angle) * nose;
+      const lx = ship.x + Math.cos(ship.angle + 2.5) * wing;
+      const ly = ship.y + Math.sin(ship.angle + 2.5) * wing;
+      const rx = ship.x + Math.cos(ship.angle - 2.5) * wing;
+      const ry = ship.y + Math.sin(ship.angle - 2.5) * wing;
+      drawTriangle(nx, ny, lx, ly, rx, ry, { color: COL_SHIP, layer: 10 });
 
-      drawColorSprite({
-        color: COL_SHIP,
-        x: ship.x - SHIP_SIZE / 2,
-        y: ship.y - SHIP_SIZE / 2,
-        w: SHIP_SIZE,
-        h: SHIP_SIZE,
-        layer: 10,
-        rotation: ship.angle,
-        originX: 0.5,
-        originY: 0.5,
-        flipX: movingBackward,
-      });
+      // Tail notch (smaller darker triangle for detail)
+      const tx = ship.x - Math.cos(ship.angle) * tail;
+      const ty = ship.y - Math.sin(ship.angle) * tail;
+      drawTriangle(lx, ly, rx, ry, tx, ty, { color: { r: 0.4, g: 0.5, b: 0.6, a: 1 }, layer: 9 });
     }
   }
 

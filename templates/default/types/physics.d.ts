@@ -218,6 +218,16 @@ declare module "@arcane/runtime/physics" {
    * No-op in headless mode.
    */
   export declare function setKinematicVelocity(id: BodyId, vx: number, vy: number): void;
+  /**
+   * Get the state of all bodies in the physics world in a single call.
+   * Much more efficient than calling getBodyState() per body when you have many bodies.
+   * Returns an empty array in headless mode or if no physics world exists.
+   *
+   * @returns Array of BodyState objects for every active body in the world.
+   */
+  export declare function getAllBodyStates(): (BodyState & {
+      id: BodyId;
+  })[];
 
   /**
    * Create a distance joint that maintains a fixed distance between two bodies.
