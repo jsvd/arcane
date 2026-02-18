@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
     branches: [main]
 
@@ -93,3 +94,27 @@ jobs:
       - name: Install system dependencies (ALSA + udev)
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
       - run: cargo check --workspace
+
+  publish:
+    name: Publish to crates.io
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [ts-tests-node, rust-tests, ts-tests-v8, headless-check, declarations-check, full-build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: v1-rust
+      - name: Install system dependencies (ALSA + udev)
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
+      - name: Publish arcane-core
+        run: cargo publish -p arcane-core
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - name: Wait for crates.io indexing
+        run: sleep 60
+      - name: Publish arcane-engine
+        run: cargo publish -p arcane-engine --allow-dirty
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
