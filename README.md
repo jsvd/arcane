@@ -96,7 +96,7 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**v0.11.1 — Single binary distribution!**
+**v0.12.0 — DX improvements: color API, particle presets, knockback, palette!**
 
 Install: [`cargo install arcane-engine`](https://crates.io/crates/arcane-engine)
 
@@ -114,7 +114,7 @@ One binary. No npm required. The CLI embeds the TypeScript runtime and copies it
 - ✅ Rust physics engine: rigid bodies, circle/AABB shapes, spatial hash broadphase, SAT narrowphase, sequential impulse solver, distance + revolute joints, sleep system, raycast, AABB queries
 - ✅ Scene management: scene stack, transitions, lifecycle hooks
 - ✅ Save/load: serialization, schema migrations, auto-save, file I/O ops
-- ✅ Recipe framework with 4 recipes (turn-based combat, inventory, grid movement, fog of war)
+- ✅ Recipe framework with 5 recipes (turn-based combat, inventory, grid movement, fog of war, actor patrol)
 - ✅ Agent protocol (HTTP inspector, describe/inspect commands)
 - ✅ MCP server: JSON-RPC 2.0 with 10 tools for AI agent interaction
 - ✅ Snapshot-replay testing: deterministic physics recording, world snapshots, replay diffing
@@ -131,7 +131,13 @@ One binary. No npm required. The CLI embeds the TypeScript runtime and copies it
 - ✅ MCP-first DX: zero-config MCP auto-discovery for Claude Code, Cursor, VS Code
 - ✅ Single binary distribution: `cargo install arcane-engine` embeds runtime + recipes, no npm required
 - ✅ Built-in asset discovery: 25 free CC0 packs with search, download, and extraction
-- ✅ 2028 TS (Node) + 2125 (V8) + 292 Rust tests passing
+- ✅ Unified Color API: all public APIs accept `Color` objects (0-1 floats)
+- ✅ Particle presets: `burstParticles()`, `streamParticles()` with 4 built-in presets
+- ✅ Platformer knockback: `platformerApplyImpulse()` with auto-decaying external velocity
+- ✅ UI palette system: `setPalette()`, `paletteColor()` for consistent theming
+- ✅ API cheatsheet: auto-generated compact reference for all 500+ exported functions
+- ✅ 5 recipes (turn-based combat, inventory, grid movement, fog of war, actor patrol)
+- ✅ 2082 TS (Node) + 2179 (V8) + 292 Rust tests passing
 - ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
 - ✅ 27 example projects (Hello World, Card Battler, Sokoban, Breakout, Roguelike, Platformer, Tower Defense, Sprite Demo, BFRPG RPG, Asteroids, Juice Showcase, Menu Flow, Physics Playground, Parallax Scroller, Tilemap Showcase, Character Controller, UI Showcase, Agent Testing, WFC Dungeon, Lighting Showcase, MSDF Text Showcase, Isometric Dungeon, Audio Showcase, Visual Polish, Hex Strategy, Gamepad Platformer)
 

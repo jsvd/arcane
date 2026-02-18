@@ -2,6 +2,27 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.12.0] - 2026-02-18
+
+### Added
+- **Particle presets** — `burstParticles()`, `streamParticles()`, and `ParticlePresets` (dust, fire, sparks, smoke) for one-liner particle effects
+- **Particle default texture** — `textureId` is now optional in emitter config; auto-creates a 1×1 white texture
+- **Platformer knockback** — `platformerApplyImpulse()` with `externalVx`/`externalVy` that decay each frame (×0.85)
+- **UI palette system** — `setPalette()`, `getPalette()`, `paletteColor()` for consistent color theming
+- **Actor patrol recipe** — `createActor()`, `updateActors()`, `damageActor()` with patrol, chase, and sine behaviors
+- **API cheatsheet** — auto-generated `types/cheatsheet.d.ts` (~600 lines) for fast API discovery
+- **Module re-exports** — `rgb`, `Color`, `drawCircle`, `drawLine`, `drawTriangle`, `shakeCamera` available from `@arcane/runtime/rendering`
+- **State architecture docs** — game-patterns.md guide for composing PlatformerState inside GameState
+
+### Changed
+- **BREAKING: `createSolidTexture(name, color: Color)`** — replaces `(name, r, g, b, a?)` positional args. Use `rgb()` or Color objects
+- **BREAKING: `setBackgroundColor(color)`** — replaces `(r, g, b)` positional args. Accepts `{r, g, b}` objects
+- **BREAKING: `createGame({ background: Color })`** — background now takes 0-1 float Color, not 0-255 ints
+- Shape primitives (`drawCircle`, `drawLine`, `drawTriangle`) default to layer 0 instead of 90
+
+### Fixed
+- Platformer tunneling on large dt spikes (velocity clamped to prevent passing through platforms)
+
 ## [0.11.1] - 2026-02-17
 
 ### Fixed
