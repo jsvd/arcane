@@ -5,9 +5,10 @@ use std::time::Duration;
 use super::{InspectorRequest, InspectorResponse, RequestSender};
 
 /// Start the HTTP inspector server on a background thread.
-/// Returns a join handle for the server thread.
-pub fn start_inspector(port: u16, request_tx: RequestSender) -> JoinHandle<()> {
-    thread::spawn(move || {
+/// Returns a join handle and the actual port the server bound to (useful when port=0).
+pub fn start_inspector(port: u16, request_tx: RequestSender) -> (JoinHandle<()>, mpsc::Receiver<u16>) {
+    let (port_tx, port_rx) = mpsc::channel();
+    let handle = thread::spawn(move || {
         let addr = format!("0.0.0.0:{port}");
         let server = match tiny_http::Server::http(&addr) {
             Ok(s) => s,
@@ -17,7 +18,14 @@ pub fn start_inspector(port: u16, request_tx: RequestSender) -> JoinHandle<()> {
             }
         };
 
-        eprintln!("[inspector] Listening on http://localhost:{port}");
+        // Report the actual bound port (may differ from requested when port=0)
+        let actual_port = match server.server_addr() {
+            tiny_http::ListenAddr::IP(addr) => addr.port(),
+            _ => port,
+        };
+        let _ = port_tx.send(actual_port);
+
+        eprintln!("[inspector] Listening on http://localhost:{actual_port}");
 
         for mut request in server.incoming_requests() {
             let url = request.url().to_string();
@@ -66,7 +74,8 @@ pub fn start_inspector(port: u16, request_tx: RequestSender) -> JoinHandle<()> {
             let resp = build_http_response(inspector_resp);
             let _ = request.respond(resp);
         }
-    })
+    });
+    (handle, port_rx)
 }
 
 fn parse_route(method: &str, url: &str, body: &str) -> Option<InspectorRequest> {

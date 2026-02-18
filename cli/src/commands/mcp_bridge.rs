@@ -5,7 +5,6 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 
-const DEFAULT_MCP_PORT: u16 = 4322;
 const HEALTH_CHECK_TIMEOUT: Duration = Duration::from_secs(15);
 const HEALTH_CHECK_INTERVAL: Duration = Duration::from_millis(250);
 
@@ -13,28 +12,43 @@ const HEALTH_CHECK_INTERVAL: Duration = Duration::from_millis(250);
 ///
 /// Reads JSON-RPC from stdin, proxies to the MCP HTTP server on localhost,
 /// and writes the response to stdout. Auto-discovers the port from
-/// `.arcane/mcp-port` or uses the default (4322). If no running instance
-/// is found, auto-launches `arcane dev <entry>` as a child process.
+/// `.arcane/mcp-port`. If no running instance is found, auto-launches
+/// `arcane dev <entry>` which picks a free port automatically.
 pub fn run(entry: String, port_override: Option<u16>) -> Result<()> {
-    let port = match port_override {
-        Some(p) => p,
-        None => discover_port(),
-    };
-
     // Try to connect. If the server is not running, auto-launch arcane dev.
     let mut child: Option<Child> = None;
 
-    if !health_check(port) {
-        eprintln!("[mcp-bridge] No running MCP server found, launching arcane dev...");
-        let child_proc = launch_dev(&entry, port)?;
-        child = Some(child_proc);
-
-        // Wait for the server to become available
-        if !wait_for_server(port) {
-            anyhow::bail!("MCP server did not start within {}s", HEALTH_CHECK_TIMEOUT.as_secs());
+    let port = if let Some(p) = port_override {
+        // Explicit port override — use it directly
+        if !health_check(p) {
+            eprintln!("[mcp-bridge] No running MCP server found, launching arcane dev...");
+            let child_proc = launch_dev(&entry, Some(p))?;
+            child = Some(child_proc);
+            if !wait_for_server(p) {
+                anyhow::bail!("MCP server did not start within {}s", HEALTH_CHECK_TIMEOUT.as_secs());
+            }
         }
-        eprintln!("[mcp-bridge] MCP server ready on port {port}");
-    }
+        eprintln!("[mcp-bridge] MCP server ready on port {p}");
+        p
+    } else if let Some(p) = discover_port() {
+        // Found a port file — check if the server is alive
+        if health_check(p) {
+            eprintln!("[mcp-bridge] MCP server ready on port {p}");
+            p
+        } else {
+            // Stale port file — launch a new instance
+            eprintln!("[mcp-bridge] Stale port file, launching arcane dev...");
+            let child_proc = launch_dev(&entry, None)?;
+            child = Some(child_proc);
+            wait_for_port_file()?
+        }
+    } else {
+        // No port file, no override — launch arcane dev (auto-assigns port)
+        eprintln!("[mcp-bridge] No running MCP server found, launching arcane dev...");
+        let child_proc = launch_dev(&entry, None)?;
+        child = Some(child_proc);
+        wait_for_port_file()?
+    };
 
     // Main loop: read JSON-RPC lines from stdin, proxy to HTTP, write to stdout
     let stdin = io::stdin();
@@ -86,11 +100,10 @@ pub fn run(entry: String, port_override: Option<u16>) -> Result<()> {
 }
 
 /// Discover the MCP port from the `.arcane/mcp-port` file.
-fn discover_port() -> u16 {
+fn discover_port() -> Option<u16> {
     std::fs::read_to_string(".arcane/mcp-port")
         .ok()
         .and_then(|s| s.trim().parse::<u16>().ok())
-        .unwrap_or(DEFAULT_MCP_PORT)
 }
 
 /// Check if the MCP server is responding on the given port.
@@ -111,13 +124,20 @@ fn wait_for_server(port: u16) -> bool {
     false
 }
 
-/// Launch `arcane dev <entry> --mcp-port <port>` as a child process.
-fn launch_dev(entry: &str, port: u16) -> Result<Child> {
+/// Launch `arcane dev <entry>` as a child process, optionally with a specific port.
+fn launch_dev(entry: &str, port: Option<u16>) -> Result<Child> {
     // Find the arcane binary (same as current executable)
     let exe = std::env::current_exe().context("Cannot find arcane executable")?;
 
+    let mut args = vec!["dev", entry];
+    let port_str;
+    if let Some(p) = port {
+        port_str = p.to_string();
+        args.extend(["--mcp-port", &port_str]);
+    }
+
     let child = Command::new(exe)
-        .args(["dev", entry, "--mcp-port", &port.to_string()])
+        .args(&args)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::inherit())
@@ -125,6 +145,24 @@ fn launch_dev(entry: &str, port: u16) -> Result<Child> {
         .context("Failed to launch arcane dev")?;
 
     Ok(child)
+}
+
+/// Wait for the `.arcane/mcp-port` file to appear (written by arcane dev after binding).
+fn wait_for_port_file() -> Result<u16> {
+    let start = Instant::now();
+    while start.elapsed() < HEALTH_CHECK_TIMEOUT {
+        if let Some(port) = discover_port() {
+            if health_check(port) {
+                eprintln!("[mcp-bridge] MCP server ready on port {port}");
+                return Ok(port);
+            }
+        }
+        std::thread::sleep(HEALTH_CHECK_INTERVAL);
+    }
+    anyhow::bail!(
+        "MCP server did not start within {}s",
+        HEALTH_CHECK_TIMEOUT.as_secs()
+    )
 }
 
 /// Proxy a JSON-RPC request to the MCP HTTP server and return the response body.
@@ -223,9 +261,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn discover_port_returns_default_when_no_file() {
-        let port = discover_port();
-        assert!(port > 0);
+    fn discover_port_returns_none_when_no_file() {
+        // discover_port reads .arcane/mcp-port from cwd; in test cwd it won't exist
+        // (unless a dev server happens to be running). Just verify it doesn't panic.
+        let _ = discover_port();
     }
 
     #[test]

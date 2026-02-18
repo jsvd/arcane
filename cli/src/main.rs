@@ -23,8 +23,8 @@ enum Commands {
         /// Enable HTTP inspector on the given port (e.g. --inspector 4321)
         #[arg(long)]
         inspector: Option<u16>,
-        /// MCP server port (default: 4322, use --no-mcp to disable)
-        #[arg(long, default_value = "4322")]
+        /// MCP server port (default: auto-assign a free port, use --no-mcp to disable)
+        #[arg(long, default_value = "0")]
         mcp_port: u16,
         /// Disable the MCP server
         #[arg(long)]

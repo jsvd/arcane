@@ -63,21 +63,25 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
     // Start HTTP inspector if requested
     let inspector_rx = inspector_port.map(|port| {
         let (tx, rx) = arcane_core::agent::inspector_channel();
-        let _handle = arcane_core::agent::inspector::start_inspector(port, tx);
+        let (_handle, port_rx) = arcane_core::agent::inspector::start_inspector(port, tx);
         // Leak the handle — inspector runs for the lifetime of the process
         std::mem::forget(_handle);
-        write_mcp_port_file(port);
-        eprintln!("[arcane] MCP server on http://localhost:{port}");
+        if let Ok(actual_port) = port_rx.recv() {
+            write_mcp_port_file(actual_port);
+            eprintln!("[arcane] Inspector on http://localhost:{actual_port}");
+        }
         rx
     });
 
     // Start MCP server if requested
     let mcp_rx = mcp_port.map(|port| {
         let (tx, rx) = arcane_core::agent::inspector_channel();
-        let _handle = arcane_core::agent::mcp::start_mcp_server(port, tx);
+        let (_handle, port_rx) = arcane_core::agent::mcp::start_mcp_server(port, tx);
         std::mem::forget(_handle);
-        write_mcp_port_file(port);
-        eprintln!("[arcane] MCP server on http://localhost:{port}");
+        if let Ok(actual_port) = port_rx.recv() {
+            write_mcp_port_file(actual_port);
+            eprintln!("[arcane] MCP server on http://localhost:{actual_port}");
+        }
         rx
     });
 
