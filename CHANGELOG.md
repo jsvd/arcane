@@ -2,6 +2,17 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.12.3] - 2026-02-18
+
+### Added
+- **Text alignment** — `drawText()` now accepts `align: "left" | "center" | "right"` option for horizontal alignment relative to the given x position. Works with both bitmap and MSDF fonts.
+- **Color mutating functions** — `setAlpha(color, a)`, `setRgb(color, r, g, b)`, and `lerpColorInto(target, start, end, t)` for zero-allocation color manipulation in hot loops. JSDoc perf warnings added to `rgb()` and `withAlpha()`.
+- **Global particle cap** — `setMaxTotalParticles(n)`, `getMaxTotalParticles()`, `getTotalParticleCount()` to enforce a memory ceiling across all emitters (default 10,000). Warns once at 80% capacity.
+- **Frame profiler MCP tool** — `get_frame_stats` returns `{frame_time_ms, draw_calls, fps}`. Slow-frame warning (`>32ms`) printed to stderr automatically. Available via HTTP inspector at `/frame_stats`.
+- **Hot-reload watchdog** — persistent watchdog thread detects stuck frames (>2s timeout), forces reload on next frame. MCP `hot_reload` tool bypasses blocked main thread directly via `AtomicBool`.
+- **Circle texture batching** — `drawCircle()` now renders a single anti-aliased sprite instead of ~80 scanline sprites. New `uploadRgbaTexture()` API for uploading raw RGBA pixel data as textures.
+- **Auto-assign free ports** — MCP and inspector servers automatically find free ports instead of failing on conflicts.
+
 ## [0.12.2] - 2026-02-18
 
 ### Added

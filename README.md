@@ -96,7 +96,7 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**v0.12.2 — DX improvements: color API, particle presets, knockback, palette!**
+**v0.12.3 — Performance & polish: text alignment, frame profiler, hot-reload watchdog, circle batching.**
 
 Install: [`cargo install arcane-engine`](https://crates.io/crates/arcane-engine)
 
@@ -137,7 +137,7 @@ One binary. No npm required. The CLI embeds the TypeScript runtime and copies it
 - ✅ UI palette system: `setPalette()`, `paletteColor()` for consistent theming
 - ✅ API cheatsheet: auto-generated compact reference for all 500+ exported functions
 - ✅ 5 recipes (turn-based combat, inventory, grid movement, fog of war, actor patrol)
-- ✅ 2110 TS (Node) + 2234 (V8) + 292 Rust tests passing
+- ✅ 2164 TS (Node) + 2288 (V8) + 292 Rust tests passing
 - ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
 - ✅ 27 example projects (Hello World, Card Battler, Sokoban, Breakout, Roguelike, Platformer, Tower Defense, Sprite Demo, BFRPG RPG, Asteroids, Juice Showcase, Menu Flow, Physics Playground, Parallax Scroller, Tilemap Showcase, Character Controller, UI Showcase, Agent Testing, WFC Dungeon, Lighting Showcase, MSDF Text Showcase, Isometric Dungeon, Audio Showcase, Visual Polish, Hex Strategy, Gamepad Platformer)
 
