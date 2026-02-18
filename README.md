@@ -137,7 +137,7 @@ One binary. No npm required. The CLI embeds the TypeScript runtime and copies it
 - ✅ UI palette system: `setPalette()`, `paletteColor()` for consistent theming
 - ✅ API cheatsheet: auto-generated compact reference for all 500+ exported functions
 - ✅ 5 recipes (turn-based combat, inventory, grid movement, fog of war, actor patrol)
-- ✅ 2082 TS (Node) + 2179 (V8) + 292 Rust tests passing
+- ✅ 2110 TS (Node) + 2234 (V8) + 292 Rust tests passing
 - ✅ Comprehensive documentation (tutorials, API reference, recipe guide)
 - ✅ 27 example projects (Hello World, Card Battler, Sokoban, Breakout, Roguelike, Platformer, Tower Defense, Sprite Demo, BFRPG RPG, Asteroids, Juice Showcase, Menu Flow, Physics Playground, Parallax Scroller, Tilemap Showcase, Character Controller, UI Showcase, Agent Testing, WFC Dungeon, Lighting Showcase, MSDF Text Showcase, Isometric Dungeon, Audio Showcase, Visual Polish, Hex Strategy, Gamepad Platformer)
 
