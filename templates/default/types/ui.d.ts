@@ -22,6 +22,9 @@ declare module "@arcane/runtime/ui" {
   /**
    * Create a Color from 0-255 RGB(A) integer values, auto-normalized to 0.0-1.0 range.
    *
+   * **Performance note:** Creates a new object each call. In hot loops,
+   * pre-compute colors or use {@link setAlpha}/{@link setRgb} to mutate in place.
+   *
    * @param r - Red channel, 0-255.
    * @param g - Green channel, 0-255.
    * @param b - Blue channel, 0-255.
@@ -404,11 +407,48 @@ declare module "@arcane/runtime/ui" {
   /**
    * Create a semi-transparent version of a color.
    *
+   * **Performance note:** Creates a new object each call. In hot loops,
+   * pre-compute colors or use {@link setAlpha} to mutate in place.
+   *
    * @param color - Source color.
    * @param alpha - New alpha value, 0.0 (transparent) to 1.0 (opaque).
    * @returns New Color with the same RGB but the specified alpha.
    */
   export declare function withAlpha(color: Color, alpha: number): Color;
+  /**
+   * Mutate a color's alpha channel in place. Returns the same object for chaining.
+   *
+   * Zero-allocation alternative to {@link withAlpha} for hot loops.
+   *
+   * @param color - Color to mutate.
+   * @param a - New alpha value, 0.0 (transparent) to 1.0 (opaque).
+   * @returns The same Color object (mutated).
+   */
+  export declare function setAlpha(color: Color, a: number): Color;
+  /**
+   * Mutate a color's RGB channels in place. Returns the same object for chaining.
+   *
+   * Zero-allocation alternative to creating a new Color for hot loops.
+   *
+   * @param color - Color to mutate.
+   * @param r - New red channel, 0.0-1.0.
+   * @param g - New green channel, 0.0-1.0.
+   * @param b - New blue channel, 0.0-1.0.
+   * @returns The same Color object (mutated).
+   */
+  export declare function setRgb(color: Color, r: number, g: number, b: number): Color;
+  /**
+   * Linearly interpolate between two colors, writing the result into `target`.
+   *
+   * Zero-allocation alternative to creating a new Color for per-particle color lerp.
+   *
+   * @param target - Color object to write the result into.
+   * @param start - Start color (t=0).
+   * @param end - End color (t=1).
+   * @param t - Interpolation factor, 0.0-1.0.
+   * @returns The same `target` object (mutated).
+   */
+  export declare function lerpColorInto(target: Color, start: Color, end: Color, t: number): Color;
   /**
    * Lighten a color by adding a fixed amount to each RGB channel (clamped to 1.0).
    * Useful for hover effects and highlights.
@@ -715,7 +755,7 @@ declare module "@arcane/runtime/ui" {
    * ```
    */
   /**
-   * Draw a filled circle using scanline fill (one drawSprite per pixel row).
+   * Draw a filled circle as a single tinted sprite (GPU-efficient).
    * No-op in headless mode.
    *
    * @param cx - Center X position (screen pixels if screenSpace, world units otherwise).

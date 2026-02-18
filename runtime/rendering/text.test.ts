@@ -8,6 +8,13 @@ import {
   drawText,
 } from "./text.ts";
 import type { BitmapFont, MSDFFont, TextOutline, TextShadow } from "./text.ts";
+import {
+  enableDrawCallCapture,
+  disableDrawCallCapture,
+  getDrawCalls,
+  clearDrawCalls,
+} from "../../runtime/testing/visual.ts";
+import type { TextDrawCall } from "../../runtime/testing/visual.ts";
 
 describe("text", () => {
   it("loadFont creates BitmapFont with correct fields", () => {
@@ -89,6 +96,113 @@ describe("text", () => {
     assert.equal(charCode, 0);
     assert.equal(col, 0);
     assert.equal(row, 0);
+  });
+});
+
+// --- Text alignment tests ---
+
+describe("text alignment", () => {
+  it("default alignment is left (no offset)", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawText("Hello", 100, 50);
+    const calls = getDrawCalls().filter((c) => c.type === "text") as TextDrawCall[];
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].x, 100, "left-aligned text should start at original x");
+    clearDrawCalls();
+
+    drawText("Hello", 100, 50, { align: "left" });
+    const calls2 = getDrawCalls().filter((c) => c.type === "text") as TextDrawCall[];
+    assert.equal(calls2.length, 1);
+    assert.equal(calls2[0].x, 100, "explicit left alignment should start at original x");
+    disableDrawCallCapture();
+  });
+
+  it("center alignment offsets by half the measured width", () => {
+    const text = "Hello";
+    const m = measureText(text);
+    // "Hello" = 5 chars * 8px = 40px wide
+    assert.equal(m.width, 40);
+
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawText(text, 100, 50, { align: "center" });
+    const calls = getDrawCalls().filter((c) => c.type === "text") as TextDrawCall[];
+    assert.equal(calls.length, 1);
+    // center align at x=100: effective x = 100 - 40/2 = 80
+    assert.equal(calls[0].x, 80, "center-aligned text should be offset by half width");
+    disableDrawCallCapture();
+  });
+
+  it("right alignment offsets by the full measured width", () => {
+    const text = "Hello";
+    const m = measureText(text);
+    assert.equal(m.width, 40);
+
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawText(text, 100, 50, { align: "right" });
+    const calls = getDrawCalls().filter((c) => c.type === "text") as TextDrawCall[];
+    assert.equal(calls.length, 1);
+    // right align at x=100: effective x = 100 - 40 = 60
+    assert.equal(calls[0].x, 60, "right-aligned text should be offset by full width");
+    disableDrawCallCapture();
+  });
+
+  it("center alignment with scale factor", () => {
+    const text = "AB";
+    const m = measureText(text, { scale: 2 });
+    // 2 chars * 8px * scale 2 = 32
+    assert.equal(m.width, 32);
+
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawText(text, 200, 50, { scale: 2, align: "center" });
+    const calls = getDrawCalls().filter((c) => c.type === "text") as TextDrawCall[];
+    assert.equal(calls.length, 1);
+    // center at x=200: effective x = 200 - 32/2 = 184
+    assert.equal(calls[0].x, 184, "center-aligned scaled text should use scaled width");
+    disableDrawCallCapture();
+  });
+
+  it("right alignment with MSDF font", () => {
+    const font = getDefaultMSDFFont();
+    const text = "Test";
+    const m = measureText(text, { msdfFont: font });
+    // 4 chars * 8px advance = 32
+    assert.equal(m.width, 32);
+
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawText(text, 100, 50, { msdfFont: font, align: "right" });
+    const calls = getDrawCalls().filter((c) => c.type === "text") as TextDrawCall[];
+    assert.equal(calls.length, 1);
+    // right align at x=100: effective x = 100 - 32 = 68
+    assert.equal(calls[0].x, 68, "right-aligned MSDF text should be offset by full width");
+    disableDrawCallCapture();
+  });
+
+  it("center alignment with MSDF font", () => {
+    const font = getDefaultMSDFFont();
+    const text = "Center";
+    const m = measureText(text, { msdfFont: font });
+    // 6 chars * 8px advance = 48
+    assert.equal(m.width, 48);
+
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawText(text, 100, 50, { msdfFont: font, align: "center" });
+    const calls = getDrawCalls().filter((c) => c.type === "text") as TextDrawCall[];
+    assert.equal(calls.length, 1);
+    // center at x=100: effective x = 100 - 48/2 = 76
+    assert.equal(calls[0].x, 76, "center-aligned MSDF text should be offset by half width");
+    disableDrawCallCapture();
+  });
+
+  it("alignment with empty string is a no-op", () => {
+    drawText("", 100, 50, { align: "center" });
+    drawText("", 100, 50, { align: "right" });
+    assert.ok(true, "alignment with empty string completed without error");
   });
 });
 

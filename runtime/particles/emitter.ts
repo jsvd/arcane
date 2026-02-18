@@ -13,6 +13,7 @@ import type {
   Affector,
 } from "./types.ts";
 import { createSolidTexture } from "../rendering/texture.ts";
+import { lerpColorInto } from "../ui/colors.ts";
 
 /** Lazily-created default 1x1 white texture for particles. */
 let _defaultParticleTexture: number | undefined;
@@ -22,6 +23,44 @@ const emitters: Emitter[] = [];
 
 /** Counter for generating unique emitter IDs. */
 let emitterIdCounter = 0;
+
+/** Maximum total alive particles across all emitters. */
+let _maxTotalParticles = 10000;
+
+/** Current total alive particle count across all emitters. */
+let _totalAliveCount = 0;
+
+/** Whether the 80% capacity warning has been logged. Reset on clearEmitters(). */
+let _warnedAt80Pct = false;
+
+/**
+ * Set the maximum total alive particles across all emitters.
+ * When the cap is reached, new particles are silently dropped.
+ * Default: 10000.
+ *
+ * @param n - Maximum particle count. Must be > 0.
+ */
+export function setMaxTotalParticles(n: number): void {
+  _maxTotalParticles = n;
+}
+
+/**
+ * Get the current maximum total particle cap.
+ *
+ * @returns The maximum allowed alive particles across all emitters.
+ */
+export function getMaxTotalParticles(): number {
+  return _maxTotalParticles;
+}
+
+/**
+ * Get the current total alive particle count across all emitters.
+ *
+ * @returns Number of alive particles across all emitters.
+ */
+export function getTotalParticleCount(): number {
+  return _totalAliveCount;
+}
 
 /**
  * Create a new particle emitter and add it to the global update list.
@@ -123,17 +162,6 @@ function randomRange(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-/**
- * Interpolate between colors based on t (0 to 1)
- */
-function lerpColor(start: any, end: any, t: number) {
-  return {
-    r: start.r + (end.r - start.r) * t,
-    g: start.g + (end.g - start.g) * t,
-    b: start.b + (end.b - start.b) * t,
-    a: start.a + (end.a - start.a) * t,
-  };
-}
 
 /**
  * Spawn a single particle from an emitter
@@ -141,13 +169,25 @@ function lerpColor(start: any, end: any, t: number) {
 function spawnParticle(emitter: Emitter): void {
   const { config } = emitter;
 
-  // Check max particles limit
+  // Global particle cap — drop new particles when at capacity
+  if (_totalAliveCount >= _maxTotalParticles) {
+    return;
+  }
+
+  // Warn once at 80% capacity
+  if (!_warnedAt80Pct && _totalAliveCount >= _maxTotalParticles * 0.8) {
+    _warnedAt80Pct = true;
+    console.warn(`[arcane] Particle count (${_totalAliveCount}) exceeds 80% of max (${_maxTotalParticles})`);
+  }
+
+  // Check per-emitter max particles limit
   const aliveCount = emitter.particles.filter((p) => p.alive).length;
   if (config.maxParticles && aliveCount >= config.maxParticles) {
     return;
   }
 
   const particle = getParticle(emitter);
+  _totalAliveCount++;
 
   // Set position based on emitter shape
   switch (config.shape) {
@@ -287,6 +327,7 @@ function updateParticle(particle: Particle, dt: number, affectors: Affector[]): 
 
   if (particle.age >= particle.lifetime) {
     particle.alive = false;
+    _totalAliveCount--;
     return;
   }
 
@@ -339,9 +380,9 @@ function updateParticle(particle: Particle, dt: number, affectors: Affector[]): 
   // Update scale
   particle.scale += particle.scaleSpeed * dt;
 
-  // Interpolate color over lifetime
+  // Interpolate color over lifetime (mutates particle.color in place — zero allocation)
   const t = particle.age / particle.lifetime;
-  particle.color = lerpColor(particle.startColor, particle.endColor, t);
+  lerpColorInto(particle.color, particle.startColor, particle.endColor, t);
 
   // Reset acceleration (will be reapplied by affectors next frame)
   particle.ax = 0;
@@ -409,6 +450,8 @@ export function addAffector(emitter: Emitter, affector: Affector): void {
  */
 export function clearEmitters(): void {
   emitters.length = 0;
+  _totalAliveCount = 0;
+  _warnedAt80Pct = false;
 }
 
 /**

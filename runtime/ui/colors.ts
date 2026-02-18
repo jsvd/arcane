@@ -88,12 +88,66 @@ export const HUDLayout = {
 /**
  * Create a semi-transparent version of a color.
  *
+ * **Performance note:** Creates a new object each call. In hot loops,
+ * pre-compute colors or use {@link setAlpha} to mutate in place.
+ *
  * @param color - Source color.
  * @param alpha - New alpha value, 0.0 (transparent) to 1.0 (opaque).
  * @returns New Color with the same RGB but the specified alpha.
  */
 export function withAlpha(color: Color, alpha: number): Color {
   return { ...color, a: alpha };
+}
+
+/**
+ * Mutate a color's alpha channel in place. Returns the same object for chaining.
+ *
+ * Zero-allocation alternative to {@link withAlpha} for hot loops.
+ *
+ * @param color - Color to mutate.
+ * @param a - New alpha value, 0.0 (transparent) to 1.0 (opaque).
+ * @returns The same Color object (mutated).
+ */
+export function setAlpha(color: Color, a: number): Color {
+  color.a = a;
+  return color;
+}
+
+/**
+ * Mutate a color's RGB channels in place. Returns the same object for chaining.
+ *
+ * Zero-allocation alternative to creating a new Color for hot loops.
+ *
+ * @param color - Color to mutate.
+ * @param r - New red channel, 0.0-1.0.
+ * @param g - New green channel, 0.0-1.0.
+ * @param b - New blue channel, 0.0-1.0.
+ * @returns The same Color object (mutated).
+ */
+export function setRgb(color: Color, r: number, g: number, b: number): Color {
+  color.r = r;
+  color.g = g;
+  color.b = b;
+  return color;
+}
+
+/**
+ * Linearly interpolate between two colors, writing the result into `target`.
+ *
+ * Zero-allocation alternative to creating a new Color for per-particle color lerp.
+ *
+ * @param target - Color object to write the result into.
+ * @param start - Start color (t=0).
+ * @param end - End color (t=1).
+ * @param t - Interpolation factor, 0.0-1.0.
+ * @returns The same `target` object (mutated).
+ */
+export function lerpColorInto(target: Color, start: Color, end: Color, t: number): Color {
+  target.r = start.r + (end.r - start.r) * t;
+  target.g = start.g + (end.g - start.g) * t;
+  target.b = start.b + (end.b - start.b) * t;
+  target.a = start.a + (end.a - start.a) * t;
+  return target;
 }
 
 /**

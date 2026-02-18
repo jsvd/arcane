@@ -204,6 +204,7 @@ declare function measureText(text: string, options?: TextOptions): TextMeasureme
 declare function drawText(text: string, x: number, y: number, options?: TextOptions): void;
 declare function loadTexture(path: string): TextureId;
 declare function createSolidTexture(name: string, color: Color): TextureId;
+declare function uploadRgbaTexture(name: string, w: number, h: number, pixels: Uint8Array): TextureId;
 declare function registerAnimatedTile(baseTileId: number, frames: number[], frameDuration: number): void;
 declare function unregisterAnimatedTile(baseTileId: number): void;
 declare function clearAnimatedTiles(): void;
@@ -320,6 +321,9 @@ declare const Colors: { /** Bright blue. */ readonly PRIMARY: { readonly r: 0.2;
 declare const HUDLayout: { /** Standard padding from screen edges in pixels. Works at any resolution. */ readonly PADDING: 10; /** Vertical spacing between HUD lines in pixels. Works at any resolution. */ readonly LINE_HEIGHT: 25; /** Default text scale for main HUD text. Works at any resolution. */ readonly TEXT_SCALE: 2; /** Smaller text scale for secondary HUD text. Works at any resolution. */ readonly SMALL_TEXT_SCALE: 1.5; /** Top-left corner position. Works at any resolution. */ readonly TOP_LEFT: { readonly x: 10; readonly y: 10; }; /** Top-right corner position. **Assumes 800px width** — use `getViewportSize()` for other sizes. */ readonly TOP_RIGHT: { readonly x: 700; readonly y: 10; }; /** Bottom-left corner position. **Assumes 600px height** — use `getViewportSize()` for other sizes. */ readonly BOTTOM_LEFT: { readonly x: 10; readonly y: 560; }; /** Bottom-right corner position. **Assumes 800×600** — use `getViewportSize()` for other sizes. */ readonly BOTTOM_RIGHT: { readonly x: 700; readonly y: 560; }; /** Screen center position. **Assumes 800×600** — use `getViewportSize()` for other sizes. */ readonly CENTER: { readonly x: 400; readonly y: 300; }; };
 -- Functions --
 declare function withAlpha(color: Color, alpha: number): Color;
+declare function setAlpha(color: Color, a: number): Color;
+declare function setRgb(color: Color, r: number, g: number, b: number): Color;
+declare function lerpColorInto(target: Color, start: Color, end: Color, t: number): Color;
 declare function lighten(color: Color, amount?: number): Color;
 declare function darken(color: Color, amount?: number): Color;
 declare function createFocusManager(): FocusManagerState;
@@ -489,6 +493,9 @@ declare function getActiveTweenCount(): number;
 
 === particles (@arcane/runtime/particles) ===
 Types: AffectorType,EmissionMode,EmitterShape,ParticleOptions,
+declare function setMaxTotalParticles(n: number): void;
+declare function getMaxTotalParticles(): number;
+declare function getTotalParticleCount(): number;
 declare function createEmitter(config: EmitterConfig): Emitter;
 declare function removeEmitter(emitter: Emitter): void;
 declare function updateParticles(dt: number): void;

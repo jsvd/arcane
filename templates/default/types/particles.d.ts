@@ -198,6 +198,26 @@ declare module "@arcane/runtime/particles" {
    * {@link getAllParticles} for rendering.
    */
   /**
+   * Set the maximum total alive particles across all emitters.
+   * When the cap is reached, new particles are silently dropped.
+   * Default: 10000.
+   *
+   * @param n - Maximum particle count. Must be > 0.
+   */
+  export declare function setMaxTotalParticles(n: number): void;
+  /**
+   * Get the current maximum total particle cap.
+   *
+   * @returns The maximum allowed alive particles across all emitters.
+   */
+  export declare function getMaxTotalParticles(): number;
+  /**
+   * Get the current total alive particle count across all emitters.
+   *
+   * @returns Number of alive particles across all emitters.
+   */
+  export declare function getTotalParticleCount(): number;
+  /**
    * Create a new particle emitter and add it to the global update list.
    *
    * The emitter immediately begins spawning particles according to its

@@ -73,10 +73,14 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
         rx
     });
 
-    // Start MCP server if requested
+    // Hot-reload: file watcher sets a flag when .ts files change
+    let reload_flag = Arc::new(AtomicBool::new(false));
+    let _watcher = start_file_watcher(&base_dir, &entry_path, reload_flag.clone());
+
+    // Start MCP server if requested (after reload_flag so it can bypass hung frames)
     let mcp_rx = mcp_port.map(|port| {
         let (tx, rx) = arcane_core::agent::inspector_channel();
-        let (_handle, port_rx) = arcane_core::agent::mcp::start_mcp_server(port, tx);
+        let (_handle, port_rx) = arcane_core::agent::mcp::start_mcp_server(port, tx, reload_flag.clone());
         std::mem::forget(_handle);
         if let Ok(actual_port) = port_rx.recv() {
             write_mcp_port_file(actual_port);
@@ -89,9 +93,42 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
     let (audio_tx, audio_rx) = audio::audio_channel();
     let _audio_thread = audio::start_audio_thread(audio_rx);
 
-    // Hot-reload: file watcher sets a flag when .ts files change
-    let reload_flag = Arc::new(AtomicBool::new(false));
-    let _watcher = start_file_watcher(&base_dir, &entry_path, reload_flag.clone());
+    // Watchdog: detects hung frames and triggers recovery via reload
+    let frame_hung = Arc::new(AtomicBool::new(false));
+    let (watchdog_tx, watchdog_rx) = std::sync::mpsc::channel::<bool>(); // true=start, false=end
+    {
+        let frame_hung_wd = frame_hung.clone();
+        let reload_flag_wd = reload_flag.clone();
+        std::thread::Builder::new()
+            .name("frame-watchdog".into())
+            .spawn(move || {
+                use std::time::Duration;
+                loop {
+                    // Wait for frame start signal
+                    match watchdog_rx.recv() {
+                        Ok(true) => {} // frame started
+                        _ => break,    // channel closed or end signal without start
+                    }
+                    // Wait for frame end with timeout
+                    match watchdog_rx.recv_timeout(Duration::from_secs(2)) {
+                        Ok(false) => {} // frame ended normally
+                        Ok(true) => {
+                            // Another start arrived before end — previous frame hung
+                            frame_hung_wd.store(true, Ordering::SeqCst);
+                            reload_flag_wd.store(true, Ordering::SeqCst);
+                            eprintln!("[watchdog] Frame hung (>2s), triggering reload");
+                        }
+                        Err(_) => {
+                            // Timeout — frame hung
+                            frame_hung_wd.store(true, Ordering::SeqCst);
+                            reload_flag_wd.store(true, Ordering::SeqCst);
+                            eprintln!("[watchdog] Frame hung (>2s), triggering reload");
+                        }
+                    }
+                }
+            })
+            .ok();
+    }
 
     // Initialize gamepad manager (gilrs)
     let mut gamepad_manager = arcane_core::platform::GamepadManager::new();
@@ -124,6 +161,21 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
             }
             // Sync clear color from bridge → renderer (TS can set it via op)
             renderer.clear_color = bridge.clear_color;
+        }
+
+        // Check for hung frame recovery (watchdog triggered)
+        if frame_hung.swap(false, Ordering::SeqCst) {
+            eprintln!("[watchdog] Recovering from hung frame, forcing reload...");
+            match reload_runtime(
+                &entry_for_reload,
+                &base_for_reload,
+                &bridge_for_loop,
+                &mut runtime,
+            ) {
+                Ok(()) => eprintln!("[watchdog] Recovery reload successful"),
+                Err(e) => eprintln!("[watchdog] Recovery reload failed: {e}"),
+            }
+            return Ok(());
         }
 
         // Check for hot-reload
@@ -204,11 +256,28 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
             }
         }
 
-        // Call the TS frame callback
+        // Call the TS frame callback (timed for profiling, with watchdog)
+        let _ = watchdog_tx.send(true); // signal frame start
+        let frame_start = std::time::Instant::now();
         let frame_result = rt.inner().execute_script(
             "<frame>",
             "if (globalThis.__frameCallback) { globalThis.__frameCallback(); }",
         );
+        let frame_elapsed_ms = frame_start.elapsed().as_secs_f64() * 1000.0;
+        let _ = watchdog_tx.send(false); // signal frame end
+
+        // Store frame profiling stats in bridge
+        {
+            let mut bridge = bridge_for_loop.borrow_mut();
+            let draw_calls = bridge.sprite_commands.len();
+            bridge.frame_time_ms = frame_elapsed_ms;
+            bridge.draw_call_count = draw_calls;
+        }
+
+        // Warn on slow frames (>32ms = below 30fps)
+        if frame_elapsed_ms > 32.0 {
+            eprintln!("[perf] Slow frame: {frame_elapsed_ms:.1}ms");
+        }
 
         // Handle frame callback errors with error snapshots
         if let Err(ref e) = frame_result {
@@ -270,6 +339,25 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
                         Err(e) => eprintln!("Failed to read texture {path}: {e}"),
                     }
                 }
+            }
+        }
+
+        // Process raw RGBA texture uploads (from op_upload_rgba_texture)
+        let pending_raw_textures: Vec<(u32, u32, u32, Vec<u8>)> = {
+            let mut bridge = bridge_for_loop.borrow_mut();
+            std::mem::take(&mut bridge.raw_texture_upload_queue)
+        };
+
+        if let Some(ref mut renderer) = state.renderer {
+            for (tex_id, w, h, pixels) in pending_raw_textures {
+                renderer.textures.upload_raw(
+                    &renderer.gpu,
+                    &renderer.sprites.texture_bind_group_layout,
+                    tex_id,
+                    &pixels,
+                    w,
+                    h,
+                );
             }
         }
 
@@ -494,7 +582,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
         // Poll inspector requests (if inspector is active)
         if let Some(ref rx) = inspector_rx {
             while let Ok((req, resp_tx)) = rx.try_recv() {
-                let response = process_inspector_request(rt, req, &reload_flag);
+                let response = process_inspector_request(rt, req, &reload_flag, &bridge_for_loop);
                 let _ = resp_tx.send(response);
             }
         }
@@ -502,7 +590,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
         // Poll MCP requests (if MCP server is active)
         if let Some(ref rx) = mcp_rx {
             while let Ok((req, resp_tx)) = rx.try_recv() {
-                let response = process_inspector_request(rt, req, &reload_flag);
+                let response = process_inspector_request(rt, req, &reload_flag, &bridge_for_loop);
                 let _ = resp_tx.send(response);
             }
         }
@@ -523,6 +611,7 @@ fn process_inspector_request(
     runtime: &mut ArcaneRuntime,
     req: arcane_core::agent::InspectorRequest,
     reload_flag: &Arc<AtomicBool>,
+    bridge: &Rc<RefCell<RenderBridgeState>>,
 ) -> arcane_core::agent::InspectorResponse {
     use arcane_core::agent::{InspectorRequest, InspectorResponse};
 
@@ -594,6 +683,19 @@ fn process_inspector_request(
             runtime,
             "JSON.stringify(globalThis.__arcaneAgent?.captureSnapshot())",
         ),
+        InspectorRequest::GetFrameStats => {
+            let b = bridge.borrow();
+            let frame_time_ms = b.frame_time_ms;
+            let draw_calls = b.draw_call_count;
+            let fps = if frame_time_ms > 0.0 {
+                1000.0 / frame_time_ms
+            } else {
+                0.0
+            };
+            InspectorResponse::json(format!(
+                "{{\"frame_time_ms\":{frame_time_ms:.2},\"draw_calls\":{draw_calls},\"fps\":{fps:.1}}}"
+            ))
+        }
     }
 }
 
@@ -802,6 +904,7 @@ fn reload_runtime(
         b.sprite_commands.clear();
         b.point_lights.clear();
         b.texture_load_queue.clear();
+        b.raw_texture_upload_queue.clear();
         b.font_texture_queue.clear();
         b.audio_commands.clear();
         b.shader_create_queue.clear();

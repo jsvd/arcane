@@ -105,6 +105,7 @@ fn parse_route(method: &str, url: &str, body: &str) -> Option<InspectorRequest> 
         }
         ("GET", "/actions") => Some(InspectorRequest::ListActions),
         ("GET", "/history") => Some(InspectorRequest::GetHistory),
+        ("GET", "/frame_stats") => Some(InspectorRequest::GetFrameStats),
         ("POST", "/action") => {
             // Parse action name and payload from JSON body
             // Simple JSON parsing: {"name": "...", "payload": ...}

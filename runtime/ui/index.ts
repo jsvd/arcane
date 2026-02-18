@@ -2,7 +2,7 @@ export type { Color, RectOptions, PanelOptions, BarOptions, LabelOptions, ShapeO
 export { rgb } from "./types.ts";
 export { drawRect, drawPanel, drawBar, drawLabel } from "./primitives.ts";
 export { drawCircle, drawLine, drawTriangle, drawArc, drawSector } from "./shapes.ts";
-export { Colors, HUDLayout, withAlpha, lighten, darken } from "./colors.ts";
+export { Colors, HUDLayout, withAlpha, setAlpha, setRgb, lerpColorInto, lighten, darken } from "./colors.ts";
 
 // Interactive UI widgets (Phase 16)
 export type { ButtonVisual, ButtonStyle, ButtonState } from "./button.ts";

@@ -164,6 +164,12 @@ pub struct RenderBridgeState {
     pub msdf_shader_pool: Vec<u32>,
     /// Pending MSDF texture loads (needs linear sampling, not sRGB).
     pub msdf_texture_load_queue: Vec<(String, u32)>,
+    /// Raw RGBA texture upload queue: (texture_id, width, height, pixels).
+    pub raw_texture_upload_queue: Vec<(u32, u32, u32, Vec<u8>)>,
+    /// Frame timing: milliseconds elapsed during the last frame's script execution.
+    pub frame_time_ms: f64,
+    /// Frame timing: number of draw calls (sprite commands) queued last frame.
+    pub draw_call_count: usize,
 }
 
 impl RenderBridgeState {
@@ -228,6 +234,9 @@ impl RenderBridgeState {
             msdf_shader_queue: Vec::new(),
             msdf_shader_pool: Vec::new(),
             msdf_texture_load_queue: Vec::new(),
+            raw_texture_upload_queue: Vec::new(),
+            frame_time_ms: 0.0,
+            draw_call_count: 0,
         }
     }
 }
@@ -412,6 +421,36 @@ pub fn op_create_solid_texture(
     // Encode color in the path as a signal to the loader
     br.texture_load_queue
         .push((format!("__solid__:{name}:{r}:{g}:{b}:{a}"), id));
+    id
+}
+
+/// Upload a raw RGBA texture from a pixel buffer. Cached by name.
+/// Returns existing texture ID if a texture with the same name was already uploaded.
+#[deno_core::op2(fast)]
+pub fn op_upload_rgba_texture(
+    state: &mut OpState,
+    #[string] name: &str,
+    width: f64,
+    height: f64,
+    #[buffer] pixels: &[u8],
+) -> u32 {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let mut b = bridge.borrow_mut();
+
+    let key = format!("__raw__:{name}");
+    if let Some(&id) = b.texture_path_to_id.get(&key) {
+        return id;
+    }
+
+    let id = b.next_texture_id;
+    b.next_texture_id += 1;
+    b.texture_path_to_id.insert(key, id);
+    b.raw_texture_upload_queue.push((
+        id,
+        width as u32,
+        height as u32,
+        pixels.to_vec(),
+    ));
     id
 }
 
@@ -1346,6 +1385,7 @@ deno_core::extension!(
         op_set_camera,
         op_get_camera,
         op_load_texture,
+        op_upload_rgba_texture,
         op_is_key_down,
         op_is_key_pressed,
         op_get_mouse_position,

@@ -1,4 +1,6 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
+use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
@@ -65,12 +67,23 @@ static MCP_TOOLS: &[McpTool] = &[
         description: "Simulate an action without committing state changes",
         input_schema: r#"{"type":"object","properties":{"name":{"type":"string","description":"Action name"},"args":{"type":"object","description":"Optional action arguments"}},"required":["name"]}"#,
     },
+    McpTool {
+        name: "get_frame_stats",
+        description: "Get frame timing statistics (frame time, draw calls, FPS)",
+        input_schema: r#"{"type":"object","properties":{}}"#,
+    },
 ];
 
 /// Start the MCP server on a background thread.
 /// The MCP server uses JSON-RPC 2.0 over HTTP (Streamable HTTP transport).
 /// Returns a join handle and the actual port the server bound to (useful when port=0).
-pub fn start_mcp_server(port: u16, request_tx: RequestSender) -> (JoinHandle<()>, mpsc::Receiver<u16>) {
+/// The `reload_flag` allows the hot_reload tool to bypass a hung main thread
+/// by directly setting the flag instead of sending through the inspector channel.
+pub fn start_mcp_server(
+    port: u16,
+    request_tx: RequestSender,
+    reload_flag: Arc<AtomicBool>,
+) -> (JoinHandle<()>, mpsc::Receiver<u16>) {
     let (port_tx, port_rx) = mpsc::channel();
     let handle = thread::spawn(move || {
         let addr = format!("0.0.0.0:{port}");
@@ -120,7 +133,7 @@ pub fn start_mcp_server(port: u16, request_tx: RequestSender) -> (JoinHandle<()>
                 continue;
             }
 
-            let response_body = handle_jsonrpc(&body, &request_tx);
+            let response_body = handle_jsonrpc(&body, &request_tx, &reload_flag);
             let resp = build_json_response(200, &response_body);
             let _ = request.respond(resp);
         }
@@ -129,7 +142,7 @@ pub fn start_mcp_server(port: u16, request_tx: RequestSender) -> (JoinHandle<()>
 }
 
 /// Handle a JSON-RPC 2.0 request and return the response body.
-fn handle_jsonrpc(body: &str, request_tx: &RequestSender) -> String {
+fn handle_jsonrpc(body: &str, request_tx: &RequestSender, reload_flag: &Arc<AtomicBool>) -> String {
     // Parse the JSON-RPC method and params
     let rpc_method = extract_json_string(body, "method").unwrap_or_default();
     let rpc_id = extract_json_value(body, "id").unwrap_or_else(|| "null".to_string());
@@ -161,7 +174,7 @@ fn handle_jsonrpc(body: &str, request_tx: &RequestSender) -> String {
             let arguments =
                 extract_json_value(&params, "arguments").unwrap_or_else(|| "{}".to_string());
 
-            let result = call_tool(&tool_name, &arguments, request_tx);
+            let result = call_tool(&tool_name, &arguments, request_tx, reload_flag);
             format!(
                 r#"{{"jsonrpc":"2.0","result":{{"content":[{{"type":"text","text":{result}}}]}},"id":{rpc_id}}}"#,
             )
@@ -178,7 +191,7 @@ fn handle_jsonrpc(body: &str, request_tx: &RequestSender) -> String {
 }
 
 /// Call an MCP tool by dispatching to the game loop via the inspector channel.
-fn call_tool(name: &str, arguments: &str, request_tx: &RequestSender) -> String {
+fn call_tool(name: &str, arguments: &str, request_tx: &RequestSender, reload_flag: &Arc<AtomicBool>) -> String {
     let inspector_req = match name {
         "get_state" => {
             let path = extract_json_string(arguments, "path");
@@ -203,10 +216,11 @@ fn call_tool(name: &str, arguments: &str, request_tx: &RequestSender) -> String 
         }
         "capture_snapshot" => InspectorRequest::GetHistory,
         "hot_reload" => {
-            // Signal a reload via a special simulate action
-            InspectorRequest::Simulate {
-                action: "__hot_reload__".to_string(),
-            }
+            // Bypass the inspector channel — set the reload flag directly.
+            // This works even if the main thread is hung (frame watchdog will also
+            // detect the hang and skip the stuck script on the next frame).
+            reload_flag.store(true, Ordering::SeqCst);
+            return json_encode("{\"ok\":true,\"reloading\":true}");
         }
         "run_tests" => InspectorRequest::Simulate {
             action: "__run_tests__".to_string(),
@@ -219,6 +233,7 @@ fn call_tool(name: &str, arguments: &str, request_tx: &RequestSender) -> String 
                 action: format!("{{\"name\":\"{action_name}\",\"args\":{args}}}"),
             }
         }
+        "get_frame_stats" => InspectorRequest::GetFrameStats,
         _ => {
             return json_encode(&format!("Unknown tool: {name}"));
         }
@@ -434,11 +449,16 @@ mod tests {
         assert_eq!(val, Some("[1, 2, 3]".to_string()));
     }
 
+    fn test_reload_flag() -> Arc<AtomicBool> {
+        Arc::new(AtomicBool::new(false))
+    }
+
     #[test]
     fn handle_initialize() {
         let (tx, _rx) = mpsc::channel();
+        let flag = test_reload_flag();
         let body = r#"{"jsonrpc":"2.0","method":"initialize","id":1}"#;
-        let resp = handle_jsonrpc(body, &tx);
+        let resp = handle_jsonrpc(body, &tx, &flag);
         assert!(resp.contains("protocolVersion"));
         assert!(resp.contains("arcane-mcp"));
         assert!(resp.contains(r#""id":1"#));
@@ -447,8 +467,9 @@ mod tests {
     #[test]
     fn handle_tools_list() {
         let (tx, _rx) = mpsc::channel();
+        let flag = test_reload_flag();
         let body = r#"{"jsonrpc":"2.0","method":"tools/list","id":2}"#;
-        let resp = handle_jsonrpc(body, &tx);
+        let resp = handle_jsonrpc(body, &tx, &flag);
         assert!(resp.contains("get_state"));
         assert!(resp.contains("execute_action"));
         assert!(resp.contains(r#""id":2"#));
@@ -457,8 +478,9 @@ mod tests {
     #[test]
     fn handle_ping() {
         let (tx, _rx) = mpsc::channel();
+        let flag = test_reload_flag();
         let body = r#"{"jsonrpc":"2.0","method":"ping","id":3}"#;
-        let resp = handle_jsonrpc(body, &tx);
+        let resp = handle_jsonrpc(body, &tx, &flag);
         assert!(resp.contains(r#""result":{}"#));
         assert!(resp.contains(r#""id":3"#));
     }
@@ -466,8 +488,9 @@ mod tests {
     #[test]
     fn handle_unknown_method() {
         let (tx, _rx) = mpsc::channel();
+        let flag = test_reload_flag();
         let body = r#"{"jsonrpc":"2.0","method":"foo/bar","id":4}"#;
-        let resp = handle_jsonrpc(body, &tx);
+        let resp = handle_jsonrpc(body, &tx, &flag);
         assert!(resp.contains("error"));
         assert!(resp.contains("-32601"));
         assert!(resp.contains("foo/bar"));
@@ -475,6 +498,6 @@ mod tests {
 
     #[test]
     fn tool_count() {
-        assert_eq!(MCP_TOOLS.len(), 10);
+        assert_eq!(MCP_TOOLS.len(), 11);
     }
 }

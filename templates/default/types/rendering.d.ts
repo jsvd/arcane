@@ -2759,6 +2759,13 @@ declare module "@arcane/runtime/rendering" {
        * Renders a colored shadow behind the text at the specified offset.
        */
       shadow?: TextShadow;
+      /**
+       * Horizontal text alignment relative to the given x position.
+       * - `"left"` (default): text starts at x.
+       * - `"center"`: text is centered on x.
+       * - `"right"`: text ends at x.
+       */
+      align?: "left" | "center" | "right";
   };
   /** Result of {@link measureText}. Dimensions in pixels (before camera transform). */
   export type TextMeasurement = {
@@ -2897,6 +2904,18 @@ declare module "@arcane/runtime/rendering" {
    * drawSprite({ textureId: redTex, x: 10, y: 10, w: 50, h: 50 });
    */
   export declare function createSolidTexture(name: string, color: Color): TextureId;
+  /**
+   * Upload a raw RGBA pixel buffer as a texture. Cached by name --
+   * uploading the same name twice returns the existing handle.
+   * Returns 0 (no texture) in headless mode.
+   *
+   * @param name - Unique name for caching (e.g. "__circle_64").
+   * @param w - Texture width in pixels.
+   * @param h - Texture height in pixels.
+   * @param pixels - RGBA pixel data (Uint8Array of length w * h * 4).
+   * @returns Texture handle for use with drawSprite().
+   */
+  export declare function uploadRgbaTexture(name: string, w: number, h: number, pixels: Uint8Array): TextureId;
 
   /** Definition for an animated tile: cycles through a sequence of tile IDs. */
   export type AnimatedTileDef = {

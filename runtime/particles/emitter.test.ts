@@ -11,6 +11,9 @@ import {
   addAffector,
   clearEmitters,
   getEmitterCount,
+  setMaxTotalParticles,
+  getMaxTotalParticles,
+  getTotalParticleCount,
 } from "./emitter.ts";
 import type { EmitterConfig } from "./types.ts";
 
@@ -348,5 +351,159 @@ describe("Particle System", () => {
       const dist = Math.sqrt(p.x * p.x + p.y * p.y);
       assert.ok(dist >= 10 && dist <= 20, `Particle at distance ${dist} should be in ring [10, 20]`);
     }
+  });
+});
+
+describe("Global Particle Cap", () => {
+  it("should default to 10000 max particles", () => {
+    clearEmitters();
+    assert.equal(getMaxTotalParticles(), 10000);
+  });
+
+  it("should allow setting max total particles", () => {
+    clearEmitters();
+    setMaxTotalParticles(500);
+    assert.equal(getMaxTotalParticles(), 500);
+    // Reset for other tests
+    setMaxTotalParticles(10000);
+  });
+
+  it("should track total alive count", () => {
+    clearEmitters();
+    setMaxTotalParticles(10000);
+
+    assert.equal(getTotalParticleCount(), 0);
+
+    const config: EmitterConfig = {
+      shape: "point",
+      x: 0,
+      y: 0,
+      mode: "burst",
+      burstCount: 5,
+      lifetime: [10, 10],
+      velocityX: [0, 0],
+      velocityY: [0, 0],
+      startColor: { r: 1, g: 0, b: 0, a: 1 },
+      endColor: { r: 1, g: 1, b: 0, a: 0 },
+      textureId: 1,
+    };
+
+    createEmitter(config);
+    updateParticles(0);
+
+    assert.equal(getTotalParticleCount(), 5);
+  });
+
+  it("should decrement count when particles die", () => {
+    clearEmitters();
+    setMaxTotalParticles(10000);
+
+    const config: EmitterConfig = {
+      shape: "point",
+      x: 0,
+      y: 0,
+      mode: "burst",
+      burstCount: 5,
+      lifetime: [0.5, 0.5],
+      velocityX: [0, 0],
+      velocityY: [0, 0],
+      startColor: { r: 1, g: 0, b: 0, a: 1 },
+      endColor: { r: 1, g: 1, b: 0, a: 0 },
+      textureId: 1,
+    };
+
+    createEmitter(config);
+    updateParticles(0);
+    assert.equal(getTotalParticleCount(), 5);
+
+    // Kill all particles
+    updateParticles(0.6);
+    assert.equal(getTotalParticleCount(), 0);
+  });
+
+  it("should enforce global cap across multiple emitters", () => {
+    clearEmitters();
+    setMaxTotalParticles(15);
+
+    const makeConfig = (): EmitterConfig => ({
+      shape: "point",
+      x: 0,
+      y: 0,
+      mode: "burst",
+      burstCount: 10,
+      lifetime: [10, 10],
+      velocityX: [0, 0],
+      velocityY: [0, 0],
+      startColor: { r: 1, g: 0, b: 0, a: 1 },
+      endColor: { r: 1, g: 1, b: 0, a: 0 },
+      textureId: 1,
+    });
+
+    // First emitter: 10 particles (all fit)
+    createEmitter(makeConfig());
+    updateParticles(0);
+    assert.equal(getTotalParticleCount(), 10);
+
+    // Second emitter: wants 10 but only 5 fit
+    createEmitter(makeConfig());
+    updateParticles(0);
+    assert.equal(getTotalParticleCount(), 15);
+    assert.equal(getAllParticles().length, 15);
+
+    // Reset for other tests
+    setMaxTotalParticles(10000);
+  });
+
+  it("should reset count on clearEmitters", () => {
+    clearEmitters();
+    setMaxTotalParticles(10000);
+
+    const config: EmitterConfig = {
+      shape: "point",
+      x: 0,
+      y: 0,
+      mode: "burst",
+      burstCount: 20,
+      lifetime: [10, 10],
+      velocityX: [0, 0],
+      velocityY: [0, 0],
+      startColor: { r: 1, g: 0, b: 0, a: 1 },
+      endColor: { r: 1, g: 1, b: 0, a: 0 },
+      textureId: 1,
+    };
+
+    createEmitter(config);
+    updateParticles(0);
+    assert.equal(getTotalParticleCount(), 20);
+
+    clearEmitters();
+    assert.equal(getTotalParticleCount(), 0);
+  });
+
+  it("should drop all spawns when cap is zero", () => {
+    clearEmitters();
+    setMaxTotalParticles(0);
+
+    const config: EmitterConfig = {
+      shape: "point",
+      x: 0,
+      y: 0,
+      mode: "burst",
+      burstCount: 10,
+      lifetime: [10, 10],
+      velocityX: [0, 0],
+      velocityY: [0, 0],
+      startColor: { r: 1, g: 0, b: 0, a: 1 },
+      endColor: { r: 1, g: 1, b: 0, a: 0 },
+      textureId: 1,
+    };
+
+    createEmitter(config);
+    updateParticles(0);
+    assert.equal(getTotalParticleCount(), 0);
+    assert.equal(getAllParticles().length, 0);
+
+    // Reset
+    setMaxTotalParticles(10000);
   });
 });

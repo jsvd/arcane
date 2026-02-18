@@ -5,6 +5,10 @@ const hasRenderOps =
   typeof (globalThis as any).Deno !== "undefined" &&
   typeof (globalThis as any).Deno?.core?.ops?.op_load_texture === "function";
 
+const hasUploadOp =
+  typeof (globalThis as any).Deno !== "undefined" &&
+  typeof (globalThis as any).Deno?.core?.ops?.op_upload_rgba_texture === "function";
+
 /**
  * Load a texture from a PNG file path. Returns an opaque texture handle.
  * Caches by path -- loading the same path twice returns the same handle.
@@ -45,4 +49,25 @@ export function createSolidTexture(
   const b = Math.round(color.b * 255);
   const a = Math.round((color.a ?? 1) * 255);
   return (globalThis as any).Deno.core.ops.op_create_solid_texture(name, r, g, b, a);
+}
+
+/**
+ * Upload a raw RGBA pixel buffer as a texture. Cached by name --
+ * uploading the same name twice returns the existing handle.
+ * Returns 0 (no texture) in headless mode.
+ *
+ * @param name - Unique name for caching (e.g. "__circle_64").
+ * @param w - Texture width in pixels.
+ * @param h - Texture height in pixels.
+ * @param pixels - RGBA pixel data (Uint8Array of length w * h * 4).
+ * @returns Texture handle for use with drawSprite().
+ */
+export function uploadRgbaTexture(
+  name: string,
+  w: number,
+  h: number,
+  pixels: Uint8Array,
+): TextureId {
+  if (!hasUploadOp) return 0;
+  return (globalThis as any).Deno.core.ops.op_upload_rgba_texture(name, w, h, pixels);
 }

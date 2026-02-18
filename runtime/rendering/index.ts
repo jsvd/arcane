@@ -52,7 +52,7 @@ export {
 } from "./input.ts";
 
 // Textures
-export { loadTexture, createSolidTexture } from "./texture.ts";
+export { loadTexture, createSolidTexture, uploadRgbaTexture } from "./texture.ts";
 
 // Game loop
 export { onFrame, getDeltaTime } from "./loop.ts";

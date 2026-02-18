@@ -117,6 +117,13 @@ export type TextOptions = {
    * Renders a colored shadow behind the text at the specified offset.
    */
   shadow?: TextShadow;
+  /**
+   * Horizontal text alignment relative to the given x position.
+   * - `"left"` (default): text starts at x.
+   * - `"center"`: text is centered on x.
+   * - `"right"`: text ends at x.
+   */
+  align?: "left" | "center" | "right";
 };
 
 /** Result of {@link measureText}. Dimensions in pixels (before camera transform). */
@@ -528,10 +535,22 @@ export function drawText(
   y: number,
   options?: TextOptions,
 ): void {
+  // Apply horizontal alignment offset
+  const align = options?.align ?? "left";
+  let alignedX = x;
+  if (align !== "left") {
+    const measured = measureText(text, options);
+    if (align === "center") {
+      alignedX = x - measured.width / 2;
+    } else {
+      alignedX = x - measured.width;
+    }
+  }
+
   _logDrawCall({
     type: "text",
     content: text,
-    x,
+    x: alignedX,
     y,
     scale: options?.scale ?? 1,
     layer: options?.layer ?? 100,
@@ -541,7 +560,7 @@ export function drawText(
 
   // MSDF path
   if (options?.msdfFont) {
-    drawMSDFTextInternal(text, x, y, options);
+    drawMSDFTextInternal(text, alignedX, y, options);
     return;
   }
 
@@ -567,7 +586,7 @@ export function drawText(
       h: 1 / font.rows,
     };
 
-    const drawX = x + i * font.glyphW * scale;
+    const drawX = alignedX + i * font.glyphW * scale;
 
     let worldX: number;
     let worldY: number;

@@ -22,6 +22,9 @@ export {
   addAffector,
   clearEmitters,
   getEmitterCount,
+  setMaxTotalParticles,
+  getMaxTotalParticles,
+  getTotalParticleCount,
 } from "./emitter.ts";
 
 // Presets

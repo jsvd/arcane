@@ -16,7 +16,7 @@
 
 import type { Color, ShapeOptions, LineOptions, ArcOptions, SectorOptions } from "./types.ts";
 import { drawSprite } from "../rendering/sprites.ts";
-import { createSolidTexture } from "../rendering/texture.ts";
+import { createSolidTexture, uploadRgbaTexture } from "../rendering/texture.ts";
 import { getCamera } from "../rendering/camera.ts";
 import { getViewportSize } from "../rendering/input.ts";
 import { _logDrawCall } from "../testing/visual.ts";
@@ -54,8 +54,35 @@ function toWorld(
 
 const WHITE: Color = { r: 1, g: 1, b: 1, a: 1 };
 
+// Cached circle texture (64x64 white circle with anti-aliased alpha)
+let _circleTexId: number | undefined;
+
+function getCircleTexture(): number {
+  if (_circleTexId !== undefined) return _circleTexId;
+  const size = 64;
+  const pixels = new Uint8Array(size * size * 4);
+  const center = (size - 1) / 2;
+  const radiusPx = size / 2;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = x - center;
+      const dy = y - center;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      // Anti-alias: 1px feather at the edge
+      const alpha = Math.max(0, Math.min(1, radiusPx - dist));
+      const idx = (y * size + x) * 4;
+      pixels[idx] = 255;     // R
+      pixels[idx + 1] = 255; // G
+      pixels[idx + 2] = 255; // B
+      pixels[idx + 3] = Math.round(alpha * 255); // A
+    }
+  }
+  _circleTexId = uploadRgbaTexture("__circle_64", size, size, pixels);
+  return _circleTexId;
+}
+
 /**
- * Draw a filled circle using scanline fill (one drawSprite per pixel row).
+ * Draw a filled circle as a single tinted sprite (GPU-efficient).
  * No-op in headless mode.
  *
  * @param cx - Center X position (screen pixels if screenSpace, world units otherwise).
@@ -87,23 +114,18 @@ export function drawCircle(
   if (!hasRenderOps) return;
 
   const color = options?.color ?? WHITE;
-  const tex = getColorTexture(color);
-  const r = Math.round(radius);
-
-  for (let dy = -r; dy <= r; dy++) {
-    const halfW = Math.sqrt(radius * radius - dy * dy);
-    if (halfW <= 0) continue;
-    const stripeX = cx - halfW;
-    const stripeY = cy + dy;
-    const stripeW = halfW * 2;
-    const stripeH = 1;
-    const pos = toWorld(stripeX, stripeY, stripeW, stripeH, ss);
-    const posX = pos.x;
-    const posY = pos.y;
-    const posW = pos.w;
-    const posH = pos.h;
-    drawSprite({ textureId: tex, x: posX, y: posY, w: posW, h: posH, layer });
-  }
+  const tex = getCircleTexture();
+  const diameter = radius * 2;
+  const pos = toWorld(cx - radius, cy - radius, diameter, diameter, ss);
+  drawSprite({
+    textureId: tex,
+    x: pos.x,
+    y: pos.y,
+    w: pos.w,
+    h: pos.h,
+    layer,
+    tint: { r: color.r, g: color.g, b: color.b, a: color.a ?? 1 },
+  });
 }
 
 /**

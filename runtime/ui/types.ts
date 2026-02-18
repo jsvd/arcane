@@ -16,6 +16,9 @@ export type Color = {
 /**
  * Create a Color from 0-255 RGB(A) integer values, auto-normalized to 0.0-1.0 range.
  *
+ * **Performance note:** Creates a new object each call. In hot loops,
+ * pre-compute colors or use {@link setAlpha}/{@link setRgb} to mutate in place.
+ *
  * @param r - Red channel, 0-255.
  * @param g - Green channel, 0-255.
  * @param b - Blue channel, 0-255.
