@@ -97,6 +97,9 @@ export type ArcOptions = ShapeOptions & {
   thickness?: number;
 };
 
+/** Options for {@link drawSector}. Same as {@link ShapeOptions} (filled shape). */
+export type SectorOptions = ShapeOptions;
+
 /** Options for {@link drawLabel}. */
 export type LabelOptions = {
   /** Text color. Default: white. */

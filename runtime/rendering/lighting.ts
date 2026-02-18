@@ -11,13 +11,21 @@ const hasRenderOps =
  * (0, 0, 0) = complete darkness (only point lights visible).
  * No-op in headless mode.
  *
- * @param r - Red channel, 0.0-1.0.
- * @param g - Green channel, 0.0-1.0.
- * @param b - Blue channel, 0.0-1.0.
+ * Accepts either a Color object or three separate 0.0-1.0 float arguments:
+ * - `setAmbientLight(rgb(255, 200, 150))` — Color object
+ * - `setAmbientLight(1.0, 0.78, 0.59)` — separate floats
+ *
+ * @param rOrColor - Red channel (0.0-1.0) or a Color object with r, g, b properties.
+ * @param g - Green channel, 0.0-1.0 (ignored if first arg is Color).
+ * @param b - Blue channel, 0.0-1.0 (ignored if first arg is Color).
  */
-export function setAmbientLight(r: number, g: number, b: number): void {
+export function setAmbientLight(rOrColor: number | { r: number; g: number; b: number }, g?: number, b?: number): void {
   if (!hasRenderOps) return;
-  (globalThis as any).Deno.core.ops.op_set_ambient_light(r, g, b);
+  if (typeof rOrColor === "object") {
+    (globalThis as any).Deno.core.ops.op_set_ambient_light(rOrColor.r, rOrColor.g, rOrColor.b);
+  } else {
+    (globalThis as any).Deno.core.ops.op_set_ambient_light(rOrColor, g ?? 1, b ?? 1);
+  }
 }
 
 /**

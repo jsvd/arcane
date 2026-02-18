@@ -73,4 +73,5 @@ export {
   getScreenFlash,
   isScreenFlashing,
   stopScreenFlash,
+  drawScreenFlash,
 } from "./helpers.ts";

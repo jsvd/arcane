@@ -6,16 +6,23 @@ All notable changes to Arcane are documented here.
 
 ### Added
 - **`drawArc()` primitive** — draw arc/partial circle outlines via line segments. Supports startAngle/endAngle, thickness, screenSpace. Available from `@arcane/runtime/ui` and `@arcane/runtime/rendering`.
+- **`drawSector()` primitive** — draw filled sectors (pie/cone shapes) via triangle fan. Useful for FOV cones, attack arcs, minimap indicators. Available from `@arcane/runtime/ui` and `@arcane/runtime/rendering`.
+- **`drawScreenFlash()` auto-renderer** — draws the screen flash overlay automatically (parallel to `drawScreenTransition()`). No need to manually read `getScreenFlash()` and render a rectangle.
 - **`sweepCircleAABB()` helper** — continuous collision detection for moving circles vs static AABBs. Returns hit time, normal, and contact point. Useful for bullet/projectile collision.
 - **ParticleOptions velocity/scale overrides** — `burstParticles()` and `streamParticles()` now accept optional `velocityX`, `velocityY`, and `scale` range overrides, bridging the gap between presets and full `createEmitter()`.
 - **`flashScreen` re-exported from rendering** — `flashScreen()` now importable from `@arcane/runtime/rendering` (alongside `shakeCamera` and `getCameraShakeOffset`).
+- **`setAmbientLight()` accepts Color** — overloaded to accept `Color` objects in addition to `(r, g, b)` floats.
+- **`hud.bar()` w/h aliases** — `HUDBarOptions` now accepts `w`/`h` as shorthand for `width`/`height`, matching `drawRect`/`drawSprite` conventions.
+- **Grid smooth movement pattern** — `game-patterns.md` now documents the prevG/gx/moveProgress interpolation pattern for grid-based games.
 - **Top-Down / Simulation genre** in AGENTS.md recommended reading order.
 
 ### Fixed
 - **Cheatsheet breaks type-checking** — renamed `cheatsheet.d.ts` to `cheatsheet.txt` so it's never type-checked. Fixed multi-line signature collapsing in the generator script. Added scaffolded-project type-check verification to the release process.
+- **Cheatsheet const/function separators** — generator now inserts separator comments between constants and functions so preset data objects aren't confused with callable APIs.
 - **Particle doc examples** — fixed `p.maxLifetime` (doesn't exist) → `1 - p.age / p.lifetime`, fixed shape names (`"circle"` → `"ring"`, `"rect"` → `"area"`), fixed shape params (`w, h` → `shapeParams: { width, height }`).
 - **AGENTS.md common mistakes** — added 5 new entries: color range confusion (#20), spread+null narrowing (#21), phase narrowing (#22), stale closures in transitions (#23), module location for shake/flash (#24).
 - **Transitions doc** — added stale-closure pattern guidance for midpoint callbacks.
+- **Test template** — added comment guiding users to adapt `tick()` call when changing its signature.
 
 ## [0.12.0] - 2026-02-18
 

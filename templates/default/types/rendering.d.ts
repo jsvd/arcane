@@ -1520,7 +1520,10 @@ declare module "@arcane/runtime/rendering" {
    * Default is dark blue-gray (0.1, 0.1, 0.15).
    * No-op in headless mode.
    *
-   * @param color - Background color with 0.0-1.0 RGBA components. Alpha is ignored.
+   * Accepts any object with r, g, b properties (0.0-1.0 floats), including
+   * the Color type returned by `rgb()`. Alpha is ignored.
+   *
+   * @param color - Background color. Use `rgb(r, g, b)` or `{ r, g, b }` with 0.0-1.0 values.
    */
   export declare function setBackgroundColor(color: {
       r: number;
@@ -2112,11 +2115,19 @@ declare module "@arcane/runtime/rendering" {
    * (0, 0, 0) = complete darkness (only point lights visible).
    * No-op in headless mode.
    *
-   * @param r - Red channel, 0.0-1.0.
-   * @param g - Green channel, 0.0-1.0.
-   * @param b - Blue channel, 0.0-1.0.
+   * Accepts either a Color object or three separate 0.0-1.0 float arguments:
+   * - `setAmbientLight(rgb(255, 200, 150))` — Color object
+   * - `setAmbientLight(1.0, 0.78, 0.59)` — separate floats
+   *
+   * @param rOrColor - Red channel (0.0-1.0) or a Color object with r, g, b properties.
+   * @param g - Green channel, 0.0-1.0 (ignored if first arg is Color).
+   * @param b - Blue channel, 0.0-1.0 (ignored if first arg is Color).
    */
-  export declare function setAmbientLight(r: number, g: number, b: number): void;
+  export declare function setAmbientLight(rOrColor: number | {
+      r: number;
+      g: number;
+      b: number;
+  }, g?: number, b?: number): void;
   /**
    * Add a point light at a world position.
    * Point lights illuminate sprites within their radius, blending with the ambient light.

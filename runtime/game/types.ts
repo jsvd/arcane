@@ -34,6 +34,10 @@ export type HUDBarOptions = {
   width?: number;
   /** Bar height in screen pixels. Default: 12. */
   height?: number;
+  /** Alias for width (matches drawRect/drawSprite convention). */
+  w?: number;
+  /** Alias for height (matches drawRect/drawSprite convention). */
+  h?: number;
   /** Fill color. Default: Colors.SUCCESS (green). */
   fillColor?: Color;
   /** Background color. Default: Colors.HUD_BG. */

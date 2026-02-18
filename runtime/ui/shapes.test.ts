@@ -5,7 +5,7 @@ import {
   getDrawCalls,
   clearDrawCalls,
 } from "../testing/visual.ts";
-import { drawCircle, drawLine, drawTriangle, drawArc } from "./shapes.ts";
+import { drawCircle, drawLine, drawTriangle, drawArc, drawSector } from "./shapes.ts";
 
 describe("shapes", () => {
   describe("drawCircle", () => {
@@ -183,6 +183,54 @@ describe("shapes", () => {
     });
   });
 
+  describe("drawSector", () => {
+    it("logs a sector draw call with correct parameters", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      drawSector(100, 200, 50, 0, Math.PI / 2);
+      const calls = getDrawCalls();
+      const sectorCalls = calls.filter((c: any) => c.type === "sector");
+      assert.equal(sectorCalls.length, 1, "expected one sector draw call");
+      const call = sectorCalls[0] as any;
+      assert.equal(call.cx, 100);
+      assert.equal(call.cy, 200);
+      assert.equal(call.radius, 50);
+      assert.equal(call.startAngle, 0);
+      assert.equal(call.endAngle, Math.PI / 2);
+      disableDrawCallCapture();
+    });
+
+    it("uses default layer 0 and screenSpace false", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      drawSector(0, 0, 30, 0, Math.PI);
+      const calls = getDrawCalls();
+      const sectorCalls = calls.filter((c: any) => c.type === "sector");
+      assert.equal(sectorCalls.length, 1);
+      const call = sectorCalls[0] as any;
+      assert.equal(call.layer, 0);
+      assert.equal(call.screenSpace, false);
+      disableDrawCallCapture();
+    });
+
+    it("accepts custom options", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      drawSector(50, 50, 40, -Math.PI / 4, Math.PI / 4, {
+        color: { r: 1, g: 0, b: 0, a: 0.5 },
+        layer: 7,
+        screenSpace: true,
+      });
+      const calls = getDrawCalls();
+      const sectorCalls = calls.filter((c: any) => c.type === "sector");
+      assert.equal(sectorCalls.length, 1);
+      const call = sectorCalls[0] as any;
+      assert.equal(call.layer, 7);
+      assert.equal(call.screenSpace, true);
+      disableDrawCallCapture();
+    });
+  });
+
   describe("headless safety", () => {
     it("all shape functions are safe in headless mode (no crash)", () => {
       // hasRenderOps is false in tests, so these should all early-return after logging
@@ -190,6 +238,7 @@ describe("shapes", () => {
       drawLine(0, 0, 200, 200);
       drawTriangle(10, 10, 50, 80, 90, 10);
       drawArc(100, 100, 30, 0, Math.PI);
+      drawSector(100, 100, 40, 0, Math.PI / 2);
       // If we get here without throwing, the test passes
       assert.ok(true, "all shapes returned without error in headless mode");
     });

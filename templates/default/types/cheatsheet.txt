@@ -39,6 +39,7 @@ declare function setListenerPosition(x: number, y: number): void;
 declare function updateSpatialAudio(): void;
 declare function setPoolConfig(id: SoundId, config: PoolConfig): void;
 declare function setInstanceVolume(instanceId: InstanceId, volume: number): void;
+-- Constants (read-only data, not function parameters) --
 declare const NORTH = 1;
 declare const EAST = 2;
 declare const SOUTH = 4;
@@ -47,6 +48,7 @@ declare const NORTHEAST = 16;
 declare const SOUTHEAST = 32;
 declare const SOUTHWEST = 64;
 declare const NORTHWEST = 128;
+-- Functions --
 declare function computeAutotileBitmask4(gx: number, gy: number, check: NeighborCheck): number;
 declare function computeAutotileBitmask8(gx: number, gy: number, check: NeighborCheck): number;
 declare function createAutotileMapping4(tileIds: number[]): AutotileMapping;
@@ -54,7 +56,9 @@ declare function createAutotileMapping8(lookup: Record<number, number>): Autotil
 declare function createAutotileRule(memberTileIds: number[], mode: 4 | 8, mapping: AutotileMapping, fallbackTileId: number): AutotileRule;
 declare function resolveAutotile(gx: number, gy: number, rule: AutotileRule, check: NeighborCheck): number;
 declare function applyAutotile(width: number, height: number, getTileFn: (gx: number, gy: number) => number, setTileFn: (gx: number, gy: number, tileId: number) => void, rule: AutotileRule, startX?: number, startY?: number, endX?: number, endY?: number): void;
+-- Constants (read-only data, not function parameters) --
 declare const BITMASK4_LABELS: ReadonlyArray<string>;
+-- Functions --
 declare function setCamera(x: number, y: number, zoom?: number): void;
 declare function getCamera(): CameraState;
 declare function followTarget(targetX: number, targetY: number, zoom?: number): void;
@@ -104,12 +108,14 @@ declare function cubeToOffset(h: HexCoord, type: OffsetType): { col: number; row
 declare function offsetToCube(col: number, row: number, type: OffsetType): HexCoord;
 declare function hexRange(center: HexCoord, range: number): HexCoord[];
 declare function hexArea(radius: number): number;
+-- Constants (read-only data, not function parameters) --
 declare const HEX_DIR_E = 1;
 declare const HEX_DIR_NE = 2;
 declare const HEX_DIR_NW = 4;
 declare const HEX_DIR_W = 8;
 declare const HEX_DIR_SW = 16;
 declare const HEX_DIR_SE = 32;
+-- Functions --
 declare function computeHexAutotileBitmask(q: number, r: number, check: (q: number, r: number) => boolean): number;
 declare function isKeyDown(key: KeyName): boolean;
 declare function isKeyPressed(key: KeyName): boolean;
@@ -160,7 +166,7 @@ declare function impact(x: number, y: number, config: ImpactConfig): void;
 declare function impactLight(x: number, y: number): void;
 declare function impactHeavy(x: number, y: number): void;
 declare function _resetJuice(): void;
-declare function setAmbientLight(r: number, g: number, b: number): void;
+declare function setAmbientLight(rOrColor: number | { r: number; g: number; b: number; }, g?: number, b?: number): void;
 declare function addPointLight(x: number, y: number, radius: number, r?: number, g?: number, b?: number, intensity?: number): void;
 declare function clearLights(): void;
 declare function enableGlobalIllumination(): void;
@@ -173,7 +179,9 @@ declare function addOccluder(options: OccluderOptions): void;
 declare function clearOccluders(): void;
 declare function addDirectionalLight(options: DirectionalLightOptions): void;
 declare function addSpotLight(options: SpotLightOptions): void;
+-- Constants (read-only data, not function parameters) --
 declare const colorTemp: { /** Warm candlelight (1800K). */ candlelight: [number, number, number]; /** Warm incandescent (2700K). */ incandescent: [number, number, number]; /** Warm white (3000K). */ warmWhite: [number, number, number]; /** Neutral daylight (5500K). */ daylight: [number, number, number]; /** Cool fluorescent (6500K). */ fluorescent: [number, number, number]; /** Cool moonlight (7500K). */ moonlight: [number, number, number]; /** Vibrant neon pink. */ neonPink: [number, number, number]; /** Vibrant neon blue. */ neonBlue: [number, number, number]; /** Vibrant neon green. */ neonGreen: [number, number, number]; /** Fire/torch (warm orange). */ torch: [number, number, number]; /** Magical purple glow. */ magic: [number, number, number]; /** Blood red. */ blood: [number, number, number]; };
+-- Functions --
 declare function setDayNightCycle(options: DayNightOptions): void;
 declare function onFrame(callback: () => void): void;
 declare function getDeltaTime(): number;
@@ -260,7 +268,9 @@ declare function destroyEntity(entity: Entity): void;
 declare function findEntity(entities: Entity[], tag: string): Entity | undefined;
 declare function findEntities(entities: Entity[], tag: string): Entity[];
 declare function createGame(config?: GameConfig): Game;
+-- Constants (read-only data, not function parameters) --
 declare const hud: { /** * Draw HUD text with sensible defaults. * screenSpace: true, layer: 100, scale: HUDLayout.TEXT_SCALE, tint: white. * * @param content - The text string to display. * @param x - X position in screen pixels. * @param y - Y position in screen pixels. * @param opts - Optional overrides for scale, tint, and layer. */ text(content: string, x: number, y: number, opts?: HUDTextOptions): void; /** * Draw a HUD progress/health bar with sensible defaults. * screenSpace: true, layer: 100, green fill on dark background. * * @param x - X position in screen pixels. * @param y - Y position in screen pixels. * @param fillRatio - Fill amount, 0.0 (empty) to 1.0 (full). Clamped internally by drawBar. * @param opts - Optional overrides for dimensions, colors, border, and layer. */ bar(x: number, y: number, fillRatio: number, opts?: HUDBarOptions): void; /** * Draw a HUD label (text with background panel). * screenSpace: true, layer: 110, white text on dark background. * * @param content - The text string to display. * @param x - X position in screen pixels. * @param y - Y position in screen pixels. * @param opts - Optional overrides for colors, padding, scale, and layer. */ label(content: string, x: number, y: number, opts?: HUDLabelOptions): void; /** * Draw a full-screen overlay rectangle (e.g., fade-to-black, damage flash). * screenSpace: true, default layer: 200 (above other HUD elements). * * @param color - Overlay color (use alpha for transparency). * @param opts - Optional layer override. * * @example * hud.overlay({ r: 0, g: 0, b: 0, a: 0.5 }); // 50% black overlay */ overlay(color: Color, opts?: HUDOverlayOptions): void; };
+-- Functions --
 declare function createPlatformerState(x: number, y: number): PlatformerState;
 declare function platformerMove(state: PlatformerState, direction: -1 | 0 | 1, running: boolean, config: PlatformerConfig): PlatformerState;
 declare function platformerJump(state: PlatformerState, config: PlatformerConfig): PlatformerState;
@@ -294,14 +304,16 @@ declare function consumeCombo(buffer: InputBuffer, combo: ComboDef): void;
 declare function updateInputBuffer(buffer: InputBuffer, map: InputMap, time: number, poller?: InputPoller): void;
 
 === ui (@arcane/runtime/ui) ===
-Types: Anchor,ArcOptions,BarOptions,ButtonState,ButtonStyle,ButtonVisual,CheckboxState,CheckboxStyle,Color,Focusable,FocusManagerState,LabelOptions,LayoutPosition,LineOptions,Palette,PanelOptions,RadioGroupState,RadioGroupStyle,RectOptions,ShapeOptions,SliderState,SliderStyle,TextInputKeyEvent,TextInputState,TextInputStyle,
+Types: Anchor,ArcOptions,BarOptions,ButtonState,ButtonStyle,ButtonVisual,CheckboxState,CheckboxStyle,Color,Focusable,FocusManagerState,LabelOptions,LayoutPosition,LineOptions,Palette,PanelOptions,RadioGroupState,RadioGroupStyle,RectOptions,SectorOptions,ShapeOptions,SliderState,SliderStyle,TextInputKeyEvent,TextInputState,TextInputStyle,
 declare function rgb(r: number, g: number, b: number, a?: number): Color;
 declare function createButton(x: number, y: number, w: number, h: number, label: string, style?: ButtonStyle): ButtonState;
 declare function hitTest(px: number, py: number, rx: number, ry: number, rw: number, rh: number): boolean;
 declare function updateButton(btn: ButtonState, mouseX: number, mouseY: number, mouseDown: boolean, enterPressed?: boolean): void;
 declare function drawButton(btn: ButtonState): void;
+-- Constants (read-only data, not function parameters) --
 declare const Colors: { /** Bright blue. */ readonly PRIMARY: { readonly r: 0.2; readonly g: 0.6; readonly b: 1; readonly a: 1; }; /** Green (success state). */ readonly SUCCESS: { readonly r: 0.2; readonly g: 0.8; readonly b: 0.3; readonly a: 1; }; /** Orange/Yellow (warning state). */ readonly WARNING: { readonly r: 1; readonly g: 0.7; readonly b: 0; readonly a: 1; }; /** Red (danger/error state). */ readonly DANGER: { readonly r: 1; readonly g: 0.3; readonly b: 0.3; readonly a: 1; }; /** Cyan (informational). */ readonly INFO: { readonly r: 0.4; readonly g: 0.8; readonly b: 0.9; readonly a: 1; }; /** Pure white. */ readonly WHITE: { readonly r: 1; readonly g: 1; readonly b: 1; readonly a: 1; }; /** Light gray. */ readonly LIGHT_GRAY: { readonly r: 0.8; readonly g: 0.8; readonly b: 0.8; readonly a: 1; }; /** Medium gray. */ readonly GRAY: { readonly r: 0.5; readonly g: 0.5; readonly b: 0.5; readonly a: 1; }; /** Dark gray. */ readonly DARK_GRAY: { readonly r: 0.3; readonly g: 0.3; readonly b: 0.3; readonly a: 1; }; /** Pure black. */ readonly BLACK: { readonly r: 0; readonly g: 0; readonly b: 0; readonly a: 1; }; /** Dark semi-transparent background for HUD panels. */ readonly HUD_BG: { readonly r: 0.1; readonly g: 0.1; readonly b: 0.15; readonly a: 0.85; }; /** Lighter semi-transparent background for HUD panels. */ readonly HUD_BG_LIGHT: { readonly r: 0.2; readonly g: 0.2; readonly b: 0.25; readonly a: 0.75; }; /** Gold color for scores, coins, rewards. */ readonly GOLD: { readonly r: 1; readonly g: 0.84; readonly b: 0; readonly a: 1; }; /** Silver color for secondary rewards. */ readonly SILVER: { readonly r: 0.75; readonly g: 0.75; readonly b: 0.75; readonly a: 1; }; /** Bronze color for tertiary rewards. */ readonly BRONZE: { readonly r: 0.8; readonly g: 0.5; readonly b: 0.2; readonly a: 1; }; /** Bright green for victory/win state. */ readonly WIN: { readonly r: 0.2; readonly g: 1; readonly b: 0.4; readonly a: 1; }; /** Bright red for defeat/lose state. */ readonly LOSE: { readonly r: 1; readonly g: 0.2; readonly b: 0.2; readonly a: 1; }; /** Yellow for paused state. */ readonly PAUSED: { readonly r: 0.9; readonly g: 0.9; readonly b: 0.2; readonly a: 1; }; };
 declare const HUDLayout: { /** Standard padding from screen edges in pixels. Works at any resolution. */ readonly PADDING: 10; /** Vertical spacing between HUD lines in pixels. Works at any resolution. */ readonly LINE_HEIGHT: 25; /** Default text scale for main HUD text. Works at any resolution. */ readonly TEXT_SCALE: 2; /** Smaller text scale for secondary HUD text. Works at any resolution. */ readonly SMALL_TEXT_SCALE: 1.5; /** Top-left corner position. Works at any resolution. */ readonly TOP_LEFT: { readonly x: 10; readonly y: 10; }; /** Top-right corner position. **Assumes 800px width** — use `getViewportSize()` for other sizes. */ readonly TOP_RIGHT: { readonly x: 700; readonly y: 10; }; /** Bottom-left corner position. **Assumes 600px height** — use `getViewportSize()` for other sizes. */ readonly BOTTOM_LEFT: { readonly x: 10; readonly y: 560; }; /** Bottom-right corner position. **Assumes 800×600** — use `getViewportSize()` for other sizes. */ readonly BOTTOM_RIGHT: { readonly x: 700; readonly y: 560; }; /** Screen center position. **Assumes 800×600** — use `getViewportSize()` for other sizes. */ readonly CENTER: { readonly x: 400; readonly y: 300; }; };
+-- Functions --
 declare function withAlpha(color: Color, alpha: number): Color;
 declare function lighten(color: Color, amount?: number): Color;
 declare function darken(color: Color, amount?: number): Color;
@@ -331,6 +343,7 @@ declare function drawCircle(cx: number, cy: number, radius: number, options?: Sh
 declare function drawLine(x1: number, y1: number, x2: number, y2: number, options?: LineOptions): void;
 declare function drawTriangle(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, options?: ShapeOptions): void;
 declare function drawArc(cx: number, cy: number, radius: number, startAngle: number, endAngle: number, options?: ArcOptions): void;
+declare function drawSector(cx: number, cy: number, radius: number, startAngle: number, endAngle: number, options?: SectorOptions): void;
 declare function createSlider(x: number, y: number, w: number, min: number, max: number, value: number, label?: string, style?: SliderStyle): SliderState;
 declare function getSliderHeight(sl: SliderState): number;
 declare function updateSlider(sl: SliderState, mouseX: number, mouseY: number, mouseDown: boolean, arrowLeftPressed?: boolean, arrowRightPressed?: boolean): void;
@@ -410,10 +423,13 @@ declare function destroyPhysicsWorld(): void;
 
 === tweening (@arcane/runtime/tweening) ===
 Types: EasingFunction,TweenCallback,TweenProps,TweenState,TweenUpdateCallback,
+-- Constants (read-only data, not function parameters) --
 declare const TweenState: { /** Waiting for delay to elapse before starting. */ PENDING: "pending"; /** Currently animating properties each frame. */ ACTIVE: "active"; /** Temporarily paused; resumes from current progress via resumeTween(). */ PAUSED: "paused"; /** All iterations complete. The tween has been removed from the update list. */ COMPLETED: "completed"; /** Manually stopped via stopTween(). The tween has been removed from the update list. */ STOPPED: "stopped"; };
+-- Functions --
 declare function sequence(tweens: TweenConfig[]): Tween[];
 declare function parallel(tweens: TweenConfig[]): Tween[];
 declare function stagger(tweens: TweenConfig[], staggerDelay: number): Tween[];
+-- Constants (read-only data, not function parameters) --
 declare const linear: EasingFunction;
 declare const easeInQuad: EasingFunction;
 declare const easeOutQuad: EasingFunction;
@@ -446,6 +462,7 @@ declare const easeOutBounce: EasingFunction;
 declare const easeInBounce: EasingFunction;
 declare const easeInOutBounce: EasingFunction;
 declare const Easing: { readonly linear: EasingFunction; readonly easeInQuad: EasingFunction; readonly easeOutQuad: EasingFunction; readonly easeInOutQuad: EasingFunction; readonly easeInCubic: EasingFunction; readonly easeOutCubic: EasingFunction; readonly easeInOutCubic: EasingFunction; readonly easeInQuart: EasingFunction; readonly easeOutQuart: EasingFunction; readonly easeInOutQuart: EasingFunction; readonly easeInQuint: EasingFunction; readonly easeOutQuint: EasingFunction; readonly easeInOutQuint: EasingFunction; readonly easeInSine: EasingFunction; readonly easeOutSine: EasingFunction; readonly easeInOutSine: EasingFunction; readonly easeInExpo: EasingFunction; readonly easeOutExpo: EasingFunction; readonly easeInOutExpo: EasingFunction; readonly easeInCirc: EasingFunction; readonly easeOutCirc: EasingFunction; readonly easeInOutCirc: EasingFunction; readonly easeInBack: EasingFunction; readonly easeOutBack: EasingFunction; readonly easeInOutBack: EasingFunction; readonly easeInElastic: EasingFunction; readonly easeOutElastic: EasingFunction; readonly easeInOutElastic: EasingFunction; readonly easeInBounce: EasingFunction; readonly easeOutBounce: EasingFunction; readonly easeInOutBounce: EasingFunction; };
+-- Functions --
 declare function shakeCamera(intensity: number, duration: number, frequency?: number): void;
 declare function getCameraShakeOffset(): { x: number; y: number; };
 declare function isCameraShaking(): boolean;
@@ -454,6 +471,7 @@ declare function flashScreen(r: number, g: number, b: number, duration: number, 
 declare function getScreenFlash(): { r: number; g: number; b: number; opacity: number; } | null;
 declare function isScreenFlashing(): boolean;
 declare function stopScreenFlash(): void;
+declare function drawScreenFlash(): void;
 declare function linear(t: number): number;
 declare function tween(target: any, props: TweenProps, duration: number, options?: TweenOptions): Tween;
 declare function updateTweens(dt: number): void;
@@ -473,7 +491,9 @@ declare function getAllParticles(): Particle[];
 declare function addAffector(emitter: Emitter, affector: Affector): void;
 declare function clearEmitters(): void;
 declare function getEmitterCount(): number;
+-- Constants (read-only data, not function parameters) --
 declare const ParticlePresets: { /** Small brown/tan particles, fast fade. Good for footsteps, impacts on ground. */ readonly dust: { readonly startColor: { readonly r: 0.6; readonly g: 0.5; readonly b: 0.3; readonly a: 0.8; }; readonly endColor: { readonly r: 0.5; readonly g: 0.4; readonly b: 0.3; readonly a: 0; }; readonly lifetime: [number, number]; readonly velocityX: [number, number]; readonly velocityY: [number, number]; readonly scale: [number, number]; readonly count: 8; }; /** Orange-to-red, rising particles with additive feel. */ readonly fire: { readonly startColor: { readonly r: 1; readonly g: 0.7; readonly b: 0.1; readonly a: 1; }; readonly endColor: { readonly r: 0.8; readonly g: 0.1; readonly b: 0; readonly a: 0; }; readonly lifetime: [number, number]; readonly velocityX: [number, number]; readonly velocityY: [number, number]; readonly scale: [number, number]; readonly count: 15; }; /** Bright yellow-to-red, fast, scattered. Good for hits and explosions. */ readonly sparks: { readonly startColor: { readonly r: 1; readonly g: 0.9; readonly b: 0.3; readonly a: 1; }; readonly endColor: { readonly r: 1; readonly g: 0.2; readonly b: 0; readonly a: 0; }; readonly lifetime: [number, number]; readonly velocityX: [number, number]; readonly velocityY: [number, number]; readonly scale: [number, number]; readonly count: 12; }; /** Gray, slow, rising. Good for chimneys, aftermath of fire. */ readonly smoke: { readonly startColor: { readonly r: 0.5; readonly g: 0.5; readonly b: 0.5; readonly a: 0.6; }; readonly endColor: { readonly r: 0.3; readonly g: 0.3; readonly b: 0.3; readonly a: 0; }; readonly lifetime: [number, number]; readonly velocityX: [number, number]; readonly velocityY: [number, number]; readonly scale: [number, number]; readonly scaleSpeed: [number, number]; readonly count: 6; }; };
+-- Functions --
 declare function burstParticles(x: number, y: number, options?: ParticleOptions): Emitter;
 declare function streamParticles(x: number, y: number, options?: ParticleOptions): Emitter;
 
@@ -530,9 +550,11 @@ declare function createFileStorage(): StorageBackend;
 
 === procgen (@arcane/runtime/procgen) ===
 Types: AdjacencyRule,Constraint,Direction,GenerateAndTestConfig,GenerateAndTestResult,TileSet,WFCConfig,WFCGrid,WFCResult,
+-- Constants (read-only data, not function parameters) --
 declare const DIRECTIONS: readonly Direction[];
 declare const OPPOSITE: Record<Direction, Direction>;
 declare const DIR_OFFSET: Record<Direction, { dx: number; dy: number; }>;
+-- Functions --
 declare function reachability(walkableFn: (tileId: number) => boolean): Constraint;
 declare function exactCount(tileId: number, n: number): Constraint;
 declare function minCount(tileId: number, n: number): Constraint;
@@ -548,7 +570,9 @@ declare function generate(config: WFCConfig): WFCResult;
 === agent (@arcane/runtime/agent) ===
 Types: ActionInfo,ArgInfo,DescribeOptions,McpRequest,McpResponse,McpToolDef,Verbosity,
 declare function defaultDescribe(state: unknown, options: DescribeOptions): string;
+-- Constants (read-only data, not function parameters) --
 declare const MCP_TOOLS: readonly McpToolDef[];
+-- Functions --
 declare function buildToolCallRequest(toolName: string, args?: Record<string, unknown>, id?: number): string;
 declare function buildInitializeRequest(id?: number): string;
 declare function buildToolsListRequest(id?: number): string;

@@ -13,9 +13,11 @@ describe("{{PROJECT_NAME}}", () => {
     assert.ok(state.rng, "state should have rng");
   });
 
-  it("tick returns state", () => {
+  it("tick advances one frame", () => {
     const state = initGame(42);
+    // Adapt this call if you change tick's signature (e.g., tick(state, ctx))
     const next = tick(state, 1 / 60);
     assert.ok(next, "tick should return state");
+    assert.ok(next.rng, "returned state should preserve rng");
   });
 });

@@ -53,7 +53,7 @@ export const hud = {
    * @param opts - Optional overrides for dimensions, colors, border, and layer.
    */
   bar(x: number, y: number, fillRatio: number, opts?: HUDBarOptions): void {
-    drawBar(x, y, opts?.width ?? 80, opts?.height ?? 12, fillRatio, {
+    drawBar(x, y, opts?.width ?? opts?.w ?? 80, opts?.height ?? opts?.h ?? 12, fillRatio, {
       fillColor: opts?.fillColor ?? Colors.SUCCESS,
       bgColor: opts?.bgColor ?? Colors.HUD_BG,
       borderColor: opts?.borderColor ?? Colors.LIGHT_GRAY,

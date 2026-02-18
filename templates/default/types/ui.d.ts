@@ -89,6 +89,8 @@ declare module "@arcane/runtime/ui" {
       /** Arc stroke thickness in pixels (screenSpace) or world units. Default: 2. */
       thickness?: number;
   };
+  /** Options for {@link drawSector}. Same as {@link ShapeOptions} (filled shape). */
+  export type SectorOptions = ShapeOptions;
   /** Options for {@link drawLabel}. */
   export type LabelOptions = {
       /** Text color. Default: white. */
@@ -777,6 +779,30 @@ declare module "@arcane/runtime/ui" {
    * });
    */
   export declare function drawArc(cx: number, cy: number, radius: number, startAngle: number, endAngle: number, options?: ArcOptions): void;
+  /**
+   * Draw a filled sector (pie/cone shape) using a triangle fan.
+   * No-op in headless mode.
+   *
+   * A sector is a "pie slice" from the center to the arc — useful for
+   * FOV cones, attack arcs, and minimap indicators.
+   *
+   * Angles are in radians, measured clockwise from the positive X axis
+   * (right). A full circle is `0` to `Math.PI * 2`.
+   *
+   * @param cx - Center X position (screen pixels if screenSpace, world units otherwise).
+   * @param cy - Center Y position (screen pixels if screenSpace, world units otherwise).
+   * @param radius - Sector radius in pixels (screenSpace) or world units.
+   * @param startAngle - Start angle in radians (0 = right, PI/2 = down).
+   * @param endAngle - End angle in radians. Must be >= startAngle.
+   * @param options - Color, layer, and screenSpace options.
+   *
+   * @example
+   * // Attack cone indicator
+   * drawSector(player.x, player.y, 60, -Math.PI / 4, Math.PI / 4, {
+   *   color: { r: 1, g: 0.2, b: 0.2, a: 0.3 }, layer: 2,
+   * });
+   */
+  export declare function drawSector(cx: number, cy: number, radius: number, startAngle: number, endAngle: number, options?: SectorOptions): void;
 
   /**
    * Immediate-mode horizontal slider widget.

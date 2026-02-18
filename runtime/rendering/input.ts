@@ -140,7 +140,10 @@ export function getScaleFactor(): number {
  * Default is dark blue-gray (0.1, 0.1, 0.15).
  * No-op in headless mode.
  *
- * @param color - Background color with 0.0-1.0 RGBA components. Alpha is ignored.
+ * Accepts any object with r, g, b properties (0.0-1.0 floats), including
+ * the Color type returned by `rgb()`. Alpha is ignored.
+ *
+ * @param color - Background color. Use `rgb(r, g, b)` or `{ r, g, b }` with 0.0-1.0 values.
  */
 export function setBackgroundColor(color: { r: number; g: number; b: number }): void {
   if (!hasViewportOp) return;

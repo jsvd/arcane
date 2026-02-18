@@ -155,11 +155,21 @@ CHEATSHEET="$OUT_DIR/cheatsheet.txt"
 
     # Extract function and const signatures, collapsing multi-line ones.
     # Tracks brace depth so "loop?: boolean;" inside {…} doesn't end the sig.
+    # Inserts a separator before const declarations so read-only data (presets)
+    # is visually distinct from callable functions.
     awk '
-      BEGIN { buf = ""; depth = 0 }
+      BEGIN { buf = ""; depth = 0; lastKind = "" }
       /^[[:space:]]+export declare (function|const) / {
         sub(/^[[:space:]]+/, "")
         sub(/^export /, "")
+        if ($0 ~ /^declare const / && lastKind != "const") {
+          print "-- Constants (read-only data, not function parameters) --"
+        }
+        if ($0 ~ /^declare function / && lastKind == "const") {
+          print "-- Functions --"
+        }
+        if ($0 ~ /^declare const /) lastKind = "const"
+        else lastKind = "function"
         buf = $0
         depth = 0
         for (i = 1; i <= length($0); i++) {

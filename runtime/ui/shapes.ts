@@ -14,7 +14,7 @@
  * ```
  */
 
-import type { Color, ShapeOptions, LineOptions, ArcOptions } from "./types.ts";
+import type { Color, ShapeOptions, LineOptions, ArcOptions, SectorOptions } from "./types.ts";
 import { drawSprite } from "../rendering/sprites.ts";
 import { createSolidTexture } from "../rendering/texture.ts";
 import { getCamera } from "../rendering/camera.ts";
@@ -366,5 +366,115 @@ export function drawArc(
 
     prevX = nextX;
     prevY = nextY;
+  }
+}
+
+/**
+ * Draw a filled sector (pie/cone shape) using a triangle fan.
+ * No-op in headless mode.
+ *
+ * A sector is a "pie slice" from the center to the arc — useful for
+ * FOV cones, attack arcs, and minimap indicators.
+ *
+ * Angles are in radians, measured clockwise from the positive X axis
+ * (right). A full circle is `0` to `Math.PI * 2`.
+ *
+ * @param cx - Center X position (screen pixels if screenSpace, world units otherwise).
+ * @param cy - Center Y position (screen pixels if screenSpace, world units otherwise).
+ * @param radius - Sector radius in pixels (screenSpace) or world units.
+ * @param startAngle - Start angle in radians (0 = right, PI/2 = down).
+ * @param endAngle - End angle in radians. Must be >= startAngle.
+ * @param options - Color, layer, and screenSpace options.
+ *
+ * @example
+ * // Attack cone indicator
+ * drawSector(player.x, player.y, 60, -Math.PI / 4, Math.PI / 4, {
+ *   color: { r: 1, g: 0.2, b: 0.2, a: 0.3 }, layer: 2,
+ * });
+ */
+export function drawSector(
+  cx: number,
+  cy: number,
+  radius: number,
+  startAngle: number,
+  endAngle: number,
+  options?: SectorOptions,
+): void {
+  const layer = options?.layer ?? 0;
+  const ss = options?.screenSpace ?? false;
+
+  _logDrawCall({
+    type: "sector",
+    cx,
+    cy,
+    radius,
+    startAngle,
+    endAngle,
+    layer,
+    screenSpace: ss,
+  } as any);
+
+  if (!hasRenderOps) return;
+
+  const color = options?.color ?? WHITE;
+  const tex = getColorTexture(color);
+
+  // Triangle fan: each triangle shares the center point.
+  // Number of triangles scales with arc length for smooth appearance.
+  const sweep = Math.abs(endAngle - startAngle);
+  const segments = Math.max(8, Math.ceil(sweep * radius * 0.5));
+  const step = (endAngle - startAngle) / segments;
+
+  for (let i = 0; i < segments; i++) {
+    const a0 = startAngle + step * i;
+    const a1 = startAngle + step * (i + 1);
+
+    const x1 = cx + Math.cos(a0) * radius;
+    const y1 = cy + Math.sin(a0) * radius;
+    const x2 = cx + Math.cos(a1) * radius;
+    const y2 = cy + Math.sin(a1) * radius;
+
+    // Sort three vertices by Y for scanline fill
+    const verts: [number, number][] = [[cx, cy], [x1, y1], [x2, y2]];
+    verts.sort((a, b) => a[1] - b[1]);
+
+    const [vTop, vMid, vBot] = verts;
+    const startY = Math.ceil(vTop[1]);
+    const endY = Math.floor(vBot[1]);
+
+    for (let scanY = startY; scanY <= endY; scanY++) {
+      let xLeft = Infinity;
+      let xRight = -Infinity;
+
+      // Edge: top -> bot
+      if (vBot[1] !== vTop[1]) {
+        const t = (scanY - vTop[1]) / (vBot[1] - vTop[1]);
+        const ex = vTop[0] + t * (vBot[0] - vTop[0]);
+        if (ex < xLeft) xLeft = ex;
+        if (ex > xRight) xRight = ex;
+      }
+
+      // Edge: top -> mid
+      if (scanY <= vMid[1] && vMid[1] !== vTop[1]) {
+        const t = (scanY - vTop[1]) / (vMid[1] - vTop[1]);
+        const ex = vTop[0] + t * (vMid[0] - vTop[0]);
+        if (ex < xLeft) xLeft = ex;
+        if (ex > xRight) xRight = ex;
+      }
+
+      // Edge: mid -> bot
+      if (scanY >= vMid[1] && vBot[1] !== vMid[1]) {
+        const t = (scanY - vMid[1]) / (vBot[1] - vMid[1]);
+        const ex = vMid[0] + t * (vBot[0] - vMid[0]);
+        if (ex < xLeft) xLeft = ex;
+        if (ex > xRight) xRight = ex;
+      }
+
+      if (xLeft >= xRight) continue;
+
+      const stripeW = xRight - xLeft;
+      const pos = toWorld(xLeft, scanY, stripeW, 1, ss);
+      drawSprite({ textureId: tex, x: pos.x, y: pos.y, w: pos.w, h: pos.h, layer });
+    }
   }
 }

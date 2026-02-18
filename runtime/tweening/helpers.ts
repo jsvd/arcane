@@ -11,6 +11,8 @@
 
 import { tween } from "./tween.ts";
 import { easeOutQuad } from "./easing.ts";
+import { drawRect } from "../ui/primitives.ts";
+import { getViewportSize } from "../rendering/input.ts";
 
 /** Internal camera shake state (global singleton). */
 let shakeState = {
@@ -163,4 +165,27 @@ export function isScreenFlashing(): boolean {
 export function stopScreenFlash(): void {
   flashState.active = false;
   flashState.opacity = 0;
+}
+
+/**
+ * Draw the screen flash overlay if a flash is active. No-op if inactive.
+ *
+ * Call this each frame after your game rendering (similar to `drawScreenTransition()`).
+ * This is the auto-rendering alternative to manually reading {@link getScreenFlash}
+ * and drawing a rectangle yourself.
+ *
+ * @example
+ * // In onFrame:
+ * updateTweens(dt);
+ * // ... render game ...
+ * drawScreenFlash();  // auto-renders flash overlay
+ */
+export function drawScreenFlash(): void {
+  if (!flashState.active) return;
+  const { width, height } = getViewportSize();
+  drawRect(0, 0, width, height, {
+    color: { r: flashState.r, g: flashState.g, b: flashState.b, a: flashState.opacity },
+    screenSpace: true,
+    layer: 200,
+  });
 }

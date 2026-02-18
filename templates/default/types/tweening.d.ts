@@ -386,6 +386,20 @@ declare module "@arcane/runtime/tweening" {
    * Stop the screen flash immediately, resetting opacity to zero.
    */
   export declare function stopScreenFlash(): void;
+  /**
+   * Draw the screen flash overlay if a flash is active. No-op if inactive.
+   *
+   * Call this each frame after your game rendering (similar to `drawScreenTransition()`).
+   * This is the auto-rendering alternative to manually reading {@link getScreenFlash}
+   * and drawing a rectangle yourself.
+   *
+   * @example
+   * // In onFrame:
+   * updateTweens(dt);
+   * // ... render game ...
+   * drawScreenFlash();  // auto-renders flash overlay
+   */
+  export declare function drawScreenFlash(): void;
 
   /**
    * Core tweening implementation.

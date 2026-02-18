@@ -145,6 +145,43 @@ if (hitByEnemy) {
 
 **External velocity** (`externalVx`/`externalVy`): Use `platformerApplyImpulse()` for knockback, bounce pads, wind, or any force that should temporarily override player input. External velocity decays automatically each frame (×0.85).
 
+## Grid Movement with Smooth Interpolation
+
+For grid-based games (roguelikes, puzzle, tactics), entities snap to grid cells but should visually slide between positions. The key pattern: store the **logical** grid position separately from the **visual** position, and interpolate.
+
+```typescript
+type GridEntity = {
+  gx: number; gy: number;       // current logical grid cell
+  prevGx: number; prevGy: number; // previous grid cell (for lerp)
+  moveProgress: number;          // 0 = at prevG, 1 = at gx/gy
+};
+
+const TILE_SIZE = 32;
+const MOVE_SPEED = 8; // tiles per second
+
+/** Move the entity to a new grid cell. */
+function gridMoveTo(e: GridEntity, newGx: number, newGy: number): GridEntity {
+  return { ...e, prevGx: e.gx, prevGy: e.gy, gx: newGx, gy: newGy, moveProgress: 0 };
+}
+
+/** Advance the interpolation (call each frame). */
+function gridUpdateMove(e: GridEntity, dt: number): GridEntity {
+  if (e.moveProgress >= 1) return e;
+  return { ...e, moveProgress: Math.min(1, e.moveProgress + MOVE_SPEED * dt) };
+}
+
+/** Get the pixel position for rendering. NEVER write this back to gx/gy. */
+function gridRenderPos(e: GridEntity): { x: number; y: number } {
+  const t = e.moveProgress;
+  return {
+    x: (e.prevGx + (e.gx - e.prevGx) * t) * TILE_SIZE,
+    y: (e.prevGy + (e.gy - e.prevGy) * t) * TILE_SIZE,
+  };
+}
+```
+
+**Common bug:** writing the interpolated position back into `gx`/`gy` each frame. This compounds rounding errors and the entity drifts. Always keep logical position (integers) and render position (floats) separate.
+
 ## Seeded Random Numbers
 
 Use `createRng()` for ergonomic deterministic randomness. Same sequences as the pure `seed()`/`randomInt()` functions, but holds state in a closure so you don't need to thread state through every call.
