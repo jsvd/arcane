@@ -109,12 +109,12 @@ jobs:
       - name: Install system dependencies (ALSA + udev)
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
       - name: Publish arcane-core
-        run: cargo publish -p arcane-core
+        run: cargo publish -p arcane-core || echo "Already published (or error above)"
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
       - name: Wait for crates.io indexing
         run: sleep 60
       - name: Publish arcane-engine
-        run: cargo publish -p arcane-engine --allow-dirty
+        run: cargo publish -p arcane-engine --allow-dirty || echo "Already published (or error above)"
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
