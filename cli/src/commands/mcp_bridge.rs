@@ -14,41 +14,12 @@ const HEALTH_CHECK_INTERVAL: Duration = Duration::from_millis(250);
 /// and writes the response to stdout. Auto-discovers the port from
 /// `.arcane/mcp-port`. If no running instance is found, auto-launches
 /// `arcane dev <entry>` which picks a free port automatically.
+///
+/// If the dev server dies mid-session (connection refused), the bridge
+/// auto-relaunches it and retries the request.
 pub fn run(entry: String, port_override: Option<u16>) -> Result<()> {
-    // Try to connect. If the server is not running, auto-launch arcane dev.
     let mut child: Option<Child> = None;
-
-    let port = if let Some(p) = port_override {
-        // Explicit port override — use it directly
-        if !health_check(p) {
-            eprintln!("[mcp-bridge] No running MCP server found, launching arcane dev...");
-            let child_proc = launch_dev(&entry, Some(p))?;
-            child = Some(child_proc);
-            if !wait_for_server(p) {
-                anyhow::bail!("MCP server did not start within {}s", HEALTH_CHECK_TIMEOUT.as_secs());
-            }
-        }
-        eprintln!("[mcp-bridge] MCP server ready on port {p}");
-        p
-    } else if let Some(p) = discover_port() {
-        // Found a port file — check if the server is alive
-        if health_check(p) {
-            eprintln!("[mcp-bridge] MCP server ready on port {p}");
-            p
-        } else {
-            // Stale port file — launch a new instance
-            eprintln!("[mcp-bridge] Stale port file, launching arcane dev...");
-            let child_proc = launch_dev(&entry, None)?;
-            child = Some(child_proc);
-            wait_for_port_file()?
-        }
-    } else {
-        // No port file, no override — launch arcane dev (auto-assigns port)
-        eprintln!("[mcp-bridge] No running MCP server found, launching arcane dev...");
-        let child_proc = launch_dev(&entry, None)?;
-        child = Some(child_proc);
-        wait_for_port_file()?
-    };
+    let mut port = ensure_server(&entry, port_override, &mut child)?;
 
     // Main loop: read JSON-RPC lines from stdin, proxy to HTTP, write to stdout
     let stdin = io::stdin();
@@ -77,26 +48,93 @@ pub fn run(entry: String, port_override: Option<u16>) -> Result<()> {
                     let _ = stdout_lock.flush();
                 }
             }
-            Err(e) => {
-                if !is_notification {
-                    let error_resp = format!(
-                        r#"{{"jsonrpc":"2.0","error":{{"code":-32000,"message":"{}"}},"id":null}}"#,
-                        e.to_string().replace('"', "\\\"")
-                    );
-                    let _ = writeln!(stdout_lock, "{error_resp}");
-                    let _ = stdout_lock.flush();
+            Err(_) => {
+                // Connection failed — try to relaunch the dev server and retry once
+                eprintln!("[mcp-bridge] Connection lost, relaunching arcane dev...");
+                kill_child(&mut child);
+                match ensure_server(&entry, port_override, &mut child) {
+                    Ok(new_port) => {
+                        port = new_port;
+                        // Retry the request on the new server
+                        match proxy_request(port, trimmed) {
+                            Ok(response) => {
+                                if !is_notification {
+                                    let _ = writeln!(stdout_lock, "{response}");
+                                    let _ = stdout_lock.flush();
+                                }
+                            }
+                            Err(e) => {
+                                if !is_notification {
+                                    let error_resp = format!(
+                                        r#"{{"jsonrpc":"2.0","error":{{"code":-32000,"message":"{}"}},"id":null}}"#,
+                                        e.to_string().replace('"', "\\\"")
+                                    );
+                                    let _ = writeln!(stdout_lock, "{error_resp}");
+                                    let _ = stdout_lock.flush();
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        if !is_notification {
+                            let error_resp = format!(
+                                r#"{{"jsonrpc":"2.0","error":{{"code":-32000,"message":"Failed to relaunch dev server: {}"}},"id":null}}"#,
+                                e.to_string().replace('"', "\\\"")
+                            );
+                            let _ = writeln!(stdout_lock, "{error_resp}");
+                            let _ = stdout_lock.flush();
+                        }
+                    }
                 }
             }
         }
     }
 
     // Clean shutdown: kill child process if we launched one
-    if let Some(ref mut c) = child {
+    kill_child(&mut child);
+
+    Ok(())
+}
+
+/// Ensure the MCP server is running. Returns the port it's listening on.
+/// Launches `arcane dev` if no server is available.
+fn ensure_server(entry: &str, port_override: Option<u16>, child: &mut Option<Child>) -> Result<u16> {
+    if let Some(p) = port_override {
+        if !health_check(p) {
+            eprintln!("[mcp-bridge] No running MCP server found, launching arcane dev...");
+            *child = Some(launch_dev(entry, Some(p))?);
+            if !wait_for_server(p) {
+                anyhow::bail!("MCP server did not start within {}s", HEALTH_CHECK_TIMEOUT.as_secs());
+            }
+        }
+        eprintln!("[mcp-bridge] MCP server ready on port {p}");
+        Ok(p)
+    } else if let Some(p) = discover_port() {
+        if health_check(p) {
+            eprintln!("[mcp-bridge] MCP server ready on port {p}");
+            Ok(p)
+        } else {
+            eprintln!("[mcp-bridge] Stale port file, launching arcane dev...");
+            *child = Some(launch_dev(entry, None)?);
+            wait_for_port_file()
+        }
+    } else {
+        eprintln!("[mcp-bridge] No running MCP server found, launching arcane dev...");
+        *child = Some(launch_dev(entry, None)?);
+        wait_for_port_file()
+    }
+}
+
+/// Kill a child process if one is running. Removes the stale port file
+/// so a fresh `arcane dev` instance can write a new one.
+fn kill_child(child: &mut Option<Child>) {
+    if let Some(c) = child {
         let _ = c.kill();
         let _ = c.wait();
     }
-
-    Ok(())
+    *child = None;
+    // Remove stale port file so wait_for_port_file sees the new one
+    let _ = std::fs::remove_file(".arcane/mcp-port");
 }
 
 /// Discover the MCP port from the `.arcane/mcp-port` file.
