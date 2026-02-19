@@ -148,7 +148,7 @@ CHEATSHEET="$OUT_DIR/cheatsheet.txt"
     echo "=== $dir (@arcane/runtime/$dir) ==="
 
     # Extract type names (one-liner summary)
-    type_names=$(grep -E '^\s+export type \w+ ' "$module_file" 2>/dev/null | sed 's/.*export type \([A-Za-z_][A-Za-z0-9_]*\).*/\1/' | sort -u | tr '\n' ', ' | sed 's/, $//') || true
+    type_names=$(grep -E '^\s+export type \w+ ' "$module_file" 2>/dev/null | sed 's/.*export type \([A-Za-z_][A-Za-z0-9_]*\).*/\1/' | LC_ALL=C sort -u | tr '\n' ', ' | sed 's/, $//') || true
     if [ -n "$type_names" ]; then
       echo "Types: $type_names"
     fi

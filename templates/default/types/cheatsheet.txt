@@ -6,7 +6,7 @@ One-liner signatures for every exported function, grouped by module.
 For full JSDoc, argument types, and examples, see the per-module .d.ts files in types/.
 
 === rendering (@arcane/runtime/rendering) ===
-Types: AnimatedTileDef,AnimationDef,AnimationFinishedCondition,AnimationId,AnimationState,AudioBus,AutotileMapping,AutotileRule,BitmapFont,BlendState,BooleanCondition,CameraBounds,CameraDeadzone,CameraState,EffectId,FloatingTextOptions,FrameEvent,FrameEventCallback,FSMConfig,FSMParams,FSMState,FSMStateDef,FSMTransition,HexConfig,HexCoord,HexOrientation,HexTile,HexTilemap,HexTilemapConfig,ImpactConfig,ImpactFlash,ImpactParticles,ImpactShake,ImpactSound,InstanceId,IsoConfig,IsoTile,IsoTilemap,IsoTilemapConfig,KeyName,LayeredTilemap,LayerOptions,MousePosition,MSDFFont,MSDFGlyph,NeighborCheck,NineSliceBorder,NineSliceOptions,OffsetType,ParallaxSpriteOptions,PlayOptions,PoolConfig,RenderTargetId,ScreenTransitionConfig,ScreenTransitionType,ShaderId,SoundId,SpatialOptions,SpriteOptions,StaggeredIsoConfig,TextAlign,TextLayoutOptions,TextMeasurement,TextOptions,TextOutline,TextShadow,TextureId,ThresholdCondition,TilemapId,TilemapLayer,TilemapOptions,TileProperties,Trail,TrailConfig,TrailPoint,TransitionCondition,TriggerCondition,Typewriter,TypewriterConfig,TypewriterDrawOptions,
+Types: AnimatedTileDef,AnimationDef,AnimationFinishedCondition,AnimationId,AnimationState,AudioBus,AutotileMapping,AutotileRule,BitmapFont,BlendState,BooleanCondition,CameraBounds,CameraDeadzone,CameraState,EffectId,FSMConfig,FSMParams,FSMState,FSMStateDef,FSMTransition,FloatingTextOptions,FrameEvent,FrameEventCallback,HexConfig,HexCoord,HexOrientation,HexTile,HexTilemap,HexTilemapConfig,ImpactConfig,ImpactFlash,ImpactParticles,ImpactShake,ImpactSound,InstanceId,IsoConfig,IsoTile,IsoTilemap,IsoTilemapConfig,KeyName,LayerOptions,LayeredTilemap,MSDFFont,MSDFGlyph,MousePosition,NeighborCheck,NineSliceBorder,NineSliceOptions,OffsetType,ParallaxSpriteOptions,PlayOptions,PoolConfig,RenderTargetId,ScreenTransitionConfig,ScreenTransitionType,ShaderId,SoundId,SpatialOptions,SpriteOptions,StaggeredIsoConfig,TextAlign,TextLayoutOptions,TextMeasurement,TextOptions,TextOutline,TextShadow,TextureId,ThresholdCondition,TileProperties,TilemapId,TilemapLayer,TilemapOptions,Trail,TrailConfig,TrailPoint,TransitionCondition,TriggerCondition,Typewriter,TypewriterConfig,TypewriterDrawOptions,
 declare function createAnimationFSM(config: FSMConfig): FSMState;
 declare function getCurrentState(fsm: FSMState): string;
 declare function isBlending(fsm: FSMState): boolean;
@@ -266,7 +266,7 @@ declare function getVisibleText(tw: Typewriter): string;
 declare function isTypewriterComplete(tw: Typewriter): boolean;
 
 === game (@arcane/runtime/game) ===
-Types: CollisionCallback,CollisionRegistry,ColorSpriteOptions,Entity,EntityOptions,EntitySprite,FrameCallback,FrameInput,Game,GameConfig,GameContext,HUDBarOptions,HUDLabelOptions,HUDOverlayOptions,HUDTextOptions,Platform,PlatformerConfig,PlatformerState,PlatformerStateType,PlatformType,SceneNode,SceneNodeId,SpriteGroup,SpriteGroupDrawOptions,SpriteGroupType,SpritePart,WorldTransform,
+Types: CollisionCallback,CollisionRegistry,ColorSpriteOptions,Entity,EntityOptions,EntitySprite,FrameCallback,FrameInput,Game,GameConfig,GameContext,HUDBarOptions,HUDLabelOptions,HUDOverlayOptions,HUDTextOptions,Platform,PlatformType,PlatformerConfig,PlatformerState,PlatformerStateType,SceneNode,SceneNodeId,SpriteGroup,SpriteGroupDrawOptions,SpriteGroupType,SpritePart,WorldTransform,
 declare function createCollisionRegistry(): CollisionRegistry;
 declare function onBodyCollision(registry: CollisionRegistry, bodyId: BodyId, callback: CollisionCallback): void;
 declare function onCollision(registry: CollisionRegistry, bodyA: BodyId, bodyB: BodyId, callback: CollisionCallback): void;
@@ -332,7 +332,7 @@ declare function consumeCombo(buffer: InputBuffer, combo: ComboDef): void;
 declare function updateInputBuffer(buffer: InputBuffer, map: InputMap, time: number, poller?: InputPoller): void;
 
 === ui (@arcane/runtime/ui) ===
-Types: Anchor,ArcOptions,BarOptions,ButtonState,ButtonStyle,ButtonVisual,CapsuleOptions,CheckboxState,CheckboxStyle,Color,EllipseOptions,Focusable,FocusManagerState,LabelOptions,LayoutPosition,LineOptions,Palette,PanelOptions,PolygonOptions,RadioGroupState,RadioGroupStyle,RectOptions,RingOptions,SectorOptions,ShapeOptions,SliderState,SliderStyle,TextInputKeyEvent,TextInputState,TextInputStyle,
+Types: Anchor,ArcOptions,BarOptions,ButtonState,ButtonStyle,ButtonVisual,CapsuleOptions,CheckboxState,CheckboxStyle,Color,EllipseOptions,FocusManagerState,Focusable,LabelOptions,LayoutPosition,LineOptions,Palette,PanelOptions,PolygonOptions,RadioGroupState,RadioGroupStyle,RectOptions,RingOptions,SectorOptions,ShapeOptions,SliderState,SliderStyle,TextInputKeyEvent,TextInputState,TextInputStyle,
 declare function rgb(r: number, g: number, b: number, a?: number): Color;
 declare function createButton(x: number, y: number, w: number, h: number, label: string, style?: ButtonStyle): ButtonState;
 declare function hitTest(px: number, py: number, rx: number, ry: number, rw: number, rh: number): boolean;
@@ -394,7 +394,7 @@ declare function updateRadioGroup(rg: RadioGroupState, mouseX: number, mouseY: n
 declare function drawRadioGroup(rg: RadioGroupState): void;
 
 === state (@arcane/runtime/state) ===
-Types: ArcaneError,DiceNotation,DiceSpec,Diff,DiffEntry,Effect,EntityId,ObserverContext,PathPattern,PRNGState,Unsubscribe,Vec2,
+Types: ArcaneError,DiceNotation,DiceSpec,Diff,DiffEntry,Effect,EntityId,ObserverContext,PRNGState,PathPattern,Unsubscribe,Vec2,
 declare function entityId(id: string): EntityId;
 declare function generateId(): EntityId;
 declare function createError(code: string, message: string, context: ArcaneError["context"]): ArcaneError;
