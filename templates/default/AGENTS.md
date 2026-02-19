@@ -17,7 +17,7 @@ Four starter files, each with a clear job:
 | `src/render.ts` | All draw calls — sprites, shapes, HUD | Yes |
 | `src/visual.ts` | Bootstrap + frame loop orchestrator | Yes |
 
-**One concept = one file.** As your game grows, split by domain:
+**One concept = one file.** As your game grows, split by domain (what the code *does*), not by entity type:
 
 ```
 src/
@@ -25,14 +25,13 @@ src/
 ├── game.ts            — core game logic (stays pure)
 ├── render.ts          → split into render-world.ts + render-hud.ts
 ├── visual.ts          — frame loop (stays thin)
-├── enemies.ts         — enemy types, AI, spawning
-├── items.ts           — item definitions, inventory logic
+├── combat.ts          — damage, attack rolls, turn logic
+├── spawning.ts        — wave generation, placement rules
 ├── levels.ts          — level data, loading, progression
 └── game.test.ts       — tests for game logic
 ```
 
 **Guidelines:**
-- Keep files under ~150 lines. If a file grows past that, split it.
 - `game.ts` and any logic file must NOT import rendering modules — keeps them headless-testable.
 - `visual.ts` stays thin — just bootstrap, input, frame loop. Delegate rendering to `render.ts`.
 - Import constants and types from `config.ts`, not inline magic numbers.
@@ -44,31 +43,47 @@ Imports use `@arcane/runtime/{module}`:
 
 ## Development Workflow
 
-**Build iteratively, not all at once.** Do NOT write the entire game in a single pass.
+**Think iteratively, not all at once.** Do NOT design the entire game upfront and then implement it in one pass. Instead, start with the simplest possible version and grow it step by step.
+
+### How to Think About It
+
+A game is built in layers, not all at once. Each layer should be **playable** before you add the next:
+
+1. **A thing on screen that moves** — colored rectangle + input. Run `arcane dev`. Done.
+2. **The core mechanic** — what makes this game *this game*? Add just that. Verify.
+3. **One enemy / obstacle / interaction** — not all of them, just one. Verify.
+4. **Scoring / win / lose** — basic game loop is now complete. Verify.
+5. **More content** — additional enemies, levels, items. One at a time. Verify each.
+6. **Polish** — particles, sound, screen shake, transitions. One at a time.
+
+Each step is a small code change (20-50 lines), verified with `arcane dev` before moving on. **Never write more than ~50 lines without checking that the game still runs.**
 
 ### The Iteration Cycle
 
-1. **Implement one thing** — a single mechanic, entity, or visual element
+For each step above:
+
+1. **Write the smallest change** — a single function, entity, or visual element
 2. **Run `arcane dev`** — verify it works visually, fix immediately if not
 3. **Write a test** — cover the logic in `*.test.ts`, run `arcane test`
 4. **Commit** — small, working increments
 
-### Walking Skeleton First
+### File Planning
 
-Start with the minimum viable loop:
+Before writing code, decide the file structure. Each file should own **one concept**. The natural boundaries are:
 
-1. A colored rectangle that moves with input
-2. One game state update in `tick()`
-3. One draw call in `renderWorld()`
+- **An algorithm** — dungeon generation, FOV, pathfinding. One algorithm = one file.
+- **A game domain** — combat logic, character creation, inventory, spawning. Group the pure functions and constants for one feature together.
+- **A constant/type table** — stat tables, level data, shared type definitions. Data that multiple files reference.
+- **A rendering scope** — world drawing vs HUD drawing. Render files read state but never call game logic.
 
-Then layer features one at a time: collision → scoring → enemies → polish.
+Don't split by entity type (no `player.ts`, `enemy.ts`) — entities are data in arrays, not classes. Split by what the code *does*.
 
-### When to Split Files
+Examples by complexity:
 
-- A file passes ~150 lines → split by concept
-- You have 3+ entity types → `src/enemies.ts`, `src/items.ts`
-- HUD gets complex → `src/render-hud.ts` separate from `src/render-world.ts`
-- You need shared constants in multiple files → they belong in `src/config.ts`
+- **Simple game** → `visual.ts` + `config.ts`
+- **Game with logic** → add `game.ts` for pure state functions
+- **Game with multiple domains** → `combat.ts`, `levels.ts`, `spawning.ts`
+- **Complex rendering** → split `render.ts` into `render-world.ts` + `render-hud.ts`
 
 ## Quick Start
 
