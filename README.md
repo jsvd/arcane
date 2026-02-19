@@ -96,7 +96,7 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 
 ## Status
 
-**v0.12.3 — Performance & polish: text alignment, frame profiler, hot-reload watchdog, circle batching.**
+**v0.13.0 — GPU geometry pipeline, Rust particles, render-to-texture FBOs, transform hierarchy, bulk ops.**
 
 Install: [`cargo install arcane-engine`](https://crates.io/crates/arcane-engine)
 

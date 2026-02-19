@@ -2,6 +2,28 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.13.0] - 2026-02-19
+
+### Added
+- **GPU geometry pipeline** — dedicated wgpu `TriangleList` render pipeline for colored shapes (`GeometryBatch`, `geom.wgsl`). All shape primitives (`drawCircle`, `drawLine`, `drawTriangle`, `drawEllipse`, `drawRing`, `drawCapsule`, `drawPolygon`, `drawArc`, `drawSector`) now use GPU geometry ops instead of texture-based hacks. Renders after sprites via `LoadOp::Load`.
+- **Rust-native particle simulation** — `op_create_emitter`, `op_update_emitter`, `op_get_emitter_sprite_data`, `op_destroy_emitter`. xorshift32 RNG, semi-implicit Euler integration, alpha decay, gravity. Packed float array readback for rendering.
+- **Render-to-texture FBOs** — `createRenderTarget()`, `beginRenderTarget()`, `endRenderTarget()`, `destroyRenderTarget()`. Off-screen render targets usable as sprite textures. `RenderTargetStore` manages GPU resources with `RENDER_ATTACHMENT | TEXTURE_BINDING` usage.
+- **Bulk sprite submission** — `op_submit_sprite_batch` packs all frame sprites into one `Float32Array` for a single op call.
+- **Bulk physics readback** — `getAllBodyStates()` reads all body states in one op call instead of N individual calls.
+- **Transform hierarchy** — `createNode()`, `setParent()`, `getWorldTransform()`, `applyToSprite()` for parent-child sprite relationships. Simple parent chain walk (no caching).
+- **Component index** — `query()` now O(matching entities) instead of O(all entities) via maintained component index in `GameStore`.
+- **Text layout** — `wrapText()`, `drawTextWrapped()`, `drawTextAligned()` with `TextAlign` enum.
+- **Async asset loading** — `preloadAssets()`, `isTextureLoaded()`, `getLoadingProgress()`.
+- **New shape primitives** — `drawEllipse()`, `drawRing()`, `drawCapsule()`, `drawPolygon()` via geometry pipeline.
+- **MCP bridge auto-relaunch** — when `arcane dev` dies mid-session, the MCP bridge detects connection failure, relaunches the dev server, and retries the request. No more lingering tool calls.
+- **Multi-file scaffold template** — `arcane new` now generates `config.ts`, `render.ts`, `game.ts` alongside `visual.ts` for better project structure.
+- **Shapes showcase demo** (`demos/shapes-showcase/`) — demonstrates all geometry pipeline shapes.
+- **Rust particle TS wrappers** — `createRustEmitter()`, `updateRustEmitter()`, `drawRustEmitter()`, `destroyRustEmitter()`, `updateAllRustEmitters()`, `setRustEmitterPosition()`, `getRustEmitterParticleCount()`.
+
+### Changed
+- Shape primitives (`drawCircle`, `drawLine`, etc.) rewritten to use `op_geo_triangle`/`op_geo_line` instead of `drawSprite`-based approaches. Significant GPU performance improvement for scenes with many shapes.
+- Scaffold template AGENTS.md updated with iterative development guidance and multi-file patterns.
+
 ## [0.12.3] - 2026-02-18
 
 ### Added
