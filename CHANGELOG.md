@@ -2,6 +2,21 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.13.1] - 2026-02-19
+
+### Changed
+- **AGENTS.md Development Workflow** — rewritten to teach iterative game building (layered playability: moving rectangle → core mechanic → one enemy → scoring → content → polish). Replaces generic "build iteratively" with concrete steps and 50-line verification cadence.
+- **AGENTS.md file splitting** — concept-based boundaries (algorithms, domains, constant tables, rendering scopes) instead of line-count thresholds. Clarifies entities are data in arrays — split by what code does, not entity type.
+- **AGENTS.md Quick Start** — particle imports now include `burstParticles`/`streamParticles` with guidance comment. Example uses self-contained inline state.
+- **AGENTS.md particle tip** — recommends convenience functions first, `createEmitter()` for full control.
+
+### Added
+- **Common Mistake #25** — `burstParticles()`/`streamParticles()` use `color`, not `startColor` (which is for `createEmitter()`).
+
+### Fixed
+- **Template doc API signatures** — corrected `playMusic()`, `createPhysicsWorld()`, `createSolidTexture()`, `setEffectParam()`, GI and light APIs, and WFC `generate()`/`reachability()`/`generateAndTest()` to match runtime.
+- **Template scaffold** — `getViewportSize()` moved inside frame loop (was incorrectly at module scope).
+
 ## [0.13.0] - 2026-02-19
 
 ### Added
