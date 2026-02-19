@@ -6,15 +6,69 @@ You are an expert game developer helping the user build their game. Translate no
 
 ## Architecture
 
-Two-file pattern:
+### File Organization
 
-- `src/game.ts` — Pure game logic. State in, state out. No rendering imports. Headless-testable.
-- `src/visual.ts` — Rendering, input, camera, audio. Entry point for `arcane dev`.
+Four starter files, each with a clear job:
+
+| File | Responsibility | Imports rendering? |
+|------|---------------|-------------------|
+| `src/config.ts` | Constants, tuning values, shared types | No |
+| `src/game.ts` | Pure game logic — state in, state out | No |
+| `src/render.ts` | All draw calls — sprites, shapes, HUD | Yes |
+| `src/visual.ts` | Bootstrap + frame loop orchestrator | Yes |
+
+**One concept = one file.** As your game grows, split by domain:
+
+```
+src/
+├── config.ts          — constants, tuning, shared types
+├── game.ts            — core game logic (stays pure)
+├── render.ts          → split into render-world.ts + render-hud.ts
+├── visual.ts          — frame loop (stays thin)
+├── enemies.ts         — enemy types, AI, spawning
+├── items.ts           — item definitions, inventory logic
+├── levels.ts          — level data, loading, progression
+└── game.test.ts       — tests for game logic
+```
+
+**Guidelines:**
+- Keep files under ~150 lines. If a file grows past that, split it.
+- `game.ts` and any logic file must NOT import rendering modules — keeps them headless-testable.
+- `visual.ts` stays thin — just bootstrap, input, frame loop. Delegate rendering to `render.ts`.
+- Import constants and types from `config.ts`, not inline magic numbers.
 
 Hot-reload: saving any file restarts the game loop (~200ms). State resets to initial.
 
 Imports use `@arcane/runtime/{module}`:
 `state`, `rendering`, `ui`, `physics`, `pathfinding`, `tweening`, `particles`, `systems`, `scenes`, `persistence`, `input`, `agent`, `testing`, `game`
+
+## Development Workflow
+
+**Build iteratively, not all at once.** Do NOT write the entire game in a single pass.
+
+### The Iteration Cycle
+
+1. **Implement one thing** — a single mechanic, entity, or visual element
+2. **Run `arcane dev`** — verify it works visually, fix immediately if not
+3. **Write a test** — cover the logic in `*.test.ts`, run `arcane test`
+4. **Commit** — small, working increments
+
+### Walking Skeleton First
+
+Start with the minimum viable loop:
+
+1. A colored rectangle that moves with input
+2. One game state update in `tick()`
+3. One draw call in `renderWorld()`
+
+Then layer features one at a time: collision → scoring → enemies → polish.
+
+### When to Split Files
+
+- A file passes ~150 lines → split by concept
+- You have 3+ entity types → `src/enemies.ts`, `src/items.ts`
+- HUD gets complex → `src/render-hud.ts` separate from `src/render-world.ts`
+- You need shared constants in multiple files → they belong in `src/config.ts`
 
 ## Quick Start
 
@@ -162,7 +216,7 @@ followTargetSmooth(player.x, player.y, 2.0, 0.08);
 
 **7. Using wrong key names** — Space is `"Space"` (not `" "`), Enter is `"Enter"` (not `"Return"`). Letters are lowercase: `"a"`, `"b"`. Arrows: `"ArrowLeft"`, `"ArrowRight"`.
 
-**8. Importing from wrong module** — State logic in `game.ts` with no rendering imports. Visual code in `visual.ts`.
+**8. Importing from wrong module** — State logic in `game.ts`/`config.ts` with no rendering imports. Draw calls in `render.ts`. Visual orchestration in `visual.ts`.
 
 **9. Forgetting gamepad deadzone** — Always apply ~0.15 deadzone: `const move = Math.abs(raw) > 0.15 ? raw : 0;`
 
@@ -307,7 +361,7 @@ arcane assets search "platformer" # Find game assets to download
 arcane assets download tiny-dungeon   # Download asset pack
 ```
 
-File organization: `src/game.ts` (logic), `src/visual.ts` (rendering), `src/*.test.ts` (tests).
+File organization: see **Architecture** section above. Start with the 4 files (`config.ts`, `game.ts`, `render.ts`, `visual.ts`), split as you grow.
 
 ## Tips
 

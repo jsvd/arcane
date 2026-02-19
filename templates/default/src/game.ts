@@ -7,6 +7,7 @@
 
 import { createRng } from "@arcane/runtime/state";
 import type { Rng } from "@arcane/runtime/state";
+import { SPEED } from "./config.ts";
 
 // --- Types ---
 
@@ -27,5 +28,6 @@ export function initGame(seedValue: number): GameState {
 /** Advance game logic by one tick. Pure function: returns new state. */
 export function tick(state: GameState, _dt: number): GameState {
   // Update your game logic here
+  // Example: state.x += SPEED * _dt;
   return state;
 }

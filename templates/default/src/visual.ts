@@ -1,25 +1,23 @@
 /**
  * {{PROJECT_NAME}} - Visual Layer
  *
- * Entry point for `arcane dev`. Handles rendering, input, camera, audio.
+ * Entry point for `arcane dev`. Thin orchestrator:
+ * bootstrap, input, frame loop. Delegates rendering to render.ts.
  * Game logic lives in game.ts — import pure functions from there.
  */
 
-import { createGame, drawColorSprite, hud } from "@arcane/runtime/game";
+import { createGame } from "@arcane/runtime/game";
 import {
-  followTargetSmooth, setCameraBounds, getViewportSize,
+  followTargetSmooth, getViewportSize,
   updateScreenTransition, drawScreenTransition,
 } from "@arcane/runtime/rendering";
 import { updateTweens, getCameraShakeOffset } from "@arcane/runtime/tweening";
 import { updateParticles } from "@arcane/runtime/particles";
 import { createInputMap, isActionDown, isActionPressed } from "@arcane/runtime/input";
-import { rgb } from "@arcane/runtime/ui";
+import { ZOOM } from "./config.ts";
 import { initGame, tick } from "./game.ts";
+import { renderWorld, renderHud } from "./render.ts";
 import type { GameState } from "./game.ts";
-
-// --- Constants ---
-
-const ZOOM = 1.0;
 
 // --- Bootstrap ---
 
@@ -56,7 +54,7 @@ game.onFrame((ctx) => {
   state = tick(state, ctx.dt);
 
   // 3. Camera — smooth follow with shake support
-  //    For scrolling worlds, add bounds: setCameraBounds({ minX: 0, minY: 0, maxX: WORLD_W, maxY: WORLD_H });
+  //    For scrolling worlds: setCameraBounds({ minX: 0, minY: 0, maxX: WORLD_W, maxY: WORLD_H });
   const shake = getCameraShakeOffset();
   followTargetSmooth(VPW / 2 + shake.x, VPH / 2 + shake.y, ZOOM, 0.08);
 
@@ -65,18 +63,10 @@ game.onFrame((ctx) => {
   updateParticles(ctx.dt);
   updateScreenTransition(ctx.dt);
 
-  // 5. Render
-  //    drawColorSprite({ color: rgb(60, 180, 255), x: 10, y: 10, w: 32, h: 32, layer: 1 });
-  //    drawCircle(x, y, radius, { color: rgb(255, 80, 80) });
-  //    For sprites: loadTexture("player.png") then drawSprite({ textureId, x, y, w, h, layer: 1 });
-  //    For hit effects: impact(x, y, { shake: true, hitstop: 3 }); — one call, multiple effects
-  //    For particles: createEmitter({ shape: "point", x, y, mode: "burst", burstCount: 20 });
+  // 5. Render — delegates to render.ts
+  renderWorld(state, VPW, VPH);
+  renderHud(state);
 
   // 6. Transitions — no-op if inactive
-  //    Start one with: startScreenTransition("fade", 0.5, {}, () => { /* midpoint */ });
   drawScreenTransition();
-
-  // 7. HUD (screen-space, not affected by camera)
-  hud.text("{{PROJECT_NAME}}", 10, 10);
-  hud.text(`${ctx.viewport.width}x${ctx.viewport.height}`, 10, 30, { scale: 0.8 });
 });
