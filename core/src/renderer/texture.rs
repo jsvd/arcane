@@ -21,6 +21,10 @@ pub struct TextureStore {
     textures: HashMap<TextureId, TextureEntry>,
     path_to_id: HashMap<String, TextureId>,
     next_id: TextureId,
+    /// Bind groups for render targets. The render target textures themselves are
+    /// owned by `RenderTargetStore`; we only hold the bind group (which keeps the
+    /// GPU resource alive via wgpu's internal reference counting).
+    render_target_bgs: HashMap<TextureId, (wgpu::BindGroup, u32, u32)>,
 }
 
 impl TextureStore {
@@ -28,6 +32,7 @@ impl TextureStore {
         Self {
             textures: HashMap::new(),
             path_to_id: HashMap::new(),
+            render_target_bgs: HashMap::new(),
             next_id: 1, // 0 reserved for "no texture"
         }
     }
@@ -379,13 +384,60 @@ impl TextureStore {
         );
     }
 
-    /// Get the bind group for a texture handle.
+    /// Get the bind group for a texture handle (regular textures and render targets).
     pub fn get_bind_group(&self, id: TextureId) -> Option<&wgpu::BindGroup> {
-        self.textures.get(&id).map(|e| &e.bind_group)
+        self.textures
+            .get(&id)
+            .map(|e| &e.bind_group)
+            .or_else(|| self.render_target_bgs.get(&id).map(|(bg, _, _)| bg))
     }
 
-    /// Get texture dimensions.
+    /// Get texture dimensions (regular textures and render targets).
     pub fn get_dimensions(&self, id: TextureId) -> Option<(u32, u32)> {
-        self.textures.get(&id).map(|e| (e.width, e.height))
+        self.textures
+            .get(&id)
+            .map(|e| (e.width, e.height))
+            .or_else(|| self.render_target_bgs.get(&id).map(|&(_, w, h)| (w, h)))
+    }
+
+    /// Register a render target's TextureView as a samplable texture.
+    ///
+    /// The texture itself is owned by `RenderTargetStore`; we only create the
+    /// bind group here. wgpu's internal reference counting keeps the GPU
+    /// resource alive for as long as the bind group exists.
+    pub fn register_render_target(
+        &mut self,
+        gpu: &GpuContext,
+        bind_group_layout: &wgpu::BindGroupLayout,
+        id: TextureId,
+        view: &wgpu::TextureView,
+        width: u32,
+        height: u32,
+    ) {
+        let sampler = gpu.device.create_sampler(&wgpu::SamplerDescriptor {
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            ..Default::default()
+        });
+        let bg = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some(&format!("render_target_bg_{id}")),
+            layout: bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
+            ],
+        });
+        self.render_target_bgs.insert(id, (bg, width, height));
+    }
+
+    /// Remove a render target's bind group. Call after destroying the render target.
+    pub fn unregister_render_target(&mut self, id: TextureId) {
+        self.render_target_bgs.remove(&id);
     }
 }

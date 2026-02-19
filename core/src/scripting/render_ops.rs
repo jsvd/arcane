@@ -269,8 +269,7 @@ pub fn op_draw_sprite(
     blend_mode: f64,
     shader_id: f64,
 ) {
-    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
-    bridge.borrow_mut().sprite_commands.push(SpriteCommand {
+    let cmd = SpriteCommand {
         texture_id,
         x: x as f32,
         y: y as f32,
@@ -293,7 +292,25 @@ pub fn op_draw_sprite(
         opacity: opacity as f32,
         blend_mode: (blend_mode as u8).min(3),
         shader_id: shader_id as u32,
-    });
+    };
+    // Route to active render target, or the main surface
+    let active_target = {
+        use super::target_ops::TargetState;
+        let ts = state.borrow::<Rc<RefCell<TargetState>>>();
+        ts.borrow().active_target
+    };
+    if let Some(target_id) = active_target {
+        use super::target_ops::TargetState;
+        let ts = state.borrow::<Rc<RefCell<TargetState>>>();
+        ts.borrow_mut()
+            .target_sprite_queues
+            .entry(target_id)
+            .or_default()
+            .push(cmd);
+    } else {
+        let bridge = state.borrow::<Rc<RefCell<RenderBridgeState>>>();
+        bridge.borrow_mut().sprite_commands.push(cmd);
+    }
 }
 
 /// Clear all queued sprite commands for this frame.
@@ -317,37 +334,56 @@ pub fn op_submit_sprite_batch(state: &mut OpState, #[buffer] data: &[u8]) {
     let floats: &[f32] = bytemuck::cast_slice(data);
     let sprite_count = floats.len() / SPRITE_STRIDE;
 
-    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
-    let mut b = bridge.borrow_mut();
-    b.sprite_commands.reserve(sprite_count);
+    // Check if a render target is active — batch goes to target or main surface
+    let active_target = {
+        use super::target_ops::TargetState;
+        let ts = state.borrow::<Rc<RefCell<TargetState>>>();
+        ts.borrow().active_target
+    };
 
-    for i in 0..sprite_count {
-        let base = i * SPRITE_STRIDE;
-        let s = &floats[base..base + SPRITE_STRIDE];
-        b.sprite_commands.push(SpriteCommand {
-            texture_id: s[0].to_bits(),
-            x: s[1],
-            y: s[2],
-            w: s[3],
-            h: s[4],
-            layer: s[5].to_bits() as i32,
-            uv_x: s[6],
-            uv_y: s[7],
-            uv_w: s[8],
-            uv_h: s[9],
-            tint_r: s[10],
-            tint_g: s[11],
-            tint_b: s[12],
-            tint_a: s[13],
-            rotation: s[14],
-            origin_x: s[15],
-            origin_y: s[16],
-            flip_x: s[17] != 0.0,
-            flip_y: s[18] != 0.0,
-            opacity: s[19],
-            blend_mode: (s[20] as u8).min(3),
-            shader_id: s[21].to_bits(),
-        });
+    let parse_cmd = |s: &[f32]| SpriteCommand {
+        texture_id: s[0].to_bits(),
+        x: s[1],
+        y: s[2],
+        w: s[3],
+        h: s[4],
+        layer: s[5].to_bits() as i32,
+        uv_x: s[6],
+        uv_y: s[7],
+        uv_w: s[8],
+        uv_h: s[9],
+        tint_r: s[10],
+        tint_g: s[11],
+        tint_b: s[12],
+        tint_a: s[13],
+        rotation: s[14],
+        origin_x: s[15],
+        origin_y: s[16],
+        flip_x: s[17] != 0.0,
+        flip_y: s[18] != 0.0,
+        opacity: s[19],
+        blend_mode: (s[20] as u8).min(3),
+        shader_id: s[21].to_bits(),
+    };
+
+    if let Some(target_id) = active_target {
+        use super::target_ops::TargetState;
+        let ts = state.borrow::<Rc<RefCell<TargetState>>>();
+        let mut ts = ts.borrow_mut();
+        let queue = ts.target_sprite_queues.entry(target_id).or_default();
+        queue.reserve(sprite_count);
+        for i in 0..sprite_count {
+            let base = i * SPRITE_STRIDE;
+            queue.push(parse_cmd(&floats[base..base + SPRITE_STRIDE]));
+        }
+    } else {
+        let bridge = state.borrow::<Rc<RefCell<RenderBridgeState>>>();
+        let mut b = bridge.borrow_mut();
+        b.sprite_commands.reserve(sprite_count);
+        for i in 0..sprite_count {
+            let base = i * SPRITE_STRIDE;
+            b.sprite_commands.push(parse_cmd(&floats[base..base + SPRITE_STRIDE]));
+        }
     }
 }
 

@@ -546,6 +546,34 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
             }
         }
 
+        // Process render targets: create/destroy GPU resources, render target sprite queues
+        {
+            use arcane_core::scripting::target_ops::TargetState;
+
+            // Drain create/destroy/render queues from TargetState
+            let (create_queue, target_sprite_queues, destroy_queue) = {
+                let op_state = rt.inner().op_state();
+                let op_state = op_state.borrow();
+                let ts = op_state.borrow::<Rc<RefCell<TargetState>>>();
+                let mut ts = ts.borrow_mut();
+                (
+                    std::mem::take(&mut ts.create_queue),
+                    std::mem::take(&mut ts.target_sprite_queues),
+                    std::mem::take(&mut ts.destroy_queue),
+                )
+            };
+
+            if let Some(ref mut renderer) = state.renderer {
+                for (id, w, h) in create_queue {
+                    renderer.create_render_target(id, w, h);
+                }
+                renderer.render_targets_prepass(target_sprite_queues);
+                for id in destroy_queue {
+                    renderer.destroy_render_target(id);
+                }
+            }
+        }
+
         // Collect sprite commands and lighting from bridge
         {
             let mut bridge = bridge_for_loop.borrow_mut();

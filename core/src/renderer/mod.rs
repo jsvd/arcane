@@ -10,6 +10,7 @@ pub mod shader;
 pub mod postprocess;
 pub mod radiance;
 pub mod geometry;
+pub mod rendertarget;
 
 pub use gpu::GpuContext;
 pub use sprite::{SpriteCommand, SpritePipeline};
@@ -22,6 +23,7 @@ pub use shader::ShaderStore;
 pub use postprocess::PostProcessPipeline;
 pub use radiance::{RadiancePipeline, RadianceState, EmissiveSurface, Occluder, DirectionalLight, SpotLight};
 pub use geometry::GeometryBatch;
+pub use rendertarget::RenderTargetStore;
 
 use anyhow::Result;
 
@@ -37,6 +39,8 @@ pub struct Renderer {
     pub lighting: LightingState,
     pub radiance: RadiancePipeline,
     pub radiance_state: RadianceState,
+    /// Off-screen render targets (owns the GPU textures; bind groups in TextureStore).
+    pub render_targets: RenderTargetStore,
     /// Sprite commands queued for the current frame.
     pub frame_commands: Vec<SpriteCommand>,
     /// Display scale factor (e.g. 2.0 on Retina). Used to convert physical → logical pixels.
@@ -74,6 +78,7 @@ impl Renderer {
             textures,
             camera,
             lighting: LightingState::default(),
+            render_targets: RenderTargetStore::new(),
             frame_commands: Vec::new(),
             scale_factor,
             clear_color: [0.1, 0.1, 0.15, 1.0],
@@ -189,5 +194,83 @@ impl Renderer {
                 physical_height as f32 / scale_factor,
             ];
         }
+    }
+
+    // ── Render target helpers ──────────────────────────────────────────────
+
+    /// Allocate a new off-screen render target and register it as a samplable texture.
+    pub fn create_render_target(&mut self, id: u32, width: u32, height: u32) {
+        let surface_format = self.gpu.config.format;
+        self.render_targets.create(&self.gpu, id, width, height, surface_format);
+        if let Some(view) = self.render_targets.get_view(id) {
+            self.textures.register_render_target(
+                &self.gpu,
+                &self.sprites.texture_bind_group_layout,
+                id,
+                view,
+                width,
+                height,
+            );
+        }
+    }
+
+    /// Free a render target's GPU resources and remove it from the texture store.
+    pub fn destroy_render_target(&mut self, id: u32) {
+        self.render_targets.destroy(id);
+        self.textures.unregister_render_target(id);
+    }
+
+    /// Render sprite commands into each queued render target (off-screen pre-pass).
+    ///
+    /// Call this BEFORE `render_frame()` so targets are ready as sprite inputs.
+    /// Uses a separate command encoder + GPU submit to avoid ordering conflicts.
+    pub fn render_targets_prepass(
+        &mut self,
+        target_queues: std::collections::HashMap<u32, Vec<SpriteCommand>>,
+    ) {
+        if target_queues.is_empty() {
+            return;
+        }
+
+        let mut encoder = self.gpu.device.create_command_encoder(
+            &wgpu::CommandEncoderDescriptor { label: Some("rt_encoder") },
+        );
+        let lighting_uniform = self.lighting.to_uniform();
+
+        for (target_id, mut cmds) in target_queues {
+            let view = self.render_targets.get_view(target_id);
+            let dims = self.render_targets.get_dims(target_id);
+            if let (Some(view), Some((tw, th))) = (view, dims) {
+                // Sort by layer → shader_id → blend_mode → texture_id
+                cmds.sort_by(|a, b| {
+                    a.layer
+                        .cmp(&b.layer)
+                        .then(a.shader_id.cmp(&b.shader_id))
+                        .then(a.blend_mode.cmp(&b.blend_mode))
+                        .then(a.texture_id.cmp(&b.texture_id))
+                });
+                // Orthographic camera: (0,0) = top-left of the render target
+                let target_camera = Camera2D {
+                    x: tw as f32 / 2.0,
+                    y: th as f32 / 2.0,
+                    zoom: 1.0,
+                    viewport_size: [tw as f32, th as f32],
+                    ..Camera2D::default()
+                };
+                self.sprites.render(
+                    &self.gpu,
+                    &self.textures,
+                    &self.shaders,
+                    &target_camera,
+                    &lighting_uniform,
+                    &cmds,
+                    view,
+                    &mut encoder,
+                    wgpu::Color { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
+                );
+            }
+        }
+
+        self.gpu.queue.submit(std::iter::once(encoder.finish()));
     }
 }

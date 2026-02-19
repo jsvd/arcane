@@ -216,6 +216,16 @@ export {
 export type { ShaderId } from "./shader.ts";
 export { createShaderFromSource, setShaderParam } from "./shader.ts";
 
+// Render Targets
+export type { RenderTargetId } from "./rendertarget.ts";
+export {
+  createRenderTarget,
+  beginRenderTarget,
+  endRenderTarget,
+  getRenderTargetTextureId,
+  destroyRenderTarget,
+} from "./rendertarget.ts";
+
 // Parallax
 export type { ParallaxSpriteOptions } from "./parallax.ts";
 export { drawParallaxSprite } from "./parallax.ts";
