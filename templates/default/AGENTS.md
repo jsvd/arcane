@@ -215,6 +215,8 @@ followTargetSmooth(player.x, player.y, 2.0, 0.08);
 
 ## Common Mistakes
 
+**0. Using `npx arcane` or `npm run arcane`** — `arcane` is a native Rust binary, not an npm package. Always use `arcane` directly: `arcane dev`, `arcane test`, etc. Never `npx arcane`.
+
 **1. Forgetting `setCamera()`** — Without it, camera is at (0,0) = screen center. Fix: call `setCamera(VPW/2, VPH/2)` every frame for web-like coordinates, or use `followTargetSmooth()`.
 
 **2. Hardcoding viewport size** — Never use `800`, `600`. Always: `const { width: VPW, height: VPH } = getViewportSize();`
@@ -375,6 +377,10 @@ arcane add --list                 # List available recipes
 arcane assets search "platformer" # Find game assets to download
 arcane assets download tiny-dungeon   # Download asset pack
 ```
+
+**IMPORTANT:** `arcane` is a native Rust binary — **never** use `npx arcane`, `node arcane`, or `npm run arcane`. It is not an npm package. Just `arcane`.
+
+**MCP / hot_reload:** If `hot_reload` returns `{"ok":false,"error":"Game window is not running..."}`, the dev server has stopped. Start it with `arcane dev src/visual.ts` and then retry.
 
 File organization: see **Architecture** section above. Start with the 4 files (`config.ts`, `game.ts`, `render.ts`, `visual.ts`), split as you grow.
 

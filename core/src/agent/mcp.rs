@@ -216,9 +216,19 @@ fn call_tool(name: &str, arguments: &str, request_tx: &RequestSender, reload_fla
         }
         "capture_snapshot" => InspectorRequest::GetHistory,
         "hot_reload" => {
-            // Bypass the inspector channel — set the reload flag directly.
-            // This works even if the main thread is hung (frame watchdog will also
-            // detect the hang and skip the stuck script on the next frame).
+            // Probe the game loop channel to check if the window is still running.
+            // If the receiver (mcp_rx in frame_callback) has been dropped (window closed),
+            // send() returns Err immediately — no blocking wait.
+            let (probe_tx, _probe_rx) = mpsc::channel();
+            if request_tx.send((InspectorRequest::Health, probe_tx)).is_err() {
+                return json_encode(
+                    "{\"ok\":false,\"error\":\"Game window is not running. Start it with: arcane dev src/visual.ts\"}",
+                );
+            }
+            // Game loop alive — set the reload flag directly.
+            // This works even if the main thread is hung (frame watchdog also detects hangs).
+            // The probe_rx is dropped here; the frame callback's send() for Health will fail
+            // silently (error is ignored with let _ = resp_tx.send(...)).
             reload_flag.store(true, Ordering::SeqCst);
             return json_encode("{\"ok\":true,\"reloading\":true}");
         }

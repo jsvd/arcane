@@ -1,3 +1,5 @@
+import { _flushSpriteBatch } from "./sprites.ts";
+
 const hasRenderOps =
   typeof (globalThis as any).Deno !== "undefined" &&
   typeof (globalThis as any).Deno?.core?.ops?.op_get_delta_time === "function";
@@ -25,6 +27,8 @@ export function onFrame(callback: () => void): void {
       (globalThis as any).__arcane_reset_msdf_cache();
     }
     callback();
+    // Flush any batched sprites to Rust before the renderer draws this frame
+    _flushSpriteBatch();
   };
 }
 
