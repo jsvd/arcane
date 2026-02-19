@@ -4,7 +4,7 @@
 
 Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for performance, TypeScript scripting for game logic.
 
-**Current status: v0.13.1 — Template DX: iterative workflow guidance, concept-based file splitting, API doc fixes. 2227 TS (Node) + 2351 (V8) + 134 Rust tests passing. Next: Phase 26 (Atmosphere).**
+**Current status: v0.13.2 — Critical sprite rendering fix. 2227 TS (Node) + 2351 (V8) + 295 Rust tests passing. Next: Phase 26 (Atmosphere).**
 
 ## Repository Structure
 

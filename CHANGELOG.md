@@ -2,6 +2,16 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.13.2] - 2026-02-19
+
+### Fixed
+- **Sprite rendering broken since v0.13.0** — bulk sprite batch (`op_submit_sprite_batch`) was never flushed to Rust before the renderer drew the frame, making all `drawSprite()`/`drawColorSprite()` calls invisible. Only geometry primitives (circles, lines) rendered. Fix: `_flushSpriteBatch()` now runs after the user callback in `onFrame()`.
+- **Cross-platform cheatsheet sort** — `sort -u` in `generate-declarations.sh` was locale-dependent (macOS vs Linux CI), causing non-deterministic type ordering. Fixed with `LC_ALL=C sort -u`.
+- **MCP hot_reload on closed window** — `hot_reload` tool now probes if the game window is alive before setting the reload flag, returning a clear error message instead of silently failing.
+
+### Changed
+- **AGENTS.md** — added Common Mistake #0 (arcane is a native binary, not npm) and MCP error recovery guidance.
+
 ## [0.13.1] - 2026-02-19
 
 ### Changed
