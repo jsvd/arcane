@@ -76,13 +76,16 @@ Then layer features one at a time: collision → scoring → enemies → polish.
 import { createGame, drawColorSprite, hud } from "@arcane/runtime/game";
 import { followTargetSmooth, setCameraBounds, getViewportSize, drawSprite } from "@arcane/runtime/rendering";
 import { updateTweens, shakeCamera, getCameraShakeOffset } from "@arcane/runtime/tweening";
-import { createEmitter, updateParticles, getAllParticles } from "@arcane/runtime/particles";
+// Particles: prefer burstParticles()/streamParticles() for quick effects,
+// createEmitter() for fine-grained control. Both need updateParticles(dt) each frame.
+import { burstParticles, streamParticles, createEmitter, updateParticles, getAllParticles } from "@arcane/runtime/particles";
 import { createInputMap, isActionDown, isActionPressed } from "@arcane/runtime/input";
 import {
   updateScreenTransition, drawScreenTransition,
 } from "@arcane/runtime/rendering";
 import { rgb } from "@arcane/runtime/ui";
 
+const SPEED = 200;
 const game = createGame({ name: "my-game", zoom: 1.0 });
 
 // Input actions — supports keyboard + gamepad + touch in one place
@@ -92,7 +95,7 @@ const input = createInputMap({
   jump:  ["Space", "ArrowUp", "w", "GamepadA"],
 });
 
-let state = newGame();
+let state = { x: 100, y: 100, score: 0 };
 
 game.state({ get: () => state, set: (s) => { state = s; } });
 
@@ -101,24 +104,20 @@ game.onFrame((ctx) => {
   let dx = 0;
   if (isActionDown("left", input)) dx = -1;
   if (isActionDown("right", input)) dx = 1;
-  if (isActionPressed("jump", input)) state = jump(state);
 
-  // 2. Update (pure functions from game.ts)
-  state = movePlayer(state, dx * SPEED * ctx.dt);
+  // 2. Update
+  state = { ...state, x: state.x + dx * SPEED * ctx.dt };
 
-  // 3. Camera — smooth follow with bounds, not raw setCamera()
-  setCameraBounds({ minX: 0, minY: 0, maxX: WORLD_W, maxY: WORLD_H });
+  // 3. Camera — smooth follow with shake support
   const shake = getCameraShakeOffset();
   followTargetSmooth(state.x + shake.x, state.y + shake.y, 2.0, 0.08);
 
-  // 4. Update subsystems — ALWAYS call these
+  // 4. Update subsystems — ALWAYS call these (no-ops when idle)
   updateTweens(ctx.dt);
   updateParticles(ctx.dt);
   updateScreenTransition(ctx.dt);
 
   // 5. Render — no clearSprites() needed (autoClear: true by default)
-  const { width: VPW, height: VPH } = getViewportSize();
-  drawColorSprite({ color: rgb(80, 80, 80), x: 0, y: 0, w: VPW, h: VPH, layer: 0 });
   drawColorSprite({ color: rgb(60, 180, 255), x: state.x - 16, y: state.y - 16, w: 32, h: 32, layer: 1 });
 
   // 6. Render particles from engine particle system
@@ -136,7 +135,6 @@ game.onFrame((ctx) => {
 
   // 8. HUD — hud.text/bar/label are screen-space by default
   hud.text(`Score: ${state.score}`, 10, 10);
-  hud.bar(10, 30, state.hp / state.maxHp);
 });
 ```
 
@@ -249,6 +247,8 @@ followTargetSmooth(player.x, player.y, 2.0, 0.08);
 **23. Stale closures in transition midpoint callbacks** — `startScreenTransition()` callbacks fire asynchronously. State may change between starting the transition and the midpoint. Capture values at call time: `const level = state.level; startScreenTransition("fade", 0.5, {}, () => { state = loadLevel(level + 1); });`. Don't reference mutable state directly.
 
 **24. Importing shakeCamera/flashScreen from the wrong module** — `shakeCamera()`, `flashScreen()`, and `getCameraShakeOffset()` are defined in `@arcane/runtime/tweening` but also re-exported from `@arcane/runtime/rendering` for convenience. Both imports work. `impact()` (which calls them internally) is in `@arcane/runtime/rendering`.
+
+**25. Using `startColor` with `burstParticles()`/`streamParticles()`** — The convenience functions take `color` (not `startColor`): `burstParticles(x, y, { color: rgb(255, 200, 50) })`. Only the lower-level `createEmitter()` uses `startColor`/`endColor`.
 
 ## Recommended Reading by Genre
 
@@ -377,7 +377,7 @@ File organization: see **Architecture** section above. Start with the 4 files (`
 - For rotation, `0` = no rotation, positive = clockwise. Ship sprites facing "up" need `angle - Math.PI/2` offset.
 - Use `blendMode: "additive"` for glowing effects (exhaust, fire, magic).
 - Use `impact()` or `impactLight()` when something hits — one call gives you shake + flash + particles.
-- Use `createEmitter()` for any visual effect that spawns many short-lived objects (fire, dust, sparks, explosions).
+- Use `burstParticles(x, y, opts)` or `streamParticles(x, y, opts)` for quick effects (explosions, fire, dust). They take `color` (not `startColor`). Use `createEmitter()` only when you need full control over every parameter.
 - Use `startScreenTransition()` for level changes — don't hand-roll fade overlays.
 - Use `wrapText()` / `drawTextWrapped()` for multi-line text with word wrapping. Use `drawTextAligned()` for horizontal alignment within a fixed-width area.
 - Use `createNode()` / `setNodeTransform()` / `getWorldTransform()` / `applyToSprite()` from `@arcane/runtime/game` for parent-child transform hierarchies (weapons on characters, UI grouping).

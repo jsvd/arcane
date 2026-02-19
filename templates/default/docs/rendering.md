@@ -6,9 +6,10 @@ Draw calls are not persisted. Redraw everything inside `onFrame()` every frame.
 
 ```typescript
 import { drawSprite, clearSprites, createSolidTexture, loadTexture } from "@arcane/runtime/rendering";
+import { rgb } from "@arcane/runtime/ui";
 
 // Create textures once at module scope
-const TEX = createSolidTexture("player", 60, 180, 255);  // solid color (0-255 RGB)
+const TEX = createSolidTexture("player", rgb(60, 180, 255));  // solid color via rgb()
 const TEX2 = loadTexture("assets/sprite.png");            // image file (cached by path)
 
 // In onFrame:
@@ -161,7 +162,7 @@ const bloom = addPostProcessEffect("bloom");    // glow around bright areas
 const blur = addPostProcessEffect("blur");      // gaussian blur
 const vig = addPostProcessEffect("vignette");   // darkened edges
 
-setEffectParam(crt, "intensity", 0.3);
+setEffectParam(crt, 0, 0.3);  // param index 0, value 0.3
 removeEffect(bloom);
 clearEffects();
 ```
@@ -207,18 +208,18 @@ addPointLight(fireX, fireY, 80 * flicker, 1.0, 0.6, 0.2, flicker);
 
 ```typescript
 import {
-  setGIEnabled, setGIQuality, setAmbientLight,
+  enableGlobalIllumination, setGIQuality, setAmbientLight,
   addPointLight, addDirectionalLight, addSpotLight, drawSprite,
 } from "@arcane/runtime/rendering";
 
-setGIEnabled(true);
-setGIQuality("medium");  // "low", "medium", "high"
+enableGlobalIllumination();
+setGIQuality({ probeSpacing: 8, cascadeCount: 4 });  // fine-tune GI quality
 setAmbientLight(0.08, 0.08, 0.12);
 
 // In onFrame:
 addPointLight(player.x, player.y, 120, 1.0, 0.8, 0.5, 1.5);
-addDirectionalLight(Math.PI * 0.75, 0.3, 0.3, 0.5, 0.4);  // moonlight
-addSpotLight(guardX, guardY, 200, guardAngle, Math.PI / 4, 1, 1, 0.8, 2.0);
+addDirectionalLight({ angle: Math.PI * 0.75, r: 0.3, g: 0.3, b: 0.5, intensity: 0.4 });  // moonlight
+addSpotLight({ x: guardX, y: guardY, angle: guardAngle, spread: Math.PI / 4, range: 200, r: 1, g: 1, b: 0.8, intensity: 2.0 });
 
 // Emissive sprites emit light into GI
 drawSprite({ textureId: TEX_LAVA, x: 100, y: 200, w: 32, h: 8, emissive: true, layer: 1 });
@@ -234,7 +235,7 @@ const dayProgress = (totalTime % 60) / 60;
 const sunAngle = dayProgress * Math.PI * 2;
 const brightness = Math.max(0, Math.sin(dayProgress * Math.PI));
 setAmbientLight(0.1 + 0.4 * brightness, 0.1 + 0.35 * brightness, 0.15 + 0.25 * brightness);
-addDirectionalLight(sunAngle, 1.0, 0.9, 0.7, brightness * 0.6);
+addDirectionalLight({ angle: sunAngle, r: 1.0, g: 0.9, b: 0.7, intensity: brightness * 0.6 });
 ```
 
 ## Layer Ordering

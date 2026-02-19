@@ -10,7 +10,6 @@ const id = playSound(sfx, { volume: 0.8, bus: "sfx", pitchVariation: 0.1 });
 
 // Instance control
 setInstanceVolume(id, 0.5);
-setInstancePitch(id, 1.2);
 stopInstance(id);
 ```
 
@@ -19,7 +18,7 @@ stopInstance(id);
 ```typescript
 import { playMusic, crossfadeMusic } from "@arcane/runtime/rendering";
 
-playMusic("forest-theme.ogg", { volume: 0.8, fadeIn: 1000 });
+playMusic("forest-theme.ogg", 0.8);  // path, volume (0.0-1.0)
 
 // Crossfade between zones
 crossfadeMusic("dungeon-theme.ogg", 2000, 0.8);  // 2s fade, 80% volume

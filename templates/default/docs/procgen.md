@@ -5,35 +5,37 @@
 Generate tile-based levels with adjacency and structural constraints.
 
 ```typescript
-import { generateWFC } from "@arcane/runtime/procgen";
+import { generate } from "@arcane/runtime/procgen";
 import { reachability, border, minCount, maxCount, exactCount } from "@arcane/runtime/procgen";
 
-const FLOOR = "floor", WALL = "wall", DOOR = "door", CHEST = "chest";
+// Tile IDs (numeric)
+const FLOOR = 0, WALL = 1, DOOR = 2, CHEST = 3;
 
-const result = generateWFC({
+const result = generate({
+  tileset: {
+    tiles: {
+      [FLOOR]: { north: [FLOOR, DOOR, WALL, CHEST], east: [FLOOR, DOOR, WALL, CHEST], south: [FLOOR, DOOR, WALL, CHEST], west: [FLOOR, DOOR, WALL, CHEST] },
+      [WALL]:  { north: [WALL, FLOOR, DOOR], east: [WALL, FLOOR, DOOR], south: [WALL, FLOOR, DOOR], west: [WALL, FLOOR, DOOR] },
+      [DOOR]:  { north: [FLOOR], east: [FLOOR], south: [FLOOR], west: [FLOOR] },
+      [CHEST]: { north: [FLOOR, WALL], east: [FLOOR, WALL], south: [FLOOR, WALL], west: [FLOOR, WALL] },
+    },
+  },
   width: 30,
   height: 20,
-  tiles: [FLOOR, WALL, DOOR, CHEST],
-  adjacency: [
-    { tile: FLOOR, neighbors: { north: [FLOOR, DOOR, WALL, CHEST], east: [FLOOR, DOOR, WALL, CHEST], south: [FLOOR, DOOR, WALL, CHEST], west: [FLOOR, DOOR, WALL, CHEST] } },
-    { tile: WALL,  neighbors: { north: [WALL, FLOOR, DOOR], east: [WALL, FLOOR, DOOR], south: [WALL, FLOOR, DOOR], west: [WALL, FLOOR, DOOR] } },
-    { tile: DOOR,  neighbors: { north: [FLOOR], east: [FLOOR], south: [FLOOR], west: [FLOOR] } },
-    { tile: CHEST, neighbors: { north: [FLOOR, WALL], east: [FLOOR, WALL], south: [FLOOR, WALL], west: [FLOOR, WALL] } },
-  ],
   constraints: [
     border(WALL),
-    reachability(FLOOR, DOOR, CHEST),
+    reachability((tileId) => tileId !== WALL),  // all non-wall tiles must be connected
     minCount(DOOR, 2),
     maxCount(CHEST, 5),
   ],
   seed: 42,
-  maxAttempts: 100,
+  maxRetries: 100,
 });
 
-if (result.success) {
-  for (let y = 0; y < result.height; y++) {
-    for (let x = 0; x < result.width; x++) {
-      const tile = result.grid[y][x];
+if (result.success && result.grid) {
+  for (let y = 0; y < result.grid.height; y++) {
+    for (let x = 0; x < result.grid.width; x++) {
+      const tileId = result.grid.tiles[y][x];
     }
   }
 }
@@ -42,7 +44,7 @@ if (result.success) {
 ## Constraints
 
 - `border(tile)` -- edges are always the given tile
-- `reachability(...tiles)` -- all instances of given tiles must be connected
+- `reachability(walkableFn)` -- all cells matching predicate must be connected via flood fill
 - `minCount(tile, n)` -- at least n instances
 - `maxCount(tile, n)` -- at most n instances
 - `exactCount(tile, n)` -- exactly n instances
@@ -54,11 +56,20 @@ Run gameplay-specific checks after generation:
 ```typescript
 import { validateLevel, generateAndTest } from "@arcane/runtime/procgen";
 
-const valid = validateLevel(result, [
-  (grid) => grid.flat().filter(t => t === DOOR).length >= 2,
-  (grid) => { /* check path from entrance to exit */ return true; },
+// validateLevel checks constraints against a generated grid
+const valid = validateLevel(result.grid!, [
+  (grid) => {
+    let doors = 0;
+    for (const row of grid.tiles) for (const t of row) if (t === DOOR) doors++;
+    return doors >= 2;
+  },
 ]);
 
-// Keep generating until validation passes
-const goodLevel = generateAndTest(wfcOptions, validators, { maxRetries: 50 });
+// generateAndTest runs multiple generations and tests each one
+const testResult = generateAndTest({
+  wfc: { tileset: { tiles: { /* ... */ } }, width: 30, height: 20, seed: 42 },
+  iterations: 50,
+  testFn: (grid) => { /* return true if level passes */ return true; },
+});
+// testResult.passed, testResult.failed, testResult.generationFailures
 ```

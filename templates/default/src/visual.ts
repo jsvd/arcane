@@ -23,8 +23,6 @@ import type { GameState } from "./game.ts";
 
 const game = createGame({ name: "{{PROJECT_NAME}}", zoom: ZOOM });
 
-const { width: VPW, height: VPH } = getViewportSize();
-
 // Input actions — keyboard + gamepad + touch in one place
 const input = createInputMap({
   left:   ["ArrowLeft", "a", { type: "gamepadAxis", axis: "LeftStickX", direction: -1 }],
@@ -55,16 +53,18 @@ game.onFrame((ctx) => {
 
   // 3. Camera — smooth follow with shake support
   //    For scrolling worlds: setCameraBounds({ minX: 0, minY: 0, maxX: WORLD_W, maxY: WORLD_H });
+  const { width: vpW, height: vpH } = getViewportSize();
   const shake = getCameraShakeOffset();
-  followTargetSmooth(VPW / 2 + shake.x, VPH / 2 + shake.y, ZOOM, 0.08);
+  followTargetSmooth(vpW / 2 + shake.x, vpH / 2 + shake.y, ZOOM, 0.08);
 
   // 4. Subsystem updates — always call, they're no-ops when idle
   updateTweens(ctx.dt);
   updateParticles(ctx.dt);
   updateScreenTransition(ctx.dt);
+  //    If using floating text: updateFloatingTexts(ctx.dt); drawFloatingTexts();
 
   // 5. Render — delegates to render.ts
-  renderWorld(state, VPW, VPH);
+  renderWorld(state, vpW, vpH);
   renderHud(state);
 
   // 6. Transitions — no-op if inactive

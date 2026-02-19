@@ -32,7 +32,7 @@ import {
 import { createPhysicsWorld, stepPhysics } from "@arcane/runtime/physics";
 import { rgb } from "@arcane/runtime/ui";
 
-createPhysicsWorld({ gravity: { x: 0, y: 300 } });
+createPhysicsWorld({ gravityX: 0, gravityY: 300 });
 
 const entities: Entity[] = [];
 
