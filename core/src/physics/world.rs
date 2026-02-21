@@ -3,8 +3,12 @@ use std::collections::{HashMap, HashSet};
 use super::broadphase::SpatialHash;
 use super::constraints::{solve_constraints, solve_constraints_position};
 use super::integrate::integrate;
-use super::narrowphase::test_collision;
-use super::resolve::{initialize_contacts, resolve_contacts_position, resolve_contacts_velocity_iteration, warm_start_contacts};
+use super::narrowphase::{test_collision, test_collision_manifold};
+use super::resolve::{
+    initialize_contacts, initialize_manifolds, resolve_contacts_position,
+    resolve_contacts_velocity_iteration, resolve_manifolds_position,
+    resolve_manifolds_velocity_iteration, warm_start_contacts, warm_start_manifolds,
+};
 use super::sleep::update_sleep;
 use super::types::*;
 
@@ -18,6 +22,8 @@ pub struct PhysicsWorld {
     fixed_dt: f32,
     accumulator: f32,
     contacts: Vec<Contact>,
+    /// Contact manifolds (TGS Soft): proper 2-point contacts with local anchors
+    manifolds: Vec<ContactManifold>,
     /// Contacts accumulated across all sub-steps within a frame.
     /// Game code reads this via get_contacts() to see every collision that
     /// occurred during the frame, not just the last sub-step's contacts.
@@ -28,7 +34,12 @@ pub struct PhysicsWorld {
     broadphase: SpatialHash,
     solver_iterations: usize,
     /// Warm-start cache: maps (body_a, body_b) → (normal_impulse, friction_impulse)
+    /// Legacy cache for single-contact mode
     warm_cache: HashMap<(BodyId, BodyId), (f32, f32)>,
+    /// Warm-start cache for manifolds: maps (body_a, body_b, ContactID) → (jn, jt)
+    manifold_warm_cache: HashMap<(BodyId, BodyId, ContactID), (f32, f32)>,
+    /// Whether to use the new manifold-based solver (TGS Soft)
+    use_manifolds: bool,
 }
 
 impl PhysicsWorld {
@@ -43,6 +54,7 @@ impl PhysicsWorld {
             fixed_dt: 1.0 / 60.0,
             accumulator: 0.0,
             contacts: Vec::new(),
+            manifolds: Vec::new(),
             frame_contacts: Vec::new(),
             frame_contact_pairs: HashSet::new(),
             broadphase: SpatialHash::new(64.0),
@@ -50,7 +62,16 @@ impl PhysicsWorld {
             // Box2D uses 4 velocity + 2 position with sub-stepping; we use more iterations.
             solver_iterations: 10,
             warm_cache: HashMap::new(),
+            manifold_warm_cache: HashMap::new(),
+            // Enable manifold solver (TGS Soft Phase 1)
+            use_manifolds: true,
         }
+    }
+
+    /// Enable or disable the manifold-based solver (TGS Soft).
+    /// When disabled, falls back to the legacy single-contact solver.
+    pub fn set_use_manifolds(&mut self, use_manifolds: bool) {
+        self.use_manifolds = use_manifolds;
     }
 
     /// Fixed-timestep physics step. Accumulates dt and runs sub-steps as needed.
@@ -84,6 +105,15 @@ impl PhysicsWorld {
     }
 
     fn sub_step(&mut self, dt: f32) {
+        if self.use_manifolds {
+            self.sub_step_manifolds(dt);
+        } else {
+            self.sub_step_legacy(dt);
+        }
+    }
+
+    /// Legacy sub-step using single-contact solver
+    fn sub_step_legacy(&mut self, dt: f32) {
         // 1. Integrate
         for body in self.bodies.iter_mut().flatten() {
             integrate(body, self.gravity.0, self.gravity.1, dt);
@@ -242,6 +272,210 @@ impl PhysicsWorld {
                 }
             }
             // Clamp velocity of body B: remove component toward A (along -normal)
+            if let Some(b) = &mut self.bodies[b_idx] {
+                if b.body_type == BodyType::Dynamic {
+                    let vn = b.vx * nx + b.vy * ny;
+                    if vn < 0.0 {
+                        b.vx -= vn * nx;
+                        b.vy -= vn * ny;
+                    }
+                }
+            }
+        }
+
+        // 7. Update sleep
+        update_sleep(&mut self.bodies, &self.contacts, dt);
+    }
+
+    /// TGS Soft sub-step using manifold-based solver with 2-point contacts
+    fn sub_step_manifolds(&mut self, dt: f32) {
+        // 1. Integrate
+        for body in self.bodies.iter_mut().flatten() {
+            integrate(body, self.gravity.0, self.gravity.1, dt);
+        }
+
+        // 2. Broadphase
+        self.broadphase.clear();
+        for body in self.bodies.iter().flatten() {
+            let (min_x, min_y, max_x, max_y) = get_shape_aabb(body);
+            self.broadphase.insert(body.id, min_x, min_y, max_x, max_y);
+        }
+        let pairs = self.broadphase.get_pairs();
+
+        // 3. Narrowphase - generate contact manifolds
+        self.manifolds.clear();
+        self.contacts.clear(); // Also keep legacy contacts for get_contacts() API
+        for (id_a, id_b) in pairs {
+            let a_idx = id_a as usize;
+            let b_idx = id_b as usize;
+
+            // Layer/mask filtering
+            let (layer_a, mask_a, sleeping_a) = match &self.bodies[a_idx] {
+                Some(b) => (b.layer, b.mask, b.sleeping),
+                None => continue,
+            };
+            let (layer_b, mask_b, sleeping_b) = match &self.bodies[b_idx] {
+                Some(b) => (b.layer, b.mask, b.sleeping),
+                None => continue,
+            };
+
+            // Both layers must pass each other's masks
+            if (layer_a & mask_b) == 0 || (layer_b & mask_a) == 0 {
+                continue;
+            }
+
+            // Skip if both sleeping
+            if sleeping_a && sleeping_b {
+                continue;
+            }
+
+            let body_a = self.bodies[a_idx].as_ref().unwrap();
+            let body_b = self.bodies[b_idx].as_ref().unwrap();
+
+            if let Some(manifold) = test_collision_manifold(body_a, body_b) {
+                // Also generate legacy Contact for get_contacts() API
+                // Use first contact point from manifold
+                if !manifold.points.is_empty() {
+                    let point = &manifold.points[0];
+                    let cos_a = body_a.angle.cos();
+                    let sin_a = body_a.angle.sin();
+                    let cpx = point.local_a.0 * cos_a - point.local_a.1 * sin_a + body_a.x;
+                    let cpy = point.local_a.0 * sin_a + point.local_a.1 * cos_a + body_a.y;
+                    self.contacts.push(Contact {
+                        body_a: manifold.body_a,
+                        body_b: manifold.body_b,
+                        normal: manifold.normal,
+                        penetration: point.penetration,
+                        contact_point: (cpx, cpy),
+                        accumulated_jn: 0.0,
+                        accumulated_jt: 0.0,
+                        velocity_bias: 0.0,
+                        tangent: manifold.tangent,
+                    });
+                }
+                self.manifolds.push(manifold);
+            }
+        }
+
+        // 3b. Sort manifolds bottom-up for stack stability
+        self.manifolds.sort_by(|a, b| {
+            let ay = self.bodies[a.body_a as usize]
+                .as_ref()
+                .map_or(0.0f32, |body| body.y)
+                .max(
+                    self.bodies[a.body_b as usize]
+                        .as_ref()
+                        .map_or(0.0f32, |body| body.y),
+                );
+            let by = self.bodies[b.body_a as usize]
+                .as_ref()
+                .map_or(0.0f32, |body| body.y)
+                .max(
+                    self.bodies[b.body_b as usize]
+                        .as_ref()
+                        .map_or(0.0f32, |body| body.y),
+                );
+            by.partial_cmp(&ay).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        // 3c. Pre-compute velocity bias
+        let gravity_mag = (self.gravity.0 * self.gravity.0 + self.gravity.1 * self.gravity.1).sqrt();
+        let restitution_threshold = gravity_mag * dt * 1.5;
+        initialize_manifolds(&self.bodies, &mut self.manifolds, restitution_threshold);
+
+        // 3d. Warm start from cache using ContactID
+        for manifold in &mut self.manifolds {
+            let pair_key = (
+                manifold.body_a.min(manifold.body_b),
+                manifold.body_a.max(manifold.body_b),
+            );
+            for point in &mut manifold.points {
+                let key = (pair_key.0, pair_key.1, point.id);
+                if let Some(&(jn, jt)) = self.manifold_warm_cache.get(&key) {
+                    point.accumulated_jn = jn * 0.95;
+                    point.accumulated_jt = jt * 0.95;
+                }
+            }
+        }
+        warm_start_manifolds(&mut self.bodies, &self.manifolds);
+
+        // 4. Velocity solve (manifolds + constraints)
+        for i in 0..self.solver_iterations {
+            let reverse = i % 2 == 1;
+            resolve_manifolds_velocity_iteration(&mut self.bodies, &mut self.manifolds, reverse);
+            solve_constraints(&mut self.bodies, &self.constraints, dt);
+        }
+
+        // 4b. Save accumulated impulses to warm cache
+        self.manifold_warm_cache.clear();
+        for manifold in &self.manifolds {
+            let pair_key = (
+                manifold.body_a.min(manifold.body_b),
+                manifold.body_a.max(manifold.body_b),
+            );
+            for point in &manifold.points {
+                let key = (pair_key.0, pair_key.1, point.id);
+                self.manifold_warm_cache.insert(key, (point.accumulated_jn, point.accumulated_jt));
+            }
+        }
+
+        // 5. Position correction (re-run narrowphase for accurate penetration)
+        // Note: Analytical updating (Phase 4) will eliminate these narrowphase calls
+        for i in 0..3 {
+            // Re-run narrowphase to get fresh penetration values
+            for manifold in &mut self.manifolds {
+                let a = &self.bodies[manifold.body_a as usize];
+                let b = &self.bodies[manifold.body_b as usize];
+                if let (Some(a), Some(b)) = (a, b) {
+                    if let Some(fresh) = test_collision_manifold(a, b) {
+                        manifold.normal = fresh.normal;
+                        manifold.tangent = fresh.tangent;
+                        // Update penetrations from fresh manifold
+                        for (point, fresh_point) in manifold.points.iter_mut().zip(fresh.points.iter()) {
+                            point.penetration = fresh_point.penetration;
+                            point.local_a = fresh_point.local_a;
+                            point.local_b = fresh_point.local_b;
+                        }
+                        // Handle point count changes
+                        if manifold.points.len() != fresh.points.len() {
+                            // Just use fresh points directly
+                            manifold.points = fresh.points;
+                        }
+                    } else {
+                        // No longer colliding
+                        for point in &mut manifold.points {
+                            point.penetration = 0.0;
+                        }
+                    }
+                }
+            }
+            resolve_manifolds_position(&mut self.bodies, &self.manifolds, i % 2 == 1);
+            solve_constraints_position(&mut self.bodies, &self.constraints);
+        }
+
+        // 6. Post-correction velocity clamping
+        for manifold in &self.manifolds {
+            let a_idx = manifold.body_a as usize;
+            let b_idx = manifold.body_b as usize;
+
+            // Check if still penetrating via analytical update
+            let still_penetrating = manifold.points.iter().any(|p| p.penetration > 0.01);
+
+            if !still_penetrating {
+                continue;
+            }
+
+            let (nx, ny) = manifold.normal;
+
+            if let Some(a) = &mut self.bodies[a_idx] {
+                if a.body_type == BodyType::Dynamic {
+                    let vn = a.vx * nx + a.vy * ny;
+                    if vn > 0.0 {
+                        a.vx -= vn * nx;
+                        a.vy -= vn * ny;
+                    }
+                }
+            }
             if let Some(b) = &mut self.bodies[b_idx] {
                 if b.body_type == BodyType::Dynamic {
                     let vn = b.vx * nx + b.vy * ny;
@@ -479,6 +713,13 @@ impl PhysicsWorld {
     /// separated during a later sub-step.
     pub fn get_contacts(&self) -> &[Contact] {
         &self.frame_contacts
+    }
+
+    /// Return all contact manifolds from the last sub-step.
+    /// Each manifold contains up to 2 contact points with feature-based IDs.
+    /// Useful for debugging and visualization.
+    pub fn get_manifolds(&self) -> &[ContactManifold] {
+        &self.manifolds
     }
 
     /// Return all active (non-None) bodies.
