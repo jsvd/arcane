@@ -397,13 +397,15 @@ impl PhysicsWorld {
             Constraint::Revolute {
                 body_a,
                 body_b,
-                pivot,
+                anchor_a,
+                anchor_b,
                 ..
             } => Constraint::Revolute {
                 id,
                 body_a,
                 body_b,
-                pivot,
+                anchor_a,
+                anchor_b,
             },
         };
         self.constraints.push(constraint);

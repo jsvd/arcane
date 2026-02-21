@@ -196,12 +196,44 @@ fn op_create_revolute_joint(
     let physics = state.borrow_mut::<Rc<RefCell<PhysicsState>>>();
     let mut ps = physics.borrow_mut();
     match ps.0.as_mut() {
-        Some(world) => world.add_constraint(Constraint::Revolute {
-            id: 0,
-            body_a,
-            body_b,
-            pivot: (pivot_x as f32, pivot_y as f32),
-        }),
+        Some(world) => {
+            // Compute local anchor offsets from body centers to pivot
+            let (anchor_a, anchor_b) = {
+                let ba = world.get_body(body_a);
+                let bb = world.get_body(body_b);
+                let pivot = (pivot_x as f32, pivot_y as f32);
+                let anchor_a = match ba {
+                    Some(b) => {
+                        let cos = b.angle.cos();
+                        let sin = b.angle.sin();
+                        let dx = pivot.0 - b.x;
+                        let dy = pivot.1 - b.y;
+                        // Rotate into body-local space
+                        (dx * cos + dy * sin, -dx * sin + dy * cos)
+                    }
+                    None => (0.0, 0.0),
+                };
+                let anchor_b = match bb {
+                    Some(b) => {
+                        let cos = b.angle.cos();
+                        let sin = b.angle.sin();
+                        let dx = pivot.0 - b.x;
+                        let dy = pivot.1 - b.y;
+                        // Rotate into body-local space
+                        (dx * cos + dy * sin, -dx * sin + dy * cos)
+                    }
+                    None => (0.0, 0.0),
+                };
+                (anchor_a, anchor_b)
+            };
+            world.add_constraint(Constraint::Revolute {
+                id: 0,
+                body_a,
+                body_b,
+                anchor_a,
+                anchor_b,
+            })
+        },
         None => u32::MAX,
     }
 }

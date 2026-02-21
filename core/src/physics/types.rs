@@ -86,7 +86,8 @@ pub enum Constraint {
         id: ConstraintId,
         body_a: BodyId,
         body_b: BodyId,
-        pivot: (f32, f32),
+        anchor_a: (f32, f32),
+        anchor_b: (f32, f32),
     },
 }
 

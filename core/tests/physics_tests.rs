@@ -946,12 +946,14 @@ fn test_revolute_constraint() {
         0xFFFF,
         0xFFFF,
     );
-    let pivot = (2.5, 0.0);
+    // Body A at (0,0), body B at (5,0), pivot at (2.5, 0)
+    // Local anchors: A: (2.5, 0), B: (-2.5, 0)
     let cid = world.add_constraint(Constraint::Revolute {
         id: 0,
         body_a: a,
         body_b: b,
-        pivot,
+        anchor_a: (2.5, 0.0),
+        anchor_b: (-2.5, 0.0),
     });
 
     world.step(1.0 / 60.0);
@@ -1131,7 +1133,8 @@ fn test_constraint_id() {
         id: 7,
         body_a: 0,
         body_b: 1,
-        pivot: (0.0, 0.0),
+        anchor_a: (0.0, 0.0),
+        anchor_b: (0.0, 0.0),
     };
     assert_eq!(r.id(), 7);
 }
