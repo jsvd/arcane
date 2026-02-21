@@ -387,13 +387,16 @@ game.onFrame((ctx) => {
       // Circle: render via geometry pipeline (efficient triangle fan)
       drawCircle(bs.x, bs.y, tracked.radius, { color: col, layer: 2 });
     } else {
-      // AABB: draw from center
+      // AABB: draw from center with rotation
       drawColorSprite({
         color: col,
         x: bs.x - tracked.halfW,
         y: bs.y - tracked.halfH,
         w: tracked.halfW * 2,
         h: tracked.halfH * 2,
+        rotation: bs.angle,
+        originX: tracked.halfW,
+        originY: tracked.halfH,
         layer: 2,
       });
     }
