@@ -114,11 +114,11 @@ state.buttons = [
     label: "Bounce",
     action: () => {
       if (state.juiceEnabled) {
-        tween(state.boxes[0], { scale: 1.5 }, 0.5, {
+        tween(state.boxes[0], { scale: 2.5 }, 1.0, {
           easing: easeOutBounce,
         });
-        tween(state.boxes[0], { scale: 1 }, 0.5, {
-          delay: 0.5,
+        tween(state.boxes[0], { scale: 1 }, 1.0, {
+          delay: 1.0,
           easing: easeInBounce,
         });
       }
@@ -132,11 +132,11 @@ state.buttons = [
     label: "Elastic",
     action: () => {
       if (state.juiceEnabled) {
-        tween(state.boxes[1], { scale: 1.5 }, 0.5, {
+        tween(state.boxes[1], { scale: 2.5 }, 1.0, {
           easing: easeOutElastic,
         });
-        tween(state.boxes[1], { scale: 1 }, 0.5, {
-          delay: 0.5,
+        tween(state.boxes[1], { scale: 1 }, 1.0, {
+          delay: 1.0,
           easing: easeInElastic,
         });
       }
@@ -150,11 +150,11 @@ state.buttons = [
     label: "Back",
     action: () => {
       if (state.juiceEnabled) {
-        tween(state.boxes[2], { scale: 1.5 }, 0.5, {
+        tween(state.boxes[2], { scale: 2.5 }, 1.0, {
           easing: easeOutBack,
         });
-        tween(state.boxes[2], { scale: 1 }, 0.5, {
-          delay: 0.5,
+        tween(state.boxes[2], { scale: 1 }, 1.0, {
+          delay: 1.0,
           easing: easeInBack,
         });
       }

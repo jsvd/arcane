@@ -1,19 +1,22 @@
 /**
- * Physics Playground Demo - Phase 11 (updated for Phase 26)
+ * Physics Playground Demo - Phase 26
  *
  * Interactive physics sandbox demonstrating the Rust physics engine
- * with geometry-pipeline debug visualization.
+ * with polygon rotation, constraints, kinematic bodies, and contact visualization.
  *
  * Controls:
- * - 1: Spawn box
- * - 2: Spawn ball
+ * - 1: Spawn box (polygon - rotates properly!)
+ * - 2: Spawn ball (circle)
  * - 3: Spawn small ball cluster
- * - 4: Spawn seesaw (revolute joint)
+ * - 4: Spawn seesaw (revolute joint with polygon plank)
  * - 5: Spawn rope (distance joint chain)
+ * - 6: Spawn moving platform (kinematic body)
+ * - 7: Raycast mode (shoots ray from center toward mouse)
+ * - C: Toggle contact visualization
  * - Space: Launch fast ball upward
  * - R: Reset world
  * - G: Toggle gravity
- * - Click: Spawn current type at mouse position
+ * - Click: Spawn current type at mouse position (modes 1-6)
  */
 
 import {
@@ -24,7 +27,7 @@ import {
   getViewportSize,
   drawTextWrapped,
 } from "../../runtime/rendering/index.ts";
-import { Colors, HUDLayout, rgb, drawCircle, drawRing, drawCapsule, drawLine } from "../../runtime/ui/index.ts";
+import { Colors, HUDLayout, rgb, drawCircle, drawRing, drawCapsule, drawLine, drawPolygon } from "../../runtime/ui/index.ts";
 import { createGame, drawColorSprite, hud } from "../../runtime/game/index.ts";
 import { createRng } from "../../runtime/state/index.ts";
 import {
@@ -34,11 +37,15 @@ import {
   createBody,
   getBodyState,
   setBodyVelocity,
+  setKinematicVelocity,
   createDistanceJoint,
   createRevoluteJoint,
   getContacts,
+  raycast,
+  boxPolygonVertices,
 } from "../../runtime/physics/index.ts";
-import type { BodyId } from "../../runtime/physics/index.ts";
+import type { RayHit } from "../../runtime/physics/index.ts";
+import type { BodyId, Contact } from "../../runtime/physics/index.ts";
 
 // Colors (0-255 via rgb() helper)
 const COL_BOX = rgb(180, 120, 60);
@@ -51,6 +58,11 @@ const COL_ROPE_LINK = rgb(140, 100, 70);
 const COL_SLEEP = rgb(100, 100, 120);
 const COL_BG = rgb(25, 25, 35);
 const COL_JOINT = rgb(220, 200, 80);
+const COL_PLATFORM = rgb(80, 160, 80);
+const COL_CONTACT = rgb(255, 50, 50);
+const COL_CONTACT_NORMAL = rgb(255, 200, 50);
+const COL_RAY = rgb(50, 255, 100);
+const COL_RAY_HIT = rgb(255, 100, 255);
 
 // Deterministic PRNG for spawn sizing
 const rng = createRng(42);
@@ -58,10 +70,14 @@ const rng = createRng(42);
 // Body tracking
 type TrackedBody = {
   id: BodyId;
-  kind: "box" | "ball" | "seesaw" | "rope" | "pivot";
+  kind: "box" | "ball" | "seesaw" | "rope" | "pivot" | "platform";
   halfW: number;
   halfH: number;
   radius?: number;
+  vertices?: [number, number][];  // For polygon shapes
+  platformDir?: number;           // For kinematic platforms
+  platformMinX?: number;
+  platformMaxX?: number;
 };
 
 // Joint tracking for visual debug
@@ -75,8 +91,10 @@ let bodies: TrackedBody[] = [];
 let joints: TrackedJoint[] = [];
 let spawnMode = 1;
 let gravityOn = true;
+let showContacts = false;
 let bodyCount = 0;
 let sleepingCount = 0;
+let lastRayHit: RayHit | null = null;
 
 const { width: VPW, height: VPH } = getViewportSize();
 
@@ -125,15 +143,17 @@ function setupWorld(): void {
 function spawnBox(x: number, y: number): void {
   const halfW = 15 + rng.float() * 15;
   const halfH = 15 + rng.float() * 15;
+  const vertices = boxPolygonVertices(halfW, halfH);
+
   const id = createBody({
     type: "dynamic",
-    shape: { type: "aabb", halfW, halfH },
+    shape: { type: "polygon", vertices },
     x,
     y,
     mass: halfW * halfH * 0.01,
     material: { restitution: 0.3, friction: 0.6 },
   });
-  bodies.push({ id, kind: "box", halfW, halfH });
+  bodies.push({ id, kind: "box", halfW, halfH, vertices });
   bodyCount++;
 }
 
@@ -160,18 +180,20 @@ function spawnCluster(x: number, y: number): void {
 }
 
 function spawnSeesaw(x: number, y: number): void {
-  // Plank
+  // Use polygon shape so the plank can rotate properly!
   const plankHW = 80;
   const plankHH = 6;
+  const vertices = boxPolygonVertices(plankHW, plankHH);
+
   const plankId = createBody({
     type: "dynamic",
-    shape: { type: "aabb", halfW: plankHW, halfH: plankHH },
+    shape: { type: "polygon", vertices },
     x,
     y,
     mass: 3.0,
     material: { restitution: 0.2, friction: 0.7 },
   });
-  bodies.push({ id: plankId, kind: "seesaw", halfW: plankHW, halfH: plankHH });
+  bodies.push({ id: plankId, kind: "seesaw", halfW: plankHW, halfH: plankHH, vertices });
   bodyCount++;
 
   // Pivot (static)
@@ -223,6 +245,71 @@ function spawnRope(x: number, y: number): void {
   }
 }
 
+function spawnPlatform(x: number, y: number): void {
+  const platHW = 50;
+  const platHH = 8;
+  const vertices = boxPolygonVertices(platHW, platHH);
+
+  const id = createBody({
+    type: "kinematic",
+    shape: { type: "polygon", vertices },
+    x,
+    y,
+    mass: 1.0,  // Doesn't matter for kinematic
+    material: { restitution: 0.1, friction: 0.9 },
+  });
+
+  const minX = x - 80;
+  const maxX = x + 80;
+
+  bodies.push({
+    id,
+    kind: "platform",
+    halfW: platHW,
+    halfH: platHH,
+    vertices,
+    platformDir: 1,
+    platformMinX: minX,
+    platformMaxX: maxX,
+  });
+  bodyCount++;
+}
+
+// Update kinematic platforms
+function updatePlatforms(): void {
+  const speed = 60;
+  for (const body of bodies) {
+    if (body.kind === "platform" && body.platformDir !== undefined) {
+      const bs = getBodyState(body.id);
+      // Reverse direction at edges
+      if (bs.x >= body.platformMaxX!) {
+        body.platformDir = -1;
+      } else if (bs.x <= body.platformMinX!) {
+        body.platformDir = 1;
+      }
+      setKinematicVelocity(body.id, speed * body.platformDir, 0);
+    }
+  }
+}
+
+// Draw a rotated polygon
+function drawRotatedPolygon(
+  cx: number,
+  cy: number,
+  angle: number,
+  vertices: [number, number][],
+  color: { r: number; g: number; b: number; a: number },
+  layer: number,
+): void {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const worldVerts: [number, number][] = vertices.map(([vx, vy]) => [
+    cx + vx * cos - vy * sin,
+    cy + vx * sin + vy * cos,
+  ]);
+  drawPolygon(worldVerts, { color, layer });
+}
+
 // Initialize
 setupWorld();
 
@@ -232,10 +319,11 @@ type PlaygroundState = {
   bodyCount: number;
   gravityOn: boolean;
   contacts: number;
+  showContacts: boolean;
 };
 
 function getPlaygroundState(): PlaygroundState {
-  return { spawnMode, bodyCount, gravityOn, contacts: getContacts().length };
+  return { spawnMode, bodyCount, gravityOn, contacts: getContacts().length, showContacts };
 }
 
 // Game setup
@@ -263,11 +351,15 @@ game.state<PlaygroundState>({
       handler: () => { spawnBall(VPW / 2, 100); return getPlaygroundState(); },
       description: "Spawn a ball at center-top",
     },
+    toggleContacts: {
+      handler: () => { showContacts = !showContacts; return getPlaygroundState(); },
+      description: "Toggle contact point visualization",
+    },
   },
 });
 
 // Mode names
-const MODE_NAMES = ["", "Box", "Ball", "Cluster", "Seesaw", "Rope"];
+const MODE_NAMES = ["", "Box", "Ball", "Cluster", "Seesaw", "Rope", "Platform", "Raycast"];
 
 /** Pick the render color for a tracked body, factoring in sleep state. */
 function bodyColor(tracked: TrackedBody, sleeping: boolean): { r: number; g: number; b: number; a: number } {
@@ -277,7 +369,26 @@ function bodyColor(tracked: TrackedBody, sleeping: boolean): { r: number; g: num
     case "seesaw": return COL_SEESAW;
     case "pivot": return COL_PIVOT;
     case "rope": return COL_ROPE;
+    case "platform": return COL_PLATFORM;
     default: return COL_BOX;
+  }
+}
+
+// Draw contact visualization
+function drawContacts(contacts: Contact[]): void {
+  for (const c of contacts) {
+    // Red dot at contact point
+    drawCircle(c.contactX, c.contactY, 4, { color: COL_CONTACT, layer: 10 });
+
+    // Normal direction line
+    const normalLen = 20;
+    drawLine(
+      c.contactX,
+      c.contactY,
+      c.contactX + c.normalX * normalLen,
+      c.contactY + c.normalY * normalLen,
+      { color: COL_CONTACT_NORMAL, thickness: 2, layer: 10 }
+    );
   }
 }
 
@@ -290,6 +401,13 @@ game.onFrame((ctx) => {
   if (isKeyPressed("3")) spawnMode = 3;
   if (isKeyPressed("4")) spawnMode = 4;
   if (isKeyPressed("5")) spawnMode = 5;
+  if (isKeyPressed("6")) spawnMode = 6;
+  if (isKeyPressed("7")) spawnMode = 7;
+
+  // Toggle contact visualization
+  if (isKeyPressed("c")) {
+    showContacts = !showContacts;
+  }
 
   // Reset
   if (isKeyPressed("r")) {
@@ -323,9 +441,20 @@ game.onFrame((ctx) => {
     }
   }
 
-  // Click to spawn
+  // Click to spawn (modes 1-6) or raycast continuously (mode 7)
   const mouse = getMouseWorldPosition();
-  if (isMouseButtonPressed(0)) {
+  if (spawnMode === 7) {
+    // Raycast mode: continuously shoot ray from center toward mouse
+    const centerX = VPW / 2;
+    const centerY = VPH / 2;
+    const dirX = mouse.x - centerX;
+    const dirY = mouse.y - centerY;
+    // Normalize and cast
+    const len = Math.sqrt(dirX * dirX + dirY * dirY);
+    if (len > 1) {
+      lastRayHit = raycast(centerX, centerY, dirX / len, dirY / len, 2000);
+    }
+  } else if (isMouseButtonPressed(0)) {
     const mx = mouse.x;
     const my = mouse.y;
     switch (spawnMode) {
@@ -334,7 +463,11 @@ game.onFrame((ctx) => {
       case 3: spawnCluster(mx, my); break;
       case 4: spawnSeesaw(mx, my); break;
       case 5: spawnRope(mx, my); break;
+      case 6: spawnPlatform(mx, my); break;
     }
+    lastRayHit = null;
+  } else {
+    lastRayHit = null;
   }
 
   // Space: fast ball upward
@@ -342,6 +475,9 @@ game.onFrame((ctx) => {
     const ballId = spawnBall(VPW / 2, VPH - 60, 8);
     setBodyVelocity(ballId, (rng.float() - 0.5) * 100, -600);
   }
+
+  // Update kinematic platforms
+  updatePlatforms();
 
   // Step physics
   stepPhysics(ctx.dt);
@@ -386,8 +522,11 @@ game.onFrame((ctx) => {
     if (tracked.radius) {
       // Circle: render via geometry pipeline (efficient triangle fan)
       drawCircle(bs.x, bs.y, tracked.radius, { color: col, layer: 2 });
+    } else if (tracked.vertices) {
+      // Polygon: draw rotated vertices
+      drawRotatedPolygon(bs.x, bs.y, bs.angle, tracked.vertices, col, 2);
     } else {
-      // AABB: draw from center with rotation
+      // Fallback AABB: draw from center with rotation
       drawColorSprite({
         color: col,
         x: bs.x - tracked.halfW,
@@ -412,6 +551,46 @@ game.onFrame((ctx) => {
     layer: 1,
   });
 
+  // Draw contact points if enabled
+  if (showContacts) {
+    drawContacts(contacts);
+  }
+
+  // Draw raycast result if in raycast mode
+  if (spawnMode === 7) {
+    const centerX = VPW / 2;
+    const centerY = VPH / 2;
+    // Draw origin marker
+    drawCircle(centerX, centerY, 6, { color: COL_RAY, layer: 10 });
+
+    if (lastRayHit) {
+      // Draw ray line from center to hit point
+      drawLine(centerX, centerY, lastRayHit.hitX, lastRayHit.hitY, {
+        color: COL_RAY,
+        thickness: 2,
+        layer: 10,
+      });
+      // Draw hit point
+      drawCircle(lastRayHit.hitX, lastRayHit.hitY, 8, { color: COL_RAY_HIT, layer: 11 });
+      // Draw small ring around hit body indicator
+      drawRing(lastRayHit.hitX, lastRayHit.hitY, 10, 14, { color: COL_RAY_HIT, layer: 11 });
+    } else {
+      // No hit - draw ray toward mouse position (long line)
+      const dirX = mouse.x - centerX;
+      const dirY = mouse.y - centerY;
+      const len = Math.sqrt(dirX * dirX + dirY * dirY);
+      if (len > 1) {
+        const endX = centerX + (dirX / len) * 2000;
+        const endY = centerY + (dirY / len) * 2000;
+        drawLine(centerX, centerY, endX, endY, {
+          color: COL_RAY,
+          thickness: 2,
+          layer: 10,
+        });
+      }
+    }
+  }
+
   // --- HUD ---
   const hudX = HUDLayout.TOP_LEFT.x;
   const hudY = HUDLayout.TOP_LEFT.y;
@@ -419,7 +598,7 @@ game.onFrame((ctx) => {
 
   hud.text("Physics Playground", hudX, hudY);
 
-  hud.text(`Mode [1-5]: ${MODE_NAMES[spawnMode]}`, hudX, hudY + lh, {
+  hud.text(`Mode [1-7]: ${MODE_NAMES[spawnMode]}`, hudX, hudY + lh, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
     tint: Colors.WARNING,
   });
@@ -429,7 +608,12 @@ game.onFrame((ctx) => {
     tint: gravityOn ? Colors.SUCCESS : Colors.LOSE,
   });
 
-  hud.text("[R] Reset  [Space] Launch  [Click] Spawn", hudX, hudY + lh * 3, {
+  hud.text(`Contacts: ${showContacts ? "ON" : "OFF"} [C]`, hudX, hudY + lh * 3, {
+    scale: HUDLayout.SMALL_TEXT_SCALE,
+    tint: showContacts ? Colors.INFO : Colors.LIGHT_GRAY,
+  });
+
+  hud.text("[R] Reset  [Space] Launch  [Click] Spawn", hudX, hudY + lh * 4, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
     tint: Colors.LIGHT_GRAY,
   });
@@ -437,11 +621,18 @@ game.onFrame((ctx) => {
   // Physics info panel (top-right) using drawTextWrapped
   const infoX = VPW - 200;
   const infoY = HUDLayout.TOP_LEFT.y;
-  const infoText =
+  let infoText =
     `Bodies: ${bodyCount}\n` +
     `Sleeping: ${sleepingCount}\n` +
     `Contacts: ${contacts.length}\n` +
     `Joints: ${joints.length}`;
+  // Add raycast info when in raycast mode
+  if (spawnMode === 7 && lastRayHit) {
+    infoText += `\n\nRay hit:\n` +
+      `  Body: ${lastRayHit.bodyId}\n` +
+      `  Dist: ${lastRayHit.distance.toFixed(1)}\n` +
+      `  Pos: (${lastRayHit.hitX.toFixed(0)}, ${lastRayHit.hitY.toFixed(0)})`;
+  }
   drawTextWrapped(infoText, infoX, infoY, {
     maxWidth: 190,
     scale: HUDLayout.SMALL_TEXT_SCALE,
