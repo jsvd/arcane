@@ -220,7 +220,12 @@ export function followTargetSmooth(
   const newX = cam.x + (desiredX - cam.x) * lerpFactor;
   const newY = cam.y + (desiredY - cam.y) * lerpFactor;
 
-  setCamera(newX, newY, zoom);
+  // Snap to target if very close to prevent floating-point jitter
+  const threshold = 0.01;
+  const finalX = Math.abs(newX - desiredX) < threshold ? desiredX : newX;
+  const finalY = Math.abs(newY - desiredY) < threshold ? desiredY : newY;
+
+  setCamera(finalX, finalY, zoom);
 }
 
 /**
