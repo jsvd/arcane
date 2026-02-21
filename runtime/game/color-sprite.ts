@@ -10,6 +10,7 @@ import type { Color } from "../ui/types.ts";
 import type { ColorSpriteOptions } from "./types.ts";
 import { drawSprite } from "../rendering/sprites.ts";
 import { createSolidTexture } from "../rendering/texture.ts";
+import { warnColor } from "../ui/colors.ts";
 
 /** @internal Color texture cache. Keyed by "r_g_b_a" string. */
 const _colorTexCache = new Map<string, number>();
@@ -32,12 +33,13 @@ function getColorTex(color: Color): number {
  *
  * @example
  * drawColorSprite({
- *   color: { r: 1, g: 0, b: 0, a: 1 },
+ *   color: rgb(255, 0, 0),
  *   x: 100, y: 200, w: 32, h: 32,
  *   layer: 1,
  * });
  */
 export function drawColorSprite(opts: ColorSpriteOptions): void {
+  warnColor(opts.color, "drawColorSprite");
   const textureId = opts.textureId ?? getColorTex(opts.color);
 
   const spriteOpts: SpriteOptions = {

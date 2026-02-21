@@ -174,9 +174,9 @@ game.onFrame((ctx) => {
 
 **Key facts:**
 - Camera defaults to **(0, 0)** — the **center** of the screen, not the top-left
-- `drawSprite({x, y, ...})` positions the sprite's **top-left corner** in world space
-- **`drawSprite` is always world-space** — no `screenSpace` option. Camera transform is applied by the GPU.
-- `screenSpace: true` is only on `drawText`, `drawRect`, `drawPanel`, `drawBar`, `drawLabel` — bypasses camera, (0,0) at top-left
+- `drawSprite({x, y, ...})` positions the sprite's **top-left corner** in world space by default
+- `drawSprite` supports `screenSpace: true` — converts screen pixels to world coords before sending to GPU
+- `screenSpace: true` is available on `drawSprite`, `drawText`, `drawRect`, `drawPanel`, `drawBar`, `drawLabel`, and all shapes — bypasses camera, (0,0) at top-left
 - Y increases **downward** (same as web)
 - Visible world area: `camera +/- viewport / (2 * zoom)` in each axis
 - **Viewport is not fixed** — always use `getViewportSize()`, never hardcode dimensions
@@ -214,7 +214,7 @@ followTargetSmooth(player.x, player.y, 2.0, 0.08);
 
 **2. Hardcoding viewport size** — Never use `800`, `600`. Always: `const { width: VPW, height: VPH } = getViewportSize();`
 
-**3. Drawing HUD in world space** — Use `screenSpace: true` for health bars, scores, menus. `drawSprite` does NOT support `screenSpace` — use `drawText`/`drawRect`/`drawBar`/`drawLabel`.
+**3. Drawing HUD in world space** — Use `screenSpace: true` for health bars, scores, menus. All draw functions support `screenSpace`, including `drawSprite`, `drawText`, `drawRect`, `drawBar`, `drawLabel`, and shapes.
 
 **4. Missing `clearSprites()` / re-drawing every frame** — Draw calls are NOT persisted. Redraw everything in `onFrame()`. (`createGame()` auto-clears.)
 
@@ -265,6 +265,47 @@ followTargetSmooth(player.x, player.y, 2.0, 0.08);
 **27. Calling `rgb()` inside onFrame causes GC freezes** — `rgb()` allocates a new object every call. Pre-compute colors at module scope: `const WHITE = rgb(255, 255, 255);`. Use the constant inside onFrame.
 
 **28. Manual subsystem updates with createGame** — `createGame()` auto-calls `updateTweens(dt)`, `updateParticles(dt)`, `updateScreenTransition(dt)`, `drawScreenTransition()`, and `drawScreenFlash()` via `autoSubsystems: true` (default). You do NOT need to call these manually. Redundant calls are harmless but unnecessary. Only set `autoSubsystems: false` if you need custom update ordering.
+
+## What Should I Draw?
+
+Pick the right function for what you're rendering:
+
+```
+"I want to draw..."
+├── A textured image → drawSprite({ textureId, x, y, w, h })
+├── A colored rectangle
+│   ├── Game world (layer 0) → drawRectangle(x, y, w, h, { color })
+│   ├── HUD / UI (layer 90) → drawRect(x, y, w, h, { color, screenSpace: true })
+│   └── With rotation/blend → drawColorSprite({ color, x, y, w, h, rotation })
+├── A circle / shape
+│   ├── Filled → drawCircle() / drawPolygon() / drawTriangle()
+│   └── Outline → drawArc() / drawRing() / drawLine()
+├── Text
+│   ├── HUD text → hud.text("Score", 10, 10)
+│   ├── World text → drawText("Hello", x, y)
+│   └── Note: drawText() auto-uses crisp MSDF font when renderer is available
+├── A health / progress bar
+│   ├── HUD → hud.bar(x, y, fillRatio)
+│   └── World (above enemy) → drawBar(x, y, w, h, fillRatio, { screenSpace: false })
+├── A panel / dialog box → drawPanel() or drawNineSlice()
+└── A tilemap → createTilemap() + drawTilemap()
+```
+
+## Layer Map
+
+Lower layers render first (behind). Higher layers render on top.
+
+```
+Layer 0-10:   Game world — tilemap (0), props (1-3), characters (5), projectiles (8)
+Layer 10-50:  World overlays — selection highlights, debug visualization
+Layer 90-99:  UI primitives — drawRect (default 90), drawPanel (default 90)
+Layer 100:    Text — drawText (default 100)
+Layer 110:    Labels — hud.label (default 110)
+Layer 200+:   Overlays — pause screens, full-screen fades
+Layer 250:    Screen transitions — startScreenTransition
+```
+
+**Always pass explicit `layer` values.** Don't rely on defaults — they differ between function families (sprites=0, UI=90, text=100).
 
 ## Recommended Reading by Genre
 
@@ -318,7 +359,7 @@ See [`types/cheatsheet.txt`](types/cheatsheet.txt) for every exported function a
 | Function | Module | What it does |
 |----------|--------|-------------|
 | `createGame(config?)` | game | Bootstrap game loop, auto-clear, agent registration |
-| `drawSprite(opts)` | rendering | Draw a textured quad in world space |
+| `drawSprite(opts)` | rendering | Draw a textured quad (supports screenSpace) |
 | `drawColorSprite(opts)` | game | Draw a colored rectangle (auto-caches texture) |
 | `drawText(text, x, y, opts?)` | rendering | Draw text (bitmap or MSDF font) |
 | `loadTexture(path)` | rendering | Load image file, returns TextureId handle |
@@ -331,7 +372,8 @@ See [`types/cheatsheet.txt`](types/cheatsheet.txt) for every exported function a
 | `WASD_ARROWS` | input | Preset: WASD+arrows+gamepad sticks+action |
 | `isActionDown(action, map)` | input | Check action state (abstracts input device) |
 | `rgb(r, g, b, a?)` | ui | Create Color from 0-255 integers |
-| `drawRect(x, y, w, h, opts?)` | ui | Draw a filled rectangle (screenSpace option) |
+| `drawRect(x, y, w, h, opts?)` | ui | Draw a UI rectangle (default layer 90, screenSpace option) |
+| `drawRectangle(x, y, w, h, opts?)` | ui | Draw a game-world rectangle (default layer 0, geometry pipeline) |
 | `hud.text(content, x, y, opts?)` | game | Screen-space text shortcut for HUD |
 | `hud.bar(x, y, fillRatio, opts?)` | game | Screen-space health/progress bar |
 | `tween(target, props, dur, opts?)` | tweening | Animate object properties with easing |

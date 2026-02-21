@@ -400,22 +400,28 @@ declare module "@arcane/runtime/particles" {
    */
   export declare function setRustEmitterPosition(id: number, x: number, y: number): void;
   /**
-   * Draw all alive TS particles as filled circles.
-   * This is the common rendering pattern every game writes manually:
+   * Draw all alive TS particles.
    *
-   * ```ts
-   * for (const p of getAllParticles()) {
-   *   drawCircle(p.x, p.y, radius, { color: p.color, layer });
-   * }
-   * ```
+   * By default, particles render as filled circles via the geometry pipeline.
+   * When a `textureId` is provided (either per-emitter via `EmitterConfig.textureId`
+   * or globally via the `textureId` option), particles render as textured sprites
+   * instead, supporting rotation, blend modes, and higher visual quality.
    *
-   * @param options - Optional radius and layer overrides.
-   * @param options.radius - Circle radius for each particle. Default: 3.
+   * @param options - Rendering overrides.
+   * @param options.radius - Circle radius for each particle (circle mode). Default: 3.
+   * @param options.size - Sprite size in pixels (sprite mode). Default: 8.
    * @param options.layer - Draw layer. Default: 5.
+   * @param options.textureId - Force all particles to render as sprites with this texture.
+   *   When omitted, particles from emitters with `textureId` in their config render as
+   *   sprites; all others render as circles.
+   * @param options.blendMode - Blend mode for sprite particles. Default: "alpha".
    */
   export declare function drawAllParticles(options?: {
       radius?: number;
+      size?: number;
       layer?: number;
+      textureId?: number;
+      blendMode?: "alpha" | "additive" | "multiply" | "screen";
   }): void;
 
   /**
@@ -562,7 +568,7 @@ declare module "@arcane/runtime/particles" {
    * @example
    * burstParticles(enemy.x, enemy.y); // default sparks
    * burstParticles(x, y, { preset: "dust", count: 20 });
-   * burstParticles(x, y, { color: { r: 0, g: 1, b: 0, a: 1 } });
+   * burstParticles(x, y, { color: rgb(0, 255, 0) });
    */
   export declare function burstParticles(x: number, y: number, options?: ParticleOptions): Emitter;
   /**

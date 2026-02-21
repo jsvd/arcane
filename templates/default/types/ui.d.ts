@@ -240,6 +240,21 @@ declare module "@arcane/runtime/ui" {
    * Standard color palette and layout helpers for consistent UI styling.
    */
   /**
+   * Validate a Color object in debug mode.
+   * Logs a warning (once per unique caller) if any channel exceeds 1.0,
+   * which usually means the developer passed 0-255 integers instead of
+   * 0.0-1.0 floats. Use `rgb(r, g, b)` to convert from 0-255.
+   *
+   * @param color - The color to validate.
+   * @param caller - Name of the calling function (for the warning message).
+   */
+  export declare function warnColor(color: {
+      r: number;
+      g: number;
+      b: number;
+      a?: number;
+  } | undefined, caller: string): void;
+  /**
    * Arcane UI Color Palette.
    * Pre-defined colors (0.0-1.0 RGBA) for consistent visual style across all demos.
    */
@@ -892,6 +907,23 @@ declare module "@arcane/runtime/ui" {
    * drawCapsule(100, 200, 300, 200, 15, { color: { r: 0, g: 0.8, b: 0.2, a: 1 } });
    */
   export declare function drawCapsule(x1: number, y1: number, x2: number, y2: number, radius: number, options?: CapsuleOptions): void;
+  /**
+   * Draw a filled rectangle via two triangles in the geometry pipeline.
+   * No-op in headless mode.
+   *
+   * This is the geometry-pipeline equivalent of drawRect() but uses layer 0
+   * by default (same as other shapes), not layer 90.
+   *
+   * @param x - Top-left X position.
+   * @param y - Top-left Y position.
+   * @param w - Width.
+   * @param h - Height.
+   * @param options - Color, layer, screenSpace.
+   *
+   * @example
+   * drawRectangle(100, 50, 200, 100, { color: rgb(220, 50, 50) });
+   */
+  export declare function drawRectangle(x: number, y: number, w: number, h: number, options?: ShapeOptions): void;
   /**
    * Draw a filled convex polygon via triangle fan.
    * No-op in headless mode.

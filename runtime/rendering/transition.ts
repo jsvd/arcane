@@ -20,7 +20,7 @@
  * ```ts
  * import { startScreenTransition, updateScreenTransition, drawScreenTransition } from "./transition.ts";
  *
- * startScreenTransition("circleIris", 0.6, { color: { r: 0, g: 0, b: 0 } }, () => {
+ * startScreenTransition("circleIris", 0.6, { color: rgb(0, 0, 0) }, () => {
  *   // swap scene at midpoint
  * });
  * ```

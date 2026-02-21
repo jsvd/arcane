@@ -7,9 +7,9 @@
  * import { createSpriteGroup, drawSpriteGroup, setPartVisible } from "@arcane/runtime/game";
  *
  * const knight = createSpriteGroup([
- *   { name: "body", offsetX: 0, offsetY: 0, w: 16, h: 16, color: { r: 0.6, g: 0.6, b: 0.6, a: 1 } },
- *   { name: "head", offsetX: 2, offsetY: -12, w: 12, h: 12, color: { r: 1, g: 0.8, b: 0.7, a: 1 } },
- *   { name: "sword", offsetX: 14, offsetY: -2, w: 6, h: 20, color: { r: 0.8, g: 0.8, b: 0.9, a: 1 }, layerOffset: 1 },
+ *   { name: "body", offsetX: 0, offsetY: 0, w: 16, h: 16, color: rgb(153, 153, 153) },
+ *   { name: "head", offsetX: 2, offsetY: -12, w: 12, h: 12, color: rgb(255, 204, 179) },
+ *   { name: "sword", offsetX: 14, offsetY: -2, w: 6, h: 20, color: rgb(204, 204, 230), layerOffset: 1 },
  * ], 5);
  *
  * drawSpriteGroup(knight, 100, 200);

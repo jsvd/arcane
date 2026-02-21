@@ -479,13 +479,16 @@ export function measureText(
   text: string,
   options?: TextOptions,
 ): TextMeasurement {
-  // MSDF path
-  if (options?.msdfFont) {
+  // Auto-select MSDF font when no font is explicitly specified and MSDF ops are available
+  const msdfFont = options?.msdfFont ?? ((!options?.font && hasMsdfOps) ? getDefaultMSDFFont() : undefined);
+
+  // MSDF path (default when renderer is available)
+  if (msdfFont) {
     const scale = options?.scale ?? 1;
-    return measureMSDFTextInternal(text, options.msdfFont, scale);
+    return measureMSDFTextInternal(text, msdfFont, scale);
   }
 
-  // Bitmap path (original)
+  // Bitmap path (fallback for headless or explicit bitmap font)
   const font = options?.font ?? getDefaultFont();
   const scale = options?.scale ?? 1;
   return {
@@ -518,15 +521,15 @@ export function measureText(
  *   msdfFont: font,
  *   scale: 3,
  *   screenSpace: true,
- *   outline: { width: 1.0, color: { r: 0, g: 0, b: 0, a: 1 } },
- *   shadow: { offsetX: 2, offsetY: 2, color: { r: 0, g: 0, b: 0, a: 0.5 } },
+ *   outline: { width: 1.0, color: rgb(0, 0, 0) },
+ *   shadow: { offsetX: 2, offsetY: 2, color: rgb(0, 0, 0, 128) },
  * });
  *
  * @example
  * // Multiple drawText calls with different params in the same frame work correctly.
  * // Each unique outline/shadow combo gets its own shader slot from the pool.
- * drawText("Red outline", 10, 10, { msdfFont: font, outline: { width: 1, color: { r: 1, g: 0, b: 0, a: 1 } } });
- * drawText("Blue outline", 10, 40, { msdfFont: font, outline: { width: 2, color: { r: 0, g: 0, b: 1, a: 1 } } });
+ * drawText("Red outline", 10, 10, { msdfFont: font, outline: { width: 1, color: rgb(255, 0, 0) } });
+ * drawText("Blue outline", 10, 40, { msdfFont: font, outline: { width: 2, color: rgb(0, 0, 255) } });
  * drawText("No effects", 10, 70, { msdfFont: font });
  */
 export function drawText(
@@ -547,24 +550,30 @@ export function drawText(
     }
   }
 
+  // Auto-select MSDF font when no font is explicitly specified and MSDF ops are available.
+  // This makes text look crisp by default without requiring the caller to know about MSDF.
+  const effectiveOptions = (!options?.font && !options?.msdfFont && hasMsdfOps)
+    ? { ...options, msdfFont: getDefaultMSDFFont() }
+    : options;
+
   _logDrawCall({
     type: "text",
     content: text,
     x: alignedX,
     y,
-    scale: options?.scale ?? 1,
-    layer: options?.layer ?? 100,
-    screenSpace: options?.screenSpace ?? false,
+    scale: effectiveOptions?.scale ?? 1,
+    layer: effectiveOptions?.layer ?? 100,
+    screenSpace: effectiveOptions?.screenSpace ?? false,
   });
   if (!hasRenderOps) return;
 
-  // MSDF path
-  if (options?.msdfFont) {
-    drawMSDFTextInternal(text, alignedX, y, options);
+  // MSDF path (now the default when renderer is available)
+  if (effectiveOptions?.msdfFont) {
+    drawMSDFTextInternal(text, alignedX, y, effectiveOptions);
     return;
   }
 
-  // Bitmap path (original, unchanged)
+  // Bitmap path (fallback for headless or explicit bitmap font)
   const font = options?.font ?? getDefaultFont();
   const scale = options?.scale ?? 1;
   const layer = options?.layer ?? 100;

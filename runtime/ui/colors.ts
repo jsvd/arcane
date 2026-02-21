@@ -4,6 +4,31 @@
 
 import type { Color } from "./types.ts";
 
+// --- Color validation ---
+
+/** Set of already-warned call sites to avoid log spam. */
+const _colorWarnings = new Set<string>();
+
+/**
+ * Validate a Color object in debug mode.
+ * Logs a warning (once per unique caller) if any channel exceeds 1.0,
+ * which usually means the developer passed 0-255 integers instead of
+ * 0.0-1.0 floats. Use `rgb(r, g, b)` to convert from 0-255.
+ *
+ * @param color - The color to validate.
+ * @param caller - Name of the calling function (for the warning message).
+ */
+export function warnColor(color: { r: number; g: number; b: number; a?: number } | undefined, caller: string): void {
+  if (!color) return;
+  if (color.r <= 1.0 && color.g <= 1.0 && color.b <= 1.0 && (color.a === undefined || color.a <= 1.0)) return;
+  if (_colorWarnings.has(caller)) return;
+  _colorWarnings.add(caller);
+  console.warn(
+    `[arcane] ${caller}(): color channel > 1.0 detected (r=${color.r}, g=${color.g}, b=${color.b}). ` +
+    `Colors use 0.0-1.0 floats, not 0-255. Use rgb(r, g, b) to convert from 0-255 values.`
+  );
+}
+
 /**
  * Arcane UI Color Palette.
  * Pre-defined colors (0.0-1.0 RGBA) for consistent visual style across all demos.

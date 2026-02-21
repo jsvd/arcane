@@ -19,6 +19,9 @@
 
 import type { Color, ShapeOptions, LineOptions, ArcOptions, SectorOptions, EllipseOptions, RingOptions, CapsuleOptions, PolygonOptions } from "./types.ts";
 import { _logDrawCall } from "../testing/visual.ts";
+import { getCamera } from "../rendering/camera.ts";
+import { getViewportSize } from "../rendering/input.ts";
+import { warnColor } from "./colors.ts";
 
 // --- Detect geometry ops availability ---
 
@@ -27,6 +30,24 @@ const hasGeoOps =
   typeof _ops?.op_geo_triangle === "function";
 
 const WHITE: Color = { r: 1, g: 1, b: 1, a: 1 };
+
+/** Convert a screen-space point to world-space coordinates. */
+function toWorldPoint(sx: number, sy: number, screenSpace: boolean): { x: number; y: number } {
+  if (!screenSpace) return { x: sx, y: sy };
+  const cam = getCamera();
+  const { width: vpW, height: vpH } = getViewportSize();
+  return {
+    x: sx / cam.zoom + cam.x - vpW / (2 * cam.zoom),
+    y: sy / cam.zoom + cam.y - vpH / (2 * cam.zoom),
+  };
+}
+
+/** Convert a screen-space length to world-space length. */
+function toWorldLength(len: number, screenSpace: boolean): number {
+  if (!screenSpace) return len;
+  const cam = getCamera();
+  return len / cam.zoom;
+}
 
 // Number of segments for circle approximation (64 gives smooth circles)
 const CIRCLE_SEGMENTS = 64;
@@ -61,6 +82,7 @@ export function drawCircle(
     screenSpace: ss,
   } as any);
 
+  warnColor(options?.color, "drawCircle");
   if (!hasGeoOps) return;
 
   const color = options?.color ?? WHITE;
@@ -69,14 +91,16 @@ export function drawCircle(
   const b = color.b;
   const a = color.a ?? 1;
   const step = (Math.PI * 2) / CIRCLE_SEGMENTS;
+  const c = toWorldPoint(cx, cy, ss);
+  const wr = toWorldLength(radius, ss);
 
   for (let i = 0; i < CIRCLE_SEGMENTS; i++) {
     const a0 = step * i;
     const a1 = step * (i + 1);
     _ops.op_geo_triangle(
-      cx, cy,
-      cx + Math.cos(a0) * radius, cy + Math.sin(a0) * radius,
-      cx + Math.cos(a1) * radius, cy + Math.sin(a1) * radius,
+      c.x, c.y,
+      c.x + Math.cos(a0) * wr, c.y + Math.sin(a0) * wr,
+      c.x + Math.cos(a1) * wr, c.y + Math.sin(a1) * wr,
       r, g, b, a,
       layer,
     );
@@ -124,14 +148,17 @@ export function drawEllipse(
   const b = color.b;
   const a = color.a ?? 1;
   const step = (Math.PI * 2) / CIRCLE_SEGMENTS;
+  const c = toWorldPoint(cx, cy, ss);
+  const wrx = toWorldLength(rx, ss);
+  const wry = toWorldLength(ry, ss);
 
   for (let i = 0; i < CIRCLE_SEGMENTS; i++) {
     const a0 = step * i;
     const a1 = step * (i + 1);
     _ops.op_geo_triangle(
-      cx, cy,
-      cx + Math.cos(a0) * rx, cy + Math.sin(a0) * ry,
-      cx + Math.cos(a1) * rx, cy + Math.sin(a1) * ry,
+      c.x, c.y,
+      c.x + Math.cos(a0) * wrx, c.y + Math.sin(a0) * wry,
+      c.x + Math.cos(a1) * wrx, c.y + Math.sin(a1) * wry,
       r, g, b, a,
       layer,
     );
@@ -180,6 +207,9 @@ export function drawRing(
   const b = color.b;
   const a = color.a ?? 1;
   const step = (Math.PI * 2) / CIRCLE_SEGMENTS;
+  const c = toWorldPoint(cx, cy, ss);
+  const wir = toWorldLength(innerRadius, ss);
+  const wor = toWorldLength(outerRadius, ss);
 
   // Each segment of the ring is a quad (2 triangles) between inner and outer arcs
   for (let i = 0; i < CIRCLE_SEGMENTS; i++) {
@@ -190,14 +220,14 @@ export function drawRing(
     const cos1 = Math.cos(a1);
     const sin1 = Math.sin(a1);
 
-    const ox0 = cx + cos0 * outerRadius;
-    const oy0 = cy + sin0 * outerRadius;
-    const ox1 = cx + cos1 * outerRadius;
-    const oy1 = cy + sin1 * outerRadius;
-    const ix0 = cx + cos0 * innerRadius;
-    const iy0 = cy + sin0 * innerRadius;
-    const ix1 = cx + cos1 * innerRadius;
-    const iy1 = cy + sin1 * innerRadius;
+    const ox0 = c.x + cos0 * wor;
+    const oy0 = c.y + sin0 * wor;
+    const ox1 = c.x + cos1 * wor;
+    const oy1 = c.y + sin1 * wor;
+    const ix0 = c.x + cos0 * wir;
+    const iy0 = c.y + sin0 * wir;
+    const ix1 = c.x + cos1 * wir;
+    const iy1 = c.y + sin1 * wir;
 
     // Two triangles per segment: (outer0, outer1, inner0) and (inner0, outer1, inner1)
     _ops.op_geo_triangle(ox0, oy0, ox1, oy1, ix0, iy0, r, g, b, a, layer);
@@ -240,11 +270,15 @@ export function drawLine(
     screenSpace: ss,
   } as any);
 
+  warnColor(options?.color, "drawLine");
   if (!hasGeoOps) return;
 
   const color = options?.color ?? WHITE;
+  const p1 = toWorldPoint(x1, y1, ss);
+  const p2 = toWorldPoint(x2, y2, ss);
+  const wt = toWorldLength(thickness, ss);
   _ops.op_geo_line(
-    x1, y1, x2, y2, thickness,
+    p1.x, p1.y, p2.x, p2.y, wt,
     color.r, color.g, color.b, color.a ?? 1,
     layer,
   );
@@ -289,11 +323,15 @@ export function drawTriangle(
     screenSpace: ss,
   } as any);
 
+  warnColor(options?.color, "drawTriangle");
   if (!hasGeoOps) return;
 
   const color = options?.color ?? WHITE;
+  const p1 = toWorldPoint(x1, y1, ss);
+  const p2 = toWorldPoint(x2, y2, ss);
+  const p3 = toWorldPoint(x3, y3, ss);
   _ops.op_geo_triangle(
-    x1, y1, x2, y2, x3, y3,
+    p1.x, p1.y, p2.x, p2.y, p3.x, p3.y,
     color.r, color.g, color.b, color.a ?? 1,
     layer,
   );
@@ -348,20 +386,23 @@ export function drawArc(
   const g = color.g;
   const b = color.b;
   const a = color.a ?? 1;
+  const c = toWorldPoint(cx, cy, ss);
+  const wr = toWorldLength(radius, ss);
+  const wt = toWorldLength(thickness, ss);
 
   const sweep = Math.abs(endAngle - startAngle);
-  const segments = Math.max(8, Math.ceil(sweep * radius * 0.5));
+  const segments = Math.max(8, Math.ceil(sweep * wr * 0.5));
   const step = (endAngle - startAngle) / segments;
 
-  let prevX = cx + Math.cos(startAngle) * radius;
-  let prevY = cy + Math.sin(startAngle) * radius;
+  let prevX = c.x + Math.cos(startAngle) * wr;
+  let prevY = c.y + Math.sin(startAngle) * wr;
 
   for (let i = 1; i <= segments; i++) {
     const angle = startAngle + step * i;
-    const nextX = cx + Math.cos(angle) * radius;
-    const nextY = cy + Math.sin(angle) * radius;
+    const nextX = c.x + Math.cos(angle) * wr;
+    const nextY = c.y + Math.sin(angle) * wr;
 
-    _ops.op_geo_line(prevX, prevY, nextX, nextY, thickness, r, g, b, a, layer);
+    _ops.op_geo_line(prevX, prevY, nextX, nextY, wt, r, g, b, a, layer);
 
     prevX = nextX;
     prevY = nextY;
@@ -415,18 +456,20 @@ export function drawSector(
   const g = color.g;
   const b = color.b;
   const a = color.a ?? 1;
+  const c = toWorldPoint(cx, cy, ss);
+  const wr = toWorldLength(radius, ss);
 
   const sweep = Math.abs(endAngle - startAngle);
-  const segments = Math.max(8, Math.ceil(sweep * radius * 0.5));
+  const segments = Math.max(8, Math.ceil(sweep * wr * 0.5));
   const step = (endAngle - startAngle) / segments;
 
   for (let i = 0; i < segments; i++) {
     const a0 = startAngle + step * i;
     const a1 = startAngle + step * (i + 1);
     _ops.op_geo_triangle(
-      cx, cy,
-      cx + Math.cos(a0) * radius, cy + Math.sin(a0) * radius,
-      cx + Math.cos(a1) * radius, cy + Math.sin(a1) * radius,
+      c.x, c.y,
+      c.x + Math.cos(a0) * wr, c.y + Math.sin(a0) * wr,
+      c.x + Math.cos(a1) * wr, c.y + Math.sin(a1) * wr,
       r, g, b, a,
       layer,
     );
@@ -478,9 +521,12 @@ export function drawCapsule(
   const g = color.g;
   const b = color.b;
   const a = color.a ?? 1;
+  const p1 = toWorldPoint(x1, y1, ss);
+  const p2 = toWorldPoint(x2, y2, ss);
+  const wr = toWorldLength(radius, ss);
 
-  const dx = x2 - x1;
-  const dy = y2 - y1;
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
   const len = Math.sqrt(dx * dx + dy * dy);
 
   // Perpendicular direction
@@ -492,9 +538,9 @@ export function drawCapsule(
       const a0 = step * i;
       const a1 = step * (i + 1);
       _ops.op_geo_triangle(
-        x1, y1,
-        x1 + Math.cos(a0) * radius, y1 + Math.sin(a0) * radius,
-        x1 + Math.cos(a1) * radius, y1 + Math.sin(a1) * radius,
+        p1.x, p1.y,
+        p1.x + Math.cos(a0) * wr, p1.y + Math.sin(a0) * wr,
+        p1.x + Math.cos(a1) * wr, p1.y + Math.sin(a1) * wr,
         r, g, b, a, layer,
       );
     }
@@ -505,19 +551,19 @@ export function drawCapsule(
   ny = dx / len;
 
   // Rectangle body (2 triangles)
-  const rx1 = x1 + nx * radius;
-  const ry1 = y1 + ny * radius;
-  const rx2 = x1 - nx * radius;
-  const ry2 = y1 - ny * radius;
-  const rx3 = x2 - nx * radius;
-  const ry3 = y2 - ny * radius;
-  const rx4 = x2 + nx * radius;
-  const ry4 = y2 + ny * radius;
+  const rx1 = p1.x + nx * wr;
+  const ry1 = p1.y + ny * wr;
+  const rx2 = p1.x - nx * wr;
+  const ry2 = p1.y - ny * wr;
+  const rx3 = p2.x - nx * wr;
+  const ry3 = p2.y - ny * wr;
+  const rx4 = p2.x + nx * wr;
+  const ry4 = p2.y + ny * wr;
 
   _ops.op_geo_triangle(rx1, ry1, rx2, ry2, rx3, ry3, r, g, b, a, layer);
   _ops.op_geo_triangle(rx1, ry1, rx3, ry3, rx4, ry4, r, g, b, a, layer);
 
-  // Half-circle cap at (x1, y1): faces away from (x2, y2)
+  // Half-circle cap at (p1.x, p1.y): faces away from (p2.x, p2.y)
   const halfSegs = CIRCLE_SEGMENTS / 2;
   const baseAngle = Math.atan2(ny, nx); // angle of perpendicular
   const capStep = Math.PI / halfSegs;
@@ -527,9 +573,9 @@ export function drawCapsule(
     const a0 = baseAngle + capStep * i;
     const a1 = baseAngle + capStep * (i + 1);
     _ops.op_geo_triangle(
-      x1, y1,
-      x1 + Math.cos(a0) * radius, y1 + Math.sin(a0) * radius,
-      x1 + Math.cos(a1) * radius, y1 + Math.sin(a1) * radius,
+      p1.x, p1.y,
+      p1.x + Math.cos(a0) * wr, p1.y + Math.sin(a0) * wr,
+      p1.x + Math.cos(a1) * wr, p1.y + Math.sin(a1) * wr,
       r, g, b, a, layer,
     );
   }
@@ -539,12 +585,67 @@ export function drawCapsule(
     const a0 = baseAngle + Math.PI + capStep * i;
     const a1 = baseAngle + Math.PI + capStep * (i + 1);
     _ops.op_geo_triangle(
-      x2, y2,
-      x2 + Math.cos(a0) * radius, y2 + Math.sin(a0) * radius,
-      x2 + Math.cos(a1) * radius, y2 + Math.sin(a1) * radius,
+      p2.x, p2.y,
+      p2.x + Math.cos(a0) * wr, p2.y + Math.sin(a0) * wr,
+      p2.x + Math.cos(a1) * wr, p2.y + Math.sin(a1) * wr,
       r, g, b, a, layer,
     );
   }
+}
+
+/**
+ * Draw a filled rectangle via two triangles in the geometry pipeline.
+ * No-op in headless mode.
+ *
+ * This is the geometry-pipeline equivalent of drawRect() but uses layer 0
+ * by default (same as other shapes), not layer 90.
+ *
+ * @param x - Top-left X position.
+ * @param y - Top-left Y position.
+ * @param w - Width.
+ * @param h - Height.
+ * @param options - Color, layer, screenSpace.
+ *
+ * @example
+ * drawRectangle(100, 50, 200, 100, { color: rgb(220, 50, 50) });
+ */
+export function drawRectangle(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  options?: ShapeOptions,
+): void {
+  const layer = options?.layer ?? 0;
+  const ss = options?.screenSpace ?? false;
+
+  _logDrawCall({
+    type: "rectangle",
+    x,
+    y,
+    w,
+    h,
+    layer,
+    screenSpace: ss,
+  } as any);
+
+  warnColor(options?.color, "drawRectangle");
+  if (!hasGeoOps) return;
+
+  const color = options?.color ?? WHITE;
+  const r = color.r;
+  const g = color.g;
+  const b = color.b;
+  const a = color.a ?? 1;
+
+  const p0 = toWorldPoint(x, y, ss);
+  const p1 = toWorldPoint(x + w, y, ss);
+  const p2 = toWorldPoint(x + w, y + h, ss);
+  const p3 = toWorldPoint(x, y + h, ss);
+
+  // Two triangles: (p0, p1, p2) and (p0, p2, p3)
+  _ops.op_geo_triangle(p0.x, p0.y, p1.x, p1.y, p2.x, p2.y, r, g, b, a, layer);
+  _ops.op_geo_triangle(p0.x, p0.y, p2.x, p2.y, p3.x, p3.y, r, g, b, a, layer);
 }
 
 /**
@@ -574,6 +675,7 @@ export function drawPolygon(
     screenSpace: ss,
   } as any);
 
+  warnColor(options?.color, "drawPolygon");
   if (!hasGeoOps || vertices.length < 3) return;
 
   const color = options?.color ?? WHITE;
@@ -582,10 +684,10 @@ export function drawPolygon(
   const b = color.b;
   const a = color.a ?? 1;
 
-  const [fx, fy] = vertices[0];
+  const f = toWorldPoint(vertices[0][0], vertices[0][1], ss);
   for (let i = 1; i < vertices.length - 1; i++) {
-    const [x2, y2] = vertices[i];
-    const [x3, y3] = vertices[i + 1];
-    _ops.op_geo_triangle(fx, fy, x2, y2, x3, y3, r, g, b, a, layer);
+    const v2 = toWorldPoint(vertices[i][0], vertices[i][1], ss);
+    const v3 = toWorldPoint(vertices[i + 1][0], vertices[i + 1][1], ss);
+    _ops.op_geo_triangle(f.x, f.y, v2.x, v2.y, v3.x, v3.y, r, g, b, a, layer);
   }
 }

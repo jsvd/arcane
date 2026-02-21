@@ -9,7 +9,7 @@
  * ```ts
  * // Spawn a red damage number
  * spawnFloatingText(enemy.x, enemy.y, "-25", {
- *   color: { r: 1, g: 0.2, b: 0.2, a: 1 },
+ *   color: rgb(255, 51, 51),
  *   rise: 40,
  *   duration: 0.8,
  * });

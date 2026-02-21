@@ -693,25 +693,61 @@ export function setRustEmitterPosition(id: number, x: number, y: number): void {
 }
 
 /**
- * Draw all alive TS particles as filled circles.
- * This is the common rendering pattern every game writes manually:
+ * Draw all alive TS particles.
  *
- * ```ts
- * for (const p of getAllParticles()) {
- *   drawCircle(p.x, p.y, radius, { color: p.color, layer });
- * }
- * ```
+ * By default, particles render as filled circles via the geometry pipeline.
+ * When a `textureId` is provided (either per-emitter via `EmitterConfig.textureId`
+ * or globally via the `textureId` option), particles render as textured sprites
+ * instead, supporting rotation, blend modes, and higher visual quality.
  *
- * @param options - Optional radius and layer overrides.
- * @param options.radius - Circle radius for each particle. Default: 3.
+ * @param options - Rendering overrides.
+ * @param options.radius - Circle radius for each particle (circle mode). Default: 3.
+ * @param options.size - Sprite size in pixels (sprite mode). Default: 8.
  * @param options.layer - Draw layer. Default: 5.
+ * @param options.textureId - Force all particles to render as sprites with this texture.
+ *   When omitted, particles from emitters with `textureId` in their config render as
+ *   sprites; all others render as circles.
+ * @param options.blendMode - Blend mode for sprite particles. Default: "alpha".
  */
-export function drawAllParticles(options?: { radius?: number; layer?: number }): void {
+export function drawAllParticles(options?: {
+  radius?: number;
+  size?: number;
+  layer?: number;
+  textureId?: number;
+  blendMode?: "alpha" | "additive" | "multiply" | "screen";
+}): void {
   const radius = options?.radius ?? 3;
+  const spriteSize = options?.size ?? 8;
   const layer = options?.layer ?? 5;
-  const particles = getAllParticles();
-  for (const p of particles) {
-    drawCircle(p.x, p.y, radius * p.scale, { color: p.color, layer });
+  const globalTexId = options?.textureId;
+  const blendMode = options?.blendMode;
+
+  for (const emitter of emitters) {
+    // Determine if this emitter's particles should render as sprites
+    const emitterTexId = globalTexId ?? emitter.config.textureId;
+    const useSprite = emitterTexId !== undefined;
+
+    for (const p of emitter.particles) {
+      if (!p.alive) continue;
+
+      if (useSprite) {
+        const sz = spriteSize * p.scale;
+        _drawSprite({
+          textureId: emitterTexId!,
+          x: p.x - sz / 2,
+          y: p.y - sz / 2,
+          w: sz,
+          h: sz,
+          layer,
+          rotation: p.rotation,
+          tint: p.color,
+          opacity: p.color.a,
+          blendMode: blendMode ?? "alpha",
+        });
+      } else {
+        drawCircle(p.x, p.y, radius * p.scale, { color: p.color, layer });
+      }
+    }
   }
 }
 

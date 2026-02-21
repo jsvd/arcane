@@ -112,7 +112,7 @@ export const ParticlePresets = {
  * @example
  * burstParticles(enemy.x, enemy.y); // default sparks
  * burstParticles(x, y, { preset: "dust", count: 20 });
- * burstParticles(x, y, { color: { r: 0, g: 1, b: 0, a: 1 } });
+ * burstParticles(x, y, { color: rgb(0, 255, 0) });
  */
 export function burstParticles(x: number, y: number, options?: ParticleOptions): Emitter {
   const preset = ParticlePresets[options?.preset ?? "sparks"];

@@ -35,7 +35,7 @@ function getEntityColorTex(color: Color): number {
  *
  * @example
  * const player = createEntity(100, 200, {
- *   sprite: { color: { r: 0, g: 0.5, b: 1, a: 1 }, w: 32, h: 32 },
+ *   sprite: { color: rgb(0, 128, 255), w: 32, h: 32 },
  *   body: { type: "dynamic", shape: { type: "aabb", halfW: 16, halfH: 16 } },
  *   tag: "player",
  * });

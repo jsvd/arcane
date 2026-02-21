@@ -73,6 +73,11 @@ declare module "@arcane/runtime/rendering" {
        * - "screen": highlights/lightening (src + dst * (1 - src))
        */
       blendMode?: "alpha" | "additive" | "multiply" | "screen";
+      /**
+       * If true, x/y are screen pixels (HUD) and the engine converts to world
+       * coordinates using the camera. If false, x/y are world units. Default: false.
+       */
+      screenSpace?: boolean;
       /** Custom shader handle from createShaderFromSource(). Default: 0 (built-in shader). */
       shaderId?: number;
       /**
@@ -1019,7 +1024,7 @@ declare module "@arcane/runtime/rendering" {
    * ```ts
    * // Spawn a red damage number
    * spawnFloatingText(enemy.x, enemy.y, "-25", {
-   *   color: { r: 1, g: 0.2, b: 0.2, a: 1 },
+   *   color: rgb(255, 51, 51),
    *   rise: 40,
    *   duration: 0.8,
    * });
@@ -2105,7 +2110,7 @@ declare module "@arcane/runtime/rendering" {
    *   shake: { intensity: 10, duration: 0.3 },
    *   hitstop: 4,
    *   flash: { r: 1, g: 0.8, b: 0.2, duration: 0.15 },
-   *   particles: { count: 25, color: { r: 1, g: 0.5, b: 0, a: 1 } },
+   *   particles: { count: 25, color: rgb(255, 128, 0) },
    * });
    *
    * // Minimal hit feedback
@@ -2975,15 +2980,15 @@ declare module "@arcane/runtime/rendering" {
    *   msdfFont: font,
    *   scale: 3,
    *   screenSpace: true,
-   *   outline: { width: 1.0, color: { r: 0, g: 0, b: 0, a: 1 } },
-   *   shadow: { offsetX: 2, offsetY: 2, color: { r: 0, g: 0, b: 0, a: 0.5 } },
+   *   outline: { width: 1.0, color: rgb(0, 0, 0) },
+   *   shadow: { offsetX: 2, offsetY: 2, color: rgb(0, 0, 0, 128) },
    * });
    *
    * @example
    * // Multiple drawText calls with different params in the same frame work correctly.
    * // Each unique outline/shadow combo gets its own shader slot from the pool.
-   * drawText("Red outline", 10, 10, { msdfFont: font, outline: { width: 1, color: { r: 1, g: 0, b: 0, a: 1 } } });
-   * drawText("Blue outline", 10, 40, { msdfFont: font, outline: { width: 2, color: { r: 0, g: 0, b: 1, a: 1 } } });
+   * drawText("Red outline", 10, 10, { msdfFont: font, outline: { width: 1, color: rgb(255, 0, 0) } });
+   * drawText("Blue outline", 10, 40, { msdfFont: font, outline: { width: 2, color: rgb(0, 0, 255) } });
    * drawText("No effects", 10, 70, { msdfFont: font });
    */
   export declare function drawText(text: string, x: number, y: number, options?: TextOptions): void;
@@ -3352,7 +3357,7 @@ declare module "@arcane/runtime/rendering" {
    *
    * @example
    * ```ts
-   * const trail = createTrail({ maxLength: 20, width: 8, color: { r: 1, g: 0.5, b: 0, a: 1 } });
+   * const trail = createTrail({ maxLength: 20, width: 8, color: rgb(255, 128, 0) });
    *
    * onFrame(() => {
    *   updateTrail(trail, mouseX, mouseY);
@@ -3483,7 +3488,7 @@ declare module "@arcane/runtime/rendering" {
    * ```ts
    * import { startScreenTransition, updateScreenTransition, drawScreenTransition } from "./transition.ts";
    *
-   * startScreenTransition("circleIris", 0.6, { color: { r: 0, g: 0, b: 0 } }, () => {
+   * startScreenTransition("circleIris", 0.6, { color: rgb(0, 0, 0) }, () => {
    *   // swap scene at midpoint
    * });
    * ```

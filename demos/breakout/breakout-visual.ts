@@ -11,7 +11,6 @@ import {
 } from "./breakout.ts";
 import type { BreakoutState } from "./breakout.ts";
 import {
-  setCamera,
   isKeyDown, isKeyPressed, getViewportSize,
 } from "../../runtime/rendering/index.ts";
 import { Colors, HUDLayout, rgb, drawCircle } from "../../runtime/ui/index.ts";
@@ -168,7 +167,7 @@ function syncBallToPhysics(): void {
 }
 
 // Game setup
-const game = createGame({ name: "breakout", autoCamera: false });
+const game = createGame({ name: "breakout" });
 
 game.state<BreakoutState>({
   get: () => state,
@@ -202,8 +201,6 @@ game.state<BreakoutState>({
 });
 
 game.onFrame((ctx) => {
-  setCamera(state.fieldW / 2, state.fieldH / 2, 1);
-
   // Input
   if (isKeyDown("ArrowLeft") || isKeyDown("a")) {
     state = movePaddle(state, -PADDLE_SPEED * ctx.dt);

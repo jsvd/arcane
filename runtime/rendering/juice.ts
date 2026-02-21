@@ -169,7 +169,7 @@ export function hitstop(frames: number): void {
  *   shake: { intensity: 10, duration: 0.3 },
  *   hitstop: 4,
  *   flash: { r: 1, g: 0.8, b: 0.2, duration: 0.15 },
- *   particles: { count: 25, color: { r: 1, g: 0.5, b: 0, a: 1 } },
+ *   particles: { count: 25, color: rgb(255, 128, 0) },
  * });
  *
  * // Minimal hit feedback

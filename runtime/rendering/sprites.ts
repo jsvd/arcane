@@ -1,4 +1,6 @@
 import type { SpriteOptions } from "./types.ts";
+import { getCamera } from "./camera.ts";
+import { getViewportSize } from "./input.ts";
 import { _logDrawCall } from "../testing/visual.ts";
 
 // Detect if we're running inside the Arcane renderer (V8 with render ops).
@@ -106,11 +108,21 @@ export function drawSprite(opts: SpriteOptions): void {
 
   // Extract ALL properties to temp variables to work around V8 object literal property access bug
   const texId = opts.textureId;
-  const x = opts.x;
-  const y = opts.y;
-  const w = opts.w;
-  const h = opts.h;
+  let x = opts.x;
+  let y = opts.y;
+  let w = opts.w;
+  let h = opts.h;
   const layer = opts.layer ?? 0;
+
+  // Screen-space conversion: transform screen pixels to world coordinates
+  if (opts.screenSpace) {
+    const cam = getCamera();
+    const { width: vpW, height: vpH } = getViewportSize();
+    x = x / cam.zoom + cam.x - vpW / (2 * cam.zoom);
+    y = y / cam.zoom + cam.y - vpH / (2 * cam.zoom);
+    w = w / cam.zoom;
+    h = h / cam.zoom;
+  }
   const uvX = uv.x;
   const uvY = uv.y;
   const uvW = uv.w;

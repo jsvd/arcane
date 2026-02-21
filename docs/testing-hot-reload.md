@@ -40,7 +40,7 @@ onFrame((dt) => {
   const font = getDefaultFont();
   drawText(`Hot reload test - VERSION 1`, 10, 10, {
     font,
-    color: { r: 0, g: 1, b: 0, a: 1 },
+    tint: rgb(0, 255, 0),
     screenSpace: true,
   });
 });

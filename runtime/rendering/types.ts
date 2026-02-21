@@ -57,6 +57,11 @@ export type SpriteOptions = {
    * - "screen": highlights/lightening (src + dst * (1 - src))
    */
   blendMode?: "alpha" | "additive" | "multiply" | "screen";
+  /**
+   * If true, x/y are screen pixels (HUD) and the engine converts to world
+   * coordinates using the camera. If false, x/y are world units. Default: false.
+   */
+  screenSpace?: boolean;
   /** Custom shader handle from createShaderFromSource(). Default: 0 (built-in shader). */
   shaderId?: number;
   /**

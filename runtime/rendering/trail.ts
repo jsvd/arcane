@@ -11,7 +11,7 @@
  *
  * @example
  * ```ts
- * const trail = createTrail({ maxLength: 20, width: 8, color: { r: 1, g: 0.5, b: 0, a: 1 } });
+ * const trail = createTrail({ maxLength: 20, width: 8, color: rgb(255, 128, 0) });
  *
  * onFrame(() => {
  *   updateTrail(trail, mouseX, mouseY);
