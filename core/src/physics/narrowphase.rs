@@ -1018,3 +1018,403 @@ fn aabb_vs_polygon_manifold(aabb: &RigidBody, poly: &RigidBody, swapped: bool) -
 
     Some(manifold)
 }
+
+// ============================================================================
+// Speculative Contact Detection (TGS Soft Phase 3)
+// ============================================================================
+
+/// Test collision between two bodies with speculative contact detection.
+/// If bodies are separated but within the speculative margin, generates a
+/// contact with negative penetration (representing the separation distance).
+/// This prevents tunneling for fast-moving objects.
+pub fn test_collision_manifold_speculative(
+    a: &RigidBody,
+    b: &RigidBody,
+    margin: f32,
+) -> Option<ContactManifold> {
+    // First try normal collision detection
+    if let Some(manifold) = test_collision_manifold(a, b) {
+        return Some(manifold);
+    }
+
+    // If no collision, check if bodies are close enough for speculative contact
+    // Use shape-specific separation distance calculation
+    match (&a.shape, &b.shape) {
+        (Shape::Circle { .. }, Shape::Circle { .. }) => {
+            circle_vs_circle_speculative(a, b, margin)
+        }
+        (Shape::Circle { .. }, Shape::AABB { .. }) => {
+            circle_vs_aabb_speculative(a, b, margin, false)
+        }
+        (Shape::AABB { .. }, Shape::Circle { .. }) => {
+            circle_vs_aabb_speculative(b, a, margin, true)
+        }
+        (Shape::AABB { .. }, Shape::AABB { .. }) => {
+            aabb_vs_aabb_speculative(a, b, margin)
+        }
+        (Shape::Polygon { .. }, Shape::Polygon { .. }) => {
+            polygon_vs_polygon_speculative(a, b, margin)
+        }
+        (Shape::Circle { .. }, Shape::Polygon { .. }) => {
+            circle_vs_polygon_speculative(a, b, margin, false)
+        }
+        (Shape::Polygon { .. }, Shape::Circle { .. }) => {
+            circle_vs_polygon_speculative(b, a, margin, true)
+        }
+        // AABB vs Polygon: convert AABB and use polygon-polygon
+        (Shape::AABB { half_w, half_h }, Shape::Polygon { .. }) => {
+            let aabb_as_poly = RigidBody {
+                shape: Shape::Polygon {
+                    vertices: vec![(-half_w, -half_h), (*half_w, -half_h), (*half_w, *half_h), (-half_w, *half_h)],
+                },
+                ..a.clone()
+            };
+            let mut result = polygon_vs_polygon_speculative(&aabb_as_poly, b, margin)?;
+            result.body_a = a.id;
+            Some(result)
+        }
+        (Shape::Polygon { .. }, Shape::AABB { half_w, half_h }) => {
+            let aabb_as_poly = RigidBody {
+                shape: Shape::Polygon {
+                    vertices: vec![(-half_w, -half_h), (*half_w, -half_h), (*half_w, *half_h), (-half_w, *half_h)],
+                },
+                ..b.clone()
+            };
+            let mut result = polygon_vs_polygon_speculative(a, &aabb_as_poly, margin)?;
+            result.body_b = b.id;
+            Some(result)
+        }
+    }
+}
+
+/// Speculative circle vs circle: compute separation and create contact if within margin.
+fn circle_vs_circle_speculative(a: &RigidBody, b: &RigidBody, margin: f32) -> Option<ContactManifold> {
+    let ra = match a.shape {
+        Shape::Circle { radius } => radius,
+        _ => return None,
+    };
+    let rb = match b.shape {
+        Shape::Circle { radius } => radius,
+        _ => return None,
+    };
+
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+    let dist = (dx * dx + dy * dy).sqrt();
+    let sum_r = ra + rb;
+    let separation = dist - sum_r;
+
+    // Only create speculative contact if separated but within margin
+    if separation <= 0.0 || separation > margin {
+        return None;
+    }
+
+    // Normal from a to b
+    let (nx, ny) = if dist > 1e-8 {
+        (dx / dist, dy / dist)
+    } else {
+        (1.0, 0.0)
+    };
+
+    // Contact point: midpoint between closest surface points
+    let cpx = a.x + nx * ra;
+    let cpy = a.y + ny * ra;
+
+    let local_a = world_to_local(a, cpx, cpy);
+    let local_b = world_to_local(b, cpx, cpy);
+
+    // Negative penetration = separation distance
+    Some(ContactManifold {
+        body_a: a.id,
+        body_b: b.id,
+        normal: (nx, ny),
+        points: vec![ManifoldPoint::new(local_a, local_b, -separation, ContactID::circle())],
+        tangent: (-ny, nx),
+        velocity_bias: 0.0,
+    })
+}
+
+/// Speculative circle vs AABB.
+fn circle_vs_aabb_speculative(
+    circle: &RigidBody,
+    aabb: &RigidBody,
+    margin: f32,
+    swapped: bool,
+) -> Option<ContactManifold> {
+    let radius = match circle.shape {
+        Shape::Circle { radius } => radius,
+        _ => return None,
+    };
+    let (hw, hh) = match aabb.shape {
+        Shape::AABB { half_w, half_h } => (half_w, half_h),
+        _ => return None,
+    };
+
+    // Circle center in AABB local space
+    let local_x = circle.x - aabb.x;
+    let local_y = circle.y - aabb.y;
+
+    // Closest point on AABB to circle center
+    let closest_x = local_x.clamp(-hw, hw);
+    let closest_y = local_y.clamp(-hh, hh);
+
+    let dx = local_x - closest_x;
+    let dy = local_y - closest_y;
+    let dist_sq = dx * dx + dy * dy;
+    let dist = dist_sq.sqrt();
+
+    // Separation = distance from closest point to circle surface
+    let separation = dist - radius;
+
+    // Only speculative if separated but within margin
+    if separation <= 0.0 || separation > margin {
+        return None;
+    }
+
+    // Normal from AABB toward circle
+    let (nx, ny) = if dist > 1e-8 {
+        (dx / dist, dy / dist)
+    } else {
+        (1.0, 0.0)
+    };
+
+    let cpx = aabb.x + closest_x;
+    let cpy = aabb.y + closest_y;
+
+    let (body_a, body_b, fnx, fny) = if swapped {
+        (aabb, circle, nx, ny)
+    } else {
+        (circle, aabb, -nx, -ny)
+    };
+
+    let local_a = world_to_local(body_a, cpx, cpy);
+    let local_b = world_to_local(body_b, cpx, cpy);
+
+    Some(ContactManifold {
+        body_a: body_a.id,
+        body_b: body_b.id,
+        normal: (fnx, fny),
+        points: vec![ManifoldPoint::new(local_a, local_b, -separation, ContactID::circle())],
+        tangent: (-fny, fnx),
+        velocity_bias: 0.0,
+    })
+}
+
+/// Speculative AABB vs AABB.
+fn aabb_vs_aabb_speculative(a: &RigidBody, b: &RigidBody, margin: f32) -> Option<ContactManifold> {
+    let (ahw, ahh) = match a.shape {
+        Shape::AABB { half_w, half_h } => (half_w, half_h),
+        _ => return None,
+    };
+    let (bhw, bhh) = match b.shape {
+        Shape::AABB { half_w, half_h } => (half_w, half_h),
+        _ => return None,
+    };
+
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+
+    // Compute separation on each axis
+    let sep_x = dx.abs() - (ahw + bhw);
+    let sep_y = dy.abs() - (ahh + bhh);
+
+    // Both must be separated, and the smaller separation must be within margin
+    let separation = sep_x.max(sep_y);
+
+    if separation <= 0.0 || separation > margin {
+        return None;
+    }
+
+    // Choose axis of minimum separation for the contact normal
+    let (nx, ny, sep) = if sep_x > sep_y {
+        // X-axis separation
+        let nx = if dx >= 0.0 { 1.0 } else { -1.0 };
+        (nx, 0.0, sep_x)
+    } else {
+        // Y-axis separation
+        let ny = if dy >= 0.0 { 1.0 } else { -1.0 };
+        (0.0, ny, sep_y)
+    };
+
+    // Contact point: surface of A closest to B
+    let cpx = a.x + nx * ahw;
+    let cpy = a.y + ny * ahh;
+
+    let local_a = world_to_local(a, cpx, cpy);
+    let local_b = world_to_local(b, cpx, cpy);
+
+    Some(ContactManifold {
+        body_a: a.id,
+        body_b: b.id,
+        normal: (nx, ny),
+        points: vec![ManifoldPoint::new(local_a, local_b, -sep, ContactID::new(0, 0, 0))],
+        tangent: (-ny, nx),
+        velocity_bias: 0.0,
+    })
+}
+
+/// Speculative polygon vs polygon using SAT separation.
+fn polygon_vs_polygon_speculative(a: &RigidBody, b: &RigidBody, margin: f32) -> Option<ContactManifold> {
+    let verts_a = get_world_vertices(a);
+    let verts_b = get_world_vertices(b);
+
+    if verts_a.len() < 3 || verts_b.len() < 3 {
+        return None;
+    }
+
+    // Find minimum separation using SAT
+    let (sep_a, edge_a) = find_max_separation(&verts_a, &verts_b);
+    let (sep_b, edge_b) = find_max_separation(&verts_b, &verts_a);
+
+    // Take the larger separation (both should be positive for separated polygons)
+    let separation = sep_a.max(sep_b);
+
+    // Only speculative if separated but within margin
+    if separation <= 0.0 || separation > margin {
+        return None;
+    }
+
+    // Use the edge with larger separation as reference
+    let (ref_verts, inc_verts, ref_edge, _ref_body, _inc_body, flip) = if sep_a >= sep_b {
+        (&verts_a, &verts_b, edge_a, a, b, false)
+    } else {
+        (&verts_b, &verts_a, edge_b, b, a, true)
+    };
+
+    // Get reference edge normal
+    let n = ref_verts.len();
+    let ref_v0 = ref_verts[ref_edge];
+    let ref_v1 = ref_verts[(ref_edge + 1) % n];
+
+    let ref_ex = ref_v1.0 - ref_v0.0;
+    let ref_ey = ref_v1.1 - ref_v0.1;
+    let ref_len = (ref_ex * ref_ex + ref_ey * ref_ey).sqrt();
+    if ref_len < 1e-8 {
+        return None;
+    }
+    let ref_nx = ref_ey / ref_len;
+    let ref_ny = -ref_ex / ref_len;
+
+    // Find closest vertex on incident polygon
+    let mut min_proj = f32::MAX;
+    let mut closest_point = inc_verts[0];
+    for &v in inc_verts {
+        let proj = (v.0 - ref_v0.0) * ref_nx + (v.1 - ref_v0.1) * ref_ny;
+        if proj < min_proj {
+            min_proj = proj;
+            closest_point = v;
+        }
+    }
+
+    // Build normal pointing from A to B
+    let (final_nx, final_ny) = if flip {
+        (-ref_nx, -ref_ny)
+    } else {
+        (ref_nx, ref_ny)
+    };
+
+    // Ensure normal points from A toward B
+    let dir_x = b.x - a.x;
+    let dir_y = b.y - a.y;
+    let (final_nx, final_ny) = if dir_x * final_nx + dir_y * final_ny < 0.0 {
+        (-final_nx, -final_ny)
+    } else {
+        (final_nx, final_ny)
+    };
+
+    let local_a = world_to_local(a, closest_point.0, closest_point.1);
+    let local_b = world_to_local(b, closest_point.0, closest_point.1);
+
+    Some(ContactManifold {
+        body_a: a.id,
+        body_b: b.id,
+        normal: (final_nx, final_ny),
+        points: vec![ManifoldPoint::new(local_a, local_b, -separation, ContactID::new(ref_edge as u8, 0, 0))],
+        tangent: (-final_ny, final_nx),
+        velocity_bias: 0.0,
+    })
+}
+
+/// Speculative circle vs polygon.
+fn circle_vs_polygon_speculative(
+    circle: &RigidBody,
+    poly: &RigidBody,
+    margin: f32,
+    swapped: bool,
+) -> Option<ContactManifold> {
+    let radius = match circle.shape {
+        Shape::Circle { radius } => radius,
+        _ => return None,
+    };
+    let verts = get_world_vertices(poly);
+    if verts.len() < 3 {
+        return None;
+    }
+
+    // Find closest point on polygon to circle center
+    let mut closest_dist_sq = f32::MAX;
+    let mut closest_point = (0.0f32, 0.0f32);
+
+    let n = verts.len();
+    for i in 0..n {
+        let (ax, ay) = verts[i];
+        let (bx, by) = verts[(i + 1) % n];
+        let (cx, cy) = closest_point_on_segment(circle.x, circle.y, ax, ay, bx, by);
+        let dx = circle.x - cx;
+        let dy = circle.y - cy;
+        let d2 = dx * dx + dy * dy;
+        if d2 < closest_dist_sq {
+            closest_dist_sq = d2;
+            closest_point = (cx, cy);
+        }
+    }
+
+    // Check if inside polygon (would be handled by normal collision)
+    if point_in_polygon(circle.x, circle.y, &verts) {
+        return None;
+    }
+
+    let dist = closest_dist_sq.sqrt();
+    let separation = dist - radius;
+
+    // Only speculative if separated but within margin
+    if separation <= 0.0 || separation > margin {
+        return None;
+    }
+
+    // Normal from polygon toward circle
+    let dx = circle.x - closest_point.0;
+    let dy = circle.y - closest_point.1;
+    let (nx, ny) = if dist > 1e-8 {
+        (dx / dist, dy / dist)
+    } else {
+        (1.0, 0.0)
+    };
+
+    let (body_a, body_b, fnx, fny) = if swapped {
+        (poly, circle, -nx, -ny)
+    } else {
+        (circle, poly, nx, ny)
+    };
+
+    // Ensure normal points from body_a to body_b
+    let dir_x = body_b.x - body_a.x;
+    let dir_y = body_b.y - body_a.y;
+    let (fnx, fny) = if fnx * dir_x + fny * dir_y < 0.0 {
+        (-fnx, -fny)
+    } else {
+        (fnx, fny)
+    };
+
+    let local_a = world_to_local(body_a, closest_point.0, closest_point.1);
+    let local_b = world_to_local(body_b, closest_point.0, closest_point.1);
+
+    Some(ContactManifold {
+        body_a: body_a.id,
+        body_b: body_b.id,
+        normal: (fnx, fny),
+        points: vec![ManifoldPoint::new(local_a, local_b, -separation, ContactID::circle())],
+        tangent: (-fny, fnx),
+        velocity_bias: 0.0,
+    })
+}

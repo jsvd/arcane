@@ -2,6 +2,11 @@ use std::collections::{HashMap, HashSet};
 
 use super::types::BodyId;
 
+/// Default speculative margin for continuous collision detection.
+/// Objects within this distance (plus velocity-based expansion) generate
+/// speculative contacts to prevent tunneling.
+pub const SPECULATIVE_MARGIN: f32 = 5.0;
+
 pub struct SpatialHash {
     #[allow(dead_code)]
     cell_size: f32,
@@ -35,6 +40,33 @@ impl SpatialHash {
                 self.cells.entry((cx, cy)).or_default().push(id);
             }
         }
+    }
+
+    /// Insert a body's AABB expanded by velocity for speculative contact detection.
+    /// The expansion is: velocity * dt + fixed margin. This catches fast-moving
+    /// objects that might tunnel through thin obstacles.
+    pub fn insert_speculative(
+        &mut self,
+        id: BodyId,
+        min_x: f32,
+        min_y: f32,
+        max_x: f32,
+        max_y: f32,
+        vx: f32,
+        vy: f32,
+        dt: f32,
+    ) {
+        // Expand AABB by velocity projection + margin
+        let expand_x = vx.abs() * dt + SPECULATIVE_MARGIN;
+        let expand_y = vy.abs() * dt + SPECULATIVE_MARGIN;
+
+        self.insert(
+            id,
+            min_x - expand_x,
+            min_y - expand_y,
+            max_x + expand_x,
+            max_y + expand_y,
+        );
     }
 
     /// Collect unique pairs of bodies that share at least one cell.

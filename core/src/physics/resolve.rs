@@ -479,25 +479,28 @@ pub fn warm_start_manifolds(
 }
 
 /// One iteration of velocity solving for all manifolds.
+/// `sub_dt` is the sub-step time for speculative contact bias calculation.
 pub fn resolve_manifolds_velocity_iteration(
     bodies: &mut [Option<RigidBody>],
     manifolds: &mut [ContactManifold],
     reverse: bool,
+    sub_dt: f32,
 ) {
     let len = manifolds.len();
     if reverse {
         for i in (0..len).rev() {
-            resolve_manifold_velocity(bodies, &mut manifolds[i]);
+            resolve_manifold_velocity(bodies, &mut manifolds[i], sub_dt);
         }
     } else {
         for i in 0..len {
-            resolve_manifold_velocity(bodies, &mut manifolds[i]);
+            resolve_manifold_velocity(bodies, &mut manifolds[i], sub_dt);
         }
     }
 }
 
 /// Solve velocity constraints for a single manifold.
-fn resolve_manifold_velocity(bodies: &mut [Option<RigidBody>], manifold: &mut ContactManifold) {
+/// `sub_dt` is used to compute speculative contact bias for negative penetration.
+fn resolve_manifold_velocity(bodies: &mut [Option<RigidBody>], manifold: &mut ContactManifold, sub_dt: f32) {
     let id_a = manifold.body_a as usize;
     let id_b = manifold.body_b as usize;
 
@@ -569,8 +572,20 @@ fn resolve_manifold_velocity(bodies: &mut [Option<RigidBody>], manifold: &mut Co
         }
 
         // Normal impulse with accumulated clamping
-        // Split velocity_bias among contact points
-        let per_point_bias = velocity_bias / num_points;
+        // For speculative contacts (negative penetration), we ALLOW approach velocity
+        // up to separation/dt so bodies arrive just-touching at end of timestep.
+        // The bias is NEGATIVE (permits approaching) unlike restitution bias (positive).
+        let speculative_bias = if point.penetration < 0.0 && sub_dt > 0.0 {
+            // penetration < 0 means separation = -penetration > 0
+            // We want to allow vn down to -separation/dt (approaching)
+            // bias = penetration / dt (which is negative, allowing approach)
+            point.penetration / sub_dt
+        } else {
+            0.0
+        };
+
+        // Combined bias: restitution (positive, for bouncing) + speculative (negative, allows approach)
+        let per_point_bias = velocity_bias / num_points + speculative_bias;
         let j_new = -(vn - per_point_bias) / inv_mass_sum;
 
         let old_accumulated = point.accumulated_jn;

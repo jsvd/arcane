@@ -3,7 +3,8 @@ use std::collections::{HashMap, HashSet};
 use super::broadphase::SpatialHash;
 use super::constraints::{solve_constraints, solve_constraints_position};
 use super::integrate::integrate;
-use super::narrowphase::{test_collision, test_collision_manifold};
+use super::broadphase::SPECULATIVE_MARGIN;
+use super::narrowphase::{test_collision, test_collision_manifold, test_collision_manifold_speculative};
 use super::resolve::{
     initialize_contacts, initialize_manifolds, resolve_contacts_position,
     resolve_contacts_velocity_iteration, resolve_manifolds_position,
@@ -309,11 +310,15 @@ impl PhysicsWorld {
             integrate(body, self.gravity.0, self.gravity.1, dt);
         }
 
-        // 2. Broadphase
+        // 2. Broadphase with speculative expansion
+        // Expand AABBs by velocity to catch fast-moving objects that might tunnel
         self.broadphase.clear();
         for body in self.bodies.iter().flatten() {
             let (min_x, min_y, max_x, max_y) = get_shape_aabb(body);
-            self.broadphase.insert(body.id, min_x, min_y, max_x, max_y);
+            self.broadphase.insert_speculative(
+                body.id, min_x, min_y, max_x, max_y,
+                body.vx, body.vy, dt,
+            );
         }
         let pairs = self.broadphase.get_pairs();
 
@@ -347,7 +352,10 @@ impl PhysicsWorld {
             let body_a = self.bodies[a_idx].as_ref().unwrap();
             let body_b = self.bodies[b_idx].as_ref().unwrap();
 
-            if let Some(manifold) = test_collision_manifold(body_a, body_b) {
+            // Use speculative collision detection to catch fast-moving objects
+            // This generates contacts with negative penetration for close but separated bodies
+            let speculative_margin = SPECULATIVE_MARGIN + (body_a.vx.abs() + body_a.vy.abs() + body_b.vx.abs() + body_b.vy.abs()) * dt;
+            if let Some(manifold) = test_collision_manifold_speculative(body_a, body_b, speculative_margin) {
                 // Also generate legacy Contact for get_contacts() API
                 // Use first contact point from manifold
                 if !manifold.points.is_empty() {
@@ -430,7 +438,7 @@ impl PhysicsWorld {
         // 4. Velocity solve (manifolds + constraints)
         for i in 0..self.solver_iterations {
             let reverse = i % 2 == 1;
-            resolve_manifolds_velocity_iteration(&mut self.bodies, &mut self.manifolds, reverse);
+            resolve_manifolds_velocity_iteration(&mut self.bodies, &mut self.manifolds, reverse, dt);
             solve_constraints(&mut self.bodies, &mut self.constraints, dt);
         }
 

@@ -3246,7 +3246,7 @@ fn test_polygon_seesaw_rotates() {
     });
 
     // Drop a ball on the right end of the plank
-    let ball = world.add_body(
+    let _ball = world.add_body(
         BodyType::Dynamic,
         Shape::Circle { radius: 8.0 },
         235.0, 150.0, 2.0, // x = 235 is past the right end
@@ -3520,4 +3520,115 @@ fn test_rigid_vs_soft_constraint_behavior() {
 
     assert!(rigid_dist > 45.0 && rigid_dist < 55.0, "Rigid should maintain distance: {}", rigid_dist);
     assert!(soft_dist > 40.0 && soft_dist < 60.0, "Soft should be near target: {}", soft_dist);
+}
+
+// =========================================================================
+// TGS Soft: Speculative Contacts (Phase 3)
+// =========================================================================
+
+/// A fast-moving ball should not tunnel through a thin wall.
+/// Speculative contacts detect potential collisions before they happen.
+#[test]
+fn test_fast_ball_no_tunneling() {
+    let mut world = PhysicsWorld::new(0.0, 0.0); // No gravity
+
+    // Thin wall at x=100
+    let wall_thickness = 2.0;
+    let _wall = world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: wall_thickness / 2.0, half_h: 50.0 },
+        100.0, 0.0, 0.0,
+        Material { restitution: 0.0, friction: 0.5 },
+        0xFFFF, 0xFFFF,
+    );
+
+    // Fast ball moving toward wall (600 units/s = 10 units per frame at 60fps)
+    // Ball starts at x=50, wall surface is at x=99
+    let ball_radius = 5.0;
+    let ball = world.add_body(
+        BodyType::Dynamic,
+        Shape::Circle { radius: ball_radius },
+        50.0, 0.0, 1.0,
+        Material { restitution: 0.5, friction: 0.5 },
+        0xFFFF, 0xFFFF,
+    );
+    world.set_velocity(ball, 600.0, 0.0);
+
+    // Simulate for 1 second
+    for _ in 0..60 {
+        world.step(1.0 / 60.0);
+    }
+
+    // Ball should NOT have tunneled through
+    // Wall surface is at x = 100 - 1 = 99, ball must stay at x <= 99 - radius = 94
+    let ball_state = world.get_body(ball).unwrap();
+    let wall_surface = 100.0 - wall_thickness / 2.0;
+    let max_allowed_x = wall_surface - ball_radius + 0.5; // Allow small penetration
+
+    assert!(
+        ball_state.x <= max_allowed_x,
+        "Ball tunneled through wall! Ball x = {:.2}, wall surface at {:.2}. Ball should have stopped.",
+        ball_state.x, wall_surface,
+    );
+
+    // Ball should have bounced back (negative velocity) or stopped
+    assert!(
+        ball_state.vx <= 0.0,
+        "Ball should have bounced or stopped, but vx = {:.2}",
+        ball_state.vx,
+    );
+}
+
+/// Speculative contacts should allow objects to approach and collide normally.
+/// This verifies the speculative bias doesn't prevent natural collision.
+#[test]
+fn test_speculative_contact_allows_collision() {
+    let mut world = PhysicsWorld::new(0.0, 0.0);
+
+    // Ground
+    let _ground = world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 100.0, half_h: 10.0 },
+        0.0, 100.0, 0.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Ball falling toward ground
+    // Ball center at y=80, radius=5, so bottom at y=85
+    // Ground top at y=90, so separation = 5 units
+    let ball_radius = 5.0;
+    let ball = world.add_body(
+        BodyType::Dynamic,
+        Shape::Circle { radius: ball_radius },
+        0.0, 80.0, 1.0,
+        Material { restitution: 0.3, friction: 0.5 },
+        0xFFFF, 0xFFFF,
+    );
+    // Give it some downward velocity
+    world.set_velocity(ball, 0.0, 100.0);
+
+    // Step a few frames
+    for _ in 0..10 {
+        world.step(1.0 / 60.0);
+    }
+
+    let state = world.get_body(ball).unwrap();
+
+    // Ball should have hit the ground (y close to ground top minus radius)
+    let ground_top = 100.0 - 10.0; // y = 90
+    let expected_rest_y = ground_top - ball_radius; // y = 85
+
+    assert!(
+        (state.y - expected_rest_y).abs() < 5.0,
+        "Ball should have collided with ground and settled. y = {:.2}, expected near {:.2}",
+        state.y, expected_rest_y,
+    );
+
+    // Ball should have slowed down significantly
+    assert!(
+        state.vy.abs() < 50.0,
+        "Ball should have slowed after hitting ground, vy = {:.2}",
+        state.vy,
+    );
 }
