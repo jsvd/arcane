@@ -30,7 +30,8 @@ arcane/
 │   ├── asset-management.md        — `arcane assets` CLI docs (search, download, catalog)
 │   ├── publishing-guide.md        — crates.io release process and checklist
 │   ├── recipe-guide.md            — Building reusable game systems with system()/rule()
-│   └── testing-hot-reload.md      — Hot-reload implementation details and debugging
+│   ├── testing-hot-reload.md      — Hot-reload implementation details and debugging
+│   └── rendering-philosophy.md    — Rendering UX design principles and layer conventions
 ├── core/                          — arcane-core lib crate
 │   ├── Cargo.toml                 — Feature-gated: `renderer` (default on)
 │   ├── src/
@@ -194,27 +195,31 @@ arcane/
 ├── demos/
 │   ├── agent-testing/             — Phase 17 demo: MCP tools, snapshot replay, property testing
 │   ├── asteroids/                 — Phase 8 demo: rotation, flip, opacity, blend modes, CRT post-processing
+│   ├── audio-showcase/            — Phase 20 demo: spatial audio, crossfade, mixer panel
 │   ├── bfrpg-crawler/             — Phase 6 demo: BFRPG dungeon crawler with character creation, combat, AI
 │   ├── breakout/                  — Phase 2b demo: real-time arcade (paddle, ball, bricks)
 │   ├── card-battler/              — Phase 1 demo: card game
-│   ├── character-controller/     — Phase 15 demo: animation state machine + blending
+│   ├── character-controller/      — Phase 15 demo: animation state machine + blending
+│   ├── gamepad-platformer/        — Phase 24 demo: gamepad/touch input, action mapping
 │   ├── hello-world/               — Minimal starter: sprite + text
-│   ├── isometric-dungeon/        — Isometric 2.5D: coordinate transforms, depth sorting, pathfinding
+│   ├── hex-strategy/              — Phase 23 demo: hex grid strategy, terrain, pathfinding
+│   ├── isometric-dungeon/         — Phase 22 demo: isometric 2.5D, coordinate transforms, depth sorting
 │   ├── juice-showcase/            — Phase 9 demo: tweening, particles, camera shake
 │   ├── lighting-showcase/         — Phase 19 demo: point/directional/spot lights, GI, day/night
 │   ├── menu-flow/                 — Phase 10 demo: scene management, save/load, menu flow
 │   ├── msdf-text-showcase/        — MSDF text rendering: outlines, shadows, crisp scaling
-│   ├── parallax-scroller/        — Phase 13 demo: parallax scrolling + camera features
+│   ├── parallax-scroller/         — Phase 13 demo: parallax scrolling + camera features
 │   ├── physics-playground/        — Phase 11 demo: rigid body physics sandbox
 │   ├── platformer/                — Phase 4 demo: gravity, platforms, coins, text HUD, UI bars
 │   ├── roguelike/                 — Phase 2b demo: procedural dungeon, FOV, fog of war
+│   ├── shapes-showcase/           — Phase 25 demo: geometry pipeline shapes, colors, layers
 │   ├── sokoban/                   — Phase 1 demo: grid puzzle + Phase 2a visual demo
 │   ├── sprite-demo/               — Phase 5.5 demo: asset loading validation with sprite sheet + sound
-│   ├── tilemap-showcase/         — Phase 14 demo: layers, auto-tiling, animated tiles
+│   ├── tilemap-showcase/          — Phase 14 demo: layers, auto-tiling, animated tiles
 │   ├── tower-defense/             — Phase 5 demo: tower placement, enemy waves, pathfinding
-│   ├── ui-showcase/              — Phase 16 demo: interactive UI widgets
-│   ├── wfc-dungeon/               — Phase 18 demo: WFC procedural dungeon generation
-│   └── audio-showcase/            — Phase 20 demo: spatial audio, crossfade, mixer panel
+│   ├── ui-showcase/               — Phase 16 demo: interactive UI widgets
+│   ├── visual-polish/             — Phase 21 demo: transitions, nine-slice, trails, floating text
+│   └── wfc-dungeon/               — Phase 18 demo: WFC procedural dungeon generation
 ├── recipes/
 │   ├── turn-based-combat/         — Initiative, attack/defend, victory detection
 │   ├── inventory-equipment/       — Items, stacking, weight, equipment slots, stat bonuses

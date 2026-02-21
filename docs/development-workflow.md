@@ -142,22 +142,10 @@ Don't use separate worktrees when:
 
 ### What Can Run in Parallel
 
-The architecture naturally splits into independent workstreams:
-
-**Phase 1 parallel opportunities:**
-
-```
-Workstream A (TS Runtime)          Workstream B (Rust Skeleton)
-─────────────────────────          ────────────────────────────
-State tree + types                 Cargo workspace setup
-Transactions + diffs               deno_core V8 embedding spike
-Query API                          Basic TS↔Rust bridge
-Observers                          CLI skeleton (arcane test)
-PRNG
-Headless test harness
-```
-
-Workstream A needs zero Rust. Workstream B needs minimal TS. They converge when we wire the TS runtime into the Rust host — but that's the end of Phase 1, not the beginning.
+The architecture naturally splits into independent workstreams. In general:
+- TS-only work (game logic, tests, systems) can run independently from Rust work
+- Rendering/physics work can run in parallel with gameplay/UI work
+- Multiple features can be developed simultaneously if they touch different files
 
 **Within a single session, use subagents for:**
 - Researching multiple libraries simultaneously

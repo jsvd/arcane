@@ -9,10 +9,10 @@ Using consistent terminology is critical when both humans and LLMs work on the s
 ## Architecture
 
 **Engine Core**
-The Rust layer. Handles rendering, physics, audio, ECS storage, spatial indexing, pathfinding, and platform integration. Agents rarely modify this layer directly.
+The Rust layer. Handles rendering, physics, audio, and platform integration. Agents rarely modify this layer directly.
 
 **Runtime**
-The TypeScript layer. Where game logic lives. State management, systems, entities, events, world definitions, and the rendering bridge. This is what agents write.
+The TypeScript layer. Where game logic lives — state management, systems, entities, events, and rendering API calls. This is what agents write.
 
 **Bridge**
 The interface between the TypeScript runtime and the Rust engine core. TypeScript issues high-level commands (e.g., "set sprite"); Rust translates them into GPU operations. Game logic never talks to the GPU directly.
@@ -75,19 +75,10 @@ Explicit connections between recipes that touch the same state or behavior. When
 ## World
 
 **Scene**
-A TypeScript definition of what's on screen — the root node, its children, their configuration. The Arcane equivalent of a `.tscn` file, but it's code. See [world-authoring.md](world-authoring.md).
-
-**Room**
-A discrete area within a world. Has a size, tiles, entities, encounters, and connections to other rooms. Rooms are data.
-
-**World**
-A collection of connected rooms. A dungeon, a town, an overworld. Defined as a typed data structure with named rooms and their connections.
+A lifecycle-managed game screen with typed state, enter/exit hooks, and update/render callbacks. See `runtime/scenes/scene.ts`.
 
 **Tilemap**
-A grid of tiles defining the visual and physical layout of a room. Can be defined in code (programmatic) or ASCII text.
-
-**Encounter**
-A game event placed in a room — combat, trap, NPC interaction, treasure. Has trigger conditions and outcomes.
+A grid of tiles defining the visual and physical layout of a level. Supports layers, animated tiles, and auto-tiling. See `runtime/rendering/tilemap.ts`.
 
 ---
 
@@ -111,6 +102,12 @@ Reloading TypeScript code in sub-second when source files change. Creates a fres
 ---
 
 ## Rendering
+
+**Geometry Pipeline**
+GPU pipeline for colored shapes (triangles, lines, polygons) rendered after sprites via `LoadOp::Load`. Used by `drawCircle()`, `drawTriangle()`, `drawPolygon()`, etc. See `core/src/renderer/geometry.rs`.
+
+**Screen Space**
+Coordinates in screen pixels (for HUD elements) rather than world units. Controlled via `screenSpace: true` in sprite options. Screen-space sprites are not affected by camera position or zoom.
 
 **MSDF Text**
 Multi-channel Signed Distance Field text rendering. Stores glyph outlines as distance fields in an atlas texture, enabling resolution-independent crisp text with GPU-accelerated outline, shadow, and glow effects via a specialized fragment shader.

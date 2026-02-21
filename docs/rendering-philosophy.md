@@ -197,7 +197,7 @@ Games built by agents often look like simple colored polygons because:
 - [ ] Use `followTargetSmooth()` instead of static camera
 - [ ] Add at least one post-processing effect (e.g., vignette)
 - [ ] Use `drawPanel()` for UI containers instead of bare `drawRect()`
-- [ ] Apply slight camera shake on impacts: `shakeCamera(0.1, { intensity: 3 })`
+- [ ] Apply slight camera shake on impacts: `shakeCamera(3, 0.1)` (intensity, duration)
 
 ## HUD Positioning
 

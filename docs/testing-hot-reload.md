@@ -32,6 +32,7 @@ ABORT
 
 ```typescript
 import { onFrame, drawText, getDefaultFont } from "./runtime/rendering/index.ts";
+import { rgb } from "./runtime/ui/index.ts";
 
 let frameCount = 0;
 

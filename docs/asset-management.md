@@ -195,8 +195,9 @@ Follow Arcane's asset resolution system:
 - **Additional sources** — Freesound.org, itch.io integration
 - **Asset hot-reload** — Auto-reload on asset file changes
 - **Asset preprocessing** — Automatic sprite sheet packing, format conversion
-- **Asset preloading** — Background loading with progress reporting
 - **Multi-row animation support** — Enhanced sprite sheet parsing
+
+> **Note:** Asset preloading is already implemented via `preloadAssets()`, `isTextureLoaded()`, and `getLoadingProgress()` in `runtime/rendering/texture.ts`.
 
 ## See Also
 

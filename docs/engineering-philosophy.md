@@ -92,18 +92,16 @@ This happens because:
    - V8 test runner (`arcane test`) validates that rendering calls don't throw
 
 2. **Runtime Validation** (Development)
-   - Add validation calls before rendering: `validateRectParams(x, y, w, h, opts)`
-   - Catches errors before they reach V8
-   - Can be stripped in production if needed
-   - Provides clear error messages: "drawRect: color.r must be 0.0-1.0, got 255"
+   - Color values are validated via `warnColor()` — logs warning if any channel > 1.0
+   - Catches common mistake of using 0-255 instead of 0.0-1.0
+   - Use `rgb(255, 0, 0)` helper to convert from 0-255 to normalized floats
 
 3. **Type Safety** (Static)
    - Use correct TypeScript types and JSDoc
    - Follow API signatures precisely
    - Common mistakes:
-     - ❌ `drawRect({ x: 0, y: 0 })` → ✅ `drawRect(0.0, 0.0, 100.0, 50.0)`
      - ❌ `color: { r: 255, g: 255, b: 255 }` → ✅ `color: rgb(255, 255, 255)`
-     - ❌ `x: 10` → ✅ `x: 10.0` (explicit floats for V8)
+     - ❌ Forgetting `screenSpace: true` for HUD elements
 
 **Architecture Pattern:**
 

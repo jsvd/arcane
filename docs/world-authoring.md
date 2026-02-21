@@ -2,193 +2,14 @@
 
 ## Code-Defined Scenes
 
-> **Note:** The scene, room, and world APIs shown in the first half of this document are **design patterns** — aspirational code showing how Arcane's code-defined world authoring is intended to work. The actual implemented APIs today are the tilemap system (`createTilemap`, `setTile`, `drawTilemap` from `@arcane/runtime/rendering`), the scene manager (`createScene`, `pushScene`, `popScene` from `@arcane/runtime/scenes`), and the procedural generation system (WFC, documented in the second half of this document).
+Arcane has no visual scene editor. No `.tscn` files. No drag-and-drop. Scenes are TypeScript code.
 
-Arcane has no visual scene editor. No `.tscn` files. No drag-and-drop. Scenes are TypeScript code:
+**Implemented APIs today:**
+- **Tilemaps**: `createTilemap()`, `setTile()`, `drawTilemap()` from `@arcane/runtime/rendering`
+- **Scene manager**: `createScene()`, `pushScene()`, `popScene()` from `@arcane/runtime/scenes`
+- **Procedural generation**: Wave Function Collapse (WFC) from `@arcane/runtime/procgen`
 
-```typescript
-export const DungeonRoom = scene({
-  root: TileMap({ size: [60, 40], tileset: 'dungeon' }),
-  children: {
-    player: Player({ position: [5, 5] }),
-    camera: FollowCamera({ target: 'player', lookahead: 2.0 }),
-    fog: FogOfWar({ radius: 8 }),
-    ui: layer({
-      hud: CharacterHUD(),
-      combat: CombatOverlay({ visible: false }),
-      pause: PauseMenu({ visible: false }),
-    }),
-  },
-})
-```
-
-Scenes are data. They're composable, testable, and version-controllable. Diffs are meaningful. An agent can read, write, and reason about scenes without a visual editor.
-
-## Room / World / Dungeon Specs
-
-Worlds are hierarchical data structures — rooms connected by doors, corridors, and transitions:
-
-```typescript
-const CryptOfTheGoblinKing = world({
-  name: 'Crypt of the Goblin King',
-
-  rooms: {
-    entrance: room({
-      size: [20, 15],
-      description: 'A crumbling stone entrance, torches flickering.',
-      tiles: {
-        floor: 'stone_cracked',
-        walls: 'dungeon_brick',
-        features: [
-          door('north', { locked: false, connects: 'hallway' }),
-          interactable('torch_1', { position: [2, 1], type: 'torch' }),
-        ],
-      },
-      spawns: [
-        encounter('goblin_patrol', {
-          enemies: [monster('goblin', 2)],
-          trigger: 'on_enter',
-        }),
-      ],
-    }),
-
-    hallway: room({
-      size: [30, 8],
-      connections: { south: 'entrance', north: 'throne_room', east: 'treasury' },
-      spawns: [
-        encounter('trap', { type: 'pit_trap', position: [15, 4], dc: 14 }),
-      ],
-    }),
-
-    throne_room: room({
-      size: [25, 25],
-      spawns: [
-        encounter('boss', {
-          enemies: [monster('goblin_king', 1), monster('goblin_guard', 4)],
-          trigger: 'on_enter',
-          dialogue: 'goblin_king_intro',
-        }),
-      ],
-    }),
-  },
-
-  progression: sequence([
-    'Clear the entrance',
-    'Navigate the hallway (avoid or disarm trap)',
-    'Defeat the Goblin King',
-  ]),
-})
-```
-
-## Tilemap Authoring
-
-### Code-Based
-
-```typescript
-const entrance = tilemap({
-  size: [20, 15],
-  layers: {
-    ground: fill('stone_floor'),
-    walls: border('dungeon_wall', { thickness: 1 }),
-    objects: place([
-      { tile: 'door_north', position: [10, 0] },
-      { tile: 'torch', position: [2, 1] },
-      { tile: 'torch', position: [18, 1] },
-    ]),
-  },
-})
-```
-
-### ASCII Text Format
-
-For quick prototyping, tilemaps can be defined as ASCII:
-
-```typescript
-const entrance = tilemapFromAscii(`
-  ###########
-  #.........#
-  #...M.....#
-  #.........#
-  #....@....#
-  #.........#
-  ###D#######
-`, {
-  '#': 'wall',
-  '.': 'floor',
-  'M': 'monster_spawn',
-  '@': 'player_spawn',
-  'D': 'door',
-})
-```
-
-This format is ideal for AI agents — they can "draw" maps in text, reason about spatial layout, and iterate quickly.
-
-### Tile Legend
-
-Games define their own ASCII legend:
-
-```typescript
-const legend = tileLegend({
-  '#': { tile: 'wall', collision: true },
-  '.': { tile: 'floor' },
-  '~': { tile: 'water', properties: { swimmable: true, speed: 0.5 } },
-  'T': { tile: 'tree', collision: true, layer: 'objects' },
-  'D': { tile: 'door', interactable: true },
-  'C': { tile: 'chest', interactable: true, loot: 'random' },
-  'M': { spawn: 'monster', remove_tile: true },
-  '@': { spawn: 'player', remove_tile: true },
-})
-```
-
-## Entity Placement
-
-Entities are placed in rooms as part of the room definition:
-
-```typescript
-const room = room({
-  size: [20, 15],
-  entities: [
-    npc('merchant', {
-      position: [10, 5],
-      dialogue: 'merchant_greeting',
-      inventory: shopInventory('weapons'),
-    }),
-    chest({
-      position: [15, 12],
-      locked: true,
-      lockDC: 15,
-      loot: [item('potion_of_healing', 2), gold(50)],
-    }),
-    sign({
-      position: [5, 7],
-      text: 'Beware: goblins ahead.',
-    }),
-  ],
-})
-```
-
-## Encounter Definitions
-
-Encounters are data, not code:
-
-```typescript
-const goblinAmbush = encounter({
-  name: 'Goblin Ambush',
-  trigger: 'on_enter',
-  enemies: [
-    monster('goblin_archer', { count: 2, position: 'flanking' }),
-    monster('goblin_warrior', { count: 1, position: 'blocking' }),
-  ],
-  conditions: {
-    surprise: { check: 'perception', dc: 14 },
-    avoidable: { check: 'stealth', dc: 12 },
-  },
-  rewards: {
-    xp: 150,
-    loot: randomLoot('goblin_standard', { rolls: 3 }),
-  },
-})
-```
+> **Future direction:** Higher-level world/room/encounter DSLs (`scene()`, `world()`, `room()`, `encounter()`, etc.) are planned but not yet implemented. The patterns below use today's working APIs.
 
 ## Procedural Generation (Wave Function Collapse)
 
@@ -196,21 +17,33 @@ Arcane provides a Wave Function Collapse (WFC) algorithm for tile-based level ge
 
 ### Defining a Tileset
 
-A tileset declares which tiles can be neighbors in each direction:
+A tileset declares which tiles can be neighbors in each direction. The `TileSet` type has two properties:
+- `tiles`: Map of tile ID to adjacency rules (required)
+- `weights`: Map of tile ID to selection weight (optional, defaults to 1)
 
 ```typescript
 import { generate, reachability, exactCount, border } from "@arcane/runtime/procgen";
+import type { TileSet } from "@arcane/runtime/procgen";
 
-const tileset = {
-  // tile ID → adjacency rules
-  0: { name: "floor", weight: 10, north: [0, 1, 2], east: [0, 1, 2], south: [0, 1, 2], west: [0, 1, 2] },
-  1: { name: "wall",  weight: 3,  north: [0, 1, 3], east: [0, 1, 3], south: [0, 1, 3], west: [0, 1, 3] },
-  2: { name: "door",  weight: 1,  north: [0], east: [0], south: [0], west: [0] },
-  3: { name: "water", weight: 2,  north: [0, 3], east: [0, 3], south: [0, 3], west: [0, 3] },
+const FLOOR = 0, WALL = 1, DOOR = 2, WATER = 3;
+
+const tileset: TileSet = {
+  tiles: {
+    [FLOOR]: { north: [FLOOR, WALL, DOOR], east: [FLOOR, WALL, DOOR], south: [FLOOR, WALL, DOOR], west: [FLOOR, WALL, DOOR] },
+    [WALL]:  { north: [FLOOR, WALL, WATER], east: [FLOOR, WALL, WATER], south: [FLOOR, WALL, WATER], west: [FLOOR, WALL, WATER] },
+    [DOOR]:  { north: [FLOOR], east: [FLOOR], south: [FLOOR], west: [FLOOR] },
+    [WATER]: { north: [FLOOR, WATER], east: [FLOOR, WATER], south: [FLOOR, WATER], west: [FLOOR, WATER] },
+  },
+  weights: {
+    [FLOOR]: 10,  // More common
+    [WALL]: 3,
+    [DOOR]: 1,    // Rare
+    [WATER]: 2,
+  },
 };
 ```
 
-Each tile has a `weight` (higher = more likely to be placed) and four adjacency lists specifying which tile IDs are valid neighbors.
+Each tile's adjacency rule specifies which tile IDs are valid neighbors in each cardinal direction. Higher weights make tiles more likely to be chosen during collapse.
 
 ### Generating a Level
 
@@ -221,19 +54,22 @@ const result = generate({
   height: 15,
   seed: 42,             // Deterministic via PRNG seed
   constraints: [
-    reachability(0),     // All floor tiles must be connected
-    exactCount(2, 2),    // Exactly 2 door tiles
-    border(1),           // Walls around the border
+    reachability((id) => id === FLOOR || id === DOOR),  // Walkable tiles must be connected
+    exactCount(DOOR, 2),                                 // Exactly 2 door tiles
+    border(WALL),                                        // Walls around the border
   ],
+  maxRetries: 100,      // Retry on contradiction or constraint failure (default: 100)
+  maxBacktracks: 1000,  // Max backtrack steps per WFC run (default: 1000)
 });
 
-if (result.success) {
-  // result.grid is a 2D array: number[][] (tile IDs)
-  for (let y = 0; y < result.grid.length; y++) {
-    for (let x = 0; x < result.grid[y].length; x++) {
-      setTile(tilemapId, x, y, result.grid[y][x]);
+if (result.success && result.grid) {
+  // result.grid.tiles is a 2D array: number[][] (tile IDs), accessed as tiles[y][x]
+  for (let y = 0; y < result.grid.height; y++) {
+    for (let x = 0; x < result.grid.width; x++) {
+      setTile(tilemapId, x, y, result.grid.tiles[y][x]);
     }
   }
+  console.log(`Generated in ${result.retries} retries, ${result.elapsed}ms`);
 }
 ```
 
@@ -243,32 +79,43 @@ Constraints validate a generated grid and reject invalid ones:
 
 | Constraint | Description |
 |---|---|
-| `reachability(tileId)` | All cells with this tile ID must be flood-fill connected |
+| `reachability(predicate)` | All cells matching `(tileId) => boolean` must be flood-fill connected |
 | `exactCount(tileId, n)` | Exactly `n` cells must contain this tile |
 | `minCount(tileId, n)` | At least `n` cells must contain this tile |
 | `maxCount(tileId, n)` | At most `n` cells may contain this tile |
 | `border(tileId)` | All border cells must be this tile |
-| `custom(fn)` | Arbitrary validation function `(grid) => boolean` |
+| `custom(fn)` | Arbitrary validation function `(grid: WFCGrid) => boolean` |
 
-### Generate-and-Test
+Additional helpers:
+- `countTile(grid, tileId)` - Count occurrences of a tile
+- `findTile(grid, tileId)` - Get all `{x, y}` positions of a tile
 
-For constraint-heavy generation, use `generateAndTest()` which retries until constraints pass:
+### Batch Generation and Testing
+
+For quality assurance, use `generateAndTest()` to batch-generate levels and run a test function on each:
 
 ```typescript
-import { generateAndTest, reachability, minCount } from "@arcane/runtime/procgen";
+import { generateAndTest, reachability, minCount, findTile } from "@arcane/runtime/procgen";
 
 const result = generateAndTest({
-  tileset,
-  width: 30,
-  height: 20,
-  seed: 123,
-  constraints: [reachability(0), minCount(2, 3)],
-  maxAttempts: 50,    // Retry up to 50 times
+  wfc: {
+    tileset,
+    width: 30,
+    height: 20,
+    seed: 123,
+    constraints: [reachability((id) => id === FLOOR), minCount(DOOR, 3)],
+  },
+  iterations: 100,    // Generate 100 levels
+  testFn: (grid) => {
+    // Custom test: exactly one entrance
+    const entrances = findTile(grid, ENTRANCE);
+    return entrances.length === 1;
+  },
 });
 
-if (result.success) {
-  // result.grid is valid, result.attempts shows how many tries it took
-}
+console.log(`${result.passed}/${result.total} levels passed`);
+// result.failed = passed test function but failed
+// result.generationFailures = WFC contradiction or constraint failure
 ```
 
 ### Validation
@@ -276,9 +123,12 @@ if (result.success) {
 You can also validate a hand-authored or modified grid:
 
 ```typescript
-import { validateLevel, reachability } from "@arcane/runtime/procgen";
+import { validateLevel, reachability, exactCount } from "@arcane/runtime/procgen";
 
-const isValid = validateLevel(myGrid, [reachability(0)]);
+const isValid = validateLevel(myGrid, [
+  reachability((id) => id !== WALL),
+  exactCount(ENTRANCE, 1),
+]);
 ```
 
 Procedural and hand-authored content use the same grid format. You can generate a dungeon, then hand-tweak specific cells, then re-validate.
@@ -295,8 +145,13 @@ import { generate, reachability } from "@arcane/runtime/procgen";
 
 describe("dungeon generation", () => {
   it("all floor tiles are connected", () => {
-    const result = generate({ tileset, width: 20, height: 15, seed: 42,
-      constraints: [reachability(0)] });
+    const result = generate({
+      tileset,
+      width: 20,
+      height: 15,
+      seed: 42,
+      constraints: [reachability((id) => id === FLOOR)],
+    });
     assert.ok(result.success);
   });
 });

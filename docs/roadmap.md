@@ -15,9 +15,9 @@ Arcane is built by AI agents. The engine is the proof of concept. If an agent-na
 9. Claude ships it (open source launch)
 10. Demos and showcase surface pain points. Fix. Iterate.
 
-## Demo Games — Genre Validation Strategy
+## Original Genre Validation Demos
 
-The engine must serve the breadth of 2D games, not just RPGs. Each demo is small (< 500 lines of game logic) but exercises distinct engine capabilities. Demos are built at the phase where their prerequisites land.
+The engine must serve the breadth of 2D games, not just RPGs. These initial demos were built at the phase where their prerequisites landed. Many additional demos (parallax-scroller, tilemap-showcase, character-controller, ui-showcase, physics-playground, asteroids, juice-showcase, lighting-showcase, wfc-dungeon, audio-showcase, isometric-dungeon, visual-polish, hex-strategy, gamepad-platformer, agent-testing) were added in later phases.
 
 | Demo | Phase | Genre | What It Validates |
 |---|---|---|---|
@@ -29,1107 +29,102 @@ The engine must serve the breadth of 2D games, not just RPGs. Each demo is small
 | **Tower Defense** | 5 | Strategy | Spatial queries, pathfinding, entity waves, spawn/despawn |
 | **BFRPG RPG** | 6 | RPG | Full integration: combat, inventory, dialogue, save/load |
 
-### Why These Games
-
-- **Sokoban**: Smallest possible "real game". If the state model can't handle a grid puzzle cleanly, it can't handle anything.
-- **Card Battler**: State tree looks nothing like an entity-position game. Proves the state model is generic, not RPG-shaped.
-- **Roguelike**: Procedural content generation is the acid test for PRNG determinism and tile map support.
-- **Breakout**: The simplest real-time game. If the engine can't do Breakout at 60 FPS, the frame loop is broken.
-- **Platformer**: Exercises sprite animation, audio playback, and text/UI rendering together. A new genre that no prior demo covers.
-- **Tower Defense**: Exercises spatial queries and pathfinding together under entity churn (constant spawn/despawn).
-- **BFRPG RPG**: The capstone. Everything composes into a full game.
-
 ---
 
-## Phase 0: Design Documents
+## Completed Phases (0-25.5)
 
-**Status: Complete**
+### Phase 0: Design Documents
+**Status: COMPLETE** — Vision, architecture, agent protocol, state management, systems/recipes, world authoring specs. CLAUDE.md for agent instructions.
 
-Establish the vision, architecture, and design decisions before writing code.
+### Phase 1: TypeScript Runtime + Headless Game Logic
+**Status: COMPLETE** — State management, transactions, queries, diffs, PRNG, observation system. Demos: Sokoban, Card Battler. 160 tests.
 
-### Deliverables
-- [x] README with vision and elevator pitch
-- [x] Architecture document (two-layer design)
-- [x] Agent protocol specification
-- [x] Game state management design
-- [x] Systems and recipes framework
-- [x] World authoring specification
-- [x] Agent tooling specification (Claude Code agents, skills, MCP tools)
-- [x] Technical decision log
-- [x] This roadmap
-- [x] CLAUDE.md for agent instructions
+### Phase 1.5: Rust Skeleton + Bridge
+**Status: COMPLETE** — Cargo workspace (core, cli), V8/deno_core embedding, `arcane test` CLI, universal test harness (Node + V8 dual-mode).
 
-### Success Criteria
-- [x] Documents are internally consistent
-- [x] Architecture descriptions match across all documents
-- [x] A developer (human or AI) can read the docs and understand what to build
-- [x] No code yet — just the blueprint
+### Phase 2a: Window + Sprites + Camera + Dev Command
+**Status: COMPLETE** — wgpu/winit, instanced sprite renderer, camera system, rendering bridge via `#[op2]` ops, `arcane dev` with hot-reload, feature-gated renderer.
 
----
+### Phase 2b: Tilemap + Lighting + More Demos
+**Status: COMPLETE** — Tilemap renderer, 2D lighting (ambient + 8 point lights), AABB/circle collision. Demos: Breakout, Roguelike (BSP dungeon, shadowcasting FOV).
 
-## Phase 1: TypeScript Runtime + Headless Game Logic
+### Phase 3: Agent Protocol + CLI
+**Status: COMPLETE** — Agent protocol (`runtime/agent/`), `arcane describe`, `arcane inspect`, HTTP inspector API, text description renderer, error snapshots. 264 TS + 35 Rust tests.
 
-**Status: Complete**
+### Phase 4: Text, UI, Animation, Audio
+**Status: COMPLETE** — Text rendering (CP437 bitmap), UI primitives, sprite animation, A* pathfinding, audio (rodio backend). Demo: Platformer. 327 TS + 38 Rust tests.
 
-Build the foundation: a TypeScript game runtime that runs headless. Prove the state model works across game genres, not just RPGs.
+### Phase 5: Recipes + Tower Defense
+**Status: COMPLETE** — Recipe framework (`system()`, `rule()`, `extend()`), 4 recipes (turn-based-combat, inventory-equipment, grid-movement, fog-of-war), `arcane add` CLI. Demo: Tower Defense. 472 TS tests.
 
-### Deliverables
-- [x] TypeScript runtime: state management, transactions, queries, diffs
-- [x] Observation/subscription system
-- [x] Deterministic PRNG
-- [x] Headless test harness — game logic runs without rendering
-- [x] **Demo: Sokoban** — pure state + transactions, undo via replaceState(), win detection
-- [x] **Demo: Card battler** — deck/hand/discard zones, PRNG shuffle, turn phases
+### Phase 5.5: Asset Validation
+**Status: COMPLETE** — Real asset loading with sprite sheets and sounds. Demo: Sprite Demo.
 
-### Success Criteria
-- [x] State model supports both grid-puzzle and card-zone game shapes
-- [x] Sokoban is playable headless with full undo/redo
-- [x] Card battler runs deterministic matches from seed
-- [x] State transactions produce correct diffs
-- [x] Seeded PRNG produces deterministic results
-- [x] Tests cover all core modules (160 tests)
+### Phase 6: Showcase Game (BFRPG RPG)
+**Status: COMPLETE** — BFRPG v4 dungeon crawler: character creation, d20 combat, BSP dungeons, monster AI with A* pathfinding, equipment, fog of war. 657 TS + 38 Rust tests.
 
----
+### Phase 7: Open Source Launch
+**Status: COMPLETE** — Package structure, scaffolding, `arcane init`, docs (getting started, tutorials, API reference), community setup, published to npm + crates.io.
 
-## Phase 1.5: Rust Skeleton + Bridge
+### Phase 8: Polish & Stability
+**Status: COMPLETE** — Hot-reload fix, TypeScript type errors fixed, 175 Rust tests (exceeded 60+ target), demo polish.
 
-**Status: Complete**
+### Phase 9: Tweening + Particles
+**Status: COMPLETE** — Tweening system (30 easing functions, chains, callbacks), particle system (emitters, affectors, pooling), camera shake, screen flash. Demo: Juice Showcase. 132 new tests.
 
-Scaffold the Rust project and wire TypeScript into it.
+### Phase 9.5: LLM-Assisted Game Dev + Standalone Install
+**Status: COMPLETE** — `cargo install arcane-cli`, embedded templates/recipes, type declarations generation, `arcane assets` CLI (list/search/download). 1022 TS + 79 Rust tests.
 
-### Deliverables
-- [x] Rust project with Cargo workspace (core, cli crates)
-- [x] V8/deno_core embedding — TypeScript runs inside Rust
-- [x] `arcane test` CLI command (runs TS tests headless)
-- [x] CI pipeline (Rust + TS tests)
-- [x] Tests pass in both Node and embedded V8
-- [x] Universal test harness (Node + V8 dual-mode)
+### Phase 10: Scene Management + Save/Load
+**Status: COMPLETE** — Scene system (stack, transitions, lifecycle hooks), save/load (slots, auto-save, migrations), file I/O ops. Demo: Menu Flow. 110 new tests.
 
-### Success Criteria
-- [x] TS runtime from Phase 1 runs identically inside Rust V8 embedding (160 tests pass in both)
-- [x] CI validates both Rust and TS
+### Phase 11: Physics System
+**Status: COMPLETE** — Homebrew Rust physics (rigid bodies, SAT collision, sequential impulse solver, constraints, sleep). Demo: Physics Playground. 77 Rust + 40 TS physics tests.
 
----
+### Phase 12: Sprite Transforms + Rendering Polish
+**Status: COMPLETE** — Rotation, pivot, flip, opacity, blend modes (additive/multiply/screen), custom WGSL shaders, post-processing (bloom/blur/vignette/CRT). Demo: Asteroids.
 
-## Phase 2a: Window + Sprites + Camera + Dev Command
+### Phase 13: Camera Polish
+**Status: COMPLETE** — Camera bounds/limits, deadzone, smooth follow (exponential lerp), smooth zoom, parallax scrolling. Demo: Parallax Scroller. 17+ new tests.
 
-**Status: Complete**
+### Phase 14: Tilemap Polish
+**Status: COMPLETE** — Multiple layers, auto-tiling (4-bit/8-bit bitmask), animated tiles, tile properties. Demo: Tilemap Showcase. 59 new tests.
 
-The first visual layer. Window creation, sprite rendering, camera, and the dev command.
+### Phase 15: Animation Polish
+**Status: COMPLETE** — Animation FSM (states, transitions, conditions), crossfade blending, frame events. Demo: Character Controller. 61 new tests.
 
-### Deliverables
-- [x] wgpu initialization and window creation (winit)
-- [x] Sprite renderer (instanced quads, texture atlas support)
-- [x] Camera system (position, zoom, follow target)
-- [x] Rendering bridge: TypeScript `#[op2]` ops → Rust renderer
-- [x] TypeScript rendering API (`runtime/rendering/`)
-- [x] `arcane dev` command (opens window, runs game loop, hot-reload via file watching)
-- [x] Visual demo: Sokoban rendered with sprites
-- [x] Feature-gated renderer (headless tests keep working without GPU)
+### Phase 16: Interactive UI
+**Status: COMPLETE** — Buttons, checkboxes, radio groups, sliders, text input, layout helpers, focus/tab navigation. Demo: UI Showcase. 162 new tests.
 
-### Success Criteria
-- [x] `cargo check --no-default-features` — headless compiles without GPU deps
-- [x] All 163 TS tests pass in both Node and V8
-- [x] All Rust tests pass
-- [x] `cargo run -- dev demos/sokoban/sokoban-visual.ts` — window opens, Sokoban renders, arrow keys move player, hot-reload works
-- [x] CI green (no GPU-dependent tests in CI)
+### Phase 17: Agent Intelligence
+**Status: COMPLETE** — MCP server (10 tools via JSON-RPC 2.0), snapshot-replay testing, property-based testing with shrinking. Demo: Agent Testing Showcase. 96+ tests.
 
----
+### Phase 18: Procedural Generation
+**Status: COMPLETE** — Wave Function Collapse with backtracking, constraint system (reachability, counts, border), `generateAndTest()`. Demo: WFC Dungeon. 60 tests.
 
-## Phase 2b: Tilemap + Lighting + More Demos
+### Phase 19: Lighting 2.0
+**Status: COMPLETE** — Radiance Cascades 2D GI (wgpu compute shader), emissive surfaces, occluders, directional/spot lights, color temperature presets, day/night cycle. Demo: Lighting Showcase. 36 tests.
 
-**Status: Complete**
+### Phase 20: Audio Polish
+**Status: COMPLETE** — Instance-based playback, spatial audio (SpatialSink), audio mixer (4 buses), crossfade, pitch variation, pooling. Demo: Audio Showcase. 44 tests.
 
-Build the remaining visual layer. Tilemap renderer, basic lighting, and more genre demos.
+### Phase 21: MCP-First Developer Experience
+**Status: COMPLETE** — MCP always-on in `arcane dev` (port 4322), `arcane mcp` stdio bridge with auto-discovery/auto-launch, template MCP configs for Claude Code/Cursor/VS Code.
 
-### Deliverables
-- [x] Tilemap renderer (atlas UV mapping, camera culling, TilemapStore)
-- [x] Basic 2D lighting (ambient + up to 8 point lights, shader uniforms)
-- [x] Physics/collision library (`runtime/physics/` — AABB, circle-AABB)
-- [x] **Demo: Breakout** — real-time game loop, collision detection, frame-rate-independent physics
-- [x] **Demo: Roguelike** — BSP dungeon generation, shadowcasting FOV, tile rendering, fog of war, camera follow, lighting
+### Phase 22: Visual Polish Foundations
+**Status: COMPLETE** — Screen transitions (fade, wipe, iris, diamond, pixelate), nine-slice sprites, trail/ribbon renderer, sprite shadows.
 
-### Success Criteria
-- [x] Roguelike generates and renders tile dungeons with fog of war
-- [x] Breakout runs at 60 FPS with real-time collision
-- [x] Camera follows the player in roguelike
-- [x] Lighting system supports point lights and ambient (shader-based)
-- [x] 227 tests passing in both Node and V8
-- [x] All Rust tests pass (21 tests: tilemap + lighting + existing)
-- [x] Headless build compiles without GPU deps
+### Phase 23: Juice & Game Feel
+**Status: COMPLETE** — Impact combinator (hitstop + shake + flash), floating text/damage numbers, typewriter text. Demo: Visual Polish.
 
----
+### Phase 24: Isometric & Hex Grids
+**Status: COMPLETE** — Diamond isometric projection, cube hex coordinates, iso/hex tilemap renderers, hex A* pathfinding, flood-fill reachable. Demos: Isometric Dungeon, Hex Strategy. 180 tests.
 
-## Phase 3: Agent Protocol + CLI
+### Phase 25: Input Systems
+**Status: COMPLETE** — Gamepad support (gilrs), multi-touch (up to 10), input action mapping with rebinding/buffering. Demo: Gamepad Platformer. 78 tests.
 
-**Status: Complete**
-
-Make the engine agent-native. This is what differentiates Arcane.
-
-### Deliverables
-- [x] TS agent protocol library (`runtime/agent/`): registerAgent(), describe, inspect, actions, simulate, rewind, snapshots
-- [x] `arcane describe <entry>` — text description of game state (headless)
-- [x] `arcane inspect <entry> <path>` — query specific state paths (headless)
-- [x] HTTP inspector API (`--inspector <port>` on `arcane dev`)
-  - [x] GET /health, /state, /state/<path>, /describe, /actions, /history
-  - [x] POST /action, /rewind, /simulate
-  - [x] CORS headers for browser/tool access
-- [x] Text description renderer (minimal/normal/detailed verbosity)
-- [x] Error snapshots (auto-capture state on frame callback errors)
-- [x] Demo integration: Roguelike + Breakout register agent protocol
-
-### Success Criteria
-- [x] An AI agent can query game state via HTTP
-- [x] Text descriptions accurately represent the game state
-- [x] Agent can execute actions and see results without vision
-- [x] Error snapshots capture state on errors
-- [x] 264 TS tests + 35 Rust tests passing
-- [x] Headless build compiles without GPU deps
-
----
-
-## Phase 4: Text, UI, Animation, Audio
-
-**Status: Complete**
-
-Make the engine capable of producing real games. Every demo so far is sprites-only — no text, no UI, no animation, no sound. These are genre-agnostic features that every game needs.
-
-### Deliverables
-- [x] Text rendering (bitmap font atlas, draw text to screen)
-  - TS API: `drawText()`, `measureText()`, `loadFont()`, `getDefaultFont()`
-  - Rust: CP437 8×8 bitmap font texture, `op_create_font_texture`, `op_get_viewport_size`
-  - Screen-space support via camera inverse transform
-- [x] UI primitives (`runtime/ui/`)
-  - `drawRect()`, `drawPanel()`, `drawBar()`, `drawLabel()`
-  - Renders as colored sprite quads with `createSolidTexture()`
-- [x] Sprite animation (`runtime/rendering/animation.ts`)
-  - `createAnimation()`, `playAnimation()`, `updateAnimation()`, `drawAnimatedSprite()`
-  - Pure TS frame cycling with UV sub-rect computation
-- [x] A* pathfinding (`runtime/pathfinding/`)
-  - `findPath(grid, start, goal, options)` with binary min-heap
-  - Manhattan/euclidean/chebyshev heuristics, diagonal movement, custom costs
-- [x] Audio (sound effects + background music)
-  - Rust: rodio backend on background thread, mpsc command channel
-  - TS API: `loadSound()`, `playSound()`, `playMusic()`, `stopSound()`, `setVolume()`
-  - Bridge: `#[op2]` ops for audio playback
-- [x] **Demo: Platformer** — gravity physics, platform collision, coin collection, text HUD, lives bar, agent protocol
-
-### Success Criteria
-- [x] Text renders on screen at arbitrary positions with configurable size/color
-- [x] UI elements (bars, panels, labels) render as sprite quads
-- [x] Sprite animations cycle at correct frame rate
-- [x] A* finds shortest path on grid maps (15 tests)
-- [x] Audio system compiles and runs (headless no-ops)
-- [x] Platformer demo exercises all new features together
-- [x] 327 TS tests + 38 Rust tests passing
-- [x] Headless build compiles without GPU/audio deps
-
----
-
-## Phase 5: Recipes + Tower Defense
-
-**Status: Complete**
-
-Build composable game system recipes. Now that the engine has text, UI, animation, and audio, recipes can produce complete game experiences.
-
-### Deliverables
-- [x] Recipe framework (`runtime/systems/`): `system()`, `rule()`, `applyRule()`, `extend()`, `getApplicableRules()`
-- [x] `turn-based-combat` recipe — initiative, turns, attack/defend/skip, victory detection, PRNG dice rolls
-- [x] `inventory-equipment` recipe — items, stacking, weight limits, equipment slots, stat bonuses
-- [x] `grid-movement` recipe — grid entity movement, pathfinding integration via `createPathGrid()`, spatial queries
-- [x] `fog-of-war` recipe — 8-octant recursive shadowcasting FOV, visibility states (hidden/explored/visible)
-- [x] `arcane add` CLI command — copy recipe source into project, list available recipes
-- [x] **Demo: Tower Defense** — tower placement, enemy waves, pre-computed pathfinding, splash/slow towers, HUD with gold/lives/score
-
-### Success Criteria
-- [x] Each recipe works standalone (32 + 26 + 21 + 15 = 94 recipe tests)
-- [x] Tower defense demo uses pathfinding + UI + text rendering
-- [x] `extend` pattern allows meaningful customization (tested)
-- [x] Each recipe ships with comprehensive tests
-- [x] 472 TS tests + 38 Rust tests passing
-- [x] Headless build compiles without GPU deps
-
----
-
-## Phase 5.5: Asset Validation
-
-**Status: Complete**
-
-Validate that real asset loading works end-to-end with actual sprite sheets and sounds.
-
-### Deliverables
-- [x] `demos/sprite-demo/` — Character with walk animation and sound effect
-- [x] `docs/asset-management.md` — Asset workflow documentation
-- [x] Example of loading PNG sprite sheets
-- [x] Example of loading audio files
-- [x] Fallback to placeholders when assets missing
-- [x] Path resolution and caching verified
-
-### Success Criteria
-- [x] Demo loads and displays sprite sheets (or placeholders)
-- [x] Animation system works with real horizontal sprite strips
-- [x] Audio loading and playback works
-- [x] Asset workflow is documented with examples
-- [x] Free asset sources documented
-- [x] 472 TS tests + 38 Rust tests passing
-
----
-
-## Phase 6: Showcase Game (BFRPG RPG)
-
-**Status: Complete**
-
-Simplified dungeon crawler based on BFRPG v4 mechanics. Proves that all systems (recipes, rendering, agent protocol, state management) compose into a full, playable RPG.
-
-### Deliverables
-- [x] Character creation (4 classes, 4 races) with BFRPG ability scores and racial modifiers
-- [x] BFRPG v4 combat system (extending turn-based-combat recipe)
-  - [x] d20 + BAB + ability mod vs AC to-hit mechanics
-  - [x] Damage dice parsing and rolling ("1d8+2")
-  - [x] Dodge action (+2 AC)
-- [x] BSP dungeon generation (60×40 tiles, variable room sizes)
-- [x] Monster spawning with floor scaling (5 monster types)
-- [x] Monster AI with A* pathfinding and random walk
-- [x] Equipment system with loot tables
-- [x] Fog of war (using fog-of-war recipe)
-- [x] Full rendering with camera, lighting, and UI
-- [x] Victory/death conditions (reach floor 5 / HP ≤ 0)
-- [x] Agent protocol with describe and actions
-- [x] Comprehensive integration tests
-
-### Success Criteria
-- [x] The game is playable end-to-end (creation → explore → combat → victory)
-- [x] Combat follows BFRPG v4 rules correctly
-- [x] An agent can query state and perform actions (describe, move, rest, descend)
-- [x] Performance is acceptable (60 FPS capability)
-- [x] 657 TS tests + 38 Rust tests passing
-- [x] All tests pass in both Node and V8
-- [x] Headless build compiles without GPU deps
-
----
-
-## Phase 7: Open Source Launch
-
-**Status: Complete** ✅
-
-Ship it.
-
-### Deliverables
-- [x] Package structure and scaffolding
-- [x] Import map support (`@arcane-engine/runtime`)
-- [x] `arcane init` command
-- [x] Optional entry points (defaults to `src/visual.ts`)
-- [x] Documentation suite
-  - [x] Getting started guide
-  - [x] Tutorials: "Build a Sokoban in 10 minutes", "Build an RPG in 30 minutes"
-  - [x] API reference (complete runtime API)
-  - [x] Recipe guide (building custom systems)
-- [x] Standalone example projects
-  - [x] Sokoban (puzzle)
-  - [x] Tower Defense (strategy)
-- [x] Publishing infrastructure
-  - [x] `@arcane-engine/create` package
-  - [x] Publishing guide
-- [x] Community setup
-  - [x] CODE_OF_CONDUCT.md
-  - [x] Issue templates (bug, feature, documentation)
-  - [x] PR template
-- [x] Published packages
-  - [x] npm: `@arcane-engine/runtime@0.2.1`, `@arcane-engine/create@0.2.1`
-  - [x] crates.io: `arcane-engine@0.2.1`, `arcane-cli@0.2.1`
-
-### Success Criteria
-- [x] A developer can `npm create @arcane-engine/game my-game` and have a working project
-- [x] Documentation is comprehensive enough for AI agents to use without guidance
-- [x] Example projects demonstrate different game types
-- [x] Community can contribute recipes
-- [x] All 895 TS tests + 38 Rust tests passing
-
----
-
-## Phase 8: Polish & Stability
-
-**Status: Complete** ✅
-
-Fix critical issues and technical debt. Originally deferred in favor of feature development; items resolved incrementally across later phases.
-
-### Deliverables
-- [x] Fix hot-reload architecture
-- [x] Fix TypeScript type errors — `tsc --noEmit` passes with zero errors
-- [x] Add more Rust unit tests (target: 60+) — 175 Rust tests passing (exceeded 3x)
-- [x] Polish existing demos (consistent styling, better feedback)
-
-### Success Criteria
-- [x] Hot-reload works without crashes
-- [x] `tsc --noEmit` passes with zero errors
-- [x] 60+ Rust tests passing (175 actual)
-- [x] All demos use consistent visual styling
-- [x] README documents all known limitations
-
----
-
-## Phase 9: Tweening + Particles
-
-**Status: Complete** ✅
-
-Add visual polish systems. Both are pure TypeScript, headless-testable, and provide massive "juice" improvements.
-
-### Deliverables
-- [x] **Tweening system** (`runtime/tweening/`)
-  - [x] Core API: `tween(target, props, duration, options)`
-  - [x] Easing functions: linear, quad, cubic, elastic, bounce, back, expo (30 total across 10 families)
-  - [x] Tween control: start, stop, pause, resume, reverse
-  - [x] Chaining: `sequence()`, `parallel()`, `stagger()`
-  - [x] Callbacks: onStart, onUpdate, onComplete, onRepeat
-  - [x] Camera shake helper: `shakeCamera(intensity, duration)`
-  - [x] Screen flash helper: `flashScreen(color, duration)`
-- [x] **Particle system** (`runtime/particles/`)
-  - [x] Emitter types: point, line, area, ring
-  - [x] Particle properties: position, velocity, acceleration, lifetime, rotation, scale, color
-  - [x] Color interpolation over lifetime (start color → end color)
-  - [x] Emission control: rate (particles/sec), burst(count), one-shot, continuous
-  - [x] Affectors: gravity, wind, attractor, repulsor, turbulence
-  - [x] Particle pooling for performance
-  - [x] Integration with sprite renderer (particles are sprites)
-- [x] **Demo: Juice Showcase** (`demos/juice-showcase/`)
-  - [x] Button effects with easing (bounce, elastic, back)
-  - [x] Explosion particle system (burst, fading)
-  - [x] Trail effects (continuous emission)
-  - [x] Camera shake on impact
-  - [x] Screen flash on events
-  - [x] Toggle juice on/off to compare before/after
-
-### Success Criteria
-- [x] Tween any numeric property with any easing function
-- [x] Camera shake feels impactful but not nauseating
-- [x] Particle explosions look convincing (50+ particles per burst)
-- [x] Trail effects follow mouse smoothly
-- [x] All systems tested headless (132 new tests: 18 tween, 82 easing, 8 chain, 13 helpers, 11 particles)
-- [x] Juice demo showcases all features interactively
-- [x] Zero performance regression on existing demos
-
----
-
-## Phase 9.5: LLM-Assisted Game Dev + Standalone Install
-
-**Status: Complete** ✅
-
-Make the engine installable and usable without cloning the repo. Improve the LLM development experience for scaffolded projects.
-
-### Deliverables
-- [x] **Standalone install** (`cargo install arcane-cli`)
-  - [x] Templates and recipes embedded in binary via `include_dir` + `build.rs`
-  - [x] Runtime resolved from `node_modules/@arcane-engine/runtime/src/` in standalone projects
-  - [x] Filesystem fallback for dev-from-repo (edits to templates/recipes take effect without recompiling)
-  - [x] `arcane new`, `arcane init`, `arcane add` all work from standalone binary
-- [x] **LLM development guide** (`templates/default/AGENTS.md`)
-  - [x] Scaffolded projects include agent-friendly development instructions
-  - [x] API declarations (`types/arcane.d.ts`) generated from runtime source
-- [x] **Type declarations generation** (`scripts/generate-declarations.sh`)
-  - [x] Auto-generates `arcane.d.ts` from runtime JSDoc annotations
-  - [x] Ships with scaffolded projects as primary LLM API reference
-- [x] Published packages: v0.2.1 on crates.io and npm
-- [x] **`arcane assets` CLI** — built-in asset discovery and download
-  - [x] `arcane assets list` — browse 25 Kenney.nl packs with type filter
-  - [x] `arcane assets search` — keyword search with synonym expansion and relevance scoring
-  - [x] `arcane assets download` — download and extract ZIP packs
-  - [x] `--json` flag for structured output on all commands
-  - [x] Embedded catalog via `include_dir` with filesystem fallback
-  - [x] 19 Rust tests for catalog, search, synonyms, filtering
-
-### Success Criteria
-- [x] `cargo install arcane-cli && arcane new my-game && cd my-game && npm install && arcane dev` works end-to-end
-- [x] Dev-from-repo workflow unchanged (`cargo run -- dev demos/...` still works)
-- [x] 1022 TS tests + 79 Rust tests passing
-
----
-
-## Phase 10: Scene Management + Save/Load
-
-**Status: Complete** ✅
-
-Architectural features that unlock "real game" structure.
-
-### Deliverables
-- [x] **Scene system** (`runtime/scenes/`)
-  - [x] Scene definition with typed state: `createScene<S>(def)`
-  - [x] Scene lifecycle hooks: onEnter, onUpdate, onRender, onPause, onResume, onExit
-  - [x] Scene stack: pushScene, popScene, replaceScene
-  - [x] Scene transitions: fade with configurable duration/color, "none" for instant
-  - [x] Scene-local state (each instance has independent typed state)
-  - [x] SceneContext for navigation from within callbacks
-  - [x] Data passing between scenes via `createSceneInstance(def, data)`
-  - [x] `startSceneManager` takes ownership of onFrame, user onUpdate callback
-- [x] **Save/Load system** (`runtime/persistence/`)
-  - [x] State serialization to JSON with `__arcane` envelope
-  - [x] State deserialization with validation and error handling
-  - [x] Save slots (multiple save files per game)
-  - [x] Auto-save support (periodic timer with `updateAutoSave(dt)`)
-  - [x] Schema migration helpers (`registerMigration`, `applyMigrations`)
-  - [x] Save metadata (timestamp, playtime, label, version)
-  - [x] Storage backends: memory (tests), file system (Rust ops for `arcane dev`)
-  - [x] Rust file I/O ops: `op_save_file`, `op_load_file`, `op_delete_file`, `op_list_save_files`
-- [x] **Demo: Menu Flow** (`demos/menu-flow/`)
-  - [x] Title screen (blinking "Press SPACE" text)
-  - [x] Main menu (New Game, Continue if save exists)
-  - [x] Gameplay screen (timed click-target game with scoring)
-  - [x] Pause menu overlay (Resume, Quit to Menu)
-  - [x] Game over screen (score + high score, Play Again, Menu)
-  - [x] Fade transitions between screens
-  - [x] Auto-save during gameplay, "Continue" loads from save
-  - [x] All scene operations demonstrated: push, pop, replace
-
-### Success Criteria
-- [x] Navigate between scenes without manual state machines
-- [x] Scene transitions fade smoothly
-- [x] Can save mid-game and restore from save
-- [x] Save files are human-readable JSON with envelope
-- [x] Schema migration works (load old saves in new versions)
-- [x] Menu demo exercises full game lifecycle
-- [x] 110 new tests for scene management and persistence (50 scene + 60 persistence)
-- [x] 1262 TS tests + 98 Rust tests passing
-
----
-
-## Phase 11: Physics System
-
-**Status: COMPLETE ✅**
-
-Homebrew Rust physics engine — no external physics dependencies. See ADR-015 for the decision rationale.
-
-### Architecture
-
-Physics lives in Rust (`core/src/physics/`), exposed to TS via `#[op2]` ops, with a thin TS API (`runtime/physics/`). Same pattern as rendering, audio, and file I/O. Fixed timestep accumulator for frame-rate independence. NOT feature-gated — compiles in headless mode.
-
-```
-TS game code → op_create_body, op_step_physics, op_get_body_state → Rust physics world
-```
-
-### Deliverables
-- [x] **Rust physics core** (`core/src/physics/`)
-  - [x] `types.rs` — RigidBody (static/dynamic/kinematic), Shape (Circle, AABB, Polygon), Material (restitution, friction)
-  - [x] `world.rs` — PhysicsWorld: body storage, step(dt), fixed timestep accumulator
-  - [x] `integrate.rs` — Semi-implicit Euler integration (velocity then position)
-  - [x] `broadphase.rs` — Spatial hash grid for O(n) collision pair culling
-  - [x] `narrowphase.rs` — SAT collision detection for all shape pairs (circle-circle, circle-AABB, AABB-AABB, polygon-polygon, mixed)
-  - [x] `resolve.rs` — Sequential impulse solver with restitution + friction
-  - [x] `constraints.rs` — Distance joint (rope/spring), revolute joint (hinge)
-  - [x] `sleep.rs` — Velocity threshold + timer, wake on contact
-- [x] **Rust ops** (`core/src/scripting/physics_ops.rs`) — 18 ops
-- [x] **TS API** (`runtime/physics/`) — types, world, body, constraints, query, index
-- [x] **Demo: Physics Playground** (`demos/physics-playground/physics-playground.ts`)
-  - [x] Falling blocks that stack and come to rest
-  - [x] Seesaw (revolute joint)
-  - [x] Rope (chain of distance joints)
-  - [x] Bouncing balls (high restitution)
-  - [x] Interactive: click to spawn, keyboard mode selection
-- [x] **Retrofit Breakout** — ball, paddle, walls, bricks as physics bodies
-
-### Success Criteria
-- [x] 77 Rust tests for physics core (shapes, broadphase, solver, constraints, sleep, ops)
-- [x] 40 TS tests for physics API (headless no-ops, type shapes, API ergonomics)
-- [x] Breakout retrofitted with Rust physics
-- [x] Headless build compiles (`cargo check --no-default-features`)
-- [x] Agent can query physics state (positions, velocities, contacts)
-
----
-
-## Phase 12: Sprite Transforms + Rendering Polish
-
-**Status: Complete ✅**
-
-Sprite rendering system extended with rotation, advanced blending, custom shaders, and post-processing.
-
-### Deliverables
-- [x] **Sprite transforms** (`core/src/renderer/sprite.rs`, `runtime/rendering/sprites.ts`)
-  - [x] Rotation: arbitrary angles in radians with 2D rotation matrix in vertex shader
-  - [x] Pivot/origin point: configurable originX/originY (0-1), default center
-  - [x] Flip: horizontal/vertical flip via UV negation (CPU-side, no shader change)
-  - [x] Opacity: per-sprite alpha multiplied with tint.a
-  - [x] SpriteInstance extended to 64 bytes with rotation_origin vec4
-- [x] **Blend modes** (4 pipelines in `core/src/renderer/sprite.rs`)
-  - [x] Additive blending (glow, fire, particles)
-  - [x] Multiply blending (shadows, tinting)
-  - [x] Screen blending (highlights)
-  - [x] Per-sprite blend mode, batched by blend_mode + texture_id
-- [x] **Custom shader support** (`core/src/renderer/shader.rs`, `runtime/rendering/shader.ts`)
-  - [x] User-defined WGSL fragment shaders (vertex stage shared with built-in)
-  - [x] 16 vec4 uniform slots per shader (256 bytes)
-  - [x] ShaderStore: lazy compilation, pipeline caching, per-shader uniform buffer
-  - [x] Bridge-queued creation and param updates
-- [x] **Post-processing pipeline** (`core/src/renderer/postprocess.rs`, `runtime/rendering/postprocess.ts`)
-  - [x] Offscreen render targets with ping-pong chaining
-  - [x] Fullscreen triangle (vertex_index-based, no vertex buffer)
-  - [x] Built-in effects: bloom, blur, vignette, CRT (scanlines + barrel distortion + chromatic aberration)
-  - [x] Effect chaining: ordered application, auto resize on window change
-  - [x] Effects cleared on hot-reload
-- [x] **Demo: Asteroids** (`demos/asteroids/asteroids.ts`)
-  - [x] Rotating spaceship (arrow keys rotate, thrust forward)
-  - [x] Rotating asteroids (random angular velocity, split on hit)
-  - [x] Particle trails with additive blending (exhaust + explosions)
-  - [x] Star field with opacity-based twinkle
-  - [x] CRT + vignette post-processing (toggleable with P key)
-  - [x] Agent protocol with state/actions
-
-### Success Criteria
-- [x] Ship rotates smoothly (rotation + origin in vertex shader)
-- [x] Additive particles glow convincingly (blend mode support)
-- [x] Custom shaders work (ShaderStore with independent pipeline per shader)
-- [x] Post-processing pipeline with ping-pong offscreen textures
-- [x] All 944 TS + 1557 V8 + 198 Rust tests pass
-- [x] Existing demos unaffected (backward compatible defaults)
-
----
-
-## Phase 13: Camera Polish
-
-**Status: Complete ✅**
-
-Camera system extended with bounds, deadzone, smooth follow, smooth zoom, and parallax scrolling.
-
-### Deliverables
-- [x] **Camera bounds/limits** (`runtime/rendering/camera.ts`, `core/src/renderer/camera.rs`)
-  - [x] Clamp camera to map edges (prevent showing void)
-  - [x] Configurable bounds rectangle, Rust-side clamping with zoom awareness
-  - [x] Centers camera when visible area exceeds bounds
-- [x] **Camera deadzone** (`runtime/rendering/camera.ts`)
-  - [x] Target can move within deadzone without camera following
-  - [x] Configurable deadzone size (width × height in world units)
-  - [x] Integrates with both followTarget() and followTargetSmooth()
-- [x] **Smooth camera follow** (`runtime/rendering/camera.ts`)
-  - [x] followTargetSmooth() with frame-rate independent exponential lerp
-  - [x] Configurable smoothness factor (0.001 = fast, 0.5 = slow/cinematic)
-- [x] **Smooth zoom** (`runtime/rendering/camera.ts`)
-  - [x] zoomTo() — animated zoom transitions using Phase 9 tweens
-  - [x] zoomToPoint() — zoom toward a world point (keeps it stationary on screen)
-- [x] **Parallax scrolling** (`runtime/rendering/parallax.ts`)
-  - [x] drawParallaxSprite() — multi-layer backgrounds at different scroll speeds
-  - [x] Per-layer depth factor (0 = fixed, 0.5 = half speed, 1 = normal)
-  - [x] CPU-side transform — no Rust/GPU changes needed
-- [x] **Demo: Parallax Scroller** (`demos/parallax-scroller/parallax-scroller.ts`)
-  - [x] Side-scrolling platformer with 3-layer parallax background
-  - [x] Camera deadzone (player can move in center without camera moving)
-  - [x] Camera bounds (stops at map edges)
-  - [x] Smooth zoom on Z/X keys with easing
-  - [x] Toggle all features (S=smooth, F=deadzone, B=bounds)
-  - [x] HUD showing camera state, deadzone indicator
-
-Multiple viewports (split-screen) deferred to future phase — high complexity, low demand for most 2D games.
-
-### Success Criteria
-- [x] Parallax layers scroll at correct speeds (depth illusion)
-- [x] Camera deadzone makes movement feel better
-- [x] Camera bounds prevent showing void at map edges
-- [x] 17+ new tests for camera and parallax features
-- [x] 961 TS (Node) + 1591 (V8) + 203 Rust tests passing
-
----
-
-## Phase 14: Tilemap Polish
-
-**Status: Complete ✅**
-
-Tilemap system extended with layers, auto-tiling, animated tiles, and tile properties.
-
-### Deliverables
-- [x] **Multiple tilemap layers** (`runtime/rendering/tilemap.ts`)
-  - [x] createLayeredTilemap() with named layers and per-layer z-order
-  - [x] Per-layer visibility toggle and opacity
-  - [x] Per-layer parallax factor (integrates with Phase 13 parallax)
-  - [x] Fill helpers: fillTiles(), fillLayerTiles()
-- [x] **Auto-tiling** (`runtime/rendering/autotile.ts`)
-  - [x] 4-bit cardinal bitmask (16 tiles)
-  - [x] 8-bit blob bitmask (47+ tiles)
-  - [x] Two-pass grid application (no feedback artifacts)
-  - [x] Mapping creation helpers
-- [x] **Animated tiles** (`runtime/rendering/tilemap.ts`)
-  - [x] registerAnimatedTile() with frame cycling
-  - [x] Global timer, automatic resolution during draw
-  - [x] Per-tile animation definitions
-- [x] **Tile properties** (`runtime/rendering/tilemap.ts`)
-  - [x] defineTileProperties() with per-tile-ID metadata
-  - [x] Positional queries: getTilePropertyAt(), getTilePropertiesAt()
-- [x] **Demo: Tilemap Showcase** (`demos/tilemap-showcase/`)
-  - [x] 4-layer tilemap with animated water
-  - [x] Auto-tiled walls, property queries at cursor
-  - [x] Layer toggles, agent protocol
-
-Isometric/hexagonal grids deferred to future phase.
-
-### Success Criteria
-- [x] Multiple layers render correctly (z-ordering)
-- [x] Auto-tiling works (place one tile, neighbors update automatically)
-- [x] Animated tiles cycle correctly
-- [x] 59 new tests (27 tilemap + 32 auto-tiling)
-
----
-
-## Phase 15: Animation Polish
-
-**Status: Complete ✅**
-
-Animation system extended with state machines, crossfade blending, and frame events.
-
-### Deliverables
-- [x] **Animation events** (`runtime/rendering/animation.ts`)
-  - [x] addFrameEvent() — register callbacks on specific animation frames
-  - [x] updateAnimationWithEvents() — advance animation and fire crossed frame events
-  - [x] getAnimationDef() — query animation definition
-- [x] **Animation state machine** (`runtime/rendering/animation-fsm.ts`)
-  - [x] Declarative state definitions with associated animations
-  - [x] 4 condition types: boolean, threshold, trigger, animationFinished
-  - [x] Transition priority ordering
-  - [x] Enter/exit callbacks per state
-  - [x] Speed multiplier per state
-  - [x] updateFSM() — evaluate transitions + advance animations
-  - [x] setFSMState() — force state change with optional blend
-- [x] **Animation blending**
-  - [x] Crossfade between states with configurable duration
-  - [x] isBlending(), getBlendProgress() — query blend state
-  - [x] drawFSMSprite() — renders with opacity-based crossfade
-- [x] **Multi-row sprite sheets** — already implemented in Phase 9.5
-- [x] **Demo: Character Controller** (`demos/character-controller/`)
-  - [x] 5 states: idle, walk, jump, fall, attack
-  - [x] Smooth crossfade blending on all transitions
-  - [x] Frame event: attack hitbox on specific frame
-  - [x] Platformer physics, enemy targets, scoring
-
-### Success Criteria
-- [x] Animation state machine handles transitions smoothly
-- [x] Frame events fire at correct times
-- [x] 61 new tests (48 FSM + 13 demo)
-
----
-
-## Phase 16: Interactive UI
-
-**Status: Complete ✅**
-
-Interactive UI widgets with immediate-mode pattern, layout helpers, and focus management.
-
-### Deliverables
-- [x] **Button widget** (`runtime/ui/button.ts`)
-  - [x] States: normal, hover, pressed, disabled
-  - [x] Hit testing, onClick callback
-  - [x] Visual feedback (color changes on hover/press)
-- [x] **Toggle widgets** (`runtime/ui/toggle.ts`)
-  - [x] Checkbox: on/off toggle with visual indicator
-  - [x] Radio group: one-of-N selection, mutual exclusion
-- [x] **Slider widget** (`runtime/ui/slider.ts`)
-  - [x] Horizontal slider with min/max/value
-  - [x] Drag handle or click to set value
-  - [x] onChange callback, step snapping
-- [x] **Text input** (`runtime/ui/text-input.ts`)
-  - [x] Single-line text input with keyboard capture
-  - [x] Cursor positioning, cursor blink animation
-  - [x] Selection, backspace/delete, character filtering
-- [x] **Layout helpers** (`runtime/ui/layout.ts`)
-  - [x] verticalStack() — items placed top-to-bottom with spacing
-  - [x] horizontalRow() — items placed left-to-right with spacing
-  - [x] anchorTo() — position relative to screen edges
-- [x] **Focus system** (`runtime/ui/focus.ts`)
-  - [x] Tab/Shift-Tab navigation between widgets
-  - [x] Focus ring visual indicator
-  - [x] Enter key activates focused widget
-- [x] **Demo: UI Showcase** (`demos/ui-showcase/`)
-  - [x] Buttons with hover states
-  - [x] Volume sliders
-  - [x] Checkboxes and radio groups
-  - [x] Text input field
-
-Scroll containers, drag-and-drop, and modal dialogs deferred to future phase.
-
-### Success Criteria
-- [x] UI buttons respond to mouse clicks with visual feedback
-- [x] Text input captures keyboard correctly
-- [x] Layout helpers position widgets correctly
-- [x] Focus system enables keyboard navigation
-- [x] 162 new tests across all widget types
-
----
-
-## Phase 17: Agent Intelligence
-
-**Status: COMPLETE** :white_check_mark:
-
-Make Arcane the definitive agent-driven game development platform. Expose the engine via MCP, add snapshot-replay testing, and ship a property-based test framework. This is Arcane's primary competitive differentiator — no other engine offers this workflow.
-
-### Deliverables
-- [x] **MCP Server** (`core/src/agent/mcp.rs`, `runtime/agent/mcp.ts`)
-  - [x] Expose engine operations as MCP tools with typed parameters and return values
-  - [x] 10 tools: `get_state`, `describe_state`, `list_actions`, `execute_action`, `inspect_scene`, `capture_snapshot`, `hot_reload`, `run_tests`, `rewind`, `simulate_action`
-  - [x] Runs as sidecar server alongside `arcane dev` (reuse inspector infrastructure)
-  - [x] JSON-RPC 2.0 over HTTP (Streamable HTTP transport), `--mcp <port>` CLI flag
-  - [x] Any MCP-compatible LLM (Claude, GPT, etc.) can drive Arcane through standardized protocol
-- [x] **Snapshot-replay testing** (`runtime/testing/replay.ts`, `core/src/scripting/replay_ops.rs`)
-  - [x] Input recording: `startRecording()`, `stopRecording()` captures frame-by-frame inputs
-  - [x] State snapshots: `captureSnapshot()` serializes full game + physics state
-  - [x] Deterministic replay: `replay(recording, { assertFrame, expectedState })`
-  - [x] Physics world serialization (body positions, velocities, constraints) via replay_ops
-  - [x] Replay diffing: `diffReplays()` compares two replays and reports divergence point
-- [x] **Property-based testing** (`runtime/testing/property.ts`)
-  - [x] `checkProperty()` / `assertProperty()` — define invariants over game state
-  - [x] Random input sequence generation (seeded, reproducible via PRNG)
-  - [x] Shrinking: find minimal failing input on violation (3-phase: trim, remove, simplify)
-  - [x] Built-in generators: `randomKeys`, `randomClicks`, `randomActions`, `combineGenerators`
-  - [x] Integration with `arcane test` — PBT runs alongside unit tests in both Node and V8
-- [x] **Demo: Agent Testing Showcase** (`demos/agent-testing/`)
-  - [x] Record a gameplay session, replay it, assert final state
-  - [x] Property: "player health never exceeds max"
-  - [x] Property: "no entity leaves world bounds"
-  - [x] Property: "HP never negative", "score monotonic", "entity count stable"
-  - [x] MCP tool catalog demonstration
-  - [x] Agent protocol integration (register, actions, snapshots, rewind)
-
-### Success Criteria
-- [x] An MCP-compatible LLM can build, test, and iterate on a game through the MCP server
-- [x] Snapshot-replay produces identical results from identical inputs
-- [x] Property-based tests catch invariant violations with minimal failing input
-- [x] 96+ tests for MCP, replay, and PBT (28 replay + 19 property + 13 MCP + 18 demo + 12 Rust MCP + 6 Rust world)
-- [x] Headless build compiles without GPU deps
-
----
-
-## Phase 18: Procedural Generation
-
-**Status: COMPLETE** ✅
-
-First-class procedural content generation with Wave Function Collapse. Agent-defined constraints make PCG a testable, iterative workflow — not a black box.
-
-### Deliverables
-- [x] **WFC core** (`runtime/procgen/wfc.ts`) — pure TypeScript, no Rust needed
-  - [x] Tile-based WFC with adjacency constraints
-  - [x] TS API: `generate({ tileset, constraints, seed })`
-  - [x] Manual adjacency rule specification
-  - [x] Backtracking with configurable retry limit (`maxBacktracks`, `maxRetries`)
-  - [x] Seeded PRNG for reproducible generation
-- [x] **Constraint system** (`runtime/procgen/constraints.ts`)
-  - [x] `reachability()` — flood-fill connectivity check for all walkable tiles
-  - [x] `exactCount(tileId, n)` — exactly N of a given tile
-  - [x] `minCount(tileId, n)` / `maxCount(tileId, n)` — bounded counts
-  - [x] `border(tileId)` — force specific tiles on edges
-  - [x] Custom constraint function: `(grid) => boolean`
-  - [x] Utility helpers: `countTile()`, `findTile()`
-- [x] **Generative testing loop** (`runtime/procgen/validate.ts`)
-  - [x] `validateLevel(grid, constraints)` — check constraints post-generation
-  - [x] `generateAndTest(config, testFn, iterations)` — generate N levels, run test on each
-- [x] **Demo: WFC Dungeon** (`demos/wfc-dungeon/`)
-  - [x] Tileset with walls, floors, entrance, exit, decorations
-  - [x] Reachability constraint (largest connected region kept)
-  - [x] Exactly one entrance and one exit (far apart)
-  - [x] Regenerate on R key, camera controls, agent protocol
-
-### Success Criteria
-- [x] WFC generates valid tilemaps from adjacency rules
-- [x] Constraints are respected (reachability, counts)
-- [x] Generation is deterministic from seed
-- [x] Agent can define constraints in TS and iterate on results
-- [x] 60 tests for WFC core and constraints (exceeds 50+ target)
-- [x] Headless build compiles without GPU deps
-
----
-
-## Phase 19: Lighting 2.0
-
-**Status: COMPLETE** ✅
-
-Replace basic point-light uniforms with real-time 2D global illumination via Radiance Cascades. Massive visual upgrade — fully describable in code, deterministic, screenshot-testable.
-
-### Deliverables
-- [x] **Radiance Cascades** (`core/src/renderer/radiance.rs`, `core/src/renderer/shaders/radiance.wgsl`)
-  - [x] wgpu compute shader: 3-pass pipeline (ray-march, merge, finalize)
-  - [x] Scene-agnostic: works with any sprite/tilemap scene
-  - [x] Noise-free, deterministic output
-  - [x] Configurable cascade levels (1-5) and probe spacing via `setGIQuality()`
-  - [x] HDR scene texture (Rgba32Float) preserves emissive intensity
-  - [x] Additive composition (GI adds light without darkening)
-- [x] **Emissive surfaces** (`runtime/rendering/lighting.ts`)
-  - [x] `addEmissive({ x, y, width, height, r, g, b, intensity })` — rectangular emissive areas
-  - [x] HDR intensity (values > 1.0 for brighter emission)
-  - [x] Point lights automatically emit into GI as small emissive cores
-- [x] **Occluders** (`runtime/rendering/lighting.ts`)
-  - [x] `addOccluder({ x, y, width, height })` — walls/objects that block GI light
-  - [x] Dynamic occluders (re-added each frame, supports moving objects)
-- [x] **Lighting API expansion** (`runtime/rendering/lighting.ts`)
-  - [x] Directional lights (`addDirectionalLight()`)
-  - [x] Spot lights (`addSpotLight()` with position, angle, spread, range)
-  - [x] 11 color temperature presets (`colorTemp.torch`, `.moonlight`, `.neonPink`, etc.)
-  - [x] Day/night cycle helper (`setDayNightCycle({ timeOfDay })`)
-  - [x] GI intensity control (`setGIIntensity()`) with exponential scaling
-  - [x] GI quality control (`setGIQuality({ probeSpacing, interval, cascadeCount })`)
-- [x] **Demo: Lighting Showcase** (`demos/lighting-showcase/`)
-  - [x] 5 scenes: dungeon, lava, outdoor, neon, side-by-side comparison
-  - [x] Dungeon with torch emissives, flickering, pillar shadows
-  - [x] Emissive lava river with GI bounce
-  - [x] Day/night cycle with color temperature shift
-  - [x] Toggle GI on/off, adjust intensity, switch scenes
-
-### Success Criteria
-- [x] Global illumination runs at 60 FPS for typical 2D scenes
-- [x] Light bounces off surfaces realistically (color bleeding via radiance cascades)
-- [x] Shadows are cast by occluders (walls, pillars)
-- [x] Lighting is fully describable in TypeScript (no visual editor needed)
-- [x] Existing point-light API remains as fast fallback
-- [x] 36 lighting tests covering full API surface
-- [x] Headless build compiles without GPU deps
-
----
-
-## Phase 20: Audio Polish
-
-**Status: COMPLETE ✅**
-
-Complete the audio system with spatial audio, mixing, and effects.
-
-### Deliverables
-- [x] **Instance-based playback** — Each `playSound()` returns unique `InstanceId`, multiple concurrent plays of same sound
-- [x] **Spatial/Positional audio** (`runtime/rendering/audio.ts`, `core/src/audio/mod.rs`)
-  - [x] `playSoundAt()` with `SpatialSink` for stereo panning based on position
-  - [x] `setListenerPosition()` + `updateSpatialAudio()` for frame-by-frame updates
-  - [x] Batch position update via JSON op for efficiency
-- [x] **Audio mixer** (`runtime/rendering/audio.ts`, `core/src/audio/mod.rs`)
-  - [x] 4 audio buses: SFX, music, ambient, voice
-  - [x] Per-bus volume control (`setBusVolume()` / `getBusVolume()`)
-  - [x] Final volume = base_volume × bus_volume × master_volume
-- [x] **Audio polish**
-  - [x] `crossfadeMusic()` using tween system for smooth transitions
-  - [x] `setPoolConfig()` — limit concurrent instances with oldest/reject policies
-  - [x] Pitch variation via `pitchVariation` option + `set_speed()`
-  - [x] Low-pass filter via rodio `Source::low_pass()`
-  - [x] Pan support (equal-power panning computed, stored for future per-channel use)
-- [x] **Demo: Audio Showcase** (`demos/audio-showcase/`)
-  - [x] Scene 1: Spatial audio with WASD listener movement + click-to-place sources
-  - [x] Scene 2: Music crossfade between colored zones
-  - [x] Scene 3: Mixer panel with 5 sliders + test sound buttons
-
-### Architecture
-- Instance-keyed sinks: `HashMap<u64, Sink>` + `HashMap<u64, SpatialSink>` in audio thread
-- `Arc<Vec<u8>>` for sound data sharing across concurrent plays
-- 7 new `#[op2]` ops: `op_play_sound_ex`, `op_play_sound_spatial`, `op_stop_instance`, `op_set_instance_volume`, `op_set_instance_pitch`, `op_update_spatial_positions`, `op_set_bus_volume`
-- Backward compatible: legacy `op_play_sound`/`op_stop_sound` still work
-
-### Success Criteria
-- [x] Spatial audio with `SpatialSink` for stereo panning
-- [x] Music crossfade via tween system
-- [x] Audio buses with independent volume control
-- [x] 44 tests (29 TS + 15 Rust)
-
----
-
-## Phase 21: MCP-First Developer Experience
-
-**Status: COMPLETE ✅**
-
-Zero-config MCP integration. After scaffolding, AI tools (Claude Code, Cursor, VS Code Copilot) auto-discover the game engine and can read state, execute actions, and hot-reload — no manual wiring.
-
-### Deliverables
-- [x] **MCP always-on in `arcane dev`** (`cli/src/main.rs`, `cli/src/commands/dev.rs`)
-  - [x] Default MCP HTTP server on port 4322 (no `--mcp` flag needed)
-  - [x] `--no-mcp` to disable, `--mcp-port <port>` to change
-  - [x] Write active port to `.arcane/mcp-port` for discovery
-  - [x] Startup log: `[arcane] MCP server on http://localhost:4322`
-- [x] **`arcane mcp` stdio bridge** (`cli/src/commands/mcp_bridge.rs`)
-  - [x] New CLI subcommand speaking MCP JSON-RPC over stdin/stdout
-  - [x] Auto-discovers running `arcane dev` via `.arcane/mcp-port` or default port
-  - [x] Auto-launches `arcane dev <entry>` if no instance running (child process with window)
-  - [x] Proxies JSON-RPC: stdin → HTTP POST localhost → stdout
-  - [x] Health check with retry/timeout on startup
-  - [x] Clean shutdown: kill child `arcane dev` on stdin close
-- [x] **Template MCP configs** (`templates/default/`)
-  - [x] `.mcp.json` — Claude Code auto-discovery
-  - [x] `.cursor/mcp.json` — Cursor auto-discovery
-  - [x] `.vscode/mcp.json` — VS Code Copilot auto-discovery
-  - [x] All contain: `{ "mcpServers": { "{{PROJECT_NAME}}": { "command": "arcane", "args": ["mcp", "src/visual.ts"] } } }`
-- [x] **Scaffold updates**
-  - [x] `.arcane/` added to `.gitignore` template
-  - [x] `arcane new` output updated with MCP integration message
-- [x] **Tests**
-  - [x] 9 Rust tests for MCP bridge (JSON-RPC passthrough, chunked decode, health check)
-
-### Success Criteria
-- [x] `arcane new my-game && cd my-game && npm install && arcane dev` → MCP server running automatically
-- [x] Open folder in Claude Code → MCP auto-discovered, tools available, zero manual config
-- [x] Open folder in Cursor → same
-- [x] AI writes code → hot-reload fires → user sees changes in game window
-- [x] Existing `--inspector` and `--mcp <port>` workflows unbroken (backward compatible)
-
----
-
-## Phase 22: Visual Polish Foundations
-
-**Status: COMPLETE ✅**
-
-Screen transitions, nine-slice sprites, trail/ribbon rendering, and sprite shadow system.
-
-### Deliverables
-- [x] **Screen transitions** (`runtime/rendering/transition.ts`)
-  - [x] `startScreenTransition(type, duration)` — visual transitions between scenes
-  - [x] Built-in types: fade, wipe, circleIris, diamond, pixelate
-  - [x] `updateScreenTransition(dt)` / `drawScreenTransition()` / `isScreenTransitionActive()`
-- [x] **Nine-slice sprites** (`runtime/rendering/nineslice.ts`)
-  - [x] `drawNineSlice(textureId, x, y, w, h, { border })` — scalable panels without corner distortion
-  - [x] Configurable border insets (uniform or per-edge)
-- [x] **Trail / ribbon renderer** (`runtime/rendering/trail.ts`)
-  - [x] `createTrail(options)` — ribbon that follows a moving point
-  - [x] `updateTrail(trail, x, y)` / `drawTrail(trail)` — add points, render
-  - [x] Configurable: width, color, fade, max length
-  - [x] `pauseTrail()` / `resumeTrail()` / `clearTrail()`
-- [x] **Simple 2D shadows** (`runtime/rendering/sprites.ts`)
-  - [x] `drawSprite({ ..., shadow: { offsetX, offsetY, color, scaleY } })` — blob/drop shadow
-- [x] **Demo: Visual Polish** (`demos/visual-polish/`)
-
-### Success Criteria
-- [x] Screen transitions animate correctly through all 5 types
-- [x] Nine-slice panels scale without corner distortion
-- [x] Trail ribbons follow smoothly with fade and configurable width
-- [x] Tests cover all Phase 22 features
-
----
-
-## Phase 23: Juice & Game Feel
-
-**Status: COMPLETE ✅**
-
-High-level "one call, big payoff" APIs. Impact combinator, floating text, typewriter text.
-
-### Deliverables
-- [x] **Impact combinator** (`runtime/rendering/juice.ts`)
-  - [x] `impact(x, y, { shake, hitstop, flash, particles, sound })` — orchestrated juice
-  - [x] `impactLight()` / `impactHeavy()` — presets
-  - [x] `hitstop(frames)` — freeze game for N frames on hit
-  - [x] `isHitstopActive()` / `getHitstopFrames()` / `consumeHitstopFrame()`
-- [x] **Floating text / damage numbers** (`runtime/rendering/floatingtext.ts`)
-  - [x] `spawnFloatingText(x, y, text, { color, rise, fade, duration })` — auto-animating text
-  - [x] `updateFloatingTexts(dt)` / `drawFloatingTexts()` — update and render all active
-  - [x] Auto-removes on completion, object pooling
-- [x] **Typewriter text** (`runtime/rendering/typewriter.ts`)
-  - [x] `createTypewriter(text, { speed, onChar, onComplete })` — progressive text reveal
-  - [x] `updateTypewriter(tw, dt)` / `drawTypewriter(tw, x, y, options)` — advance and render
-  - [x] Skip-ahead, pause on punctuation, per-character callbacks
-  - [x] `pauseTypewriter()` / `resumeTypewriter()` / `resetTypewriter()`
-- [x] **Demo: Visual Polish** (`demos/visual-polish/` — combined Phase 22+23 demo)
-
-### Success Criteria
-- [x] `impact()` orchestrates hitstop + shake + flash in one call
-- [x] Floating text auto-animates and auto-cleans
-- [x] Typewriter text respects punctuation pauses and skip-ahead
-- [x] Tests cover all juice APIs
-
----
-
-## Phase 24: Isometric & Hex Grids
-
-**Status: COMPLETE ✅**
-
-First-class isometric and hexagonal grid support. Diamond projection, cube hex coordinates, tilemap renderers, hex pathfinding.
-
-### Deliverables
-- [x] **Isometric coordinate system** (`runtime/rendering/isometric.ts`)
-  - [x] `isoToWorld()` / `worldToIso()` / `worldToGrid()` — diamond projection transforms
-  - [x] `screenToIso(sx, sy, camera, viewportW, viewportH)` — mouse picking
-  - [x] `isoDepthLayer(gy)` — automatic depth sorting
-  - [x] Staggered isometric variant (`staggeredIsoToWorld()`, `screenToStaggeredIso()`)
-  - [x] `isoMapBounds()`, `isoIterateBackToFront()`, `isoNeighbors()`, `isoDistance()`
-- [x] **Isometric tilemap renderer** (`runtime/rendering/iso-tilemap.ts`)
-  - [x] `createIsoTilemap()` / `drawIsoTilemap()` — render with depth sorting and camera culling
-  - [x] Per-tile elevation, auto-tiling (`computeIsoAutotile4()`)
-  - [x] `setIsoTile()`, `getIsoTile()`, `fillIsoTiles()`, `setIsoTileTexture()`
-- [x] **Hex coordinate system** (`runtime/rendering/hex.ts`)
-  - [x] Cube coordinates (`{ q, r, s }`) with `hex()`, `hexFromCube()`, `hexEqual()`
-  - [x] Offset coordinates (odd-r, even-r, odd-q, even-q): `cubeToOffset()` / `offsetToCube()`
-  - [x] `hexToWorld()` / `worldToHex()` — pointy-top and flat-top
-  - [x] `screenToHex(sx, sy, camera, vpW, vpH)` — mouse picking
-  - [x] `hexNeighbors()`, `hexDistance()`, `hexRing()`, `hexSpiral()`, `hexLineDraw()`
-  - [x] `hexRange()`, `hexArea()`, `computeHexAutotileBitmask()`
-- [x] **Hex tilemap renderer** (`runtime/rendering/hex-tilemap.ts`)
-  - [x] `createHexTilemap()` / `drawHexTilemap()` — render with camera culling
-  - [x] Pointy-top and flat-top, 6-neighbor auto-tiling (`computeHexTilemapAutotile()`)
-  - [x] Cube/offset helpers: `hexTilemapToCube()`, `getHexTileAtCube()`, `setHexTileAtCube()`
-- [x] **Hex pathfinding** (`runtime/pathfinding/hex.ts`)
-  - [x] `findHexPath(grid, start, goal, options)` — A* with hex neighbors
-  - [x] Cost-aware (terrain types affect movement cost)
-  - [x] `hexReachable(start, movement, grid)` — flood-fill within budget
-- [x] **Demo: Hex Strategy** (`demos/hex-strategy/`)
-  - [x] Hex grid with terrain types, unit selection, movement range, pathfinding
-
-### Success Criteria
-- [x] Isometric coordinate transforms correct
-- [x] Hex mouse picking works for both orientations
-- [x] Hex pathfinding produces optimal paths with terrain costs
-- [x] 180 tests (iso coords, hex coords, hex math, hex pathfinding, tilemaps)
-
----
-
-## Phase 25: Input Systems
-
-**Status: COMPLETE ✅**
-
-Gamepad support (gilrs), multi-touch, and input action mapping system.
-
-### Deliverables
-- [x] **Gamepad support** (`core/src/platform/gamepad.rs`, `runtime/rendering/input.ts`)
-  - [x] `getGamepadCount()`, `isGamepadConnected()`, `getGamepadName()`
-  - [x] `isGamepadButtonDown()`, `isGamepadButtonPressed()`, `getGamepadAxis()`
-  - [x] Deadzone handling, gilrs integration
-- [x] **Touch input** (`core/src/platform/touch.rs`, `runtime/rendering/input.ts`)
-  - [x] `getTouchCount()`, `isTouchActive()`, `getTouchPosition()`
-  - [x] `getTouchWorldPosition()` — touch in world coordinates
-  - [x] Multi-touch tracking (up to 10 simultaneous touches)
-- [x] **Input mapping system** (`runtime/input/actions.ts`)
-  - [x] Named actions ("jump", "attack", "menu") mapped to physical inputs
-  - [x] `createActionMap()`, `bindAction()`, `isActionDown()`, `isActionPressed()`
-  - [x] `getActionAxis()` — composite axis from multiple bindings
-  - [x] Input buffering (`enableBuffer()`, `consumeAction()`)
-  - [x] Remappable at runtime, serializable bindings
-- [x] **Demo: Gamepad Platformer** (`demos/gamepad-platformer/`)
-  - [x] Platformer with gamepad analog stick movement
-
-### Success Criteria
-- [x] Gamepad input works via gilrs (cross-platform)
-- [x] Multi-touch tracked correctly
-- [x] Input mapping allows rebinding at runtime
-- [x] 78 tests (56 TS input mapping + 22 Rust gamepad/touch)
-
----
-
-## Phase 25.5: Performance & Architecture
-
-**Status: COMPLETE ✅**
-
-Targeted performance optimizations and architectural improvements. GPU geometry pipeline, Rust-native particle simulation, bulk data submission, transform hierarchy, component indexing, text layout, and async asset loading.
-
-### Deliverables
-- [x] **GPU geometry pipeline** (`core/src/renderer/geometry.rs`, `shaders/geom.wgsl`, `core/src/scripting/geometry_ops.rs`)
-  - [x] Dedicated `TriangleList` render pipeline for colored shapes (circles, lines, polygons, arcs, sectors, ellipses, rings, capsules)
-  - [x] Shares sprite pipeline camera bind group, renders after sprites via `LoadOp::Load`
-  - [x] New shapes: `drawEllipse()`, `drawRing()`, `drawCapsule()`, `drawPolygon()`
-  - [x] GeoState in OpState, separate from RenderBridgeState
-- [x] **Rust-native particle simulation** (`core/src/scripting/particle_ops.rs`)
-  - [x] Emitter lifecycle: `op_create_emitter`, `op_update_emitter`, `op_get_emitter_sprite_data`, `op_destroy_emitter`
-  - [x] xorshift32 RNG, semi-implicit Euler, alpha decay, gravity
-  - [x] Packed float array readback: one op call regardless of particle count
-- [x] **Bulk sprite submission** (`op_submit_sprite_batch`)
-  - [x] All frame sprites packed into `Float32Array`, submitted in one op call
-- [x] **Bulk physics readback** (`getAllBodyStates()`)
-  - [x] Read all body states in one op call instead of N `getBodyState()` calls
-- [x] **Transform hierarchy** (`runtime/game/transform.ts`)
-  - [x] SceneNode system with parent-child relationships
-  - [x] `createNode()`, `setParent()`, `getWorldTransform()` (walks parent chain), `applyToSprite()`
-  - [x] No caching/dirty flags — simple walk for typical 3-5 level depths
-- [x] **Component index** (`runtime/state/store.ts`)
-  - [x] `query()` now O(matching entities) not O(all entities) via maintained component index
-- [x] **Text layout** (`runtime/rendering/text.ts`)
-  - [x] `wrapText()`, `drawTextWrapped()`, `drawTextAligned()`, `TextAlign`
-- [x] **Async asset loading** (`runtime/rendering/texture.ts`)
-  - [x] `preloadAssets()`, `isTextureLoaded()`, `getLoadingProgress()`
-
-### Success Criteria
-- [x] Shape drawing uses GPU geometry pipeline instead of scanline sprites
-- [x] Particle simulation runs in Rust with packed readback
-- [x] Bulk sprite submission reduces per-frame op overhead
-- [x] Transform hierarchy enables parent-child sprite relationships
-- [x] Component index improves query performance for large entity counts
-- [x] Text layout supports wrapping and alignment
+### Phase 25.5: Performance & Architecture
+**Status: COMPLETE** — GPU geometry pipeline, Rust-native particle simulation, bulk sprite/physics submission, transform hierarchy, component index, text layout (wrapping/alignment), async asset loading.
 
 ---
 
@@ -1235,7 +230,7 @@ The migration strategy preserves existing TS function signatures — game code n
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| TS↔Rust bridge is too slow | Medium | High | deno_core has solved most of this; profile early |
+| TS-Rust bridge is too slow | Medium | High | deno_core has solved most of this; profile early |
 | "Good enough" with Phaser + existing tools | Medium | High | Focus on agent DX that no existing tool provides |
 | Godot/Unity add first-class agent support | Low | High | Move fast; the architecture advantage is structural |
 | Vision-capable agents close the gap | Medium | Medium | Text interaction will always be faster than visual |
@@ -1248,33 +243,9 @@ The migration strategy preserves existing TS function signatures — game code n
 
 Items discovered during development that don't block current work but should be addressed.
 
-### MSDF Text: Per-Draw-Call Shader Params
-
-**Status:** Done ✅
-**Discovered:** Phase 19 polish
-**Severity:** Medium — affects visual fidelity of MSDF outline/shadow effects
-
-Fixed via multi-shader pool approach: 8 identical MSDF shaders (same WGSL, separate uniform buffers) allocated per font. Per-frame cache maps unique param combos to pool slots, reset each frame. `MSDFFont.shaderPool` exposes the pool; `drawMSDFTextInternal` selects a slot based on outline/shadow/scale params.
-
-### MSDF Text: External Font sRGB Bug
-
-**Status:** Done ✅
-**Discovered:** Phase 19 polish
-**Severity:** High — external MSDF fonts loaded via `loadMSDFFont()` will render invisible
-
-Fixed: Added `msdf_texture_load_queue` on `RenderBridgeState`. `op_load_msdf_font` pushes to this queue instead of `texture_load_queue`. In `dev.rs`, the new queue is processed via `upload_raw_linear()` (linear format, not sRGB), matching the builtin MSDF font path.
-
-### Dead Code Cleanup
-
-**Status:** Done ✅
-**Discovered:** Phase 19 polish
-
-`runtime/rendering/validate.ts` was never imported, exported, or referenced. Deleted.
-
 ### Test Coverage Gaps
 
 **Status:** Open
-**Discovered:** Phase 19 audit
 **Severity:** Low — all code works, just lacks dedicated test files
 
 18 runtime modules have no dedicated `*.test.ts` file:
@@ -1285,20 +256,47 @@ Fixed: Added `msdf_texture_load_queue` on `RenderBridgeState`. `op_load_msdf_fon
 - `runtime/testing/` — harness (1 file)
 - `runtime/agent/` — protocol (1 file, though agent.test.ts covers it partially)
 
-These modules are exercised indirectly by demo tests and integration tests. Adding targeted unit tests would improve confidence for future refactors.
+These modules are exercised indirectly by demo tests and integration tests.
 
 ### Type-Check-Only CLI Mode
 
 **Status:** Open
-**Discovered:** User feedback (v0.12.1)
 **Severity:** Medium — affects developer iteration speed
 
-`arcane test` runs the full test suite to surface type errors. A fast `arcane typecheck` (or `arcane dev --type-check-only`) command that only transpiles and type-checks without discovering/executing tests would speed up the edit-check loop significantly. Implementation would require a new CLI subcommand in `cli/src/commands/` that loads the TS module through deno_ast transpilation but skips test discovery and execution.
+A fast `arcane typecheck` command that only transpiles and type-checks without discovering/executing tests would speed up the edit-check loop significantly.
 
 ### MCP Screenshot / Frame Capture Tool
 
 **Status:** Open
-**Discovered:** User feedback (v0.12.1)
 **Severity:** Medium — biggest gap for non-visual AI iteration
 
-A `capture_frame` or `capture_screenshot` MCP tool that returns a base64-encoded image of the current game window would enable AI agents to visually verify game state without requiring a human to look at the screen. Implementation would require a Rust-side framebuffer readback (`wgpu` buffer copy from the surface texture), encoding to PNG, and exposing as a new MCP tool. This is the single most impactful missing feature for agent-driven development workflows.
+A `capture_frame` MCP tool that returns a base64-encoded image of the current game window would enable AI agents to visually verify game state. This is the single most impactful missing feature for agent-driven development workflows.
+
+### World Authoring DSL
+
+**Status:** Open (Design in docs/world-authoring.md, not yet implemented)
+**Severity:** Low — current APIs work, this is convenience
+
+Declarative world definition APIs for agent-friendly scene authoring:
+- `scene()` / `world()` / `room()` — Composable scene graph definition
+- `tilemapFromAscii()` / `tileLegend()` — ASCII art tilemap parsing
+- `encounter()` / `npc()` / `chest()` / `sign()` — Entity placement helpers
+
+These would let agents define game worlds in a more natural, data-oriented way rather than imperative API calls.
+
+### Advanced UI Widgets
+
+**Status:** Open (deferred from Phase 16)
+**Severity:** Low — current widgets cover most needs
+
+Missing interactive UI components:
+- **Scroll containers** — Scrollable lists and text areas
+- **Drag-and-drop** — Reorderable lists, inventory drag
+- **Modal dialogs** — Blocking popups with focus trapping
+
+### Asset Hot-Reload
+
+**Status:** Open
+**Severity:** Low — code hot-reload works, assets require restart
+
+Automatically detect and reload changed asset files (textures, sounds) without restarting the game. Currently only `.ts` files trigger hot-reload.

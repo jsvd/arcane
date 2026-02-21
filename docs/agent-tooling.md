@@ -125,11 +125,14 @@ All engine operations are available as CLI commands:
 
 | Command | Description |
 |---|---|
-| `arcane dev <entry.ts>` | Run game with window, hot-reload, optional `--inspector <port>` and `--mcp <port>` |
-| `arcane test` | Discover and run `*.test.ts` files headless in V8 |
+| `arcane new <name>` | Create a new Arcane project from template |
+| `arcane init` | Initialize an Arcane project in the current directory |
+| `arcane dev [entry.ts]` | Run game with window, hot-reload. MCP on by default (auto-port), `--mcp-port <port>` to specify, `--no-mcp` to disable, `--inspector <port>` for HTTP inspector |
+| `arcane test [path]` | Discover and run `*.test.ts` files headless in V8 |
+| `arcane mcp [entry.ts]` | Stdio MCP bridge (JSON-RPC over stdin/stdout). Auto-launches `arcane dev` if needed |
 | `arcane describe <entry.ts>` | Print text description of game state |
 | `arcane inspect <entry.ts> <path>` | Query specific state path |
-| `arcane add <recipe>` | Copy a recipe into the project |
+| `arcane add <recipe>` | Copy a recipe into the project (`--list` to see available) |
 | `arcane assets list/search/download/inspect` | Discover and download game assets from catalog |
 
 ### Claude Code Skills
@@ -139,6 +142,8 @@ All engine operations are available as CLI commands:
 | `/test-all` | Run all 4 test suites (Node, V8, Rust, headless check) and report a unified summary |
 | `/phase-complete [N] [name]` | Phase transition checklist: run tests, discover new files, regenerate declarations, update status lines |
 | `/api-sync` | Regenerate `arcane.d.ts` from runtime source and check for drift |
+| `/release X.Y.Z` | Full release workflow: changelog, version bump, tests, commit, tag, push, crates.io publish, GitHub release |
+| `/verify` | Run all tests, regenerate declarations, type-check scaffolded project. The "did I break anything?" button |
 
 ### Custom Agents
 
@@ -150,12 +155,22 @@ All engine operations are available as CLI commands:
 
 ## MCP Server
 
-The MCP (Model Context Protocol) server runs alongside `arcane dev` via `--mcp <port>`. It implements JSON-RPC 2.0 and exposes 10 tools for AI agents to inspect and control a running game.
+The MCP (Model Context Protocol) server runs alongside `arcane dev` by default. It implements JSON-RPC 2.0 and exposes 10 tools for AI agents to inspect and control a running game.
 
 ### Starting the MCP Server
 
+MCP is enabled by default with an auto-assigned port. Use `--mcp-port <port>` to specify a port, or `--no-mcp` to disable.
+
 ```bash
-arcane dev my-game.ts --mcp 3001
+arcane dev my-game.ts              # MCP on auto port (written to .arcane/mcp-port)
+arcane dev my-game.ts --mcp-port 3001  # MCP on specific port
+arcane dev my-game.ts --no-mcp     # Disable MCP
+```
+
+For stdio-based MCP (JSON-RPC over stdin/stdout), use the `arcane mcp` bridge:
+
+```bash
+arcane mcp my-game.ts              # Auto-discovers or launches dev server
 ```
 
 The server responds to standard MCP protocol messages: `initialize`, `tools/list`, `tools/call`, and `ping`.

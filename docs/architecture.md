@@ -91,11 +91,11 @@ Particle simulation runs in Rust (`core/src/scripting/particle_ops.rs`) for perf
 - V8 embedding via deno_core
 - Script hot-reload (creates fresh V8 isolate on file change)
 - FFI bridge between TS game logic and Rust systems
-- Op files: `render_ops.rs` (sprites, camera, tilemap, lighting, audio), `physics_ops.rs` (bodies, constraints, queries), `geometry_ops.rs` (triangles, line segments via GeoState), `particle_ops.rs` (emitter lifecycle, simulation via ParticleState), `replay_ops.rs` (physics snapshots)
+- Op files: `render_ops.rs` (sprites, camera, tilemap, lighting, audio), `physics_ops.rs` (bodies, constraints, queries), `geometry_ops.rs` (triangles, line segments via GeoState), `particle_ops.rs` (emitter lifecycle, simulation via ParticleState), `replay_ops.rs` (physics snapshots), `target_ops.rs` (render-to-texture)
 
 ### Platform (`core/platform/`)
 - Windowing (winit)
-- Input handling (keyboard, mouse)
+- Input handling (keyboard, mouse, gamepad via gilrs, multi-touch)
 
 ## TypeScript Runtime
 
@@ -173,6 +173,7 @@ arcane/
 │   │   ├── tilemap.rs       # Tile data, atlas UV, camera culling
 │   │   ├── lighting.rs      # Point lights, ambient, GPU uniform
 │   │   ├── radiance.rs      # Radiance Cascades 2D GI compute pipeline
+│   │   ├── rendertarget.rs  # Off-screen render targets (render-to-texture)
 │   │   ├── msdf.rs          # MSDF font atlas, glyph metrics, SDF shader
 │   │   ├── shader.rs        # Custom WGSL fragment shaders, 16 vec4 uniforms
 │   │   ├── postprocess.rs   # Bloom, blur, vignette, CRT effects
@@ -184,8 +185,8 @@ arcane/
 │   ├── audio/               # rodio-based sound loading + playback
 │   ├── physics/             # Homebrew 2D rigid body physics
 │   ├── agent/               # HTTP inspector + MCP server
-│   ├── scripting/           # V8 embedding, hot-reload, render/physics/geometry/particle/replay ops
-│   └── platform/            # Windowing (winit), input handling
+│   ├── scripting/           # V8 embedding, hot-reload, render/physics/geometry/particle/replay/target ops
+│   └── platform/            # Windowing (winit), input (keyboard, mouse, gamepad, touch)
 │
 ├── runtime/                 # TypeScript game runtime
 │   ├── state/               # State tree, transactions, queries, PRNG
@@ -196,17 +197,61 @@ arcane/
 │   │   ├── tilemap.ts       # Tilemaps, layers, auto-tiling
 │   │   ├── lighting.ts      # Lights, GI, emissives, occluders, day/night
 │   │   ├── text.ts          # Bitmap + MSDF text, outlines, shadows
-│   │   ├── animation.ts     # Sprite animation, animation FSM
+│   │   ├── animation.ts     # Sprite animation
+│   │   ├── animation-fsm.ts # Animation state machine, transitions, blending
 │   │   ├── audio.ts         # Sound loading, playback, music
-│   │   └── postprocess.ts   # Post-processing effects
+│   │   ├── postprocess.ts   # Post-processing effects
+│   │   ├── rendertarget.ts  # Render-to-texture API
+│   │   ├── transition.ts    # Screen transitions (fade, wipe, iris, pixelate)
+│   │   ├── nineslice.ts     # Nine-slice sprite rendering
+│   │   ├── trail.ts         # Trail/ribbon renderer
+│   │   ├── juice.ts         # Impact combinator (hitstop + shake + flash)
+│   │   ├── floatingtext.ts  # Floating text / damage numbers
+│   │   ├── typewriter.ts    # Progressive text reveal
+│   │   ├── isometric.ts     # Isometric coordinate system (diamond projection)
+│   │   ├── iso-tilemap.ts   # Isometric tilemap renderer with depth sorting
+│   │   ├── hex.ts           # Hex cube coordinates (q + r + s = 0)
+│   │   └── hex-tilemap.ts   # Hex tilemap renderer
 │   ├── ui/                  # Buttons, sliders, checkboxes, text input, layout
+│   │   ├── primitives.ts    # drawRect(), drawPanel(), drawBar(), drawLabel()
+│   │   ├── shapes.ts        # drawCircle(), drawLine(), drawPolygon(), drawArc()
+│   │   ├── colors.ts        # Color manipulation utilities
+│   │   ├── palette.ts       # Predefined color palettes
+│   │   ├── button.ts        # createButton(), updateButton(), drawButton()
+│   │   ├── toggle.ts        # createCheckbox(), createRadioGroup()
+│   │   ├── slider.ts        # createSlider(), updateSlider(), drawSlider()
+│   │   ├── text-input.ts    # createTextInput(), updateTextInput()
+│   │   ├── layout.ts        # verticalStack(), horizontalRow(), anchorTo()
+│   │   └── focus.ts         # createFocusManager(), tab navigation
+│   ├── input/               # Input action mapping system
+│   │   ├── actions.ts       # createActionMap(), mapKey(), isActionActive()
+│   │   ├── presets.ts       # WASD_ARROWS, GAMEPAD_STANDARD presets
+│   │   └── types.ts         # ActionMap, InputBinding types
+│   ├── game/                # High-level game helpers
+│   │   ├── game.ts          # createGame() bootstrap
+│   │   ├── entity.ts        # Lightweight entity handles (sprite + physics)
+│   │   ├── collision.ts     # Collision event registry + callbacks
+│   │   ├── hud.ts           # hud.text(), hud.bar(), hud.label() shortcuts
+│   │   ├── widgets.ts       # captureInput(), autoUpdate* widget helpers
+│   │   ├── transform.ts     # Scene node hierarchy, world transforms
+│   │   ├── color-sprite.ts  # drawColorSprite() with auto-cached textures
+│   │   ├── sprite-group.ts  # Sprite grouping utilities
+│   │   └── platformer.ts    # Platformer-specific helpers
 │   ├── physics/             # Physics world, body, constraint, query wrappers
 │   ├── procgen/             # Wave Function Collapse, constraints, validation
 │   ├── scenes/              # Scene stack, transitions, lifecycle
 │   ├── persistence/         # Save/load, migrations, auto-save
 │   ├── tweening/            # Tween, easing, sequence, parallel, stagger
+│   │   ├── tween.ts         # tween(), updateTweens(), pauseTween()
+│   │   ├── easing.ts        # 30 easing functions
+│   │   ├── chain.ts         # sequence(), parallel(), stagger()
+│   │   └── helpers.ts       # Tween utility functions
 │   ├── particles/           # Particle emitter with pooling
+│   │   ├── emitter.ts       # createEmitter(), updateParticles()
+│   │   └── presets.ts       # Particle presets (fire, smoke, sparks)
 │   ├── pathfinding/         # A* pathfinding
+│   │   ├── astar.ts         # findPath() A* with binary min-heap
+│   │   └── hex.ts           # Hex A* pathfinding + flood-fill reachable
 │   ├── agent/               # Agent protocol, MCP tools, describe
 │   └── testing/             # Harness, snapshots, replay, property-based testing
 │
@@ -214,7 +259,8 @@ arcane/
 │   ├── turn-based-combat/
 │   ├── inventory-equipment/
 │   ├── grid-movement/
-│   └── fog-of-war/
+│   ├── fog-of-war/
+│   └── actor-patrol/
 │
 ├── cli/                     # The arcane CLI
 │   └── commands/
@@ -223,25 +269,13 @@ arcane/
 │       ├── describe.rs      # arcane describe (text state description)
 │       ├── inspect.rs       # arcane inspect (query state paths)
 │       ├── add.rs           # arcane add (copy recipe into project)
-│       └── assets.rs        # arcane assets (discover + download assets)
+│       ├── assets.rs        # arcane assets (discover + download assets)
+│       ├── init.rs          # arcane init (initialize project in current dir)
+│       ├── new.rs           # arcane new (create new project directory)
+│       ├── mcp_bridge.rs    # arcane mcp (stdio MCP bridge)
+│       └── type_check.rs    # arcane check (TypeScript type checking)
 │
 └── demos/                   # Genre-spanning demo games
-```
-
-## The Rendering Bridge
-
-Game logic never talks to the GPU directly. Instead, it issues high-level rendering commands that the Rust core translates into efficient draw calls.
-
-```
-TypeScript                          Rust
-─────────                          ────
-drawSprite({...})           →      Batch sprite draw
-submitSpriteBatch(f32arr)   →      Bulk sprite submission (one op, N sprites)
-drawCircle(x, y, r, color) →      Geometry pipeline: colored triangles
-setCamera(x, y, zoom)      →      Update view matrix
-addPointLight(x, y, ...)   →      Update light uniform
-drawText(str, x, y, opts)  →      Emit text command
-updateParticles(id, dt)     →      Rust particle simulation + packed readback
 ```
 
 This separation means:
