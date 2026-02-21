@@ -612,7 +612,7 @@ fn resolve_manifold_velocity(bodies: &mut [Option<RigidBody>], manifold: &mut Co
             }
         }
 
-        // Friction solve
+        // Friction solve with friction anchors
         let ra_cross_t = ra_x * ty - ra_y * tx;
         let rb_cross_t = rb_x * ty - rb_y * tx;
         let inv_mass_sum_t = inv_ma + inv_mb
@@ -628,12 +628,49 @@ fn resolve_manifold_velocity(bodies: &mut [Option<RigidBody>], manifold: &mut Co
             let rel_vy = (vby + (avb * rb_x)) - (vay + (ava * ra_x));
 
             let vt = rel_vx * tx + rel_vy * ty;
-            let jt_new = -vt / inv_mass_sum_t;
+
+            // Friction anchor: compute tangent position correction
+            // Current world-space contact position (midpoint of both anchors)
+            let current_pos = ((wa_x + wb_x) * 0.5, (wa_y + wb_y) * 0.5);
+
+            // Initialize friction anchor if not set
+            if point.friction_anchor.is_none() {
+                point.friction_anchor = Some(current_pos);
+            }
+
+            // Compute tangent drift from anchor
+            let anchor = point.friction_anchor.unwrap();
+            let drift_x = current_pos.0 - anchor.0;
+            let drift_y = current_pos.1 - anchor.1;
+            let tangent_drift = drift_x * tx + drift_y * ty;
+
+            // Baumgarte correction velocity toward anchor (factor = 0.1)
+            const FRICTION_BAUMGARTE: f32 = 0.1;
+            let correction_velocity = if sub_dt > 0.0 {
+                tangent_drift * FRICTION_BAUMGARTE / sub_dt
+            } else {
+                0.0
+            };
+
+            // Total tangent velocity to correct: actual velocity + anchor drift correction
+            let vt_corrected = vt + correction_velocity;
+            let jt_new = -vt_corrected / inv_mass_sum_t;
 
             // Coulomb friction
             let max_friction = point.accumulated_jn * mu;
             let old_jt = point.accumulated_jt;
-            point.accumulated_jt = (old_jt + jt_new).clamp(-max_friction, max_friction);
+            let new_jt_accumulated = (old_jt + jt_new).clamp(-max_friction, max_friction);
+
+            // Check if we hit the friction limit (sliding)
+            let requested_jt = old_jt + jt_new;
+            let is_sliding = (new_jt_accumulated - requested_jt).abs() > 1e-8;
+
+            if is_sliding {
+                // Reset friction anchor when sliding
+                point.friction_anchor = Some(current_pos);
+            }
+
+            point.accumulated_jt = new_jt_accumulated;
             let jt = point.accumulated_jt - old_jt;
 
             if jt.abs() > 1e-8 {

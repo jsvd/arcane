@@ -60,9 +60,33 @@ export function getContacts(): Contact[] {
 }
 
 /**
- * Get contact manifolds with all points (TGS Soft).
- * Each manifold can have 1-2 contact points for edge-edge contacts.
- * Returns an empty array in headless mode.
+ * Get all contact manifolds from the physics simulation.
+ *
+ * Contact manifolds provide detailed collision information used by the
+ * TGS Soft solver. Each manifold represents a collision between two bodies
+ * and can contain 1-2 contact points (2D collisions produce at most 2).
+ *
+ * Use this for:
+ * - Visualizing contact points for debugging
+ * - Custom collision response logic
+ * - Physics debugging overlays
+ *
+ * **Note:** Sleeping bodies don't generate manifolds (performance optimization).
+ * Wake a body with `applyImpulse(body, 0, 0)` if you need its manifolds.
+ *
+ * @returns Array of contact manifolds. Empty in headless mode.
+ *
+ * @example
+ * // Draw contact points for debugging
+ * for (const m of getManifolds()) {
+ *   const stateA = getBodyState(m.bodyA);
+ *   for (const pt of m.points) {
+ *     // Transform local anchor to world space
+ *     const wx = stateA.x + pt.localAX;
+ *     const wy = stateA.y + pt.localAY;
+ *     drawCircle({ x: wx, y: wy, radius: 3, color: rgb(255, 0, 0) });
+ *   }
+ * }
  */
 export function getManifolds(): ContactManifold[] {
   if (!hasPhysicsOps) return [];

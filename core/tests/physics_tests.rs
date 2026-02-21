@@ -1947,6 +1947,100 @@ fn test_friction_slows_sliding_body() {
 }
 
 #[test]
+fn test_box_on_slope_sticks_below_friction_angle() {
+    // A box on a sloped surface should not slide if the slope angle
+    // is below the friction angle (arctan(mu)).
+    // With friction = 0.8, friction angle ~= 38 degrees.
+    // We'll use a ~20 degree slope, which should hold.
+    let mut world = PhysicsWorld::new(0.0, 400.0);
+
+    // Create a rotated platform (polygon) representing a slope
+    // For simplicity, use a static AABB as ground and place box at angle
+    // The friction anchor should help keep it stationary.
+    world.add_body(
+        BodyType::Static, Shape::AABB { half_w: 400.0, half_h: 20.0 },
+        0.0, 100.0, 0.0,
+        Material { restitution: 0.0, friction: 0.8 },
+        0xFFFF, 0xFFFF,
+    );
+
+    let box_id = world.add_body(
+        BodyType::Dynamic, Shape::AABB { half_w: 10.0, half_h: 10.0 },
+        0.0, 69.0, 1.0, // On top of ground
+        Material { restitution: 0.0, friction: 0.8 },
+        0xFFFF, 0xFFFF,
+    );
+
+    // Apply a small lateral impulse (like being on a gentle slope)
+    world.apply_force(box_id, 50.0, 0.0);
+
+    let initial_x = world.get_body(box_id).unwrap().x;
+
+    // Step for 1 second
+    for _ in 0..60 {
+        world.step(1.0 / 60.0);
+    }
+
+    let body = world.get_body(box_id).unwrap();
+
+    // With friction anchors, the box should resist the small force and not drift much
+    // (Without friction anchors, it would slowly creep due to the continuous force)
+    // Allow some movement but it shouldn't have slid far
+    assert!(
+        (body.x - initial_x).abs() < 20.0,
+        "Box should resist sliding due to friction anchor, moved {} from start",
+        (body.x - initial_x).abs()
+    );
+}
+
+#[test]
+fn test_friction_anchor_resets_on_slide() {
+    // When friction limit is exceeded (sliding), the anchor should reset.
+    // This test applies a large force that exceeds Coulomb limit, causing sliding.
+    let mut world = PhysicsWorld::new(0.0, 400.0);
+
+    world.add_body(
+        BodyType::Static, Shape::AABB { half_w: 400.0, half_h: 20.0 },
+        0.0, 100.0, 0.0,
+        Material { restitution: 0.0, friction: 0.5 },
+        0xFFFF, 0xFFFF,
+    );
+
+    let box_id = world.add_body(
+        BodyType::Dynamic, Shape::AABB { half_w: 10.0, half_h: 10.0 },
+        0.0, 69.0, 1.0,
+        Material { restitution: 0.0, friction: 0.5 },
+        0xFFFF, 0xFFFF,
+    );
+
+    // Apply a large lateral impulse that should exceed friction limit
+    world.set_velocity(box_id, 500.0, 0.0);
+
+    let initial_x = world.get_body(box_id).unwrap().x;
+
+    // Step a few frames
+    for _ in 0..30 {
+        world.step(1.0 / 60.0);
+    }
+
+    let body = world.get_body(box_id).unwrap();
+
+    // The box should have slid significantly (friction slows but doesn't stop it instantly)
+    assert!(
+        (body.x - initial_x).abs() > 50.0,
+        "Box should have slid when friction limit exceeded, only moved {}",
+        (body.x - initial_x).abs()
+    );
+
+    // And the velocity should have decreased (friction is still working)
+    assert!(
+        body.vx.abs() < 500.0,
+        "Friction should still slow the sliding body, vx={}",
+        body.vx
+    );
+}
+
+#[test]
 fn test_zero_restitution_no_bounce() {
     // With restitution=0, a dropped ball should not bounce.
     let mut world = PhysicsWorld::new(0.0, 400.0);

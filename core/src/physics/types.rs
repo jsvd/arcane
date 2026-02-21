@@ -61,6 +61,10 @@ pub struct ManifoldPoint {
     pub accumulated_jn: f32,
     /// Accumulated friction impulse (for warm starting)
     pub accumulated_jt: f32,
+    /// Friction anchor: world-space position that friction "sticks to".
+    /// When set, friction applies Baumgarte correction to return to this point.
+    /// Resets when Coulomb friction limit is exceeded (sliding).
+    pub friction_anchor: Option<(f32, f32)>,
 }
 
 impl ManifoldPoint {
@@ -72,6 +76,7 @@ impl ManifoldPoint {
             id,
             accumulated_jn: 0.0,
             accumulated_jt: 0.0,
+            friction_anchor: None,
         }
     }
 }

@@ -188,7 +188,23 @@ Arcane uses a modern **Temporal Gauss-Seidel with Soft Constraints** solver:
 - **2-point contact manifolds** — Sutherland-Hodgman clipping for stable stacking
 - **Soft constraints** — Spring-damper dynamics replace rigid Baumgarte stabilization
 - **Speculative contacts** — Predicts collisions before penetration (no tunneling)
+- **Friction anchors** — Persistent friction state for rock-solid stacking
 - **4 sub-steps** — 240 Hz effective physics rate for smooth simulation
 - **Warm starting** — Impulse caching for faster convergence
 
 This architecture follows modern physics engine best practices.
+
+## Default Tuning Parameters
+
+These are the built-in defaults. Override per-joint or per-body as needed.
+
+| Parameter | Default | Notes |
+|-----------|---------|-------|
+| Contact frequency | 30 Hz | Stiff but not rigid; eliminates jitter |
+| Contact damping | 1.0 | Critical damping (no bounce from softness) |
+| Speculative margin | 5 px | How far ahead to predict collisions |
+| Friction Baumgarte | 0.1 | Correction rate for friction anchors |
+| Sleep threshold | 0.5 px/s | Velocity below which bodies start sleep timer |
+| Sleep time | 0.5 s | How long at rest before sleeping |
+| Sub-steps | 4 | Internal physics rate = 240 Hz |
+| Velocity iterations | 10 | Constraint solver passes per sub-step |
