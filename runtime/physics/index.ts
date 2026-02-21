@@ -12,6 +12,8 @@ export type {
   BodyDef,
   BodyState,
   Contact,
+  ContactManifold,
+  ManifoldPoint,
   RayHit,
   PhysicsWorldOptions,
 } from "./types.ts";
@@ -46,4 +48,4 @@ export {
 } from "./constraints.ts";
 
 // Spatial queries
-export { queryAABB, raycast, getContacts } from "./query.ts";
+export { queryAABB, raycast, getContacts, getManifolds } from "./query.ts";

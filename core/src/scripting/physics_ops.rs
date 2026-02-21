@@ -458,6 +458,40 @@ fn op_get_contacts(state: &mut OpState) -> Vec<f64> {
     }
 }
 
+/// Get contact manifolds with all points (TGS Soft Phase 1).
+/// Returns flattened data: [bodyA, bodyB, nx, ny, numPoints,
+///   (localAx, localAy, localBx, localBy, penetration) × numPoints, ...]
+/// This exposes the full 2-point manifold data for visualization.
+#[deno_core::op2]
+#[serde]
+fn op_get_manifolds(state: &mut OpState) -> Vec<f64> {
+    let physics = state.borrow_mut::<Rc<RefCell<PhysicsState>>>();
+    let ps = physics.borrow();
+    match ps.0.as_ref() {
+        Some(world) => {
+            let manifolds = world.get_manifolds();
+            // Estimate capacity: ~10 values per manifold average
+            let mut result = Vec::with_capacity(manifolds.len() * 10);
+            for m in manifolds {
+                result.push(m.body_a as f64);
+                result.push(m.body_b as f64);
+                result.push(m.normal.0 as f64);
+                result.push(m.normal.1 as f64);
+                result.push(m.points.len() as f64);
+                for point in &m.points {
+                    result.push(point.local_a.0 as f64);
+                    result.push(point.local_a.1 as f64);
+                    result.push(point.local_b.0 as f64);
+                    result.push(point.local_b.1 as f64);
+                    result.push(point.penetration as f64);
+                }
+            }
+            result
+        }
+        None => vec![],
+    }
+}
+
 /// Get all body states as a packed f64 array for bulk readback.
 /// Layout per body: [id, x, y, vx, vy, angle, angular_velocity, is_sleeping(0/1)] = 8 f64s.
 /// Only includes bodies that exist (skips removed/empty slots).
@@ -510,6 +544,7 @@ deno_core::extension!(
         op_query_aabb,
         op_raycast,
         op_get_contacts,
+        op_get_manifolds,
         op_get_all_body_states,
     ],
 );

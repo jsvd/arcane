@@ -1,4 +1,4 @@
-import type { BodyId, Contact, RayHit } from "./types.ts";
+import type { BodyId, Contact, ContactManifold, ManifoldPoint, RayHit } from "./types.ts";
 
 const hasPhysicsOps =
   typeof (globalThis as any).Deno !== "undefined" &&
@@ -57,4 +57,35 @@ export function getContacts(): Contact[] {
     });
   }
   return contacts;
+}
+
+/**
+ * Get contact manifolds with all points (TGS Soft).
+ * Each manifold can have 1-2 contact points for edge-edge contacts.
+ * Returns an empty array in headless mode.
+ */
+export function getManifolds(): ContactManifold[] {
+  if (!hasPhysicsOps) return [];
+  const flat: number[] = (globalThis as any).Deno.core.ops.op_get_manifolds();
+  const manifolds: ContactManifold[] = [];
+  let i = 0;
+  while (i < flat.length) {
+    const bodyA = flat[i++];
+    const bodyB = flat[i++];
+    const normalX = flat[i++];
+    const normalY = flat[i++];
+    const numPoints = flat[i++];
+    const points: ManifoldPoint[] = [];
+    for (let p = 0; p < numPoints; p++) {
+      points.push({
+        localAX: flat[i++],
+        localAY: flat[i++],
+        localBX: flat[i++],
+        localBY: flat[i++],
+        penetration: flat[i++],
+      });
+    }
+    manifolds.push({ bodyA, bodyB, normalX, normalY, points });
+  }
+  return manifolds;
 }

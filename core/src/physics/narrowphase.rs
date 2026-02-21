@@ -856,13 +856,15 @@ fn polygon_vs_polygon_manifold(a: &RigidBody, b: &RigidBody) -> Option<ContactMa
         clipped = clip_segment_to_line(clipped[0], clipped[1], ref_v1, (-ref_tx, -ref_ty));
     }
 
-    // Keep only points behind reference face
+    // Keep only points behind (or very close to) reference face
+    // Tolerance prevents losing contacts due to floating-point precision
+    const CLIP_TOLERANCE: f32 = 0.02;
     let mut points = Vec::with_capacity(2);
     for (i, &cp) in clipped.iter().enumerate() {
-        // Distance behind reference face
+        // Distance behind reference face (negative = behind)
         let sep = (cp.0 - ref_v0.0) * ref_nx + (cp.1 - ref_v0.1) * ref_ny;
 
-        if sep <= 0.0 {
+        if sep <= CLIP_TOLERANCE {
             // Penetration = -sep
             let penetration = -sep;
 

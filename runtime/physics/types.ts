@@ -53,6 +53,24 @@ export type Contact = {
   readonly contactY: number;
 };
 
+/** A single point within a contact manifold (TGS Soft). */
+export type ManifoldPoint = {
+  readonly localAX: number;  // Body-local anchor on body A
+  readonly localAY: number;
+  readonly localBX: number;  // Body-local anchor on body B
+  readonly localBY: number;
+  readonly penetration: number;
+};
+
+/** Contact manifold with 1-2 contact points (TGS Soft). */
+export type ContactManifold = {
+  readonly bodyA: BodyId;
+  readonly bodyB: BodyId;
+  readonly normalX: number;
+  readonly normalY: number;
+  readonly points: ManifoldPoint[];
+};
+
 /** Raycast hit result. */
 export type RayHit = {
   readonly bodyId: BodyId;

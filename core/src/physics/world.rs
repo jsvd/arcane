@@ -342,6 +342,10 @@ impl PhysicsWorld {
     /// Analytically update contact penetration from body-local anchors.
     /// This avoids re-running narrowphase geometry tests during sub-steps.
     /// O(contacts) vs O(contacts × shape_complexity)
+    ///
+    /// Note: Currently unused - analytical updating during position correction
+    /// didn't converge well in testing. Kept for future solver experiments.
+    #[allow(dead_code)]
     fn update_contacts_analytically(&mut self) {
         for manifold in &mut self.manifolds {
             let a = match &self.bodies[manifold.body_a as usize] {

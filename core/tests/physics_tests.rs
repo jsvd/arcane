@@ -3632,3 +3632,139 @@ fn test_speculative_contact_allows_collision() {
         state.vy,
     );
 }
+
+// ============================================================================
+// TGS Soft Manifold Tests - 2-point contacts
+// ============================================================================
+
+#[test]
+fn test_box_on_ground_has_two_contacts() {
+    // A box sitting flat on a ground AABB should have 2 contact points
+    // (one at each corner of the bottom edge)
+    let mut world = PhysicsWorld::new(0.0, 500.0);
+
+    // Ground (static AABB)
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 200.0, half_h: 20.0 },
+        0.0, 100.0, 0.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Box (polygon) sitting on ground
+    let box_half = 20.0;
+    let box_y = 100.0 - 20.0 - box_half; // On top of ground
+    world.add_body(
+        BodyType::Dynamic,
+        Shape::Polygon {
+            vertices: vec![
+                (-box_half, -box_half),
+                (box_half, -box_half),
+                (box_half, box_half),
+                (-box_half, box_half),
+            ],
+        },
+        0.0, box_y, 1.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Let it settle
+    for _ in 0..60 {
+        world.step(1.0 / 60.0);
+    }
+
+    // Check manifolds - should have 2 contact points
+    let manifolds = world.get_manifolds();
+    assert!(!manifolds.is_empty(), "Should have at least one manifold");
+
+    let total_points: usize = manifolds.iter().map(|m| m.points.len()).sum();
+    assert!(
+        total_points >= 2,
+        "Box resting on ground should have 2 contact points, got {}",
+        total_points,
+    );
+}
+
+#[test]
+fn test_stacked_boxes_have_two_contacts_each() {
+    // Two boxes stacked should each have 2 contact points with the surface below
+    let mut world = PhysicsWorld::new(0.0, 500.0);
+
+    // Ground
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 200.0, half_h: 20.0 },
+        0.0, 100.0, 0.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    let box_half = 20.0;
+
+    // Bottom box
+    let bottom_y = 100.0 - 20.0 - box_half;
+    let _bottom = world.add_body(
+        BodyType::Dynamic,
+        Shape::Polygon {
+            vertices: vec![
+                (-box_half, -box_half),
+                (box_half, -box_half),
+                (box_half, box_half),
+                (-box_half, box_half),
+            ],
+        },
+        0.0, bottom_y, 1.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Top box
+    let top_y = bottom_y - box_half * 2.0;
+    let _top = world.add_body(
+        BodyType::Dynamic,
+        Shape::Polygon {
+            vertices: vec![
+                (-box_half, -box_half),
+                (box_half, -box_half),
+                (box_half, box_half),
+                (-box_half, box_half),
+            ],
+        },
+        0.0, top_y, 1.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Let it settle (but not long enough to sleep)
+    for _ in 0..30 {
+        world.step(1.0 / 60.0);
+    }
+
+    // Check manifolds
+    let manifolds = world.get_manifolds();
+    let mut ground_contacts = 0;
+    let mut stack_contacts = 0;
+
+    for m in manifolds {
+        let points = m.points.len();
+        // Ground is body 0
+        if m.body_a == 0 || m.body_b == 0 {
+            ground_contacts += points;
+        } else {
+            stack_contacts += points;
+        }
+    }
+
+    assert!(
+        ground_contacts >= 2,
+        "Bottom box should have 2 contacts with ground, got {}",
+        ground_contacts,
+    );
+    assert!(
+        stack_contacts >= 2,
+        "Stacked boxes should have 2 contacts between them, got {}",
+        stack_contacts,
+    );
+}

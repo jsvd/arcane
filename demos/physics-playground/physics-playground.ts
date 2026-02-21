@@ -43,11 +43,12 @@ import {
   createSoftDistanceJoint,
   createRevoluteJoint,
   getContacts,
+  getManifolds,
   raycast,
   boxPolygonVertices,
 } from "../../runtime/physics/index.ts";
 import type { RayHit } from "../../runtime/physics/index.ts";
-import type { BodyId, Contact } from "../../runtime/physics/index.ts";
+import type { BodyId, Contact, ContactManifold } from "../../runtime/physics/index.ts";
 
 // Colors (0-255 via rgb() helper)
 const COL_BOX = rgb(180, 120, 60);
@@ -414,21 +415,34 @@ function bodyColor(tracked: TrackedBody, sleeping: boolean): { r: number; g: num
   }
 }
 
-// Draw contact visualization
-function drawContacts(contacts: Contact[]): void {
-  for (const c of contacts) {
-    // Red dot at contact point
-    drawCircle(c.contactX, c.contactY, 4, { color: COL_CONTACT, layer: 10 });
+// Draw contact visualization using manifolds (shows all contact points)
+function drawContactsFromManifolds(manifolds: ContactManifold[]): void {
+  for (const m of manifolds) {
+    // Get body states to transform local anchors to world space
+    const stateA = getBodyState(m.bodyA);
+    const stateB = getBodyState(m.bodyB);
+    if (!stateA || !stateB) continue;
 
-    // Normal direction line
-    const normalLen = 20;
-    drawLine(
-      c.contactX,
-      c.contactY,
-      c.contactX + c.normalX * normalLen,
-      c.contactY + c.normalY * normalLen,
-      { color: COL_CONTACT_NORMAL, thickness: 2, layer: 10 }
-    );
+    for (const point of m.points) {
+      // Transform local anchor A to world space
+      const cosA = Math.cos(stateA.angle);
+      const sinA = Math.sin(stateA.angle);
+      const worldX = point.localAX * cosA - point.localAY * sinA + stateA.x;
+      const worldY = point.localAX * sinA + point.localAY * cosA + stateA.y;
+
+      // Red dot at contact point
+      drawCircle(worldX, worldY, 4, { color: COL_CONTACT, layer: 10 });
+
+      // Normal direction line
+      const normalLen = 20;
+      drawLine(
+        worldX,
+        worldY,
+        worldX + m.normalX * normalLen,
+        worldY + m.normalY * normalLen,
+        { color: COL_CONTACT_NORMAL, thickness: 2, layer: 10 }
+      );
+    }
   }
 }
 
@@ -620,9 +634,10 @@ game.onFrame((ctx) => {
     layer: 1,
   });
 
-  // Draw contact points if enabled
+  // Draw contact points if enabled (uses manifolds to show all 2 points per edge)
   if (showContacts) {
-    drawContacts(contacts);
+    const manifolds = getManifolds();
+    drawContactsFromManifolds(manifolds);
   }
 
   // Draw raycast result if in raycast mode
