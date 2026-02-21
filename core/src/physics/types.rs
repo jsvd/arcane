@@ -8,6 +8,90 @@ pub enum BodyType {
     Kinematic,
 }
 
+/// Feature-based contact identifier for warm starting.
+/// Tracks which geometric features (edges/vertices) are in contact
+/// so accumulated impulses can be transferred across frames even when
+/// contact points shift slightly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ContactID {
+    /// Edge index on reference body (the face we're clipping against)
+    pub ref_edge: u8,
+    /// Edge index on incident body (the face being clipped)
+    pub inc_edge: u8,
+    /// Which endpoint of the clipped segment (0 or 1)
+    pub clip_index: u8,
+    /// Reserved for future use / padding
+    pub flags: u8,
+}
+
+impl ContactID {
+    pub fn new(ref_edge: u8, inc_edge: u8, clip_index: u8) -> Self {
+        Self {
+            ref_edge,
+            inc_edge,
+            clip_index,
+            flags: 0,
+        }
+    }
+
+    /// ID for circle contacts (no edge features)
+    pub fn circle() -> Self {
+        Self {
+            ref_edge: 255,
+            inc_edge: 255,
+            clip_index: 0,
+            flags: 0,
+        }
+    }
+}
+
+/// A single contact point within a manifold.
+/// Stores body-local anchors for analytical updating across sub-steps.
+#[derive(Debug, Clone)]
+pub struct ManifoldPoint {
+    /// Body-local anchor on body A
+    pub local_a: (f32, f32),
+    /// Body-local anchor on body B
+    pub local_b: (f32, f32),
+    /// Penetration depth (positive = overlapping, negative = separated/speculative)
+    pub penetration: f32,
+    /// Feature-based ID for warm start matching
+    pub id: ContactID,
+    /// Accumulated normal impulse (for warm starting)
+    pub accumulated_jn: f32,
+    /// Accumulated friction impulse (for warm starting)
+    pub accumulated_jt: f32,
+}
+
+impl ManifoldPoint {
+    pub fn new(local_a: (f32, f32), local_b: (f32, f32), penetration: f32, id: ContactID) -> Self {
+        Self {
+            local_a,
+            local_b,
+            penetration,
+            id,
+            accumulated_jn: 0.0,
+            accumulated_jt: 0.0,
+        }
+    }
+}
+
+/// Contact manifold: up to 2 contact points between two bodies.
+/// In 2D, any convex-convex collision produces at most 2 contact points.
+#[derive(Debug, Clone)]
+pub struct ContactManifold {
+    pub body_a: BodyId,
+    pub body_b: BodyId,
+    /// Contact normal (points from A toward B)
+    pub normal: (f32, f32),
+    /// Contact points (0-2 for 2D)
+    pub points: Vec<ManifoldPoint>,
+    /// Pre-computed tangent direction (perpendicular to normal)
+    pub tangent: (f32, f32),
+    /// Pre-computed restitution velocity bias
+    pub velocity_bias: f32,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Shape {
     Circle { radius: f32 },

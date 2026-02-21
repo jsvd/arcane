@@ -3310,3 +3310,109 @@ fn test_polygon_stack_reaches_sleep() {
         "Bottom polygon box should reach sleep after 5 seconds of settling"
     );
 }
+
+// =========================================================================
+// TGS Soft: Contact Manifolds (Phase 1)
+// =========================================================================
+
+#[test]
+fn test_polygon_manifold_generates_two_contacts() {
+    use arcane_core::physics::narrowphase::test_collision_manifold;
+
+    // Two aligned squares with edge-on-face contact
+    let box_verts = vec![(-10.0, -10.0), (10.0, -10.0), (10.0, 10.0), (-10.0, 10.0)];
+
+    let bottom = make_body(0, BodyType::Static, Shape::Polygon { vertices: box_verts.clone() }, 0.0, 0.0, 0.0);
+    // Top box penetrating bottom by 2 units
+    let top = make_body(1, BodyType::Dynamic, Shape::Polygon { vertices: box_verts }, 0.0, -18.0, 1.0);
+
+    let manifold = test_collision_manifold(&bottom, &top);
+    assert!(manifold.is_some(), "Should detect collision");
+    let m = manifold.unwrap();
+    
+    // Edge-on-face contact should produce 2 contact points
+    assert_eq!(m.points.len(), 2, "Edge-on-face should generate 2 contact points");
+    
+    // Normal should point upward (from bottom toward top in screen coords)
+    assert!(m.normal.1 < 0.0, "Normal should point upward (negative Y)");
+    
+    // Both points should have similar penetration
+    assert!((m.points[0].penetration - m.points[1].penetration).abs() < 0.1);
+}
+
+#[test]
+fn test_aabb_manifold_generates_two_contacts() {
+    use arcane_core::physics::narrowphase::test_collision_manifold;
+
+    // Two AABBs with edge-on-face contact
+    let bottom = make_body(0, BodyType::Static, Shape::AABB { half_w: 50.0, half_h: 10.0 }, 0.0, 0.0, 0.0);
+    // Top AABB penetrating bottom by 3 units
+    let top = make_body(1, BodyType::Dynamic, Shape::AABB { half_w: 15.0, half_h: 15.0 }, 0.0, -22.0, 1.0);
+
+    let manifold = test_collision_manifold(&bottom, &top);
+    assert!(manifold.is_some(), "Should detect collision");
+    let m = manifold.unwrap();
+    
+    // AABB edge-on-face should produce 2 contact points
+    assert_eq!(m.points.len(), 2, "AABB edge-on-face should generate 2 contact points");
+}
+
+#[test]
+fn test_manifold_warm_start_uses_contact_id() {
+    // Verify that contact points have unique ContactIDs
+    use arcane_core::physics::narrowphase::test_collision_manifold;
+
+    let box_verts = vec![(-10.0, -10.0), (10.0, -10.0), (10.0, 10.0), (-10.0, 10.0)];
+    let a = make_body(0, BodyType::Static, Shape::Polygon { vertices: box_verts.clone() }, 0.0, 0.0, 0.0);
+    let b = make_body(1, BodyType::Dynamic, Shape::Polygon { vertices: box_verts }, 0.0, -18.0, 1.0);
+
+    let manifold = test_collision_manifold(&a, &b).unwrap();
+    
+    if manifold.points.len() >= 2 {
+        // ContactIDs should be different for different contact points
+        assert_ne!(manifold.points[0].id, manifold.points[1].id, 
+            "Different contact points should have different ContactIDs");
+    }
+}
+
+#[test]
+fn test_world_manifold_solver_enabled() {
+    // Verify manifold solver is working with basic stacking
+    let mut world = PhysicsWorld::new(0.0, 200.0);
+
+    // Ground
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 200.0, half_h: 10.0 },
+        0.0, 300.0, 0.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Stack of boxes
+    let mut ids = Vec::new();
+    for i in 0..5 {
+        let y = 280.0 - (i as f32 * 22.0);
+        ids.push(world.add_body(
+            BodyType::Dynamic,
+            Shape::AABB { half_w: 10.0, half_h: 10.0 },
+            0.0, y, 1.0,
+            Material { restitution: 0.1, friction: 0.5 },
+            0xFFFF, 0xFFFF,
+        ));
+    }
+
+    // Run simulation
+    for _ in 0..120 {
+        world.step(1.0 / 60.0);
+    }
+
+    // Check manifolds are being generated
+    let manifolds = world.get_manifolds();
+    // Should have some manifolds from stacking
+    assert!(!manifolds.is_empty(), "Manifold solver should generate manifolds");
+    
+    // At least some should have 2 contact points (edge-on-face)
+    let multi_point_count = manifolds.iter().filter(|m| m.points.len() >= 2).count();
+    assert!(multi_point_count > 0, "Some manifolds should have 2 contact points for edge-on-face");
+}

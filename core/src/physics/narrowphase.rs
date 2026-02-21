@@ -1,4 +1,4 @@
-use super::types::{Contact, RigidBody, Shape};
+use super::types::{Contact, ContactID, ContactManifold, ManifoldPoint, RigidBody, Shape};
 
 /// Test collision between two rigid bodies. Returns a contact if overlapping.
 /// Contact normal always points from body_a toward body_b.
@@ -444,4 +444,577 @@ fn point_in_polygon(px: f32, py: f32, verts: &[(f32, f32)]) -> bool {
         j = i;
     }
     inside
+}
+
+// ============================================================================
+// Contact Manifold Generation (TGS Soft Phase 1)
+// ============================================================================
+
+/// Test collision between two bodies and return a contact manifold.
+/// This is the new entry point that generates proper 2-point manifolds using
+/// Sutherland-Hodgman clipping for polygon-polygon collisions.
+pub fn test_collision_manifold(a: &RigidBody, b: &RigidBody) -> Option<ContactManifold> {
+    match (&a.shape, &b.shape) {
+        (Shape::Circle { .. }, Shape::Circle { .. }) => circle_vs_circle_manifold(a, b),
+        (Shape::Circle { .. }, Shape::AABB { .. }) => circle_vs_aabb_manifold(a, b, false),
+        (Shape::AABB { .. }, Shape::Circle { .. }) => circle_vs_aabb_manifold(b, a, true),
+        (Shape::AABB { .. }, Shape::AABB { .. }) => aabb_vs_aabb_manifold(a, b),
+        (Shape::Polygon { .. }, Shape::Polygon { .. }) => polygon_vs_polygon_manifold(a, b),
+        (Shape::Circle { .. }, Shape::Polygon { .. }) => circle_vs_polygon_manifold(a, b, false),
+        (Shape::Polygon { .. }, Shape::Circle { .. }) => circle_vs_polygon_manifold(b, a, true),
+        (Shape::AABB { .. }, Shape::Polygon { .. }) => aabb_vs_polygon_manifold(a, b, false),
+        (Shape::Polygon { .. }, Shape::AABB { .. }) => aabb_vs_polygon_manifold(b, a, true),
+    }
+}
+
+/// Transform a world-space point to body-local space
+fn world_to_local(body: &RigidBody, wx: f32, wy: f32) -> (f32, f32) {
+    let dx = wx - body.x;
+    let dy = wy - body.y;
+    let cos = body.angle.cos();
+    let sin = body.angle.sin();
+    // Inverse rotation
+    (dx * cos + dy * sin, -dx * sin + dy * cos)
+}
+
+fn circle_vs_circle_manifold(a: &RigidBody, b: &RigidBody) -> Option<ContactManifold> {
+    let ra = match a.shape {
+        Shape::Circle { radius } => radius,
+        _ => return None,
+    };
+    let rb = match b.shape {
+        Shape::Circle { radius } => radius,
+        _ => return None,
+    };
+
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+    let dist_sq = dx * dx + dy * dy;
+    let sum_r = ra + rb;
+
+    if dist_sq >= sum_r * sum_r {
+        return None;
+    }
+
+    let dist = dist_sq.sqrt();
+    let (nx, ny) = if dist > 1e-8 {
+        (dx / dist, dy / dist)
+    } else {
+        (1.0, 0.0)
+    };
+
+    let penetration = sum_r - dist;
+
+    // World-space contact point
+    let cpx = a.x + nx * (ra - penetration * 0.5);
+    let cpy = a.y + ny * (ra - penetration * 0.5);
+
+    // Convert to body-local anchors
+    let local_a = world_to_local(a, cpx, cpy);
+    let local_b = world_to_local(b, cpx, cpy);
+
+    Some(ContactManifold {
+        body_a: a.id,
+        body_b: b.id,
+        normal: (nx, ny),
+        points: vec![ManifoldPoint::new(local_a, local_b, penetration, ContactID::circle())],
+        tangent: (-ny, nx),
+        velocity_bias: 0.0,
+    })
+}
+
+fn circle_vs_aabb_manifold(circle: &RigidBody, aabb: &RigidBody, swapped: bool) -> Option<ContactManifold> {
+    let radius = match circle.shape {
+        Shape::Circle { radius } => radius,
+        _ => return None,
+    };
+    let (hw, hh) = match aabb.shape {
+        Shape::AABB { half_w, half_h } => (half_w, half_h),
+        _ => return None,
+    };
+
+    let local_x = circle.x - aabb.x;
+    let local_y = circle.y - aabb.y;
+
+    let closest_x = local_x.clamp(-hw, hw);
+    let closest_y = local_y.clamp(-hh, hh);
+
+    let dx = local_x - closest_x;
+    let dy = local_y - closest_y;
+    let dist_sq = dx * dx + dy * dy;
+
+    if dist_sq >= radius * radius {
+        return None;
+    }
+
+    let inside = local_x.abs() < hw && local_y.abs() < hh;
+
+    let (nx, ny, penetration) = if inside {
+        let overlap_x = hw - local_x.abs();
+        let overlap_y = hh - local_y.abs();
+        if overlap_x < overlap_y {
+            let nx = if local_x >= 0.0 { 1.0 } else { -1.0 };
+            (nx, 0.0, overlap_x + radius)
+        } else {
+            let ny = if local_y >= 0.0 { 1.0 } else { -1.0 };
+            (0.0, ny, overlap_y + radius)
+        }
+    } else {
+        let dist = dist_sq.sqrt();
+        let nx = if dist > 1e-8 { dx / dist } else { 1.0 };
+        let ny = if dist > 1e-8 { dy / dist } else { 0.0 };
+        (nx, ny, radius - dist)
+    };
+
+    let cpx = aabb.x + closest_x;
+    let cpy = aabb.y + closest_y;
+
+    let (body_a, body_b, fnx, fny) = if swapped {
+        (aabb, circle, nx, ny)
+    } else {
+        (circle, aabb, -nx, -ny)
+    };
+
+    let local_a = world_to_local(body_a, cpx, cpy);
+    let local_b = world_to_local(body_b, cpx, cpy);
+
+    Some(ContactManifold {
+        body_a: body_a.id,
+        body_b: body_b.id,
+        normal: (fnx, fny),
+        points: vec![ManifoldPoint::new(local_a, local_b, penetration, ContactID::circle())],
+        tangent: (-fny, fnx),
+        velocity_bias: 0.0,
+    })
+}
+
+fn aabb_vs_aabb_manifold(a: &RigidBody, b: &RigidBody) -> Option<ContactManifold> {
+    let (ahw, ahh) = match a.shape {
+        Shape::AABB { half_w, half_h } => (half_w, half_h),
+        _ => return None,
+    };
+    let (bhw, bhh) = match b.shape {
+        Shape::AABB { half_w, half_h } => (half_w, half_h),
+        _ => return None,
+    };
+
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+    let overlap_x = (ahw + bhw) - dx.abs();
+    let overlap_y = (ahh + bhh) - dy.abs();
+
+    if overlap_x <= 0.0 || overlap_y <= 0.0 {
+        return None;
+    }
+
+    // Choose axis of minimum penetration
+    if overlap_x < overlap_y {
+        // X-axis separation (vertical edge contact)
+        let nx = if dx >= 0.0 { 1.0 } else { -1.0 };
+
+        // Contact edge X position
+        let cx = if dx >= 0.0 { a.x + ahw } else { a.x - ahw };
+
+        // Y range of overlap
+        let y_min = (a.y - ahh).max(b.y - bhh);
+        let y_max = (a.y + ahh).min(b.y + bhh);
+
+        // Two contact points at overlap corners
+        let mut points = Vec::with_capacity(2);
+
+        let cp1 = (cx, y_min);
+        let local_a1 = world_to_local(a, cp1.0, cp1.1);
+        let local_b1 = world_to_local(b, cp1.0, cp1.1);
+        points.push(ManifoldPoint::new(local_a1, local_b1, overlap_x, ContactID::new(0, 0, 0)));
+
+        let cp2 = (cx, y_max);
+        let local_a2 = world_to_local(a, cp2.0, cp2.1);
+        let local_b2 = world_to_local(b, cp2.0, cp2.1);
+        points.push(ManifoldPoint::new(local_a2, local_b2, overlap_x, ContactID::new(0, 0, 1)));
+
+        Some(ContactManifold {
+            body_a: a.id,
+            body_b: b.id,
+            normal: (nx, 0.0),
+            points,
+            tangent: (0.0, 1.0),
+            velocity_bias: 0.0,
+        })
+    } else {
+        // Y-axis separation (horizontal edge contact)
+        let ny = if dy >= 0.0 { 1.0 } else { -1.0 };
+
+        // Contact edge Y position
+        let cy = if dy >= 0.0 { a.y + ahh } else { a.y - ahh };
+
+        // X range of overlap
+        let x_min = (a.x - ahw).max(b.x - bhw);
+        let x_max = (a.x + ahw).min(b.x + bhw);
+
+        // Two contact points at overlap corners
+        let mut points = Vec::with_capacity(2);
+
+        let cp1 = (x_min, cy);
+        let local_a1 = world_to_local(a, cp1.0, cp1.1);
+        let local_b1 = world_to_local(b, cp1.0, cp1.1);
+        points.push(ManifoldPoint::new(local_a1, local_b1, overlap_y, ContactID::new(1, 1, 0)));
+
+        let cp2 = (x_max, cy);
+        let local_a2 = world_to_local(a, cp2.0, cp2.1);
+        let local_b2 = world_to_local(b, cp2.0, cp2.1);
+        points.push(ManifoldPoint::new(local_a2, local_b2, overlap_y, ContactID::new(1, 1, 1)));
+
+        Some(ContactManifold {
+            body_a: a.id,
+            body_b: b.id,
+            normal: (0.0, ny),
+            points,
+            tangent: (1.0, 0.0),
+            velocity_bias: 0.0,
+        })
+    }
+}
+
+/// Find the edge with maximum separation between two polygons (SAT).
+/// Returns (separation, edge_index) where edge_index is on polygon `a`.
+fn find_max_separation(
+    a_verts: &[(f32, f32)],
+    b_verts: &[(f32, f32)],
+) -> (f32, usize) {
+    let mut max_sep = f32::MIN;
+    let mut best_edge = 0;
+
+    let n = a_verts.len();
+    for i in 0..n {
+        let v0 = a_verts[i];
+        let v1 = a_verts[(i + 1) % n];
+
+        // Outward edge normal
+        let ex = v1.0 - v0.0;
+        let ey = v1.1 - v0.1;
+        let len = (ex * ex + ey * ey).sqrt();
+        if len < 1e-8 {
+            continue;
+        }
+        let nx = ey / len;
+        let ny = -ex / len;
+
+        // Find support point on B in direction -n
+        let mut min_dot = f32::MAX;
+        for &bv in b_verts {
+            let d = (bv.0 - v0.0) * nx + (bv.1 - v0.1) * ny;
+            min_dot = min_dot.min(d);
+        }
+
+        // min_dot is the separation along this axis (negative = overlap)
+        if min_dot > max_sep {
+            max_sep = min_dot;
+            best_edge = i;
+        }
+    }
+
+    (max_sep, best_edge)
+}
+
+/// Find the edge on the incident polygon that is most anti-parallel to the reference normal.
+fn find_incident_edge(
+    inc_verts: &[(f32, f32)],
+    ref_normal: (f32, f32),
+) -> usize {
+    let n = inc_verts.len();
+    let mut min_dot = f32::MAX;
+    let mut best_edge = 0;
+
+    for i in 0..n {
+        let v0 = inc_verts[i];
+        let v1 = inc_verts[(i + 1) % n];
+
+        // Edge normal (outward)
+        let ex = v1.0 - v0.0;
+        let ey = v1.1 - v0.1;
+        let len = (ex * ex + ey * ey).sqrt();
+        if len < 1e-8 {
+            continue;
+        }
+        let nx = ey / len;
+        let ny = -ex / len;
+
+        // Most anti-parallel to reference normal
+        let dot = nx * ref_normal.0 + ny * ref_normal.1;
+        if dot < min_dot {
+            min_dot = dot;
+            best_edge = i;
+        }
+    }
+
+    best_edge
+}
+
+/// Clip a line segment against a half-plane defined by the line passing through
+/// `line_point` with normal `normal`. Points are kept if they're on the positive side.
+/// Returns up to 2 clipped points.
+fn clip_segment_to_line(
+    v0: (f32, f32),
+    v1: (f32, f32),
+    line_point: (f32, f32),
+    normal: (f32, f32),
+) -> Vec<(f32, f32)> {
+    let mut result = Vec::with_capacity(2);
+
+    // Distance from line (positive = inside)
+    let d0 = (v0.0 - line_point.0) * normal.0 + (v0.1 - line_point.1) * normal.1;
+    let d1 = (v1.0 - line_point.0) * normal.0 + (v1.1 - line_point.1) * normal.1;
+
+    // Keep points inside
+    if d0 >= 0.0 {
+        result.push(v0);
+    }
+    if d1 >= 0.0 {
+        result.push(v1);
+    }
+
+    // If they're on opposite sides, compute intersection
+    if d0 * d1 < 0.0 {
+        let t = d0 / (d0 - d1);
+        let cx = v0.0 + t * (v1.0 - v0.0);
+        let cy = v0.1 + t * (v1.1 - v0.1);
+        result.push((cx, cy));
+    }
+
+    result
+}
+
+/// Sutherland-Hodgman polygon clipping for polygon-polygon collision.
+/// Generates a proper 2-point contact manifold.
+fn polygon_vs_polygon_manifold(a: &RigidBody, b: &RigidBody) -> Option<ContactManifold> {
+    let verts_a = get_world_vertices(a);
+    let verts_b = get_world_vertices(b);
+
+    if verts_a.len() < 3 || verts_b.len() < 3 {
+        return None;
+    }
+
+    // Find axes of minimum penetration for both polygons
+    let (sep_a, edge_a) = find_max_separation(&verts_a, &verts_b);
+    let (sep_b, edge_b) = find_max_separation(&verts_b, &verts_a);
+
+    // If either is positive, no collision
+    if sep_a > 0.0 || sep_b > 0.0 {
+        return None;
+    }
+
+    // Choose reference face (the one with smaller penetration = larger separation)
+    // Use a small bias to prefer A when close to equal
+    let (ref_verts, inc_verts, ref_edge, ref_body, inc_body, flip) = if sep_a > sep_b - 0.001 {
+        (&verts_a, &verts_b, edge_a, a, b, false)
+    } else {
+        (&verts_b, &verts_a, edge_b, b, a, true)
+    };
+
+    let n = ref_verts.len();
+    let ref_v0 = ref_verts[ref_edge];
+    let ref_v1 = ref_verts[(ref_edge + 1) % n];
+
+    // Reference face normal (outward)
+    let ref_ex = ref_v1.0 - ref_v0.0;
+    let ref_ey = ref_v1.1 - ref_v0.1;
+    let ref_len = (ref_ex * ref_ex + ref_ey * ref_ey).sqrt();
+    if ref_len < 1e-8 {
+        return None;
+    }
+    let ref_nx = ref_ey / ref_len;
+    let ref_ny = -ref_ex / ref_len;
+
+    // Reference face tangent (along edge)
+    let ref_tx = ref_ex / ref_len;
+    let ref_ty = ref_ey / ref_len;
+
+    // Find incident edge
+    let inc_edge = find_incident_edge(inc_verts, (ref_nx, ref_ny));
+    let inc_n = inc_verts.len();
+    let inc_v0 = inc_verts[inc_edge];
+    let inc_v1 = inc_verts[(inc_edge + 1) % inc_n];
+
+    // Clip incident edge against side planes of reference face
+    // The side planes are perpendicular to the reference edge at its endpoints.
+    // We want to keep points BETWEEN the two endpoints, so:
+    // - At ref_v0: keep points in the +tangent direction (toward ref_v1)
+    // - At ref_v1: keep points in the -tangent direction (toward ref_v0)
+
+    // Side plane 1: at ref_v0, normal = +tangent (keeps points toward ref_v1)
+    let mut clipped = clip_segment_to_line(inc_v0, inc_v1, ref_v0, (ref_tx, ref_ty));
+
+    if clipped.len() < 2 {
+        // Degenerate case - use single point
+        if clipped.is_empty() {
+            return None;
+        }
+    }
+
+    // Side plane 2: at ref_v1, normal = -tangent (keeps points toward ref_v0)
+    if clipped.len() >= 2 {
+        clipped = clip_segment_to_line(clipped[0], clipped[1], ref_v1, (-ref_tx, -ref_ty));
+    }
+
+    // Keep only points behind reference face
+    let mut points = Vec::with_capacity(2);
+    for (i, &cp) in clipped.iter().enumerate() {
+        // Distance behind reference face
+        let sep = (cp.0 - ref_v0.0) * ref_nx + (cp.1 - ref_v0.1) * ref_ny;
+
+        if sep <= 0.0 {
+            // Penetration = -sep
+            let penetration = -sep;
+
+            let (local_a, local_b) = if flip {
+                (world_to_local(inc_body, cp.0, cp.1), world_to_local(ref_body, cp.0, cp.1))
+            } else {
+                (world_to_local(ref_body, cp.0, cp.1), world_to_local(inc_body, cp.0, cp.1))
+            };
+
+            let id = ContactID::new(ref_edge as u8, inc_edge as u8, i as u8);
+            points.push(ManifoldPoint::new(local_a, local_b, penetration, id));
+        }
+    }
+
+    if points.is_empty() {
+        return None;
+    }
+
+    // Build final normal pointing from A to B
+    let (final_nx, final_ny) = if flip {
+        (-ref_nx, -ref_ny)
+    } else {
+        (ref_nx, ref_ny)
+    };
+
+    // Ensure normal points from A toward B
+    let dir_x = b.x - a.x;
+    let dir_y = b.y - a.y;
+    let (final_nx, final_ny) = if dir_x * final_nx + dir_y * final_ny < 0.0 {
+        (-final_nx, -final_ny)
+    } else {
+        (final_nx, final_ny)
+    };
+
+    Some(ContactManifold {
+        body_a: a.id,
+        body_b: b.id,
+        normal: (final_nx, final_ny),
+        points,
+        tangent: (-final_ny, final_nx),
+        velocity_bias: 0.0,
+    })
+}
+
+fn circle_vs_polygon_manifold(circle: &RigidBody, poly: &RigidBody, swapped: bool) -> Option<ContactManifold> {
+    let radius = match circle.shape {
+        Shape::Circle { radius } => radius,
+        _ => return None,
+    };
+    let verts = get_world_vertices(poly);
+    if verts.len() < 3 {
+        return None;
+    }
+
+    // Find closest point on polygon to circle center
+    let mut closest_dist_sq = f32::MAX;
+    let mut closest_point = (0.0f32, 0.0f32);
+
+    let n = verts.len();
+    for i in 0..n {
+        let (ax, ay) = verts[i];
+        let (bx, by) = verts[(i + 1) % n];
+        let (cx, cy) = closest_point_on_segment(circle.x, circle.y, ax, ay, bx, by);
+        let dx = circle.x - cx;
+        let dy = circle.y - cy;
+        let d2 = dx * dx + dy * dy;
+        if d2 < closest_dist_sq {
+            closest_dist_sq = d2;
+            closest_point = (cx, cy);
+        }
+    }
+
+    let inside = point_in_polygon(circle.x, circle.y, &verts);
+    let dist = closest_dist_sq.sqrt();
+
+    if !inside && dist >= radius {
+        return None;
+    }
+
+    let (nx, ny, penetration) = if inside {
+        let dx = circle.x - closest_point.0;
+        let dy = circle.y - closest_point.1;
+        let len = (dx * dx + dy * dy).sqrt();
+        if len > 1e-8 {
+            (-dx / len, -dy / len, radius + dist)
+        } else {
+            (1.0, 0.0, radius)
+        }
+    } else {
+        let dx = circle.x - closest_point.0;
+        let dy = circle.y - closest_point.1;
+        (dx / dist, dy / dist, radius - dist)
+    };
+
+    let (body_a, body_b, fnx, fny) = if swapped {
+        (poly, circle, -nx, -ny)
+    } else {
+        (circle, poly, nx, ny)
+    };
+
+    // Ensure normal points from body_a to body_b
+    let dir_x = body_b.x - body_a.x;
+    let dir_y = body_b.y - body_a.y;
+    let (fnx, fny) = if fnx * dir_x + fny * dir_y < 0.0 {
+        (-fnx, -fny)
+    } else {
+        (fnx, fny)
+    };
+
+    let local_a = world_to_local(body_a, closest_point.0, closest_point.1);
+    let local_b = world_to_local(body_b, closest_point.0, closest_point.1);
+
+    Some(ContactManifold {
+        body_a: body_a.id,
+        body_b: body_b.id,
+        normal: (fnx, fny),
+        points: vec![ManifoldPoint::new(local_a, local_b, penetration, ContactID::circle())],
+        tangent: (-fny, fnx),
+        velocity_bias: 0.0,
+    })
+}
+
+fn aabb_vs_polygon_manifold(aabb: &RigidBody, poly: &RigidBody, swapped: bool) -> Option<ContactManifold> {
+    let (hw, hh) = match aabb.shape {
+        Shape::AABB { half_w, half_h } => (half_w, half_h),
+        _ => return None,
+    };
+
+    // Convert AABB to polygon and use polygon-polygon collision
+    let aabb_as_poly = RigidBody {
+        shape: Shape::Polygon {
+            vertices: vec![(-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh)],
+        },
+        ..aabb.clone()
+    };
+
+    let mut manifold = polygon_vs_polygon_manifold(&aabb_as_poly, poly)?;
+
+    if swapped {
+        // Swap body IDs and flip normal
+        std::mem::swap(&mut manifold.body_a, &mut manifold.body_b);
+        manifold.normal = (-manifold.normal.0, -manifold.normal.1);
+        manifold.tangent = (-manifold.tangent.0, -manifold.tangent.1);
+
+        // Swap local anchors in each point
+        for point in &mut manifold.points {
+            std::mem::swap(&mut point.local_a, &mut point.local_b);
+        }
+    } else {
+        // Fix body IDs (we used aabb_as_poly which has same id as aabb)
+        manifold.body_a = aabb.id;
+    }
+
+    Some(manifold)
 }
