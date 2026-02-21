@@ -1,5 +1,8 @@
 {
   "devDependencies": {
     "@types/node": "^25.2.2"
+  },
+  "dependencies": {
+    "msdf-bmfont-xml": "^2.8.0"
   }
 }
