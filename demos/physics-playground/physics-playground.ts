@@ -12,6 +12,7 @@
  * - 5: Spawn rope (distance joint chain)
  * - 6: Spawn moving platform (kinematic body)
  * - 7: Raycast mode (shoots ray from center toward mouse)
+ * - 8: Spawn soft spring (bouncy oscillating spring!)
  * - C: Toggle contact visualization
  * - Space: Launch fast ball upward
  * - R: Reset world
@@ -39,6 +40,7 @@ import {
   setBodyVelocity,
   setKinematicVelocity,
   createDistanceJoint,
+  createSoftDistanceJoint,
   createRevoluteJoint,
   getContacts,
   raycast,
@@ -63,6 +65,8 @@ const COL_CONTACT = rgb(255, 50, 50);
 const COL_CONTACT_NORMAL = rgb(255, 200, 50);
 const COL_RAY = rgb(50, 255, 100);
 const COL_RAY_HIT = rgb(255, 100, 255);
+const COL_SPRING = rgb(100, 220, 255);
+const COL_SPRING_ANCHOR = rgb(200, 180, 255);
 
 // Deterministic PRNG for spawn sizing
 const rng = createRng(42);
@@ -70,7 +74,7 @@ const rng = createRng(42);
 // Body tracking
 type TrackedBody = {
   id: BodyId;
-  kind: "box" | "ball" | "seesaw" | "rope" | "pivot" | "platform";
+  kind: "box" | "ball" | "seesaw" | "rope" | "pivot" | "platform" | "spring" | "spring_anchor";
   halfW: number;
   halfH: number;
   radius?: number;
@@ -84,7 +88,7 @@ type TrackedBody = {
 type TrackedJoint = {
   bodyA: BodyId;
   bodyB: BodyId;
-  kind: "distance" | "revolute";
+  kind: "distance" | "revolute" | "soft";
 };
 
 let bodies: TrackedBody[] = [];
@@ -275,6 +279,40 @@ function spawnPlatform(x: number, y: number): void {
   bodyCount++;
 }
 
+function spawnSpring(x: number, y: number): void {
+  // Soft spring: static anchor + dynamic ball connected with soft constraint
+  const restLength = 80;
+  const ballRadius = 12;
+
+  // Anchor (static)
+  const anchorId = createBody({
+    type: "static",
+    shape: { type: "circle", radius: 6 },
+    x,
+    y,
+  });
+  bodies.push({ id: anchorId, kind: "spring_anchor", halfW: 6, halfH: 6, radius: 6 });
+
+  // Bouncing ball
+  const ballId = createBody({
+    type: "dynamic",
+    shape: { type: "circle", radius: ballRadius },
+    x,
+    y: y + restLength,
+    mass: 1.0,
+    material: { restitution: 0.3, friction: 0.5 },
+  });
+  bodies.push({ id: ballId, kind: "spring", halfW: ballRadius, halfH: ballRadius, radius: ballRadius });
+  bodyCount++;
+
+  // Soft distance joint: 2 Hz oscillation, underdamped (0.3 = bouncy!)
+  createSoftDistanceJoint(anchorId, ballId, restLength, {
+    frequencyHz: 2.0,
+    dampingRatio: 0.3,
+  });
+  joints.push({ bodyA: anchorId, bodyB: ballId, kind: "soft" });
+}
+
 // Update kinematic platforms
 function updatePlatforms(): void {
   const speed = 60;
@@ -359,7 +397,7 @@ game.state<PlaygroundState>({
 });
 
 // Mode names
-const MODE_NAMES = ["", "Box", "Ball", "Cluster", "Seesaw", "Rope", "Platform", "Raycast"];
+const MODE_NAMES = ["", "Box", "Ball", "Cluster", "Seesaw", "Rope", "Platform", "Raycast", "Spring"];
 
 /** Pick the render color for a tracked body, factoring in sleep state. */
 function bodyColor(tracked: TrackedBody, sleeping: boolean): { r: number; g: number; b: number; a: number } {
@@ -370,6 +408,8 @@ function bodyColor(tracked: TrackedBody, sleeping: boolean): { r: number; g: num
     case "pivot": return COL_PIVOT;
     case "rope": return COL_ROPE;
     case "platform": return COL_PLATFORM;
+    case "spring": return sleeping ? COL_SLEEP : COL_SPRING;
+    case "spring_anchor": return COL_SPRING_ANCHOR;
     default: return COL_BOX;
   }
 }
@@ -403,6 +443,7 @@ game.onFrame((ctx) => {
   if (isKeyPressed("5")) spawnMode = 5;
   if (isKeyPressed("6")) spawnMode = 6;
   if (isKeyPressed("7")) spawnMode = 7;
+  if (isKeyPressed("8")) spawnMode = 8;
 
   // Toggle contact visualization
   if (isKeyPressed("c")) {
@@ -464,6 +505,7 @@ game.onFrame((ctx) => {
       case 4: spawnSeesaw(mx, my); break;
       case 5: spawnRope(mx, my); break;
       case 6: spawnPlatform(mx, my); break;
+      case 8: spawnSpring(mx, my); break;
     }
     lastRayHit = null;
   } else {
@@ -501,6 +543,33 @@ game.onFrame((ctx) => {
         color: COL_ROPE_LINK,
         layer: 1,
       });
+    } else if (joint.kind === "soft") {
+      // Soft spring: draw zigzag-ish line
+      const dx = stateB.x - stateA.x;
+      const dy = stateB.y - stateA.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const segments = 8;
+      const amplitude = 6;
+      const perpX = -dy / dist;
+      const perpY = dx / dist;
+
+      let lastX = stateA.x;
+      let lastY = stateA.y;
+      for (let i = 1; i <= segments; i++) {
+        const t = i / segments;
+        const baseX = stateA.x + dx * t;
+        const baseY = stateA.y + dy * t;
+        const offset = (i < segments) ? amplitude * (i % 2 === 0 ? 1 : -1) : 0;
+        const nx = baseX + perpX * offset;
+        const ny = baseY + perpY * offset;
+        drawLine(lastX, lastY, nx, ny, {
+          color: COL_SPRING,
+          thickness: 2,
+          layer: 1,
+        });
+        lastX = nx;
+        lastY = ny;
+      }
     } else {
       // Revolute joint: draw ring at pivot + connecting lines
       drawRing(stateB.x, stateB.y, 6, 10, { color: COL_JOINT, layer: 3 });

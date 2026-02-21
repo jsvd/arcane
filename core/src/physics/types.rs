@@ -154,7 +154,7 @@ impl SoftConstraintParams {
     /// not the target velocity that zeroes out the position error.
     ///
     /// For underdamped oscillation, we apply impulse = -(k*x + c*v) * dt / (1 + h*(c + h*k)/m)
-    pub fn compute_coefficients(&self, dt: f32, inv_mass_sum: f32) -> SoftCoefficients {
+    pub fn compute_coefficients(&self, dt: f32, _inv_mass_sum: f32) -> SoftCoefficients {
         if self.frequency_hz <= 0.0 || dt <= 0.0 {
             // Rigid constraint: no softness
             return SoftCoefficients {

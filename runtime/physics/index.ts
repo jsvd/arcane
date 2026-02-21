@@ -36,7 +36,14 @@ export {
 } from "./body.ts";
 
 // Constraints / joints
-export { createDistanceJoint, createRevoluteJoint, removeConstraint } from "./constraints.ts";
+export type { SoftConstraintParams } from "./constraints.ts";
+export {
+  createDistanceJoint,
+  createSoftDistanceJoint,
+  createRevoluteJoint,
+  createSoftRevoluteJoint,
+  removeConstraint,
+} from "./constraints.ts";
 
 // Spatial queries
 export { queryAABB, raycast, getContacts } from "./query.ts";
