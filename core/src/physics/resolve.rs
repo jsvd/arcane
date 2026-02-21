@@ -576,7 +576,7 @@ fn resolve_manifold_velocity(bodies: &mut [Option<RigidBody>], manifold: &mut Co
         // up to separation/dt so bodies arrive just-touching at end of timestep.
         // The bias is NEGATIVE (permits approaching) unlike restitution bias (positive).
         let speculative_bias = if point.penetration < 0.0 && sub_dt > 0.0 {
-            // penetration < 0 means separation = -penetration > 0
+            // Speculative: penetration < 0 means separation = -penetration > 0
             // We want to allow vn down to -separation/dt (approaching)
             // bias = penetration / dt (which is negative, allowing approach)
             point.penetration / sub_dt
