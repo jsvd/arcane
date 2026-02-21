@@ -2,6 +2,20 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.13.3] - 2026-02-21
+
+### Added
+- **`followTargetWithShake()`** — combines `getCameraShakeOffset()` + `followTargetSmooth()` into one call, eliminating 3 lines of boilerplate every game.
+- **`drawAllParticles()`** — renders all alive TS particles as filled circles in one call, replacing the 5-10 line manual loop pattern. Optional `{ radius, layer }` overrides.
+- **`WASD_ARROWS` input preset** — standard WASD + arrow keys + left gamepad stick + action (Space/Enter/GamepadA). Use with `createInputMap(WASD_ARROWS)` or extend via spread.
+- **`autoSubsystems` in `createGame()`** — automatically calls `updateTweens(dt)`, `updateParticles(dt)`, `updateScreenTransition(dt)` before the user callback, and `drawScreenTransition()`/`drawScreenFlash()` after. Default: `true`. Eliminates 3-5 lines of ceremony per game.
+- **Common Mistake #28** — manual subsystem updates are redundant when using `createGame()` (autoSubsystems is on by default).
+
+### Changed
+- **Scaffold template** — `visual.ts` frame loop simplified from ~20 lines to ~8 using new helpers. Uses `WASD_ARROWS` preset, `followTargetWithShake()`, and auto-subsystem updates.
+- **Scaffold template** — `config.ts` adds `BG_COLOR` constant and color pre-computation guidance. `game.ts` adds `x`/`y`/`score` to `GameState` so template works out-of-the-box. `render.ts` demonstrates pre-computed colors and `hud.text` tint parameter.
+- **Scaffold `coordinates.md`** — adds camera pattern quick-reference table, reorders examples to show centered-world first.
+
 ## [0.13.2] - 2026-02-19
 
 ### Fixed

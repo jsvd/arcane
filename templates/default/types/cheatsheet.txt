@@ -69,6 +69,7 @@ declare function getCameraDeadzone(): CameraDeadzone | null;
 declare function followTargetSmooth(targetX: number, targetY: number, zoom?: number, smoothness?: number): void;
 declare function zoomTo(targetZoom: number, duration: number, easing?: (t: number) => number): void;
 declare function zoomToPoint(targetZoom: number, worldX: number, worldY: number, duration: number, easing?: (t: number) => number): void;
+declare function followTargetWithShake(targetX: number, targetY: number, zoom?: number, smoothness?: number): void;
 declare function spawnFloatingText(x: number, y: number, text: string, options?: FloatingTextOptions): void;
 declare function updateFloatingTexts(dt: number): void;
 declare function drawFloatingTexts(): void;
@@ -330,6 +331,8 @@ declare function bufferAction(buffer: InputBuffer, action: string, time: number)
 declare function checkCombo(buffer: InputBuffer, combo: ComboDef, time: number): boolean;
 declare function consumeCombo(buffer: InputBuffer, combo: ComboDef): void;
 declare function updateInputBuffer(buffer: InputBuffer, map: InputMap, time: number, poller?: InputPoller): void;
+-- Constants (read-only data, not function parameters) --
+declare const WASD_ARROWS: InputMapDef;
 
 === ui (@arcane/runtime/ui) ===
 Types: Anchor,ArcOptions,BarOptions,ButtonState,ButtonStyle,ButtonVisual,CapsuleOptions,CheckboxState,CheckboxStyle,Color,EllipseOptions,FocusManagerState,Focusable,LabelOptions,LayoutPosition,LineOptions,Palette,PanelOptions,PolygonOptions,RadioGroupState,RadioGroupStyle,RectOptions,RingOptions,SectorOptions,ShapeOptions,SliderState,SliderStyle,TextInputKeyEvent,TextInputState,TextInputStyle,
@@ -538,6 +541,7 @@ declare function drawRustEmitter(id: number, opts?: { w?: number; h?: number; la
 declare function destroyRustEmitter(id: number): void;
 declare function updateAllRustEmitters(dt: number): void;
 declare function setRustEmitterPosition(id: number, x: number, y: number): void;
+declare function drawAllParticles(options?: { radius?: number; layer?: number; }): void;
 -- Constants (read-only data, not function parameters) --
 declare const ParticlePresets: { /** Small brown/tan particles, fast fade. Good for footsteps, impacts on ground. */ readonly dust: { readonly startColor: { readonly r: 0.6; readonly g: 0.5; readonly b: 0.3; readonly a: 0.8; }; readonly endColor: { readonly r: 0.5; readonly g: 0.4; readonly b: 0.3; readonly a: 0; }; readonly lifetime: [number, number]; readonly velocityX: [number, number]; readonly velocityY: [number, number]; readonly scale: [number, number]; readonly count: 8; }; /** Orange-to-red, rising particles with additive feel. */ readonly fire: { readonly startColor: { readonly r: 1; readonly g: 0.7; readonly b: 0.1; readonly a: 1; }; readonly endColor: { readonly r: 0.8; readonly g: 0.1; readonly b: 0; readonly a: 0; }; readonly lifetime: [number, number]; readonly velocityX: [number, number]; readonly velocityY: [number, number]; readonly scale: [number, number]; readonly count: 15; }; /** Bright yellow-to-red, fast, scattered. Good for hits and explosions. */ readonly sparks: { readonly startColor: { readonly r: 1; readonly g: 0.9; readonly b: 0.3; readonly a: 1; }; readonly endColor: { readonly r: 1; readonly g: 0.2; readonly b: 0; readonly a: 0; }; readonly lifetime: [number, number]; readonly velocityX: [number, number]; readonly velocityY: [number, number]; readonly scale: [number, number]; readonly count: 12; }; /** Gray, slow, rising. Good for chimneys, aftermath of fire. */ readonly smoke: { readonly startColor: { readonly r: 0.5; readonly g: 0.5; readonly b: 0.5; readonly a: 0.6; }; readonly endColor: { readonly r: 0.3; readonly g: 0.3; readonly b: 0.3; readonly a: 0; }; readonly lifetime: [number, number]; readonly velocityX: [number, number]; readonly velocityY: [number, number]; readonly scale: [number, number]; readonly scaleSpeed: [number, number]; readonly count: 6; }; };
 -- Functions --

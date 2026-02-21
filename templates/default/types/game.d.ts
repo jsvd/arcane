@@ -237,6 +237,16 @@ declare module "@arcane/runtime/game" {
           g: number;
           b: number;
       };
+      /**
+       * Auto-update subsystems each frame? Default: true.
+       * When enabled, createGame() automatically calls before the user callback:
+       *   updateTweens(dt), updateParticles(dt), updateScreenTransition(dt)
+       * And after the user callback:
+       *   drawScreenTransition(), drawScreenFlash()
+       * Redundant manual calls are harmless (they're no-ops when idle).
+       * Set to false if you need full manual control over subsystem update order.
+       */
+      autoSubsystems?: boolean;
   };
   /** Context passed to the frame callback. */
   export type GameContext = {
@@ -426,7 +436,7 @@ declare module "@arcane/runtime/game" {
    *
    * Provides a minimal wrapper that handles common boilerplate:
    * - Auto-clearing sprites each frame
-   * - Auto-centering the camera on the viewport (web-like top-left origin)
+   * - Optional auto-centering the camera on the viewport (web-like top-left origin)
    * - Setting background color
    * - Wiring up agent protocol for AI interaction
    *
@@ -441,7 +451,7 @@ declare module "@arcane/runtime/game" {
    *
    * Defaults:
    * - `autoClear: true` -- clears all sprites at the start of each frame.
-   * - `autoCamera: true` -- on the first frame, sets the camera so (0,0) is top-left.
+   * - `autoCamera: true` -- on the first frame, sets camera so (0,0) is top-left. Set false when using followTargetSmooth.
    * - `zoom: 1` -- default zoom level.
    *
    * If `background` is provided (0.0-1.0 RGB), calls setBackgroundColor().

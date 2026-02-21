@@ -399,6 +399,24 @@ declare module "@arcane/runtime/particles" {
    * @param y - World Y position.
    */
   export declare function setRustEmitterPosition(id: number, x: number, y: number): void;
+  /**
+   * Draw all alive TS particles as filled circles.
+   * This is the common rendering pattern every game writes manually:
+   *
+   * ```ts
+   * for (const p of getAllParticles()) {
+   *   drawCircle(p.x, p.y, radius, { color: p.color, layer });
+   * }
+   * ```
+   *
+   * @param options - Optional radius and layer overrides.
+   * @param options.radius - Circle radius for each particle. Default: 3.
+   * @param options.layer - Draw layer. Default: 5.
+   */
+  export declare function drawAllParticles(options?: {
+      radius?: number;
+      layer?: number;
+  }): void;
 
   /**
    * Particle preset configurations and convenience functions.

@@ -986,6 +986,27 @@ declare module "@arcane/runtime/rendering" {
    * zoomToPoint(3.0, mouse.x, mouse.y, 0.3, easeOutCubic);
    */
   export declare function zoomToPoint(targetZoom: number, worldX: number, worldY: number, duration: number, easing?: (t: number) => number): void;
+  /**
+   * Follow a target with smooth interpolation and automatic camera shake offset.
+   * Wraps {@link followTargetSmooth} + {@link getCameraShakeOffset} into one call.
+   *
+   * Equivalent to:
+   * ```ts
+   * const shake = getCameraShakeOffset();
+   * followTargetSmooth(targetX + shake.x, targetY + shake.y, zoom, smoothness);
+   * ```
+   *
+   * @param targetX - Target X position in world units.
+   * @param targetY - Target Y position in world units.
+   * @param zoom - Zoom level. Default: 1.
+   * @param smoothness - Smoothing factor (0..1). Lower = faster follow. Default: 0.1.
+   *
+   * @example
+   * onFrame(() => {
+   *   followTargetWithShake(player.x, player.y, 2.0, 0.08);
+   * });
+   */
+  export declare function followTargetWithShake(targetX: number, targetY: number, zoom?: number, smoothness?: number): void;
 
   /**
    * Floating text / damage numbers.
