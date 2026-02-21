@@ -175,16 +175,17 @@ function spawnSeesaw(x: number, y: number): void {
   bodyCount++;
 
   // Pivot (static)
+  const pivotY = y + plankHH + 5;
   const pivotId = createBody({
     type: "static",
     shape: { type: "circle", radius: 5 },
     x,
-    y: y + plankHH + 5,
+    y: pivotY,
   });
   bodies.push({ id: pivotId, kind: "pivot", halfW: 5, halfH: 5, radius: 5 });
 
-  // Revolute joint
-  createRevoluteJoint(plankId, pivotId, x, y);
+  // Revolute joint - anchor at pivot position
+  createRevoluteJoint(plankId, pivotId, x, pivotY);
   joints.push({ bodyA: plankId, bodyB: pivotId, kind: "revolute" });
 }
 
