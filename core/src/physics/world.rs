@@ -202,11 +202,26 @@ impl PhysicsWorld {
         }
         warm_start_contacts(&mut self.bodies, &self.contacts);
 
+        // 3c. Reset soft constraint accumulated impulses for this sub-step
+        // (Soft constraints apply force each sub-step based on current state,
+        // not iteratively converge like rigid constraints)
+        for constraint in &mut self.constraints {
+            match constraint {
+                Constraint::Distance { soft: Some(_), accumulated_impulse, .. } => {
+                    *accumulated_impulse = 0.0;
+                }
+                Constraint::Revolute { soft: Some(_), accumulated_impulse, .. } => {
+                    *accumulated_impulse = (0.0, 0.0);
+                }
+                _ => {}
+            }
+        }
+
         // 4. Velocity solve (contacts + constraints)
         for i in 0..self.solver_iterations {
             let reverse = i % 2 == 1;
             resolve_contacts_velocity_iteration(&mut self.bodies, &mut self.contacts, reverse);
-            solve_constraints(&mut self.bodies, &self.constraints, dt);
+            solve_constraints(&mut self.bodies, &mut self.constraints, dt);
         }
 
         // 4b. Save accumulated impulses to warm cache for next frame
@@ -399,11 +414,24 @@ impl PhysicsWorld {
         }
         warm_start_manifolds(&mut self.bodies, &self.manifolds);
 
+        // 3e. Reset soft constraint accumulated impulses for this sub-step
+        for constraint in &mut self.constraints {
+            match constraint {
+                Constraint::Distance { soft: Some(_), accumulated_impulse, .. } => {
+                    *accumulated_impulse = 0.0;
+                }
+                Constraint::Revolute { soft: Some(_), accumulated_impulse, .. } => {
+                    *accumulated_impulse = (0.0, 0.0);
+                }
+                _ => {}
+            }
+        }
+
         // 4. Velocity solve (manifolds + constraints)
         for i in 0..self.solver_iterations {
             let reverse = i % 2 == 1;
             resolve_manifolds_velocity_iteration(&mut self.bodies, &mut self.manifolds, reverse);
-            solve_constraints(&mut self.bodies, &self.constraints, dt);
+            solve_constraints(&mut self.bodies, &mut self.constraints, dt);
         }
 
         // 4b. Save accumulated impulses to warm cache
@@ -622,6 +650,7 @@ impl PhysicsWorld {
                 distance,
                 anchor_a,
                 anchor_b,
+                soft,
                 ..
             } => Constraint::Distance {
                 id,
@@ -630,12 +659,15 @@ impl PhysicsWorld {
                 distance,
                 anchor_a,
                 anchor_b,
+                soft,
+                accumulated_impulse: 0.0,
             },
             Constraint::Revolute {
                 body_a,
                 body_b,
                 anchor_a,
                 anchor_b,
+                soft,
                 ..
             } => Constraint::Revolute {
                 id,
@@ -643,6 +675,8 @@ impl PhysicsWorld {
                 body_b,
                 anchor_a,
                 anchor_b,
+                soft,
+                accumulated_impulse: (0.0, 0.0),
             },
         };
         self.constraints.push(constraint);

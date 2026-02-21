@@ -1,13 +1,13 @@
-use super::types::{BodyType, Constraint, RigidBody};
+use super::types::{BodyType, Constraint, RigidBody, SoftConstraintParams};
 
 /// Solve all constraints velocity-level for this timestep.
-/// This applies velocity impulses to satisfy constraint conditions.
+/// For soft constraints, position error is corrected via velocity bias.
 pub fn solve_constraints(
     bodies: &mut [Option<RigidBody>],
-    constraints: &[Constraint],
-    _dt: f32,
+    constraints: &mut [Constraint],
+    dt: f32,
 ) {
-    for constraint in constraints {
+    for constraint in constraints.iter_mut() {
         match constraint {
             Constraint::Distance {
                 body_a,
@@ -15,20 +15,31 @@ pub fn solve_constraints(
                 distance,
                 anchor_a,
                 anchor_b,
+                soft,
+                accumulated_impulse,
                 ..
-            } => solve_distance_velocity(bodies, *body_a, *body_b, *distance, *anchor_a, *anchor_b),
+            } => solve_distance_velocity_soft(
+                bodies, *body_a, *body_b, *distance, *anchor_a, *anchor_b,
+                soft.as_ref(), accumulated_impulse, dt,
+            ),
             Constraint::Revolute {
                 body_a,
                 body_b,
                 anchor_a,
                 anchor_b,
+                soft,
+                accumulated_impulse,
                 ..
-            } => solve_revolute_velocity(bodies, *body_a, *body_b, *anchor_a, *anchor_b),
+            } => solve_revolute_velocity_soft(
+                bodies, *body_a, *body_b, *anchor_a, *anchor_b,
+                soft.as_ref(), accumulated_impulse, dt,
+            ),
         }
     }
 }
 
 /// Position correction pass for constraints (called after velocity solve).
+/// Soft constraints skip this phase (error corrected via velocity bias).
 pub fn solve_constraints_position(
     bodies: &mut [Option<RigidBody>],
     constraints: &[Constraint],
@@ -41,33 +52,42 @@ pub fn solve_constraints_position(
                 distance,
                 anchor_a,
                 anchor_b,
+                soft,
                 ..
-            } => solve_distance_position(bodies, *body_a, *body_b, *distance, *anchor_a, *anchor_b),
+            } => {
+                // Skip position correction for soft constraints
+                if soft.is_none() {
+                    solve_distance_position(bodies, *body_a, *body_b, *distance, *anchor_a, *anchor_b);
+                }
+            }
             Constraint::Revolute {
                 body_a,
                 body_b,
                 anchor_a,
                 anchor_b,
+                soft,
                 ..
-            } => solve_revolute_position(bodies, *body_a, *body_b, *anchor_a, *anchor_b),
+            } => {
+                // Skip position correction for soft constraints
+                if soft.is_none() {
+                    solve_revolute_position(bodies, *body_a, *body_b, *anchor_a, *anchor_b);
+                }
+            }
         }
     }
 }
 
-/// Relaxation factor for constraint impulses.
-/// Standard value - stiffness comes from iteration count, not this parameter.
-/// Box2D uses ~1.0 with warmstarting; we use 0.8 as a safe default.
-const CONSTRAINT_RELAXATION: f32 = 0.8;
-
-/// Distance constraint velocity solver.
-/// Applies impulses to zero out relative velocity along the constraint axis.
-fn solve_distance_velocity(
+/// Distance constraint velocity solver with soft constraint support.
+fn solve_distance_velocity_soft(
     bodies: &mut [Option<RigidBody>],
     id_a: u32,
     id_b: u32,
-    _target_distance: f32,
+    target_distance: f32,
     anchor_a: (f32, f32),
     anchor_b: (f32, f32),
+    soft: Option<&SoftConstraintParams>,
+    accumulated: &mut f32,
+    dt: f32,
 ) {
     let a_idx = id_a as usize;
     let b_idx = id_b as usize;
@@ -112,13 +132,16 @@ fn solve_distance_velocity(
     let nx = dx / current_distance;
     let ny = dy / current_distance;
 
+    // Position error (constraint violation)
+    let position_error = current_distance - target_distance;
+
     // Lever arms from body centers to anchors
     let ra_x = wa_x - xa;
     let ra_y = wa_y - ya;
     let rb_x = wb_x - xb;
     let rb_y = wb_y - yb;
 
-    // Velocity at anchor points (linear + angular contribution)
+    // Velocity at anchor points
     let va_x = vax - ava * ra_y;
     let va_y = vay + ava * ra_x;
     let vb_x = vbx - avb * rb_y;
@@ -138,8 +161,44 @@ fn solve_distance_velocity(
         return;
     }
 
-    // Impulse to zero out relative velocity along axis (with relaxation)
-    let j = -rel_vn / inv_mass_sum * CONSTRAINT_RELAXATION;
+    let eff_mass = 1.0 / inv_mass_sum;
+
+    // For soft constraints, apply spring-damper force ONCE per sub-step
+    // F = -k*x - c*v, impulse J = F * dt
+    //
+    // We use accumulated impulse to detect if this is the first iteration
+    // of a sub-step (accumulated resets between sub-steps in physics world)
+    let is_first_iteration = *accumulated == 0.0;
+
+    let lambda = if let Some(params) = soft {
+        if !params.is_rigid() && dt > 0.0 {
+            // Only apply spring force on first iteration of sub-step
+            if is_first_iteration {
+                let omega = 2.0 * std::f32::consts::PI * params.frequency_hz;
+                let k = omega * omega;                          // stiffness
+                let c = 2.0 * params.damping_ratio * omega;     // damping
+
+                // Spring-damper impulse: J = -(k*x + c*v) * dt
+                let spring_term = k * position_error;
+                let damping_term = c * rel_vn;
+                -(spring_term + damping_term) * dt * eff_mass
+            } else {
+                // Subsequent iterations: no additional impulse (spring already applied)
+                0.0
+            }
+        } else {
+            // Rigid constraint: correct velocity to zero relative motion (all iterations)
+            -eff_mass * rel_vn
+        }
+    } else {
+        // Rigid constraint: correct velocity to zero relative motion
+        -eff_mass * rel_vn
+    };
+
+    // Track accumulated impulse
+    let old_accumulated = *accumulated;
+    *accumulated += lambda;
+    let j = *accumulated - old_accumulated;
 
     let impulse_x = j * nx;
     let impulse_y = j * ny;
@@ -162,6 +221,7 @@ fn solve_distance_velocity(
 }
 
 /// Distance constraint position correction (Baumgarte stabilization).
+/// Only used for rigid constraints; soft constraints use velocity bias.
 fn solve_distance_position(
     bodies: &mut [Option<RigidBody>],
     id_a: u32,
@@ -186,7 +246,6 @@ fn solve_distance_position(
         return;
     }
 
-    // World-space anchor positions
     let wa_x = xa + anchor_a.0 * cos_a - anchor_a.1 * sin_a;
     let wa_y = ya + anchor_a.0 * sin_a + anchor_a.1 * cos_a;
     let wb_x = xb + anchor_b.0 * cos_b - anchor_b.1 * sin_b;
@@ -204,8 +263,6 @@ fn solve_distance_position(
     let ny = dy / current_distance;
     let error = current_distance - target_distance;
 
-    // Slop and Baumgarte factor (matching Box2D standard values).
-    // Stiffness comes from iteration count, not aggressive correction.
     let slop = 0.005;
     let baumgarte = 0.2;
     let max_correction = 0.2;
@@ -233,20 +290,20 @@ fn solve_distance_position(
     }
 }
 
-/// Revolute constraint velocity solver.
-/// Applies impulses to zero out relative velocity at the anchor point in both directions.
-/// This constrains translation but allows free rotation.
-fn solve_revolute_velocity(
+/// Revolute constraint velocity solver with soft constraint support.
+fn solve_revolute_velocity_soft(
     bodies: &mut [Option<RigidBody>],
     id_a: u32,
     id_b: u32,
     anchor_a: (f32, f32),
     anchor_b: (f32, f32),
+    soft: Option<&SoftConstraintParams>,
+    accumulated: &mut (f32, f32),
+    dt: f32,
 ) {
     let a_idx = id_a as usize;
     let b_idx = id_b as usize;
 
-    // Extract body data
     let (xa, ya, cos_a, sin_a, vax, vay, ava, inv_ma, inv_ia, type_a) = match &bodies[a_idx] {
         Some(b) => (
             b.x, b.y, b.angle.cos(), b.angle.sin(),
@@ -268,66 +325,84 @@ fn solve_revolute_velocity(
         return;
     }
 
-    // World-space anchor positions
     let wa_x = xa + anchor_a.0 * cos_a - anchor_a.1 * sin_a;
     let wa_y = ya + anchor_a.0 * sin_a + anchor_a.1 * cos_a;
     let wb_x = xb + anchor_b.0 * cos_b - anchor_b.1 * sin_b;
     let wb_y = yb + anchor_b.0 * sin_b + anchor_b.1 * cos_b;
 
-    // Lever arms from body centers to anchors
+    // Position error
+    let pos_err_x = wb_x - wa_x;
+    let pos_err_y = wb_y - wa_y;
+
     let ra_x = wa_x - xa;
     let ra_y = wa_y - ya;
     let rb_x = wb_x - xb;
     let rb_y = wb_y - yb;
 
-    // Velocity at anchor points (linear + angular contribution)
     let va_x = vax - ava * ra_y;
     let va_y = vay + ava * ra_x;
     let vb_x = vbx - avb * rb_y;
     let vb_y = vby + avb * rb_x;
 
-    // Relative velocity at anchor (we want to zero this out)
     let rel_vx = vb_x - va_x;
     let rel_vy = vb_y - va_y;
 
-    // Build 2x2 effective mass matrix K
-    // K = [k11, k12; k21, k22]
-    // For impulse J = (jx, jy), velocity change is:
-    //   delta_v = K^-1 * J
-
-    // Diagonal terms
+    // 2x2 effective mass matrix
     let k11 = inv_ma + inv_mb + ra_y * ra_y * inv_ia + rb_y * rb_y * inv_ib;
     let k22 = inv_ma + inv_mb + ra_x * ra_x * inv_ia + rb_x * rb_x * inv_ib;
-
-    // Off-diagonal terms
     let k12 = -ra_x * ra_y * inv_ia - rb_x * rb_y * inv_ib;
-    let k21 = k12; // Symmetric
 
-    // Solve K * J = -rel_v using Cramer's rule
-    let det = k11 * k22 - k12 * k21;
+    let det = k11 * k22 - k12 * k12;
     if det.abs() < 1e-8 {
         return;
     }
 
     let inv_det = 1.0 / det;
-    let jx = inv_det * (k22 * (-rel_vx) - k12 * (-rel_vy)) * CONSTRAINT_RELAXATION;
-    let jy = inv_det * (-k21 * (-rel_vx) + k11 * (-rel_vy)) * CONSTRAINT_RELAXATION;
+
+    // Soft constraint bias
+    let (bias_x, bias_y, mass_coeff, damp_coeff) = if let Some(params) = soft {
+        if !params.is_rigid() && dt > 0.0 {
+            let inv_mass_sum = inv_ma + inv_mb;
+            let coeffs = params.compute_coefficients(dt, inv_mass_sum);
+            let bias_x = coeffs.bias_coeff * pos_err_x;
+            let bias_y = coeffs.bias_coeff * pos_err_y;
+            (bias_x, bias_y, coeffs.mass_coeff, coeffs.impulse_coeff)
+        } else {
+            (0.0, 0.0, 1.0, 0.0)
+        }
+    } else {
+        (0.0, 0.0, 1.0, 0.0)
+    };
+
+    // Solve K * J = -(rel_v + bias) with damping
+    let damp_factor = 1.0 + damp_coeff;
+    let rhs_x = -(damp_factor * rel_vx + bias_x);
+    let rhs_y = -(damp_factor * rel_vy + bias_y);
+    let jx = inv_det * (k22 * rhs_x - k12 * rhs_y) * mass_coeff;
+    let jy = inv_det * (-k12 * rhs_x + k11 * rhs_y) * mass_coeff;
+
+    // Accumulate impulse
+    let old_x = accumulated.0;
+    let old_y = accumulated.1;
+    accumulated.0 += jx;
+    accumulated.1 += jy;
+    let applied_jx = accumulated.0 - old_x;
+    let applied_jy = accumulated.1 - old_y;
 
     // Apply impulses
     if let Some(a) = &mut bodies[a_idx] {
         if a.body_type == BodyType::Dynamic {
-            a.vx -= jx * inv_ma;
-            a.vy -= jy * inv_ma;
-            // Angular impulse: r × J
-            let ra_cross_j = ra_x * jy - ra_y * jx;
+            a.vx -= applied_jx * inv_ma;
+            a.vy -= applied_jy * inv_ma;
+            let ra_cross_j = ra_x * applied_jy - ra_y * applied_jx;
             a.angular_velocity -= ra_cross_j * inv_ia;
         }
     }
     if let Some(b) = &mut bodies[b_idx] {
         if b.body_type == BodyType::Dynamic {
-            b.vx += jx * inv_mb;
-            b.vy += jy * inv_mb;
-            let rb_cross_j = rb_x * jy - rb_y * jx;
+            b.vx += applied_jx * inv_mb;
+            b.vy += applied_jy * inv_mb;
+            let rb_cross_j = rb_x * applied_jy - rb_y * applied_jx;
             b.angular_velocity += rb_cross_j * inv_ib;
         }
     }
@@ -357,13 +432,11 @@ fn solve_revolute_position(
         return;
     }
 
-    // Transform local anchors to world space
     let wa_x = xa + anchor_a.0 * cos_a - anchor_a.1 * sin_a;
     let wa_y = ya + anchor_a.0 * sin_a + anchor_a.1 * cos_a;
     let wb_x = xb + anchor_b.0 * cos_b - anchor_b.1 * sin_b;
     let wb_y = yb + anchor_b.0 * sin_b + anchor_b.1 * cos_b;
 
-    // Position error
     let dx = wb_x - wa_x;
     let dy = wb_y - wa_y;
     let error_sq = dx * dx + dy * dy;
@@ -380,7 +453,6 @@ fn solve_revolute_position(
         return;
     }
 
-    // Apply correction proportionally
     let cx = (dx * baumgarte).clamp(-max_correction, max_correction) / inv_total;
     let cy = (dy * baumgarte).clamp(-max_correction, max_correction) / inv_total;
 

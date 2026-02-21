@@ -897,7 +897,7 @@ fn test_distance_constraint_maintains_distance() {
         0xFFFF,
         0xFFFF,
     );
-    world.add_constraint(Constraint::Distance {
+    world.add_constraint(Constraint::Distance { soft: None, accumulated_impulse: 0.0,
         id: 0,
         body_a: a,
         body_b: b,
@@ -948,7 +948,7 @@ fn test_revolute_constraint() {
     );
     // Body A at (0,0), body B at (5,0), pivot at (2.5, 0)
     // Local anchors: A: (2.5, 0), B: (-2.5, 0)
-    let cid = world.add_constraint(Constraint::Revolute {
+    let cid = world.add_constraint(Constraint::Revolute { soft: None, accumulated_impulse: (0.0, 0.0),
         id: 0,
         body_a: a,
         body_b: b,
@@ -984,7 +984,7 @@ fn test_remove_constraint() {
         0xFFFF,
         0xFFFF,
     );
-    let cid = world.add_constraint(Constraint::Distance {
+    let cid = world.add_constraint(Constraint::Distance { soft: None, accumulated_impulse: 0.0,
         id: 0,
         body_a: a,
         body_b: b,
@@ -1119,7 +1119,7 @@ fn test_material_default() {
 
 #[test]
 fn test_constraint_id() {
-    let c = Constraint::Distance {
+    let c = Constraint::Distance { soft: None, accumulated_impulse: 0.0,
         id: 42,
         body_a: 0,
         body_b: 1,
@@ -1129,7 +1129,7 @@ fn test_constraint_id() {
     };
     assert_eq!(c.id(), 42);
 
-    let r = Constraint::Revolute {
+    let r = Constraint::Revolute { soft: None, accumulated_impulse: (0.0, 0.0),
         id: 7,
         body_a: 0,
         body_b: 1,
@@ -2054,7 +2054,7 @@ fn test_distance_constraint_spring_behavior() {
         100.0, 0.0, 1.0, Material::default(),
         0xFFFF, 0xFFFF,
     );
-    world.add_constraint(Constraint::Distance {
+    world.add_constraint(Constraint::Distance { soft: None, accumulated_impulse: 0.0,
         id: 0,
         body_a: a_id,
         body_b: b_id,
@@ -2851,7 +2851,7 @@ fn test_revolute_joint_allows_rotation() {
     );
 
     // Revolute joint at pivot center (plank's anchor is at its center)
-    world.add_constraint(Constraint::Revolute {
+    world.add_constraint(Constraint::Revolute { soft: None, accumulated_impulse: (0.0, 0.0),
         id: 0,
         body_a: plank_id,
         body_b: pivot_id,
@@ -2916,7 +2916,7 @@ fn test_distance_joint_rope_does_not_stretch() {
             Material { restitution: 0.0, friction: 0.5 },
             0xFFFF, 0xFFFF,
         );
-        world.add_constraint(Constraint::Distance {
+        world.add_constraint(Constraint::Distance { soft: None, accumulated_impulse: 0.0,
             id: 0,
             body_a: prev_id,
             body_b: seg_id,
@@ -2980,7 +2980,7 @@ fn test_rope_collision_does_not_launch_body() {
             Material { restitution: 0.3, friction: 0.5 },
             0xFFFF, 0xFFFF,
         );
-        world.add_constraint(Constraint::Distance {
+        world.add_constraint(Constraint::Distance { soft: None, accumulated_impulse: 0.0,
             id: 0,
             body_a: prev_id,
             body_b: seg_id,
@@ -3095,7 +3095,7 @@ fn test_seesaw_rotates_when_weight_lands() {
     );
 
     // Revolute joint attaching plank to pivot
-    world.add_constraint(Constraint::Revolute {
+    world.add_constraint(Constraint::Revolute { soft: None, accumulated_impulse: (0.0, 0.0),
         id: 0,
         body_a: plank_id,
         body_b: pivot_id,
@@ -3163,7 +3163,7 @@ fn test_distance_joint_dampens_velocity() {
         Material::default(),
         0xFFFF, 0xFFFF,
     );
-    world.add_constraint(Constraint::Distance {
+    world.add_constraint(Constraint::Distance { soft: None, accumulated_impulse: 0.0,
         id: 0,
         body_a,
         body_b,
@@ -3237,7 +3237,7 @@ fn test_polygon_seesaw_rotates() {
     );
 
     // Revolute joint at pivot
-    world.add_constraint(Constraint::Revolute {
+    world.add_constraint(Constraint::Revolute { soft: None, accumulated_impulse: (0.0, 0.0),
         id: 0,
         body_a: plank,
         body_b: pivot,
@@ -3415,4 +3415,109 @@ fn test_world_manifold_solver_enabled() {
     // At least some should have 2 contact points (edge-on-face)
     let multi_point_count = manifolds.iter().filter(|m| m.points.len() >= 2).count();
     assert!(multi_point_count > 0, "Some manifolds should have 2 contact points for edge-on-face");
+}
+
+// =========================================================================
+// TGS Soft: Soft Constraints (Phase 2)
+// =========================================================================
+
+#[test]
+fn test_soft_distance_joint_oscillates() {
+    // A soft spring should oscillate at roughly the configured frequency
+    let mut world = PhysicsWorld::new(0.0, 0.0); // No gravity for cleaner test
+
+    // Fixed anchor
+    let anchor = world.add_body(
+        BodyType::Static,
+        Shape::Circle { radius: 5.0 },
+        0.0, 0.0, 0.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Oscillating mass
+    let mass = world.add_body(
+        BodyType::Dynamic,
+        Shape::Circle { radius: 5.0 },
+        100.0, 0.0, 1.0, // Start displaced
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Soft spring at 2 Hz (should complete ~2 cycles per second)
+    world.add_constraint(Constraint::Distance {
+        soft: Some(SoftConstraintParams::soft(2.0, 0.3)), // Low damping for visible oscillation
+        accumulated_impulse: 0.0,
+        id: 0,
+        body_a: anchor,
+        body_b: mass,
+        distance: 50.0, // Rest length
+        anchor_a: (0.0, 0.0),
+        anchor_b: (0.0, 0.0),
+    });
+
+    // Run for 1 second, count zero crossings (x crossing 50.0)
+    let mut crossings = 0;
+    let mut prev_x = 100.0f32;
+    let rest_x = 50.0;
+
+    for _ in 0..60 {
+        world.step(1.0 / 60.0);
+        let body = world.get_body(mass).unwrap();
+        let curr_x = body.x;
+
+        // Check for crossing rest position
+        if (prev_x - rest_x) * (curr_x - rest_x) < 0.0 {
+            crossings += 1;
+        }
+        prev_x = curr_x;
+    }
+
+    // At 2 Hz, we expect ~4 crossings per second (2 full cycles = 4 zero crossings)
+    // Allow some tolerance
+    assert!(crossings >= 2, "Soft spring should oscillate, got {} crossings", crossings);
+}
+
+#[test]
+fn test_rigid_vs_soft_constraint_behavior() {
+    // Rigid constraint should be stiff, soft should be springy
+    let mut world_rigid = PhysicsWorld::new(0.0, 100.0);
+    let mut world_soft = PhysicsWorld::new(0.0, 100.0);
+
+    // Setup identical scenarios
+    for world in [&mut world_rigid, &mut world_soft] {
+        world.add_body(BodyType::Static, Shape::Circle { radius: 5.0 }, 0.0, 0.0, 0.0, Material::default(), 0xFFFF, 0xFFFF);
+        world.add_body(BodyType::Dynamic, Shape::Circle { radius: 5.0 }, 0.0, 50.0, 1.0, Material::default(), 0xFFFF, 0xFFFF);
+    }
+
+    // Rigid constraint
+    world_rigid.add_constraint(Constraint::Distance {
+        soft: None, accumulated_impulse: 0.0,
+        id: 0, body_a: 0, body_b: 1, distance: 50.0,
+        anchor_a: (0.0, 0.0), anchor_b: (0.0, 0.0),
+    });
+
+    // Soft constraint
+    world_soft.add_constraint(Constraint::Distance {
+        soft: Some(SoftConstraintParams::soft(5.0, 1.0)), accumulated_impulse: 0.0,
+        id: 0, body_a: 0, body_b: 1, distance: 50.0,
+        anchor_a: (0.0, 0.0), anchor_b: (0.0, 0.0),
+    });
+
+    // Step both
+    for _ in 0..30 {
+        world_rigid.step(1.0 / 60.0);
+        world_soft.step(1.0 / 60.0);
+    }
+
+    let rigid_y = world_rigid.get_body(1).unwrap().y;
+    let soft_y = world_soft.get_body(1).unwrap().y;
+
+    // Both should end up at roughly the same distance from anchor
+    // (soft may overshoot then recover, but should converge)
+    let rigid_dist = rigid_y.abs();
+    let soft_dist = soft_y.abs();
+
+    assert!(rigid_dist > 45.0 && rigid_dist < 55.0, "Rigid should maintain distance: {}", rigid_dist);
+    assert!(soft_dist > 40.0 && soft_dist < 60.0, "Soft should be near target: {}", soft_dist);
 }

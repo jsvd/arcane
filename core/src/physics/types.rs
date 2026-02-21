@@ -92,6 +92,137 @@ pub struct ContactManifold {
     pub velocity_bias: f32,
 }
 
+// ============================================================================
+// Soft Constraints (TGS Soft Phase 2)
+// ============================================================================
+
+/// Soft constraint parameters using frequency/damping formulation.
+/// This provides mass-independent spring behavior (Box2D 3.0 / Bepu approach).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SoftConstraintParams {
+    /// Natural frequency in Hz. 0 = rigid constraint.
+    /// Typical values: 1-5 Hz for soft springs, 30+ Hz for stiff contacts.
+    pub frequency_hz: f32,
+    /// Damping ratio. 1.0 = critical damping (no oscillation).
+    /// < 1.0 = underdamped (oscillates), > 1.0 = overdamped (slow return).
+    pub damping_ratio: f32,
+}
+
+impl Default for SoftConstraintParams {
+    fn default() -> Self {
+        Self::rigid()
+    }
+}
+
+impl SoftConstraintParams {
+    /// Rigid constraint (no softness).
+    pub fn rigid() -> Self {
+        Self {
+            frequency_hz: 0.0,
+            damping_ratio: 1.0,
+        }
+    }
+
+    /// Soft spring with given frequency and damping.
+    pub fn soft(frequency_hz: f32, damping_ratio: f32) -> Self {
+        Self {
+            frequency_hz: frequency_hz.max(0.0),
+            damping_ratio: damping_ratio.max(0.0),
+        }
+    }
+
+    /// Stiff contact (high frequency, critical damping).
+    pub fn stiff_contact() -> Self {
+        Self {
+            frequency_hz: 30.0,
+            damping_ratio: 1.0,
+        }
+    }
+
+    /// Returns true if this is a rigid (non-soft) constraint.
+    pub fn is_rigid(&self) -> bool {
+        self.frequency_hz <= 0.0
+    }
+
+    /// Compute soft constraint coefficients for velocity-level solving.
+    ///
+    /// For soft constraints, we model a spring-damper system:
+    ///   F = -k*x - c*v
+    ///
+    /// We convert this to a velocity bias in the constraint solver.
+    /// The key insight: bias should represent the spring ACCELERATION (F/m * dt),
+    /// not the target velocity that zeroes out the position error.
+    ///
+    /// For underdamped oscillation, we apply impulse = -(k*x + c*v) * dt / (1 + h*(c + h*k)/m)
+    pub fn compute_coefficients(&self, dt: f32, inv_mass_sum: f32) -> SoftCoefficients {
+        if self.frequency_hz <= 0.0 || dt <= 0.0 {
+            // Rigid constraint: no softness
+            return SoftCoefficients {
+                bias_coeff: 0.0,
+                mass_coeff: 1.0,
+                impulse_coeff: 0.0,
+            };
+        }
+
+        let omega = 2.0 * std::f32::consts::PI * self.frequency_hz;
+        let h = dt;
+        let zeta = self.damping_ratio;
+
+        // Spring-damper coefficients (normalized to effective mass)
+        let k = omega * omega;         // stiffness (rad/s)^2
+        let c = 2.0 * zeta * omega;    // damping (rad/s)
+
+        // For the constraint solver, we want:
+        // impulse = -effMass * (Cdot + bias)
+        // where bias represents the spring acceleration contribution
+        //
+        // Spring acceleration: a = -k*x - c*v
+        // Velocity change from spring: dv = a * dt = (-k*x - c*v) * dt
+        //
+        // In constraint form:
+        //   bias = k * x * dt  (position correction bias)
+        //   Cdot already includes damping naturally through the velocity solve
+        //
+        // For stability with sub-stepping, we scale by:
+        //   softness_factor = 1 / (1 + h * c)
+        // This prevents over-correction on stiff springs
+
+        let softness_factor = 1.0 / (1.0 + h * c);
+
+        // Bias coefficient: spring force scaled for the time step
+        // bias = bias_coeff * position_error
+        // Should give: velocity_change = k * x * dt (spring impulse / mass)
+        let bias_coeff = k * h * softness_factor;
+
+        // Mass coefficient: apply full effective mass (softness is in bias)
+        let mass_coeff = softness_factor;
+
+        // Impulse coefficient: explicit damping on velocity
+        // Applied as: -impulse_coeff * rel_velocity
+        let impulse_coeff = c * h * softness_factor;
+
+        SoftCoefficients {
+            bias_coeff,
+            mass_coeff,
+            impulse_coeff,
+        }
+    }
+}
+
+/// Coefficients computed from SoftConstraintParams for use in constraint solving.
+/// Formulation:
+///   lambda = -massCoeff * effMass * (Cdot + biasCoeff * C + impulseCoeff * Cdot)
+///          = -massCoeff * effMass * ((1 + impulseCoeff) * Cdot + biasCoeff * C)
+#[derive(Debug, Clone, Copy)]
+pub struct SoftCoefficients {
+    /// Spring stiffness coefficient. Multiply by position error C for spring bias.
+    pub bias_coeff: f32,
+    /// Mass scaling coefficient (for stability).
+    pub mass_coeff: f32,
+    /// Damping coefficient. Multiply by relative velocity for damping force.
+    pub impulse_coeff: f32,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Shape {
     Circle { radius: f32 },
@@ -165,6 +296,10 @@ pub enum Constraint {
         distance: f32,
         anchor_a: (f32, f32),
         anchor_b: (f32, f32),
+        /// Soft constraint parameters (frequency/damping). None = rigid.
+        soft: Option<SoftConstraintParams>,
+        /// Accumulated impulse for warm starting
+        accumulated_impulse: f32,
     },
     Revolute {
         id: ConstraintId,
@@ -172,6 +307,10 @@ pub enum Constraint {
         body_b: BodyId,
         anchor_a: (f32, f32),
         anchor_b: (f32, f32),
+        /// Soft constraint parameters (frequency/damping). None = rigid.
+        soft: Option<SoftConstraintParams>,
+        /// Accumulated impulse for warm starting (x, y)
+        accumulated_impulse: (f32, f32),
     },
 }
 

@@ -180,6 +180,8 @@ fn op_create_distance_joint(
             distance: distance as f32,
             anchor_a: (0.0, 0.0),
             anchor_b: (0.0, 0.0),
+            soft: None,
+            accumulated_impulse: 0.0,
         }),
         None => u32::MAX,
     }
@@ -232,6 +234,92 @@ fn op_create_revolute_joint(
                 body_b,
                 anchor_a,
                 anchor_b,
+                soft: None,
+                accumulated_impulse: (0.0, 0.0),
+            })
+        },
+        None => u32::MAX,
+    }
+}
+
+/// Create a soft distance joint with frequency and damping.
+/// frequency_hz: 0 = rigid, typical soft: 1-5 Hz
+/// damping_ratio: 1.0 = critical damping
+#[deno_core::op2(fast)]
+fn op_create_soft_distance_joint(
+    state: &mut OpState,
+    body_a: u32,
+    body_b: u32,
+    distance: f64,
+    frequency_hz: f64,
+    damping_ratio: f64,
+) -> u32 {
+    let physics = state.borrow_mut::<Rc<RefCell<PhysicsState>>>();
+    let mut ps = physics.borrow_mut();
+    match ps.0.as_mut() {
+        Some(world) => world.add_constraint(Constraint::Distance {
+            id: 0,
+            body_a,
+            body_b,
+            distance: distance as f32,
+            anchor_a: (0.0, 0.0),
+            anchor_b: (0.0, 0.0),
+            soft: Some(SoftConstraintParams::soft(frequency_hz as f32, damping_ratio as f32)),
+            accumulated_impulse: 0.0,
+        }),
+        None => u32::MAX,
+    }
+}
+
+/// Create a soft revolute joint with frequency and damping.
+#[deno_core::op2(fast)]
+fn op_create_soft_revolute_joint(
+    state: &mut OpState,
+    body_a: u32,
+    body_b: u32,
+    pivot_x: f64,
+    pivot_y: f64,
+    frequency_hz: f64,
+    damping_ratio: f64,
+) -> u32 {
+    let physics = state.borrow_mut::<Rc<RefCell<PhysicsState>>>();
+    let mut ps = physics.borrow_mut();
+    match ps.0.as_mut() {
+        Some(world) => {
+            let (anchor_a, anchor_b) = {
+                let ba = world.get_body(body_a);
+                let bb = world.get_body(body_b);
+                let pivot = (pivot_x as f32, pivot_y as f32);
+                let anchor_a = match ba {
+                    Some(b) => {
+                        let cos = b.angle.cos();
+                        let sin = b.angle.sin();
+                        let dx = pivot.0 - b.x;
+                        let dy = pivot.1 - b.y;
+                        (dx * cos + dy * sin, -dx * sin + dy * cos)
+                    }
+                    None => (0.0, 0.0),
+                };
+                let anchor_b = match bb {
+                    Some(b) => {
+                        let cos = b.angle.cos();
+                        let sin = b.angle.sin();
+                        let dx = pivot.0 - b.x;
+                        let dy = pivot.1 - b.y;
+                        (dx * cos + dy * sin, -dx * sin + dy * cos)
+                    }
+                    None => (0.0, 0.0),
+                };
+                (anchor_a, anchor_b)
+            };
+            world.add_constraint(Constraint::Revolute {
+                id: 0,
+                body_a,
+                body_b,
+                anchor_a,
+                anchor_b,
+                soft: Some(SoftConstraintParams::soft(frequency_hz as f32, damping_ratio as f32)),
+                accumulated_impulse: (0.0, 0.0),
             })
         },
         None => u32::MAX,
@@ -416,6 +504,8 @@ deno_core::extension!(
         op_set_collision_layers,
         op_create_distance_joint,
         op_create_revolute_joint,
+        op_create_soft_distance_joint,
+        op_create_soft_revolute_joint,
         op_remove_constraint,
         op_query_aabb,
         op_raycast,
