@@ -289,6 +289,7 @@ export {
   hexRound,
   hexLineDraw,
   hexToWorld,
+  hexVertices,
   worldToHex,
   screenToHex,
   cubeToOffset,

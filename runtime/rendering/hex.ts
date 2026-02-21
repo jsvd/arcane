@@ -495,3 +495,38 @@ export function computeHexAutotileBitmask(
   if (check(neighbors[5].q, neighbors[5].r)) mask |= HEX_DIR_SE;
   return mask;
 }
+
+// ---------------------------------------------------------------------------
+// Hexagon polygon vertices
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate the 6 corner vertices of a hexagon for rendering with drawPolygon.
+ *
+ * For pointy-top: corners at 30°, 90°, 150°, 210°, 270°, 330° (starting from upper-right, clockwise).
+ * For flat-top: corners at 0°, 60°, 120°, 180°, 240°, 300° (starting from right, clockwise).
+ *
+ * @param cx - Center X position (world coordinates).
+ * @param cy - Center Y position (world coordinates).
+ * @param size - Hex size (distance from center to corner).
+ * @param orientation - "pointy" or "flat".
+ * @returns Array of 6 [x, y] vertex pairs.
+ */
+export function hexVertices(
+  cx: number,
+  cy: number,
+  size: number,
+  orientation: HexOrientation,
+): [number, number][] {
+  const vertices: [number, number][] = [];
+  const angleOffset = orientation === "pointy" ? Math.PI / 6 : 0;
+
+  for (let i = 0; i < 6; i++) {
+    const angle = angleOffset + i * (Math.PI / 3);
+    const x = cx + size * Math.cos(angle);
+    const y = cy + size * Math.sin(angle);
+    vertices.push([x, y]);
+  }
+
+  return vertices;
+}

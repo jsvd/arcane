@@ -15,6 +15,7 @@ import {
   hexRound,
   hexLineDraw,
   hexToWorld,
+  hexVertices,
   worldToHex,
   screenToHex,
   cubeToOffset,
@@ -565,5 +566,44 @@ describe("computeHexAutotileBitmask", () => {
     assert.equal(HEX_DIR_SW, 16);
     assert.equal(HEX_DIR_SE, 32);
     assert.equal(HEX_DIR_E | HEX_DIR_NE | HEX_DIR_NW | HEX_DIR_W | HEX_DIR_SW | HEX_DIR_SE, 63);
+  });
+});
+
+describe("hexVertices", () => {
+  it("generates 6 vertices for pointy-top hexagon", () => {
+    const verts = hexVertices(0, 0, 10, "pointy");
+    assert.equal(verts.length, 6);
+  });
+
+  it("generates 6 vertices for flat-top hexagon", () => {
+    const verts = hexVertices(0, 0, 10, "flat");
+    assert.equal(verts.length, 6);
+  });
+
+  it("vertices are evenly spaced at correct distance from center", () => {
+    const verts = hexVertices(100, 200, 20, "pointy");
+    // Check that all vertices are at distance 20 from center (within floating-point error)
+    for (const [x, y] of verts) {
+      const dx = x - 100;
+      const dy = y - 200;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      assert.ok(Math.abs(dist - 20) < 0.01, `vertex distance ${dist} should be close to 20`);
+    }
+  });
+
+  it("pointy-top first vertex is at 30° (upper-right)", () => {
+    const verts = hexVertices(0, 0, 10, "pointy");
+    const [x0, y0] = verts[0];
+    // 30° = π/6: x = 10*cos(π/6) ≈ 8.66, y = 10*sin(π/6) = 5
+    assert.ok(Math.abs(x0 - 8.66) < 0.01, `x0=${x0} should be close to 8.66`);
+    assert.ok(Math.abs(y0 - 5) < 0.01, `y0=${y0} should be close to 5`);
+  });
+
+  it("flat-top first vertex is at 0° (right)", () => {
+    const verts = hexVertices(0, 0, 10, "flat");
+    const [x0, y0] = verts[0];
+    // 0°: x = 10, y = 0
+    assert.ok(Math.abs(x0 - 10) < 0.01, `x0=${x0} should be close to 10`);
+    assert.ok(Math.abs(y0 - 0) < 0.01, `y0=${y0} should be close to 0`);
   });
 });

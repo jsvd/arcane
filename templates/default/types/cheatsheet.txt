@@ -118,6 +118,7 @@ declare const HEX_DIR_SW = 16;
 declare const HEX_DIR_SE = 32;
 -- Functions --
 declare function computeHexAutotileBitmask(q: number, r: number, check: (q: number, r: number) => boolean): number;
+declare function hexVertices(cx: number, cy: number, size: number, orientation: HexOrientation): [number, number][];
 declare function isKeyDown(key: KeyName): boolean;
 declare function isKeyPressed(key: KeyName): boolean;
 declare function getMousePosition(): MousePosition;

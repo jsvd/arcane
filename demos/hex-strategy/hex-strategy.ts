@@ -27,32 +27,35 @@ import {
   hexDistance,
   hexNeighbors,
   hexLineDraw,
+  hexVertices,
 } from "../../runtime/rendering/index.ts";
 import { findHexPath, hexReachable, reachableToArray } from "../../runtime/pathfinding/index.ts";
 import type { HexCoord, HexConfig } from "../../runtime/rendering/index.ts";
 import type { HexPathGrid } from "../../runtime/pathfinding/index.ts";
 import { updateTweens } from "../../runtime/tweening/index.ts";
 import { createGame } from "../../runtime/game/index.ts";
-import { rgb } from "../../runtime/ui/index.ts";
+import { rgb, drawPolygon } from "../../runtime/ui/index.ts";
 
 // --- Hex config ---
 const HEX_SIZE = 32;
 const CONFIG: HexConfig = { hexSize: HEX_SIZE, orientation: "pointy" };
-const SQRT3 = Math.sqrt(3);
-const HEX_W = SQRT3 * HEX_SIZE; // pointy-top width
-const HEX_H = 2 * HEX_SIZE;     // pointy-top height
 const MAP_RADIUS = 6; // hex map radius (creates ~127 tiles)
 
+// --- Colors ---
+const COL_GRASS = rgb(90, 160, 70);
+const COL_GRASS_DARK = rgb(70, 130, 55);
+const COL_FOREST = rgb(40, 100, 35);
+const COL_FOREST_TREE = rgb(30, 80, 25);
+const COL_MOUNTAIN = rgb(140, 130, 120);
+const COL_MOUNTAIN_PEAK = rgb(200, 195, 190);
+const COL_WATER = rgb(50, 100, 200);
+const COL_WATER_SHINE = rgb(80, 140, 230);
+const COL_SAND = rgb(220, 200, 150);
+
 // --- Textures ---
-const TEX_GRASS = createSolidTexture("grass", rgb(90, 160, 70));
-const TEX_GRASS_DARK = createSolidTexture("grass_dark", rgb(70, 130, 55));
-const TEX_FOREST = createSolidTexture("forest", rgb(40, 100, 35));
-const TEX_FOREST_TREE = createSolidTexture("forest_tree", rgb(30, 80, 25));
-const TEX_MOUNTAIN = createSolidTexture("mountain", rgb(140, 130, 120));
-const TEX_MOUNTAIN_PEAK = createSolidTexture("mountain_peak", rgb(200, 195, 190));
-const TEX_WATER = createSolidTexture("water", rgb(50, 100, 200));
-const TEX_WATER_SHINE = createSolidTexture("water_shine", rgb(80, 140, 230));
-const TEX_SAND = createSolidTexture("sand", rgb(220, 200, 150));
+const TEX_FOREST_TREE = createSolidTexture("forest_tree", COL_FOREST_TREE);
+const TEX_MOUNTAIN_PEAK = createSolidTexture("mountain_peak", COL_MOUNTAIN_PEAK);
+const TEX_WATER_SHINE = createSolidTexture("water_shine", COL_WATER_SHINE);
 
 // Unit textures
 const TEX_UNIT_BODY = createSolidTexture("unit_body", rgb(50, 120, 220));
@@ -61,8 +64,6 @@ const TEX_UNIT_ENEMY = createSolidTexture("unit_enemy", rgb(200, 50, 50));
 const TEX_UNIT_ENEMY_HEAD = createSolidTexture("unit_enemy_head", rgb(180, 140, 110));
 
 // UI textures
-const TEX_HIGHLIGHT = createSolidTexture("highlight", rgb(100, 200, 255));
-const TEX_MOVE_RANGE = createSolidTexture("move_range", rgb(80, 220, 120));
 const TEX_PATH_DOT = createSolidTexture("path_dot", rgb(255, 255, 100));
 const TEX_SELECT = createSolidTexture("select", rgb(255, 220, 50));
 const TEX_HUD_BG = createSolidTexture("hud_bg", rgb(20, 15, 30));
@@ -278,19 +279,18 @@ function resetGame(): void {
 
 function drawHexCell(q: number, r: number, t: TerrainType): void {
   const world = hexToWorld(hex(q, r), CONFIG);
-  const baseX = world.x - HEX_W / 2;
-  const baseY = world.y - HEX_H / 2;
+  const verts = hexVertices(world.x, world.y, HEX_SIZE, CONFIG.orientation);
   const layer = 0;
 
-  // Base terrain
+  // Base terrain hexagon
   switch (t) {
     case "grass": {
-      const alt = ((q + r) % 2 === 0) ? TEX_GRASS : TEX_GRASS_DARK;
-      drawSprite({ textureId: alt, x: baseX, y: baseY, w: HEX_W, h: HEX_H, layer });
+      const col = ((q + r) % 2 === 0) ? COL_GRASS : COL_GRASS_DARK;
+      drawPolygon(verts, { color: col, layer });
       break;
     }
     case "forest": {
-      drawSprite({ textureId: TEX_FOREST, x: baseX, y: baseY, w: HEX_W, h: HEX_H, layer });
+      drawPolygon(verts, { color: COL_FOREST, layer });
       // Tree sprites
       const h = hashHex(q, r, 100);
       const treeX = world.x - 6 + h * 4;
@@ -300,20 +300,20 @@ function drawHexCell(q: number, r: number, t: TerrainType): void {
       break;
     }
     case "mountain": {
-      drawSprite({ textureId: TEX_MOUNTAIN, x: baseX, y: baseY, w: HEX_W, h: HEX_H, layer });
+      drawPolygon(verts, { color: COL_MOUNTAIN, layer });
       // Peak
       drawSprite({ textureId: TEX_MOUNTAIN_PEAK, x: world.x - 8, y: world.y - 16, w: 16, h: 10, layer: 2 });
       break;
     }
     case "water": {
-      drawSprite({ textureId: TEX_WATER, x: baseX, y: baseY, w: HEX_W, h: HEX_H, layer });
+      drawPolygon(verts, { color: COL_WATER, layer });
       // Shine
       const shine = Math.sin(Date.now() / 800 + q * 0.5 + r * 0.3) * 0.3 + 0.3;
       drawSprite({ textureId: TEX_WATER_SHINE, x: world.x - 8, y: world.y - 4, w: 16, h: 6, layer: 1, opacity: shine });
       break;
     }
     case "sand": {
-      drawSprite({ textureId: TEX_SAND, x: baseX, y: baseY, w: HEX_W, h: HEX_H, layer });
+      drawPolygon(verts, { color: COL_SAND, layer });
       break;
     }
   }
@@ -350,16 +350,11 @@ function drawReachableHighlight(): void {
     const [q, r] = key.split(",").map(Number);
     if (selectedUnit && q === selectedUnit.q && r === selectedUnit.r) continue;
     const world = hexToWorld(hex(q, r), CONFIG);
+    const verts = hexVertices(world.x, world.y, HEX_SIZE, CONFIG.orientation);
     const opacity = 0.15 + (remaining / (selectedUnit?.movement ?? 1)) * 0.15;
-    drawSprite({
-      textureId: TEX_MOVE_RANGE,
-      x: world.x - HEX_W / 2,
-      y: world.y - HEX_H / 2,
-      w: HEX_W,
-      h: HEX_H,
-      layer: 50,
-      opacity,
-    });
+    const col = rgb(80, 220, 120);
+    col.a = opacity;
+    drawPolygon(verts, { color: col, layer: 50 });
   }
 }
 
@@ -401,15 +396,10 @@ function drawHoverHighlight(): void {
   const hoverHex = worldToHex(mouseWorld.x, mouseWorld.y, CONFIG);
   if (terrain.has(hexKey(hoverHex.q, hoverHex.r))) {
     const world = hexToWorld(hoverHex, CONFIG);
-    drawSprite({
-      textureId: TEX_HIGHLIGHT,
-      x: world.x - HEX_W / 2,
-      y: world.y - HEX_H / 2,
-      w: HEX_W,
-      h: HEX_H,
-      layer: 40,
-      opacity: 0.15,
-    });
+    const verts = hexVertices(world.x, world.y, HEX_SIZE, CONFIG.orientation);
+    const col = rgb(100, 200, 255);
+    col.a = 0.15;
+    drawPolygon(verts, { color: col, layer: 40 });
   }
 }
 

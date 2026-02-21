@@ -1441,6 +1441,19 @@ declare module "@arcane/runtime/rendering" {
    * @returns Bitmask value 0-63.
    */
   export declare function computeHexAutotileBitmask(q: number, r: number, check: (q: number, r: number) => boolean): number;
+  /**
+   * Generate the 6 corner vertices of a hexagon for rendering with drawPolygon.
+   *
+   * For pointy-top: corners at 30°, 90°, 150°, 210°, 270°, 330° (starting from upper-right, clockwise).
+   * For flat-top: corners at 0°, 60°, 120°, 180°, 240°, 300° (starting from right, clockwise).
+   *
+   * @param cx - Center X position (world coordinates).
+   * @param cy - Center Y position (world coordinates).
+   * @param size - Hex size (distance from center to corner).
+   * @param orientation - "pointy" or "flat".
+   * @returns Array of 6 [x, y] vertex pairs.
+   */
+  export declare function hexVertices(cx: number, cy: number, size: number, orientation: HexOrientation): [number, number][];
 
   /**
    * Check if a key is currently held down (returns true every frame while held).
