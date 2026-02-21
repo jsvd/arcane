@@ -707,16 +707,32 @@ function drawMSDFTextInternal(
   // Draw each glyph as a sprite with the allocated MSDF shader
   let cursorX = x;
 
+  // For uniform-cell fonts (built-in): use fontSize * cellScale
+  // For variable-cell fonts (bmfont): use per-glyph dimensions
+  const uniformCellSize = msdfFont.fontSize + 2 * msdfFont.distanceRange;
+
   for (let i = 0; i < glyphs.length; i++) {
     const g = glyphs[i];
 
-    // The glyph sprite size includes the SDF padding
-    // Atlas cell size = fontSize + 2 * distanceRange
-    const cellScale = (msdfFont.fontSize + 2 * msdfFont.distanceRange) / msdfFont.fontSize;
-    const spriteW = msdfFont.fontSize * scale * cellScale;
-    const spriteH = msdfFont.fontSize * scale * cellScale;
+    // Use per-glyph dimensions if they differ significantly from uniform cell
+    // (bmfont format provides actual atlas cell size including padding)
+    const isVariableCell = Math.abs(g.width - msdfFont.fontSize) > 1 ||
+                          Math.abs(g.height - msdfFont.fontSize) > 1;
 
-    // Offset to center the glyph within the padded cell
+    let spriteW: number;
+    let spriteH: number;
+
+    if (isVariableCell) {
+      // bmfont: width/height are the actual atlas cell dimensions
+      spriteW = g.width * scale;
+      spriteH = g.height * scale;
+    } else {
+      // Built-in font: uniform cells
+      spriteW = uniformCellSize * scale;
+      spriteH = uniformCellSize * scale;
+    }
+
+    // Offset to account for SDF padding around the visual glyph
     const padOffset = msdfFont.distanceRange * scale;
 
     const drawX = cursorX - padOffset + g.offsetX * scale;

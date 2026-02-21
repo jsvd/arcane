@@ -496,15 +496,15 @@ function drawSection7_CustomFont() {
   // Load the custom font on first visit (lazy loading)
   if (!robotoLoadAttempted) {
     robotoLoadAttempted = true;
-    // Load Roboto MSDF font from local files
-    loadMSDFFont(
-      "demos/msdf-text-showcase/fonts/roboto-msdf.png",
-      "demos/msdf-text-showcase/fonts/Roboto-Regular.json",
-    ).then((font) => {
-      robotoFont = font;
-    }).catch((err) => {
+    try {
+      // Load Roboto MSDF font from local files (paths relative to this demo's dir)
+      robotoFont = loadMSDFFont(
+        "fonts/roboto-msdf.png",
+        "fonts/Roboto-Regular.json",
+      );
+    } catch (err) {
       console.error("Failed to load Roboto font:", err);
-    });
+    }
   }
 
   if (!robotoFont) {
@@ -518,9 +518,21 @@ function drawSection7_CustomFont() {
     return;
   }
 
-  let y = 80;
+  // Roboto has lineHeight=63 at native size 48, scale accordingly
+  const baseLineHeight = 63;
+  let y = 70;
 
-  // Basic text at different scales
+  // Scale 0.5 - smaller text
+  drawText("Roboto Regular - Scale 0.5", 40, y, {
+    msdfFont: robotoFont,
+    scale: 0.5,
+    tint: white,
+    screenSpace: true,
+    layer: 200,
+  });
+  y += baseLineHeight * 0.5 + 5;
+
+  // Scale 1.0
   drawText("Roboto Regular - Scale 1.0", 40, y, {
     msdfFont: robotoFont,
     scale: 1.0,
@@ -528,40 +540,23 @@ function drawSection7_CustomFont() {
     screenSpace: true,
     layer: 200,
   });
-  y += 30;
+  y += baseLineHeight * 1.0 + 5;
 
-  drawText("Roboto Regular - Scale 2.0", 40, y, {
+  // Scale 1.5
+  drawText("Roboto Regular - Scale 1.5", 40, y, {
     msdfFont: robotoFont,
-    scale: 2.0,
-    tint: white,
-    screenSpace: true,
-    layer: 200,
-  });
-  y += 50;
-
-  drawText("Roboto Regular - Scale 3.0", 40, y, {
-    msdfFont: robotoFont,
-    scale: 3.0,
-    tint: white,
-    screenSpace: true,
-    layer: 200,
-  });
-  y += 70;
-
-  // With effects
-  drawText("Roboto with Outline", 40, y, {
-    msdfFont: robotoFont,
-    scale: 2.5,
+    scale: 1.5,
     tint: cyan,
     screenSpace: true,
     layer: 200,
     outline: { width: 1.0, color: { r: 0, g: 0.2, b: 0.4, a: 1 } },
   });
-  y += 60;
+  y += baseLineHeight * 1.5 + 5;
 
+  // Scale 2.0 with shadow
   drawText("Roboto with Shadow", 40, y, {
     msdfFont: robotoFont,
-    scale: 2.5,
+    scale: 2.0,
     tint: yellow,
     screenSpace: true,
     layer: 200,
@@ -572,30 +567,21 @@ function drawSection7_CustomFont() {
       softness: 2.0,
     },
   });
-  y += 60;
+  y += baseLineHeight * 2.0 + 10;
 
-  // Full character set demo
+  // Character set at scale 1.0
   drawText("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 40, y, {
     msdfFont: robotoFont,
-    scale: 1.5,
+    scale: 1.0,
     tint: green,
     screenSpace: true,
     layer: 200,
   });
-  y += 35;
+  y += baseLineHeight * 1.0;
 
-  drawText("abcdefghijklmnopqrstuvwxyz", 40, y, {
+  drawText("abcdefghijklmnopqrstuvwxyz 0123456789", 40, y, {
     msdfFont: robotoFont,
-    scale: 1.5,
-    tint: green,
-    screenSpace: true,
-    layer: 200,
-  });
-  y += 35;
-
-  drawText("0123456789 !@#$%^&*()-=+", 40, y, {
-    msdfFont: robotoFont,
-    scale: 1.5,
+    scale: 1.0,
     tint: orange,
     screenSpace: true,
     layer: 200,
