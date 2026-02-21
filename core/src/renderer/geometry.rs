@@ -257,6 +257,102 @@ impl GeometryBatch {
         self.vertices.clear();
     }
 
+    /// Render a slice of GeoCommands with configurable load op.
+    ///
+    /// `clear_color`: `Some(color)` → `LoadOp::Clear(color)` (first pass),
+    ///                 `None` → `LoadOp::Load` (subsequent passes).
+    pub fn flush_commands(
+        &mut self,
+        gpu: &GpuContext,
+        encoder: &mut wgpu::CommandEncoder,
+        target: &wgpu::TextureView,
+        camera_bind_group: &wgpu::BindGroup,
+        commands: &[crate::scripting::geometry_ops::GeoCommand],
+        clear_color: Option<wgpu::Color>,
+    ) {
+        if commands.is_empty() {
+            return;
+        }
+
+        // Convert GeoCommands to vertices
+        let mut verts: Vec<GeoVertex> = Vec::new();
+        for cmd in commands {
+            match cmd {
+                crate::scripting::geometry_ops::GeoCommand::Triangle {
+                    x1, y1, x2, y2, x3, y3, r, g, b, a, ..
+                } => {
+                    let color = [*r, *g, *b, *a];
+                    verts.push(GeoVertex { position: [*x1, *y1], color });
+                    verts.push(GeoVertex { position: [*x2, *y2], color });
+                    verts.push(GeoVertex { position: [*x3, *y3], color });
+                }
+                crate::scripting::geometry_ops::GeoCommand::LineSeg {
+                    x1, y1, x2, y2, thickness, r, g, b, a, ..
+                } => {
+                    let dx = x2 - x1;
+                    let dy = y2 - y1;
+                    let len = (dx * dx + dy * dy).sqrt();
+                    if len < 1e-8 {
+                        continue;
+                    }
+                    let half = thickness * 0.5;
+                    let nx = -dy / len * half;
+                    let ny = dx / len * half;
+                    let color = [*r, *g, *b, *a];
+                    let a0 = GeoVertex { position: [x1 + nx, y1 + ny], color };
+                    let b0 = GeoVertex { position: [x1 - nx, y1 - ny], color };
+                    let c0 = GeoVertex { position: [x2 - nx, y2 - ny], color };
+                    let d0 = GeoVertex { position: [x2 + nx, y2 + ny], color };
+                    verts.push(a0);
+                    verts.push(b0);
+                    verts.push(c0);
+                    verts.push(a0);
+                    verts.push(c0);
+                    verts.push(d0);
+                }
+            }
+        }
+
+        if verts.is_empty() {
+            return;
+        }
+
+        let vertex_buffer = gpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("geom_vertex_buffer"),
+            contents: bytemuck::cast_slice(&verts),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
+        let vertex_count = verts.len() as u32;
+
+        let load_op = match clear_color {
+            Some(color) => wgpu::LoadOp::Clear(color),
+            None => wgpu::LoadOp::Load,
+        };
+
+        {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("geom_render_pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: target,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: load_op,
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
+
+            pass.set_pipeline(&self.pipeline);
+            pass.set_bind_group(0, camera_bind_group, &[]);
+            pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+            pass.draw(0..vertex_count, 0..1);
+        }
+    }
+
     /// Discard all queued vertices without rendering.
     pub fn clear(&mut self) {
         self.vertices.clear();

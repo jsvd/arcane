@@ -31,6 +31,15 @@ pub enum GeoCommand {
     },
 }
 
+impl GeoCommand {
+    pub fn layer(&self) -> i32 {
+        match self {
+            GeoCommand::Triangle { layer, .. } => *layer,
+            GeoCommand::LineSeg { layer, .. } => *layer,
+        }
+    }
+}
+
 /// Geometry command queue: collected by TS ops, drained by the frame callback.
 pub struct GeoState {
     pub commands: Vec<GeoCommand>,

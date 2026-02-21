@@ -385,21 +385,14 @@ impl SpritePipeline {
         &self.camera_bind_group
     }
 
-    /// Render a sorted list of sprite commands.
-    /// Commands should be sorted by layer → shader_id → blend_mode → texture_id.
-    pub fn render(
+    /// Write camera and lighting uniforms to GPU buffers. Call once per frame
+    /// before any `render()` calls to avoid redundant buffer writes.
+    pub fn prepare(
         &self,
         gpu: &GpuContext,
-        textures: &TextureStore,
-        shaders: &super::shader::ShaderStore,
         camera: &Camera2D,
         lighting: &LightingUniform,
-        commands: &[SpriteCommand],
-        target: &wgpu::TextureView,
-        encoder: &mut wgpu::CommandEncoder,
-        clear_color: wgpu::Color,
     ) {
-        // Update camera uniform
         let camera_uniform = CameraUniform {
             view_proj: camera.view_proj(),
         };
@@ -408,13 +401,32 @@ impl SpritePipeline {
             0,
             bytemuck::cast_slice(&[camera_uniform]),
         );
-
-        // Update lighting uniform
         gpu.queue.write_buffer(
             &self.lighting_buffer,
             0,
             bytemuck::cast_slice(&[*lighting]),
         );
+    }
+
+    /// Render a sorted list of sprite commands.
+    /// Commands should be sorted by layer → shader_id → blend_mode → texture_id.
+    ///
+    /// `clear_color`: `Some(color)` → `LoadOp::Clear(color)` (first pass),
+    ///                 `None` → `LoadOp::Load` (subsequent passes).
+    pub fn render(
+        &self,
+        gpu: &GpuContext,
+        textures: &TextureStore,
+        shaders: &super::shader::ShaderStore,
+        commands: &[SpriteCommand],
+        target: &wgpu::TextureView,
+        encoder: &mut wgpu::CommandEncoder,
+        clear_color: Option<wgpu::Color>,
+    ) {
+        let load_op = match clear_color {
+            Some(color) => wgpu::LoadOp::Clear(color),
+            None => wgpu::LoadOp::Load,
+        };
 
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("sprite_render_pass"),
@@ -422,7 +434,7 @@ impl SpritePipeline {
                 view: target,
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(clear_color),
+                    load: load_op,
                     store: wgpu::StoreOp::Store,
                 },
             })],

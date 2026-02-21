@@ -25,7 +25,65 @@ pub use radiance::{RadiancePipeline, RadianceState, EmissiveSurface, Occluder, D
 pub use geometry::GeometryBatch;
 pub use rendertarget::RenderTargetStore;
 
+use crate::scripting::geometry_ops::GeoCommand;
 use anyhow::Result;
+
+/// A single step in the interleaved render schedule.
+/// Sprites and geometry are merged by layer so that layer ordering is respected
+/// across both pipeline types.
+enum RenderOp {
+    /// Render a contiguous range of sorted sprite commands.
+    Sprites { start: usize, end: usize },
+    /// Render a contiguous range of sorted geometry commands.
+    Geometry { start: usize, end: usize },
+}
+
+/// Build an interleaved render schedule from sorted sprite and geometry commands.
+///
+/// Both input slices must be pre-sorted by layer. The schedule merges them so that
+/// lower layers render first. At the same layer, sprites render before geometry.
+fn build_render_schedule(
+    sprites: &[SpriteCommand],
+    geo: &[GeoCommand],
+) -> Vec<RenderOp> {
+    let mut schedule = Vec::new();
+    let mut si = 0;
+    let mut gi = 0;
+
+    while si < sprites.len() || gi < geo.len() {
+        // Decide whether to emit sprites or geometry next.
+        // At the same layer, sprites go first.
+        let do_sprites = if si >= sprites.len() {
+            false
+        } else if gi >= geo.len() {
+            true
+        } else {
+            sprites[si].layer <= geo[gi].layer()
+        };
+
+        if do_sprites {
+            let start = si;
+            // Consume sprites whose layer is <= the next geo command's layer.
+            // This groups all sprites that should render before the next geo block.
+            let bound = if gi < geo.len() { geo[gi].layer() } else { i32::MAX };
+            while si < sprites.len() && sprites[si].layer <= bound {
+                si += 1;
+            }
+            schedule.push(RenderOp::Sprites { start, end: si });
+        } else {
+            let start = gi;
+            // Consume geo commands whose layer is strictly < the next sprite's layer.
+            // Strict < because at the same layer, sprites go first.
+            let bound = if si < sprites.len() { sprites[si].layer } else { i32::MAX };
+            while gi < geo.len() && geo[gi].layer() < bound {
+                gi += 1;
+            }
+            schedule.push(RenderOp::Geometry { start, end: gi });
+        }
+    }
+
+    schedule
+}
 
 /// Top-level renderer that owns the GPU context, sprite pipeline, and textures.
 pub struct Renderer {
@@ -43,6 +101,8 @@ pub struct Renderer {
     pub render_targets: RenderTargetStore,
     /// Sprite commands queued for the current frame.
     pub frame_commands: Vec<SpriteCommand>,
+    /// Geometry commands queued for the current frame (drained from GeoState).
+    pub geo_commands: Vec<GeoCommand>,
     /// Display scale factor (e.g. 2.0 on Retina). Used to convert physical → logical pixels.
     pub scale_factor: f32,
     /// Clear color for the render pass background. Default: dark blue-gray.
@@ -80,12 +140,18 @@ impl Renderer {
             lighting: LightingState::default(),
             render_targets: RenderTargetStore::new(),
             frame_commands: Vec::new(),
+            geo_commands: Vec::new(),
             scale_factor,
             clear_color: [0.1, 0.1, 0.15, 1.0],
         })
     }
 
-    /// Render the current frame's sprite commands and present.
+    /// Set geometry commands for the current frame (drained from GeoState in dev.rs).
+    pub fn set_geo_commands(&mut self, cmds: Vec<GeoCommand>) {
+        self.geo_commands = cmds;
+    }
+
+    /// Render the current frame's sprite and geometry commands, interleaved by layer.
     pub fn render_frame(&mut self) -> Result<()> {
         let output = self.gpu.surface.get_current_texture()?;
         let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -94,7 +160,7 @@ impl Renderer {
             &wgpu::CommandEncoderDescriptor { label: Some("frame_encoder") },
         );
 
-        // Sort by layer → shader_id → blend_mode → texture_id for batching
+        // Sort sprites by layer → shader_id → blend_mode → texture_id for batching
         self.frame_commands.sort_by(|a, b| {
             a.layer
                 .cmp(&b.layer)
@@ -102,6 +168,12 @@ impl Renderer {
                 .then(a.blend_mode.cmp(&b.blend_mode))
                 .then(a.texture_id.cmp(&b.texture_id))
         });
+
+        // Sort geometry commands by layer
+        self.geo_commands.sort_by_key(|c| c.layer());
+
+        // Build interleaved render schedule
+        let schedule = build_render_schedule(&self.frame_commands, &self.geo_commands);
 
         // Flush dirty custom shader uniforms
         self.shaders.flush(&self.gpu);
@@ -113,6 +185,9 @@ impl Renderer {
             b: self.clear_color[2] as f64,
             a: self.clear_color[3] as f64,
         };
+
+        // Write camera + lighting uniforms once for the whole frame
+        self.sprites.prepare(&self.gpu, &self.camera, &lighting_uniform);
 
         // Run radiance cascade GI compute pass (if enabled)
         let gi_active = self.radiance.compute(
@@ -127,23 +202,39 @@ impl Renderer {
         );
 
         if self.postprocess.has_effects() {
-            // Render sprites to offscreen target, then apply effects to surface
+            // Render to offscreen target, then apply effects to surface
             {
                 let sprite_target = self.postprocess.sprite_target(&self.gpu);
-                self.sprites.render(
-                    &self.gpu,
-                    &self.textures,
-                    &self.shaders,
-                    &self.camera,
-                    &lighting_uniform,
-                    &self.frame_commands,
-                    sprite_target,
-                    &mut encoder,
-                    clear_color,
-                );
-                // Geometry overlays on sprites before post-processing
                 let camera_bg = self.sprites.camera_bind_group();
-                self.geometry.flush(&self.gpu, &mut encoder, sprite_target, camera_bg);
+
+                if schedule.is_empty() {
+                    // No commands at all — still need to clear
+                    self.sprites.render(
+                        &self.gpu, &self.textures, &self.shaders,
+                        &[], sprite_target, &mut encoder, Some(clear_color),
+                    );
+                } else {
+                    let mut first = true;
+                    for op in &schedule {
+                        let cc = if first { Some(clear_color) } else { None };
+                        first = false;
+                        match op {
+                            RenderOp::Sprites { start, end } => {
+                                self.sprites.render(
+                                    &self.gpu, &self.textures, &self.shaders,
+                                    &self.frame_commands[*start..*end],
+                                    sprite_target, &mut encoder, cc,
+                                );
+                            }
+                            RenderOp::Geometry { start, end } => {
+                                self.geometry.flush_commands(
+                                    &self.gpu, &mut encoder, sprite_target,
+                                    camera_bg, &self.geo_commands[*start..*end], cc,
+                                );
+                            }
+                        }
+                    }
+                }
             }
             // Apply GI light texture to the offscreen target before post-processing
             if gi_active {
@@ -153,20 +244,36 @@ impl Renderer {
             self.postprocess.apply(&self.gpu, &mut encoder, &view);
         } else {
             // No effects — render directly to surface
-            self.sprites.render(
-                &self.gpu,
-                &self.textures,
-                &self.shaders,
-                &self.camera,
-                &lighting_uniform,
-                &self.frame_commands,
-                &view,
-                &mut encoder,
-                clear_color,
-            );
-            // Geometry overlays on sprites
             let camera_bg = self.sprites.camera_bind_group();
-            self.geometry.flush(&self.gpu, &mut encoder, &view, camera_bg);
+
+            if schedule.is_empty() {
+                // No commands at all — still need to clear
+                self.sprites.render(
+                    &self.gpu, &self.textures, &self.shaders,
+                    &[], &view, &mut encoder, Some(clear_color),
+                );
+            } else {
+                let mut first = true;
+                for op in &schedule {
+                    let cc = if first { Some(clear_color) } else { None };
+                    first = false;
+                    match op {
+                        RenderOp::Sprites { start, end } => {
+                            self.sprites.render(
+                                &self.gpu, &self.textures, &self.shaders,
+                                &self.frame_commands[*start..*end],
+                                &view, &mut encoder, cc,
+                            );
+                        }
+                        RenderOp::Geometry { start, end } => {
+                            self.geometry.flush_commands(
+                                &self.gpu, &mut encoder, &view,
+                                camera_bg, &self.geo_commands[*start..*end], cc,
+                            );
+                        }
+                    }
+                }
+            }
             // Apply GI light texture to the surface
             if gi_active {
                 self.radiance.compose(&mut encoder, &view);
@@ -177,6 +284,7 @@ impl Renderer {
         output.present();
 
         self.frame_commands.clear();
+        self.geo_commands.clear();
         Ok(())
     }
 
@@ -257,16 +365,15 @@ impl Renderer {
                     viewport_size: [tw as f32, th as f32],
                     ..Camera2D::default()
                 };
+                self.sprites.prepare(&self.gpu, &target_camera, &lighting_uniform);
                 self.sprites.render(
                     &self.gpu,
                     &self.textures,
                     &self.shaders,
-                    &target_camera,
-                    &lighting_uniform,
                     &cmds,
                     view,
                     &mut encoder,
-                    wgpu::Color { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
+                    Some(wgpu::Color { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }),
                 );
             }
         }
