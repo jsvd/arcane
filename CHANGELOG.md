@@ -2,6 +2,16 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.14.1] - 2026-02-21
+
+### Added
+- **Friction anchors** — persistent friction state for rock-solid stacking (TGS Soft Phase 5)
+- Physics tuning parameters table in documentation
+
+### Changed
+- Enhanced JSDoc for soft constraint APIs with usage examples
+- Improved `getManifolds()` documentation with code examples
+
 ## [0.14.0] - 2026-02-21
 
 ### Added
