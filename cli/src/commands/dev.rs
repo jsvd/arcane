@@ -310,7 +310,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
                         let a = parts[5].parse::<u8>().unwrap_or(255);
                         // Use upload_raw with the bridge-assigned ID to avoid ID mismatch
                         renderer.textures.upload_raw(
-                            &renderer.gpu,
+                            &renderer.gpu.device, &renderer.gpu.queue,
                             &renderer.sprites.texture_bind_group_layout,
                             id,
                             &[r, g, b, a],
@@ -326,7 +326,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
                                 let rgba = img.to_rgba8();
                                 let (w, h) = rgba.dimensions();
                                 renderer.textures.upload_raw(
-                                    &renderer.gpu,
+                                    &renderer.gpu.device, &renderer.gpu.queue,
                                     &renderer.sprites.texture_bind_group_layout,
                                     id,
                                     &rgba,
@@ -351,7 +351,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
         if let Some(ref mut renderer) = state.renderer {
             for (tex_id, w, h, pixels) in pending_raw_textures {
                 renderer.textures.upload_raw(
-                    &renderer.gpu,
+                    &renderer.gpu.device, &renderer.gpu.queue,
                     &renderer.sprites.texture_bind_group_layout,
                     tex_id,
                     &pixels,
@@ -372,7 +372,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
                 let (pixels, width, height) =
                     arcane_core::renderer::font::generate_builtin_font();
                 renderer.textures.upload_raw(
-                    &renderer.gpu,
+                    &renderer.gpu.device, &renderer.gpu.queue,
                     &renderer.sprites.texture_bind_group_layout,
                     font_tex_id,
                     &pixels,
@@ -393,7 +393,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
                 let (pixels, width, height, _font) =
                     arcane_core::renderer::msdf::generate_builtin_msdf_font();
                 renderer.textures.upload_raw_linear(
-                    &renderer.gpu,
+                    &renderer.gpu.device, &renderer.gpu.queue,
                     &renderer.sprites.texture_bind_group_layout,
                     tex_id,
                     &pixels,
@@ -417,7 +417,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
                             let rgba = img.to_rgba8();
                             let (w, h) = rgba.dimensions();
                             renderer.textures.upload_raw_linear(
-                                &renderer.gpu,
+                                &renderer.gpu.device, &renderer.gpu.queue,
                                 &renderer.sprites.texture_bind_group_layout,
                                 id,
                                 &rgba,
@@ -440,7 +440,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
 
         if let Some(ref mut renderer) = state.renderer {
             for (id, source) in pending_msdf_shaders {
-                renderer.shaders.create(&renderer.gpu, id, "msdf", &source);
+                renderer.shaders.create(&renderer.gpu.device, id, "msdf", &source);
             }
         }
 
@@ -458,7 +458,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
 
         if let Some(ref mut renderer) = state.renderer {
             for (id, name, source) in pending_shaders {
-                renderer.shaders.create(&renderer.gpu, id, &name, &source);
+                renderer.shaders.create(&renderer.gpu.device, id, &name, &source);
             }
             for (shader_id, index, values) in shader_params {
                 renderer
@@ -498,7 +498,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
                 {
                     renderer
                         .postprocess
-                        .add(&renderer.gpu, id, effect_type);
+                        .add(&renderer.gpu.device, id, effect_type);
                 }
             }
             for (effect_id, index, values) in effect_params {

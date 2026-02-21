@@ -31,7 +31,10 @@ Thumbs.db
 
 # Test coverage
 coverage/
+coverage-rust/
 *.lcov
+*.profraw
+*.profdata
 
 # Build artifacts
 *.wasm
