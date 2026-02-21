@@ -7,13 +7,19 @@ import {
   drawText,
   getDefaultFont,
   getDefaultMSDFFont,
+  loadMSDFFont,
 } from "../../runtime/rendering/index.ts";
+import type { MSDFFont } from "../../runtime/rendering/index.ts";
 import { createGame } from "../../runtime/game/index.ts";
 
 // --- State ---
 
 let currentSection = 1;
-const totalSections = 6;
+const totalSections = 7;
+
+// Custom font (loaded lazily)
+let robotoFont: MSDFFont | null = null;
+let robotoLoadAttempted = false;
 
 // Interactive mode state (section 6)
 let interactiveScale = 2.0;
@@ -50,7 +56,7 @@ function drawTitle(title: string) {
 function drawHelpBar() {
   const { height } = getViewportSize();
   drawText(
-    `[1-6] Switch section  Current: ${currentSection}/${totalSections}`,
+    `[1-7] Switch section  Current: ${currentSection}/${totalSections}`,
     20,
     height - 24,
     { font: getDefaultFont(), scale: 2, tint: gray, screenSpace: true, layer: 200 },
@@ -482,6 +488,120 @@ function drawSection6_Interactive() {
   }
 }
 
+function drawSection7_CustomFont() {
+  drawTitle("7: Custom Font (Roboto)");
+
+  const bitmap = getDefaultFont();
+
+  // Load the custom font on first visit (lazy loading)
+  if (!robotoLoadAttempted) {
+    robotoLoadAttempted = true;
+    // Load Roboto MSDF font from local files
+    loadMSDFFont(
+      "demos/msdf-text-showcase/fonts/roboto-msdf.png",
+      "demos/msdf-text-showcase/fonts/Roboto-Regular.json",
+    ).then((font) => {
+      robotoFont = font;
+    }).catch((err) => {
+      console.error("Failed to load Roboto font:", err);
+    });
+  }
+
+  if (!robotoFont) {
+    drawText("Loading Roboto font...", 40, 100, {
+      font: bitmap,
+      scale: 2,
+      tint: gray,
+      screenSpace: true,
+      layer: 200,
+    });
+    return;
+  }
+
+  let y = 80;
+
+  // Basic text at different scales
+  drawText("Roboto Regular - Scale 1.0", 40, y, {
+    msdfFont: robotoFont,
+    scale: 1.0,
+    tint: white,
+    screenSpace: true,
+    layer: 200,
+  });
+  y += 30;
+
+  drawText("Roboto Regular - Scale 2.0", 40, y, {
+    msdfFont: robotoFont,
+    scale: 2.0,
+    tint: white,
+    screenSpace: true,
+    layer: 200,
+  });
+  y += 50;
+
+  drawText("Roboto Regular - Scale 3.0", 40, y, {
+    msdfFont: robotoFont,
+    scale: 3.0,
+    tint: white,
+    screenSpace: true,
+    layer: 200,
+  });
+  y += 70;
+
+  // With effects
+  drawText("Roboto with Outline", 40, y, {
+    msdfFont: robotoFont,
+    scale: 2.5,
+    tint: cyan,
+    screenSpace: true,
+    layer: 200,
+    outline: { width: 1.0, color: { r: 0, g: 0.2, b: 0.4, a: 1 } },
+  });
+  y += 60;
+
+  drawText("Roboto with Shadow", 40, y, {
+    msdfFont: robotoFont,
+    scale: 2.5,
+    tint: yellow,
+    screenSpace: true,
+    layer: 200,
+    shadow: {
+      offsetX: 3,
+      offsetY: 3,
+      color: blackAlpha,
+      softness: 2.0,
+    },
+  });
+  y += 60;
+
+  // Full character set demo
+  drawText("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 40, y, {
+    msdfFont: robotoFont,
+    scale: 1.5,
+    tint: green,
+    screenSpace: true,
+    layer: 200,
+  });
+  y += 35;
+
+  drawText("abcdefghijklmnopqrstuvwxyz", 40, y, {
+    msdfFont: robotoFont,
+    scale: 1.5,
+    tint: green,
+    screenSpace: true,
+    layer: 200,
+  });
+  y += 35;
+
+  drawText("0123456789 !@#$%^&*()-=+", 40, y, {
+    msdfFont: robotoFont,
+    scale: 1.5,
+    tint: orange,
+    screenSpace: true,
+    layer: 200,
+  });
+}
+
 // --- Game Bootstrap ---
 
 const game = createGame({ name: "msdf-text-showcase", background: { r: 38 / 255, g: 38 / 255, b: 51 / 255 } });
@@ -496,6 +616,7 @@ game.onFrame((ctx) => {
   if (isKeyPressed("4")) currentSection = 4;
   if (isKeyPressed("5")) currentSection = 5;
   if (isKeyPressed("6")) currentSection = 6;
+  if (isKeyPressed("7")) currentSection = 7;
 
   // Draw active section
   switch (currentSection) {
@@ -516,6 +637,9 @@ game.onFrame((ctx) => {
       break;
     case 6:
       drawSection6_Interactive();
+      break;
+    case 7:
+      drawSection7_CustomFont();
       break;
   }
 

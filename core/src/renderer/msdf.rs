@@ -327,27 +327,120 @@ fn point_to_segment_dist_sq(px: f32, py: f32, x1: f32, y1: f32, x2: f32, y2: f32
     ex * ex + ey * ey
 }
 
-/// Parse MSDF font metrics from a JSON string (msdf-atlas-gen format).
+/// Parse MSDF font metrics from a JSON string.
 ///
-/// Expected JSON format:
-/// ```json
-/// {
-///   "atlas": { "width": 256, "height": 256, "distanceRange": 4, "size": 32 },
-///   "metrics": { "lineHeight": 1.2 },
-///   "glyphs": [
-///     {
-///       "unicode": 65,
-///       "advance": 0.6,
-///       "atlasBounds": { "left": 0, "bottom": 32, "right": 24, "top": 0 },
-///       "planeBounds": { "left": 0, "bottom": -0.1, "right": 0.6, "top": 0.9 }
-///     }
-///   ]
-/// }
-/// ```
+/// Supports two formats:
+/// 1. msdf-bmfont format (has "chars" array)
+/// 2. msdf-atlas-gen format (has "glyphs" array)
 pub fn parse_msdf_metrics(json: &str, texture_id: u32) -> Result<MsdfFont, String> {
-    // Minimal JSON parsing without external dependencies.
-    // We only need a few specific fields.
+    // Detect format: msdf-bmfont uses "chars", msdf-atlas-gen uses "glyphs"
+    if json.contains("\"chars\"") {
+        parse_msdf_bmfont_format(json, texture_id)
+    } else {
+        parse_msdf_atlas_gen_format(json, texture_id)
+    }
+}
 
+/// Parse msdf-bmfont format (from msdf-bmfont-xml npm package).
+fn parse_msdf_bmfont_format(json: &str, texture_id: u32) -> Result<MsdfFont, String> {
+    // common.scaleW, common.scaleH = atlas dimensions
+    let atlas_width = extract_nested_number(json, "\"common\"", "\"scaleW\"")
+        .ok_or("Missing common.scaleW")? as u32;
+    let atlas_height = extract_nested_number(json, "\"common\"", "\"scaleH\"")
+        .ok_or("Missing common.scaleH")? as u32;
+
+    // info.size = font size
+    let font_size = extract_nested_number(json, "\"info\"", "\"size\"")
+        .unwrap_or(32.0);
+
+    // distanceField.distanceRange
+    let distance_range = extract_nested_number(json, "\"distanceField\"", "\"distanceRange\"")
+        .unwrap_or(4.0);
+
+    // common.lineHeight (absolute value in pixels)
+    let line_height = extract_nested_number(json, "\"common\"", "\"lineHeight\"")
+        .unwrap_or(font_size * 1.2);
+
+    let mut glyphs = HashMap::new();
+
+    // Parse chars array
+    if let Some(chars_start) = json.find("\"chars\"") {
+        let rest = &json[chars_start..];
+        if let Some(arr_start) = rest.find('[') {
+            let arr_rest = &rest[arr_start + 1..];
+            let mut depth = 0i32;
+            let mut obj_start = None;
+
+            for (i, ch) in arr_rest.char_indices() {
+                match ch {
+                    '{' => {
+                        if depth == 0 {
+                            obj_start = Some(i);
+                        }
+                        depth += 1;
+                    }
+                    '}' => {
+                        depth -= 1;
+                        if depth == 0 {
+                            if let Some(start) = obj_start {
+                                let obj = &arr_rest[start..=i];
+                                if let Some(glyph) = parse_bmfont_char(
+                                    obj,
+                                    atlas_width as f32,
+                                    atlas_height as f32,
+                                ) {
+                                    glyphs.insert(glyph.0, glyph.1);
+                                }
+                            }
+                        }
+                    }
+                    ']' if depth == 0 => break,
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    Ok(MsdfFont {
+        texture_id,
+        atlas_width,
+        atlas_height,
+        font_size,
+        line_height,
+        distance_range,
+        glyphs,
+    })
+}
+
+/// Parse a single char object from msdf-bmfont format.
+fn parse_bmfont_char(obj: &str, atlas_w: f32, atlas_h: f32) -> Option<(u32, MsdfGlyph)> {
+    let id = extract_number(obj, "\"id\"")? as u32;
+    let x = extract_number(obj, "\"x\"").unwrap_or(0.0);
+    let y = extract_number(obj, "\"y\"").unwrap_or(0.0);
+    let width = extract_number(obj, "\"width\"").unwrap_or(0.0);
+    let height = extract_number(obj, "\"height\"").unwrap_or(0.0);
+    let xoffset = extract_number(obj, "\"xoffset\"").unwrap_or(0.0);
+    let yoffset = extract_number(obj, "\"yoffset\"").unwrap_or(0.0);
+    let xadvance = extract_number(obj, "\"xadvance\"").unwrap_or(width);
+
+    Some((
+        id,
+        MsdfGlyph {
+            uv_x: x / atlas_w,
+            uv_y: y / atlas_h,
+            uv_w: width / atlas_w,
+            uv_h: height / atlas_h,
+            advance: xadvance,
+            width,
+            height,
+            offset_x: xoffset,
+            offset_y: yoffset,
+        },
+    ))
+}
+
+/// Parse msdf-atlas-gen format.
+fn parse_msdf_atlas_gen_format(json: &str, texture_id: u32) -> Result<MsdfFont, String> {
     let atlas_width = extract_number(json, "\"width\"")
         .ok_or("Missing atlas width")? as u32;
     let atlas_height = extract_number(json, "\"height\"")
@@ -368,7 +461,6 @@ pub fn parse_msdf_metrics(json: &str, texture_id: u32) -> Result<MsdfFont, Strin
         let rest = &json[glyphs_start..];
         if let Some(arr_start) = rest.find('[') {
             let arr_rest = &rest[arr_start + 1..];
-            // Split by glyph objects
             let mut depth = 0i32;
             let mut obj_start = None;
 
