@@ -12,8 +12,6 @@
 
 use std::collections::HashMap;
 
-use super::gpu::GpuContext;
-
 /// A single off-screen render target.
 pub struct RenderTargetEntry {
     pub texture: wgpu::Texture,
@@ -40,13 +38,13 @@ impl RenderTargetStore {
     /// sprite pipeline can render into it without a format mismatch.
     pub fn create(
         &mut self,
-        gpu: &GpuContext,
+        device: &wgpu::Device,
         id: u32,
         width: u32,
         height: u32,
         surface_format: wgpu::TextureFormat,
     ) {
-        let texture = gpu.device.create_texture(&wgpu::TextureDescriptor {
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some(&format!("render_target_{id}")),
             size: wgpu::Extent3d {
                 width,

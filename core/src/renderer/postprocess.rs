@@ -100,10 +100,19 @@ pub struct PostProcessPipeline {
 }
 
 impl PostProcessPipeline {
+    /// Create a post-process pipeline for headless testing.
+    pub fn new_headless(device: &wgpu::Device, format: wgpu::TextureFormat) -> Self {
+        Self::new_internal(device, format)
+    }
+
     pub fn new(gpu: &GpuContext) -> Self {
+        Self::new_internal(&gpu.device, gpu.config.format)
+    }
+
+    fn new_internal(device: &wgpu::Device, surface_format: wgpu::TextureFormat) -> Self {
         // Group 0: input texture + sampler
         let texture_bind_group_layout =
-            gpu.device
+            device
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     label: Some("postprocess_texture_layout"),
                     entries: &[
@@ -132,7 +141,7 @@ impl PostProcessPipeline {
 
         // Group 1: effect params uniform
         let params_bind_group_layout =
-            gpu.device
+            device
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     label: Some("postprocess_params_layout"),
                     entries: &[wgpu::BindGroupLayoutEntry {
@@ -148,7 +157,7 @@ impl PostProcessPipeline {
                 });
 
         let pipeline_layout =
-            gpu.device
+            device
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("postprocess_pipeline_layout"),
                     bind_group_layouts: &[
@@ -158,7 +167,7 @@ impl PostProcessPipeline {
                     push_constant_ranges: &[],
                 });
 
-        let sampler = gpu.device.create_sampler(&wgpu::SamplerDescriptor {
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("postprocess_sampler"),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
@@ -175,7 +184,7 @@ impl PostProcessPipeline {
             params_bind_group_layout,
             pipeline_layout,
             sampler,
-            surface_format: gpu.config.format,
+            surface_format,
         }
     }
 
@@ -185,18 +194,18 @@ impl PostProcessPipeline {
     }
 
     /// Add an effect. The id is pre-assigned by the bridge.
-    pub fn add(&mut self, gpu: &GpuContext, id: u32, effect_type: EffectType) {
+    pub fn add(&mut self, device: &wgpu::Device, id: u32, effect_type: EffectType) {
         let wgsl = build_effect_wgsl(effect_type.fragment_source());
 
         let shader_module =
-            gpu.device
+            device
                 .create_shader_module(wgpu::ShaderModuleDescriptor {
                     label: Some("postprocess_shader"),
                     source: wgpu::ShaderSource::Wgsl(wgsl.into()),
                 });
 
         let pipeline =
-            gpu.device
+            device
                 .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                     label: Some("postprocess_pipeline"),
                     layout: Some(&self.pipeline_layout),
@@ -229,14 +238,14 @@ impl PostProcessPipeline {
         let param_data = effect_type.defaults();
 
         let param_buffer =
-            gpu.device
+            device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("postprocess_param_buffer"),
                     contents: bytemuck::cast_slice(&param_data),
                     usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                 });
 
-        let param_bind_group = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let param_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("postprocess_param_bind_group"),
             layout: &self.params_bind_group_layout,
             entries: &[wgpu::BindGroupEntry {

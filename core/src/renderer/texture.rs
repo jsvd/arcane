@@ -139,7 +139,8 @@ impl TextureStore {
     /// Create a solid-color 1x1 texture. Useful for placeholder sprites.
     pub fn create_solid_color(
         &mut self,
-        gpu: &GpuContext,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
         bind_group_layout: &wgpu::BindGroupLayout,
         name: &str,
         r: u8,
@@ -152,7 +153,7 @@ impl TextureStore {
             return id;
         }
 
-        let texture = gpu.device.create_texture(&wgpu::TextureDescriptor {
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some(name),
             size: wgpu::Extent3d {
                 width: 1,
@@ -167,7 +168,7 @@ impl TextureStore {
             view_formats: &[],
         });
 
-        gpu.queue.write_texture(
+        queue.write_texture(
             wgpu::TexelCopyTextureInfo {
                 texture: &texture,
                 mip_level: 0,
@@ -188,13 +189,13 @@ impl TextureStore {
         );
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let sampler = gpu.device.create_sampler(&wgpu::SamplerDescriptor {
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             mag_filter: wgpu::FilterMode::Nearest,
             min_filter: wgpu::FilterMode::Nearest,
             ..Default::default()
         });
 
-        let bind_group = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some(&format!("solid_color_bind_group_{name}")),
             layout: bind_group_layout,
             entries: &[
@@ -230,14 +231,15 @@ impl TextureStore {
     /// Used for procedurally generated textures (e.g., built-in font).
     pub fn upload_raw(
         &mut self,
-        gpu: &GpuContext,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
         bind_group_layout: &wgpu::BindGroupLayout,
         id: TextureId,
         pixels: &[u8],
         width: u32,
         height: u32,
     ) {
-        let texture = gpu.device.create_texture(&wgpu::TextureDescriptor {
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some(&format!("raw_texture_{id}")),
             size: wgpu::Extent3d {
                 width,
@@ -252,7 +254,7 @@ impl TextureStore {
             view_formats: &[],
         });
 
-        gpu.queue.write_texture(
+        queue.write_texture(
             wgpu::TexelCopyTextureInfo {
                 texture: &texture,
                 mip_level: 0,
@@ -273,13 +275,13 @@ impl TextureStore {
         );
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let sampler = gpu.device.create_sampler(&wgpu::SamplerDescriptor {
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             mag_filter: wgpu::FilterMode::Nearest,
             min_filter: wgpu::FilterMode::Nearest,
             ..Default::default()
         });
 
-        let bind_group = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some(&format!("raw_texture_bind_group_{id}")),
             layout: bind_group_layout,
             entries: &[
@@ -309,14 +311,15 @@ impl TextureStore {
     /// Use this for distance field atlases (MSDF, SDF) where values must be sampled linearly.
     pub fn upload_raw_linear(
         &mut self,
-        gpu: &GpuContext,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
         bind_group_layout: &wgpu::BindGroupLayout,
         id: TextureId,
         pixels: &[u8],
         width: u32,
         height: u32,
     ) {
-        let texture = gpu.device.create_texture(&wgpu::TextureDescriptor {
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some(&format!("raw_linear_texture_{id}")),
             size: wgpu::Extent3d {
                 width,
@@ -331,7 +334,7 @@ impl TextureStore {
             view_formats: &[],
         });
 
-        gpu.queue.write_texture(
+        queue.write_texture(
             wgpu::TexelCopyTextureInfo {
                 texture: &texture,
                 mip_level: 0,
@@ -352,13 +355,13 @@ impl TextureStore {
         );
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let sampler = gpu.device.create_sampler(&wgpu::SamplerDescriptor {
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             mag_filter: wgpu::FilterMode::Linear,
             min_filter: wgpu::FilterMode::Linear,
             ..Default::default()
         });
 
-        let bind_group = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some(&format!("raw_linear_texture_bind_group_{id}")),
             layout: bind_group_layout,
             entries: &[
@@ -407,19 +410,19 @@ impl TextureStore {
     /// resource alive for as long as the bind group exists.
     pub fn register_render_target(
         &mut self,
-        gpu: &GpuContext,
+        device: &wgpu::Device,
         bind_group_layout: &wgpu::BindGroupLayout,
         id: TextureId,
         view: &wgpu::TextureView,
         width: u32,
         height: u32,
     ) {
-        let sampler = gpu.device.create_sampler(&wgpu::SamplerDescriptor {
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             mag_filter: wgpu::FilterMode::Linear,
             min_filter: wgpu::FilterMode::Linear,
             ..Default::default()
         });
-        let bg = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some(&format!("render_target_bg_{id}")),
             layout: bind_group_layout,
             entries: &[

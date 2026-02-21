@@ -62,18 +62,27 @@ pub struct GeometryBatch {
 }
 
 impl GeometryBatch {
+    /// Create a geometry batch for headless testing.
+    pub fn new_headless(device: &wgpu::Device, format: wgpu::TextureFormat) -> Self {
+        Self::new_internal(device, format)
+    }
+
     /// Create a new geometry batch renderer.
     ///
     /// Shares the sprite pipeline's camera bind group at flush time so both pipelines
     /// use the same view-projection matrix without duplicating the uniform buffer.
     pub fn new(gpu: &GpuContext) -> Self {
-        let shader = gpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        Self::new_internal(&gpu.device, gpu.config.format)
+    }
+
+    fn new_internal(device: &wgpu::Device, surface_format: wgpu::TextureFormat) -> Self {
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("geom_shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shaders/geom.wgsl").into()),
         });
 
         let camera_bgl =
-            gpu.device
+            device
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     label: Some("geom_camera_bind_group_layout"),
                     entries: &[wgpu::BindGroupLayoutEntry {
@@ -89,7 +98,7 @@ impl GeometryBatch {
                 });
 
         let pipeline_layout =
-            gpu.device
+            device
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("geom_pipeline_layout"),
                     bind_group_layouts: &[&camera_bgl],
@@ -115,7 +124,7 @@ impl GeometryBatch {
             ],
         };
 
-        let pipeline = gpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("geom_pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
@@ -128,7 +137,7 @@ impl GeometryBatch {
                 module: &shader,
                 entry_point: Some("fs_main"),
                 targets: &[Some(wgpu::ColorTargetState {
-                    format: gpu.config.format,
+                    format: surface_format,
                     blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
@@ -215,7 +224,7 @@ impl GeometryBatch {
     /// Does NOT clear the render target (uses LoadOp::Load to layer over sprites).
     pub fn flush(
         &mut self,
-        gpu: &GpuContext,
+        device: &wgpu::Device,
         encoder: &mut wgpu::CommandEncoder,
         target: &wgpu::TextureView,
         camera_bind_group: &wgpu::BindGroup,
@@ -224,7 +233,7 @@ impl GeometryBatch {
             return;
         }
 
-        let vertex_buffer = gpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("geom_vertex_buffer"),
             contents: bytemuck::cast_slice(&self.vertices),
             usage: wgpu::BufferUsages::VERTEX,
@@ -263,7 +272,7 @@ impl GeometryBatch {
     ///                 `None` → `LoadOp::Load` (subsequent passes).
     pub fn flush_commands(
         &mut self,
-        gpu: &GpuContext,
+        device: &wgpu::Device,
         encoder: &mut wgpu::CommandEncoder,
         target: &wgpu::TextureView,
         camera_bind_group: &wgpu::BindGroup,
@@ -317,7 +326,7 @@ impl GeometryBatch {
             return;
         }
 
-        let vertex_buffer = gpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("geom_vertex_buffer"),
             contents: bytemuck::cast_slice(&verts),
             usage: wgpu::BufferUsages::VERTEX,

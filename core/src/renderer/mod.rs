@@ -11,6 +11,8 @@ pub mod postprocess;
 pub mod radiance;
 pub mod geometry;
 pub mod rendertarget;
+// Test harness is always public for integration tests
+pub mod test_harness;
 
 pub use gpu::GpuContext;
 pub use sprite::{SpriteCommand, SpritePipeline};
@@ -176,7 +178,7 @@ impl Renderer {
         let schedule = build_render_schedule(&self.frame_commands, &self.geo_commands);
 
         // Flush dirty custom shader uniforms
-        self.shaders.flush(&self.gpu);
+        self.shaders.flush(&self.gpu.queue);
 
         let lighting_uniform = self.lighting.to_uniform();
         let clear_color = wgpu::Color {
@@ -187,7 +189,7 @@ impl Renderer {
         };
 
         // Write camera + lighting uniforms once for the whole frame
-        self.sprites.prepare(&self.gpu, &self.camera, &lighting_uniform);
+        self.sprites.prepare(&self.gpu.device, &self.gpu.queue, &self.camera, &lighting_uniform);
 
         // Run radiance cascade GI compute pass (if enabled)
         let gi_active = self.radiance.compute(
@@ -210,7 +212,7 @@ impl Renderer {
                 if schedule.is_empty() {
                     // No commands at all — still need to clear
                     self.sprites.render(
-                        &self.gpu, &self.textures, &self.shaders,
+                        &self.gpu.device, &self.gpu.queue, &self.textures, &self.shaders,
                         &[], sprite_target, &mut encoder, Some(clear_color),
                     );
                 } else {
@@ -221,14 +223,14 @@ impl Renderer {
                         match op {
                             RenderOp::Sprites { start, end } => {
                                 self.sprites.render(
-                                    &self.gpu, &self.textures, &self.shaders,
+                                    &self.gpu.device, &self.gpu.queue, &self.textures, &self.shaders,
                                     &self.frame_commands[*start..*end],
                                     sprite_target, &mut encoder, cc,
                                 );
                             }
                             RenderOp::Geometry { start, end } => {
                                 self.geometry.flush_commands(
-                                    &self.gpu, &mut encoder, sprite_target,
+                                    &self.gpu.device, &mut encoder, sprite_target,
                                     camera_bg, &self.geo_commands[*start..*end], cc,
                                 );
                             }
@@ -249,7 +251,7 @@ impl Renderer {
             if schedule.is_empty() {
                 // No commands at all — still need to clear
                 self.sprites.render(
-                    &self.gpu, &self.textures, &self.shaders,
+                    &self.gpu.device, &self.gpu.queue, &self.textures, &self.shaders,
                     &[], &view, &mut encoder, Some(clear_color),
                 );
             } else {
@@ -260,14 +262,14 @@ impl Renderer {
                     match op {
                         RenderOp::Sprites { start, end } => {
                             self.sprites.render(
-                                &self.gpu, &self.textures, &self.shaders,
+                                &self.gpu.device, &self.gpu.queue, &self.textures, &self.shaders,
                                 &self.frame_commands[*start..*end],
                                 &view, &mut encoder, cc,
                             );
                         }
                         RenderOp::Geometry { start, end } => {
                             self.geometry.flush_commands(
-                                &self.gpu, &mut encoder, &view,
+                                &self.gpu.device, &mut encoder, &view,
                                 camera_bg, &self.geo_commands[*start..*end], cc,
                             );
                         }
@@ -309,10 +311,10 @@ impl Renderer {
     /// Allocate a new off-screen render target and register it as a samplable texture.
     pub fn create_render_target(&mut self, id: u32, width: u32, height: u32) {
         let surface_format = self.gpu.config.format;
-        self.render_targets.create(&self.gpu, id, width, height, surface_format);
+        self.render_targets.create(&self.gpu.device, id, width, height, surface_format);
         if let Some(view) = self.render_targets.get_view(id) {
             self.textures.register_render_target(
-                &self.gpu,
+                &self.gpu.device,
                 &self.sprites.texture_bind_group_layout,
                 id,
                 view,
@@ -365,9 +367,10 @@ impl Renderer {
                     viewport_size: [tw as f32, th as f32],
                     ..Camera2D::default()
                 };
-                self.sprites.prepare(&self.gpu, &target_camera, &lighting_uniform);
+                self.sprites.prepare(&self.gpu.device, &self.gpu.queue, &target_camera, &lighting_uniform);
                 self.sprites.render(
-                    &self.gpu,
+                    &self.gpu.device,
+                    &self.gpu.queue,
                     &self.textures,
                     &self.shaders,
                     &cmds,

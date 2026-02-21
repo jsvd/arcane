@@ -135,8 +135,26 @@ pub struct SpritePipeline {
 }
 
 impl SpritePipeline {
+    /// Create a sprite pipeline for headless testing.
+    /// Takes raw GPU components instead of GpuContext (which requires a surface).
+    pub fn new_headless(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        format: wgpu::TextureFormat,
+    ) -> Self {
+        Self::new_internal(device, queue, format)
+    }
+
     pub fn new(gpu: &GpuContext) -> Self {
-        let shader = gpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        Self::new_internal(&gpu.device, &gpu.queue, gpu.config.format)
+    }
+
+    fn new_internal(
+        device: &wgpu::Device,
+        _queue: &wgpu::Queue,
+        surface_format: wgpu::TextureFormat,
+    ) -> Self {
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("sprite_shader"),
             source: wgpu::ShaderSource::Wgsl(
                 include_str!("shaders/sprite.wgsl").into(),
@@ -145,7 +163,7 @@ impl SpritePipeline {
 
         // Camera uniform bind group layout (group 0)
         let camera_bind_group_layout =
-            gpu.device
+            device
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     label: Some("camera_bind_group_layout"),
                     entries: &[wgpu::BindGroupLayoutEntry {
@@ -162,7 +180,7 @@ impl SpritePipeline {
 
         // Texture bind group layout (group 1)
         let texture_bind_group_layout =
-            gpu.device
+            device
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     label: Some("texture_bind_group_layout"),
                     entries: &[
@@ -187,7 +205,7 @@ impl SpritePipeline {
 
         // Lighting uniform bind group layout (group 2)
         let lighting_bind_group_layout =
-            gpu.device
+            device
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     label: Some("lighting_bind_group_layout"),
                     entries: &[wgpu::BindGroupLayoutEntry {
@@ -203,7 +221,7 @@ impl SpritePipeline {
                 });
 
         let pipeline_layout =
-            gpu.device
+            device
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("sprite_pipeline_layout"),
                     bind_group_layouts: &[
@@ -273,7 +291,7 @@ impl SpritePipeline {
         let blend_names = ["alpha", "additive", "multiply", "screen"];
         let pipelines: Vec<wgpu::RenderPipeline> = (0..4u8)
             .map(|mode| {
-                gpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                     label: Some(&format!("sprite_pipeline_{}", blend_names[mode as usize])),
                     layout: Some(&pipeline_layout),
                     vertex: wgpu::VertexState {
@@ -286,7 +304,7 @@ impl SpritePipeline {
                         module: &shader,
                         entry_point: Some("fs_main"),
                         targets: &[Some(wgpu::ColorTargetState {
-                            format: gpu.config.format,
+                            format: surface_format,
                             blend: Some(blend_state_for(mode)),
                             write_mask: wgpu::ColorWrites::ALL,
                         })],
@@ -311,13 +329,13 @@ impl SpritePipeline {
 
         let pipelines: [wgpu::RenderPipeline; 4] = pipelines.try_into().unwrap();
 
-        let vertex_buffer = gpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("quad_vertex_buffer"),
             contents: bytemuck::cast_slice(QUAD_VERTICES),
             usage: wgpu::BufferUsages::VERTEX,
         });
 
-        let index_buffer = gpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("quad_index_buffer"),
             contents: bytemuck::cast_slice(QUAD_INDICES),
             usage: wgpu::BufferUsages::INDEX,
@@ -327,13 +345,13 @@ impl SpritePipeline {
             view_proj: Camera2D::default().view_proj(),
         };
 
-        let camera_buffer = gpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("camera_uniform_buffer"),
             contents: bytemuck::cast_slice(&[camera_uniform]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let camera_bind_group = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("camera_bind_group"),
             layout: &camera_bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
@@ -352,13 +370,13 @@ impl SpritePipeline {
             }; super::lighting::MAX_LIGHTS],
         };
 
-        let lighting_buffer = gpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let lighting_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("lighting_uniform_buffer"),
             contents: bytemuck::cast_slice(&[default_lighting]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let lighting_bind_group = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let lighting_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("lighting_bind_group"),
             layout: &lighting_bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
@@ -389,19 +407,21 @@ impl SpritePipeline {
     /// before any `render()` calls to avoid redundant buffer writes.
     pub fn prepare(
         &self,
-        gpu: &GpuContext,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
         camera: &Camera2D,
         lighting: &LightingUniform,
     ) {
+        let _ = device; // device not needed for buffer writes, but kept for consistency
         let camera_uniform = CameraUniform {
             view_proj: camera.view_proj(),
         };
-        gpu.queue.write_buffer(
+        queue.write_buffer(
             &self.camera_buffer,
             0,
             bytemuck::cast_slice(&[camera_uniform]),
         );
-        gpu.queue.write_buffer(
+        queue.write_buffer(
             &self.lighting_buffer,
             0,
             bytemuck::cast_slice(&[*lighting]),
@@ -415,7 +435,8 @@ impl SpritePipeline {
     ///                 `None` → `LoadOp::Load` (subsequent passes).
     pub fn render(
         &self,
-        gpu: &GpuContext,
+        device: &wgpu::Device,
+        _queue: &wgpu::Queue,
         textures: &TextureStore,
         shaders: &super::shader::ShaderStore,
         commands: &[SpriteCommand],
@@ -521,7 +542,7 @@ impl SpritePipeline {
                 .collect();
 
             let instance_buffer =
-                gpu.device
+                device
                     .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                         label: Some("sprite_instance_buffer"),
                         contents: bytemuck::cast_slice(&instances),

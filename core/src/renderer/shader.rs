@@ -59,10 +59,19 @@ pub struct ShaderStore {
 }
 
 impl ShaderStore {
+    /// Create a shader store for headless testing.
+    pub fn new_headless(device: &wgpu::Device, format: wgpu::TextureFormat) -> Self {
+        Self::new_internal(device, format)
+    }
+
     pub fn new(gpu: &GpuContext) -> Self {
+        Self::new_internal(&gpu.device, gpu.config.format)
+    }
+
+    fn new_internal(device: &wgpu::Device, surface_format: wgpu::TextureFormat) -> Self {
         // Create bind group layouts matching SpritePipeline's groups 0-2
         let camera_layout =
-            gpu.device
+            device
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     label: Some("shader_camera_layout"),
                     entries: &[wgpu::BindGroupLayoutEntry {
@@ -78,7 +87,7 @@ impl ShaderStore {
                 });
 
         let texture_layout =
-            gpu.device
+            device
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     label: Some("shader_texture_layout"),
                     entries: &[
@@ -102,7 +111,7 @@ impl ShaderStore {
                 });
 
         let lighting_layout =
-            gpu.device
+            device
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     label: Some("shader_lighting_layout"),
                     entries: &[wgpu::BindGroupLayoutEntry {
@@ -119,7 +128,7 @@ impl ShaderStore {
 
         // Group 3: custom uniform params
         let params_bind_group_layout =
-            gpu.device
+            device
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     label: Some("shader_params_layout"),
                     entries: &[wgpu::BindGroupLayoutEntry {
@@ -135,7 +144,7 @@ impl ShaderStore {
                 });
 
         let pipeline_layout =
-            gpu.device
+            device
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("custom_shader_pipeline_layout"),
                     bind_group_layouts: &[
@@ -151,7 +160,7 @@ impl ShaderStore {
             shaders: HashMap::new(),
             pipeline_layout,
             params_bind_group_layout,
-            surface_format: gpu.config.format,
+            surface_format,
         }
     }
 
@@ -159,11 +168,10 @@ impl ShaderStore {
     /// The source must contain a `@fragment fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>`.
     /// Standard declarations (camera, texture, lighting, vertex shader) are prepended automatically.
     /// Custom uniforms are available as `shader_params.values[0..15]` (vec4 array).
-    pub fn create(&mut self, gpu: &GpuContext, id: u32, _name: &str, source: &str) {
+    pub fn create(&mut self, device: &wgpu::Device, id: u32, _name: &str, source: &str) {
         let full_wgsl = build_custom_wgsl(source);
 
-        let shader_module = gpu
-            .device
+        let shader_module = device
             .create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("custom_shader"),
                 source: wgpu::ShaderSource::Wgsl(full_wgsl.into()),
@@ -224,7 +232,7 @@ impl ShaderStore {
         };
 
         let pipeline =
-            gpu.device
+            device
                 .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                     label: Some("custom_shader_pipeline"),
                     layout: Some(&self.pipeline_layout),
@@ -261,14 +269,14 @@ impl ShaderStore {
 
         // Create uniform buffer (zero-initialized)
         let uniform_buffer =
-            gpu.device
+            device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("shader_params_buffer"),
                     contents: &[0u8; UNIFORM_BUFFER_SIZE],
                     usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                 });
 
-        let uniform_bind_group = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("shader_params_bind_group"),
             layout: &self.params_bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
@@ -302,10 +310,10 @@ impl ShaderStore {
     }
 
     /// Flush dirty uniform buffers to GPU.
-    pub fn flush(&mut self, gpu: &GpuContext) {
+    pub fn flush(&mut self, queue: &wgpu::Queue) {
         for entry in self.shaders.values_mut() {
             if entry.dirty {
-                gpu.queue.write_buffer(
+                queue.write_buffer(
                     &entry.uniform_buffer,
                     0,
                     bytemuck::cast_slice(&entry.param_data),
