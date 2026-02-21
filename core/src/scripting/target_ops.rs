@@ -112,3 +112,83 @@ deno_core::extension!(
         op_destroy_render_target,
     ],
 );
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_target_state_new() {
+        let state = TargetState::new();
+        assert!(state.active_target.is_none());
+        assert!(state.create_queue.is_empty());
+        assert!(state.destroy_queue.is_empty());
+        assert!(state.target_sprite_queues.is_empty());
+    }
+
+    #[test]
+    fn test_set_active_target() {
+        let mut state = TargetState::new();
+        assert!(state.active_target.is_none());
+
+        state.active_target = Some(42);
+        assert_eq!(state.active_target, Some(42));
+
+        state.active_target = None;
+        assert!(state.active_target.is_none());
+    }
+
+    #[test]
+    fn test_create_queue() {
+        let mut state = TargetState::new();
+
+        state.create_queue.push((1, 256, 256));
+        state.create_queue.push((2, 128, 128));
+
+        assert_eq!(state.create_queue.len(), 2);
+        assert_eq!(state.create_queue[0], (1, 256, 256));
+        assert_eq!(state.create_queue[1], (2, 128, 128));
+    }
+
+    #[test]
+    fn test_destroy_queue() {
+        let mut state = TargetState::new();
+
+        state.destroy_queue.push(5);
+        state.destroy_queue.push(10);
+
+        assert_eq!(state.destroy_queue.len(), 2);
+        assert!(state.destroy_queue.contains(&5));
+        assert!(state.destroy_queue.contains(&10));
+    }
+
+    #[test]
+    fn test_target_sprite_queues() {
+        let mut state = TargetState::new();
+
+        state.target_sprite_queues.insert(1, Vec::new());
+        state.target_sprite_queues.insert(2, Vec::new());
+
+        assert!(state.target_sprite_queues.contains_key(&1));
+        assert!(state.target_sprite_queues.contains_key(&2));
+        assert!(!state.target_sprite_queues.contains_key(&3));
+
+        state.target_sprite_queues.remove(&1);
+        assert!(!state.target_sprite_queues.contains_key(&1));
+    }
+
+    #[test]
+    fn test_destroy_clears_active() {
+        let mut state = TargetState::new();
+        state.active_target = Some(5);
+
+        // Simulate destroy logic
+        state.destroy_queue.push(5);
+        state.target_sprite_queues.remove(&5);
+        if state.active_target == Some(5) {
+            state.active_target = None;
+        }
+
+        assert!(state.active_target.is_none());
+    }
+}

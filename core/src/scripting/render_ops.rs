@@ -1320,14 +1320,14 @@ pub fn op_get_msdf_font_info(state: &mut OpState, font_id: u32) -> String {
     }
 }
 
-/// Load an MSDF font from an atlas image path + metrics JSON string.
+/// Load an MSDF font from an atlas image path + metrics JSON (string or file path).
 /// Returns a JSON string: { "fontId": N, "textureId": M, "shaderId": S }
 #[deno_core::op2]
 #[string]
 pub fn op_load_msdf_font(
     state: &mut OpState,
     #[string] atlas_path: &str,
-    #[string] metrics_json: &str,
+    #[string] metrics_json_or_path: &str,
 ) -> String {
     let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
     let mut b = bridge.borrow_mut();
@@ -1350,8 +1350,30 @@ pub fn op_load_msdf_font(
         id
     };
 
+    // Determine if metrics_json_or_path is a file path or raw JSON.
+    // If it ends with .json and doesn't start with '{', treat as file path.
+    let metrics_json: String = if metrics_json_or_path.trim_start().starts_with('{') {
+        metrics_json_or_path.to_string()
+    } else {
+        // Treat as file path
+        let json_path = if std::path::Path::new(metrics_json_or_path).is_absolute() {
+            metrics_json_or_path.to_string()
+        } else {
+            b.base_dir
+                .join(metrics_json_or_path)
+                .to_string_lossy()
+                .to_string()
+        };
+        match std::fs::read_to_string(&json_path) {
+            Ok(content) => content,
+            Err(e) => {
+                return format!("{{\"error\":\"Failed to read metrics file {}: {}\"}}", json_path, e);
+            }
+        }
+    };
+
     // Parse metrics
-    let font = match crate::renderer::msdf::parse_msdf_metrics(metrics_json, tex_id) {
+    let font = match crate::renderer::msdf::parse_msdf_metrics(&metrics_json, tex_id) {
         Ok(f) => f,
         Err(e) => {
             return format!("{{\"error\":\"{}\"}}", e);

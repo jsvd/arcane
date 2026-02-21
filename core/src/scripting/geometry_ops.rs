@@ -101,3 +101,71 @@ deno_core::extension!(
         op_geo_line,
     ],
 );
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_geo_command_triangle_layer() {
+        let cmd = GeoCommand::Triangle {
+            x1: 0.0, y1: 0.0,
+            x2: 10.0, y2: 0.0,
+            x3: 5.0, y3: 10.0,
+            r: 1.0, g: 0.0, b: 0.0, a: 1.0,
+            layer: 5,
+        };
+        assert_eq!(cmd.layer(), 5);
+    }
+
+    #[test]
+    fn test_geo_command_line_layer() {
+        let cmd = GeoCommand::LineSeg {
+            x1: 0.0, y1: 0.0,
+            x2: 100.0, y2: 100.0,
+            thickness: 2.0,
+            r: 0.0, g: 1.0, b: 0.0, a: 0.5,
+            layer: 10,
+        };
+        assert_eq!(cmd.layer(), 10);
+    }
+
+    #[test]
+    fn test_geo_state_new() {
+        let state = GeoState::new();
+        assert!(state.commands.is_empty());
+    }
+
+    #[test]
+    fn test_geo_state_add_commands() {
+        let mut state = GeoState::new();
+
+        state.commands.push(GeoCommand::Triangle {
+            x1: 0.0, y1: 0.0, x2: 10.0, y2: 0.0, x3: 5.0, y3: 10.0,
+            r: 1.0, g: 1.0, b: 1.0, a: 1.0, layer: 0,
+        });
+
+        state.commands.push(GeoCommand::LineSeg {
+            x1: 0.0, y1: 0.0, x2: 50.0, y2: 50.0,
+            thickness: 3.0, r: 0.5, g: 0.5, b: 0.5, a: 1.0, layer: 1,
+        });
+
+        assert_eq!(state.commands.len(), 2);
+        assert_eq!(state.commands[0].layer(), 0);
+        assert_eq!(state.commands[1].layer(), 1);
+    }
+
+    #[test]
+    fn test_geo_state_drain() {
+        let mut state = GeoState::new();
+
+        state.commands.push(GeoCommand::Triangle {
+            x1: 0.0, y1: 0.0, x2: 10.0, y2: 0.0, x3: 5.0, y3: 10.0,
+            r: 1.0, g: 0.0, b: 0.0, a: 1.0, layer: 0,
+        });
+
+        let drained: Vec<_> = state.commands.drain(..).collect();
+        assert_eq!(drained.len(), 1);
+        assert!(state.commands.is_empty());
+    }
+}
