@@ -42,9 +42,16 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var shadow_alpha = 0.0;
 
     if (shadow_color.a > 0.0) {
-        // Compute texel size from atlas dimensions for shadow offset
+        // Convert shadow offset from screen pixels to UV space.
+        // shadow_offset is in screen pixels. To show shadow at +offset, we sample SDF at -offset.
+        // scale = screen_px_range / (2 * distance_range)
+        // 1 screen pixel = 1/scale atlas pixels = 2 * distance_range / screen_px_range atlas pixels
+        // 1 atlas pixel = 1/tex_size in UV
+        // So 1 screen pixel = 2 * distance_range / (screen_px_range * tex_size) in UV
+        let distance_range = shader_params.values[0].x;
         let tex_size = vec2<f32>(textureDimensions(t_diffuse, 0));
-        let shadow_uv = in.tex_coords + shadow_offset / tex_size;
+        let screen_to_uv = 2.0 * distance_range / (screen_px_range * tex_size);
+        let shadow_uv = in.tex_coords - shadow_offset * screen_to_uv;
         let shadow_dist = msdf_sample_distance(shadow_uv, screen_px_range);
         let softness_factor = max(shadow_softness, 1.0);
         shadow_alpha = smoothstep(-softness_factor, softness_factor, shadow_dist) * shadow_color.a;

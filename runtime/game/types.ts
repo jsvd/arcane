@@ -26,6 +26,8 @@ export type HUDTextOptions = {
   scale?: number;
   /** Draw layer. Default: 100. */
   layer?: number;
+  /** Horizontal alignment. "left" = x is left edge, "center" = x is center, "right" = x is right edge. Default: "left". */
+  align?: "left" | "center" | "right";
 };
 
 /** Options for hud.bar(). All optional with sensible defaults. */
@@ -62,6 +64,8 @@ export type HUDLabelOptions = {
   padding?: number;
   /** Draw layer. Default: 110. */
   layer?: number;
+  /** Horizontal alignment. "left" = x is left edge, "center" = x is center, "right" = x is right edge. Default: "left". */
+  align?: "left" | "center" | "right";
 };
 
 /** Options for hud.overlay(). */

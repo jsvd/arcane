@@ -650,9 +650,11 @@ function drawMSDFTextInternal(
   const shadow = options.shadow;
 
   // Compute screen pixel range for SDF rendering.
-  const glyphScreenSize = msdfFont.fontSize * scale;
-  const atlasGlyphSize = msdfFont.fontSize + 2 * msdfFont.distanceRange;
-  const screenPxRange = (glyphScreenSize / atlasGlyphSize) * msdfFont.distanceRange;
+  // The atlas stores: sd = 0.5 + signedDist / (2 * distanceRange)
+  // So signedDist = (sd - 0.5) * 2 * distanceRange (in atlas pixels)
+  // Screen distance = signedDist * scale (since each atlas pixel = scale screen pixels)
+  // Therefore screenPxRange = 2 * distanceRange * scale
+  const screenPxRange = 2 * msdfFont.distanceRange * scale;
 
   // Resolve which shader to use from the pool
   const pool = msdfFont.shaderPool.length > 0 ? msdfFont.shaderPool : [msdfFont.shaderId];

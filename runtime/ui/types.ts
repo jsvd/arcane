@@ -133,4 +133,6 @@ export type LabelOptions = {
   layer?: number;
   /** If true, x/y are screen pixels (HUD). If false, world units. Default: false. */
   screenSpace?: boolean;
+  /** Horizontal alignment. "left" = x is left edge, "center" = x is center, "right" = x is right edge. Default: "left". */
+  align?: "left" | "center" | "right";
 };

@@ -191,9 +191,10 @@ app.onFrame((ctx) => {
 
   // Victory screen
   if (current.won) {
-    hud.label(`VICTORY! ${current.moves} moves`, HUDLayout.CENTER.x - 120, HUDLayout.CENTER.y - 20, {
+    hud.label(`VICTORY! ${current.moves} moves`, vpW / 2, vpH / 2 - 20, {
       textColor: Colors.WIN,
       padding: 12,
+      align: "center",
     });
   }
 });

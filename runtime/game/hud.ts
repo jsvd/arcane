@@ -40,6 +40,7 @@ export const hud = {
       tint: opts?.tint ?? { r: 1, g: 1, b: 1, a: 1 },
       layer: opts?.layer ?? 100,
       screenSpace: true,
+      align: opts?.align ?? "left",
     });
   },
 
@@ -80,6 +81,7 @@ export const hud = {
       scale: opts?.scale ?? HUDLayout.TEXT_SCALE,
       layer: opts?.layer ?? 110,
       screenSpace: true,
+      align: opts?.align ?? "left",
     });
   },
 

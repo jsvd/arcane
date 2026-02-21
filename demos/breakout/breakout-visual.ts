@@ -295,41 +295,43 @@ game.onFrame((ctx) => {
 
   // --- HUD (screen space) ---
 
-  // Score
+  // Score and lives (top-left, above brick area)
   hud.text(`Score: ${state.score}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y);
-
-  // Lives bar
   hud.bar(
-    HUDLayout.TOP_LEFT.x,
-    HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT,
+    HUDLayout.TOP_LEFT.x + 120,
+    HUDLayout.TOP_LEFT.y + 4,
     state.lives / 3,
+    { width: 60 },
   );
 
-  // Bricks remaining
+  // Bricks remaining (top-right)
   const bricksLeft = state.bricks.filter((b) => b.hp > 0).length;
-  hud.text(`Bricks: ${bricksLeft}`, HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2, {
+  hud.text(`Bricks: ${bricksLeft}`, width - 120, HUDLayout.TOP_LEFT.y, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
     tint: Colors.INFO,
   });
 
-  // Phase instructions
+  // Phase instructions (bottom center)
   if (state.phase === "ready") {
-    hud.text("Press SPACE to launch", HUDLayout.TOP_LEFT.x, HUDLayout.TOP_LEFT.y + HUDLayout.LINE_HEIGHT * 2.5, {
+    hud.text("Press SPACE to launch", width / 2, height - 60, {
       scale: HUDLayout.SMALL_TEXT_SCALE,
       tint: Colors.WARNING,
+      align: "center",
     });
   }
 
   // Win/lose screens
   if (state.phase === "won") {
-    hud.label("VICTORY! Press SPACE to restart", HUDLayout.CENTER.x - 180, HUDLayout.CENTER.y - 20, {
+    hud.label("VICTORY! Press SPACE to restart", width / 2, height / 2 - 20, {
       textColor: Colors.WIN,
       padding: 12,
+      align: "center",
     });
   } else if (state.phase === "lost") {
-    hud.label("GAME OVER! Press SPACE to restart", HUDLayout.CENTER.x - 190, HUDLayout.CENTER.y - 20, {
+    hud.label("GAME OVER! Press SPACE to restart", width / 2, height / 2 - 20, {
       textColor: Colors.LOSE,
       padding: 12,
+      align: "center",
     });
   }
 });

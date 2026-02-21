@@ -132,14 +132,16 @@ game.onFrame((ctx) => {
 
   // Phase indicator
   if (state.phase === "won") {
-    hud.label("YOU WIN! Press R to restart", HUDLayout.CENTER.x - 150, HUDLayout.CENTER.y - 20, {
+    hud.label("YOU WIN! Press R to restart", vpW / 2, vpH / 2 - 20, {
       textColor: Colors.WIN,
       padding: 12,
+      align: "center",
     });
   } else if (state.phase === "dead") {
-    hud.label("GAME OVER! Press R to restart", HUDLayout.CENTER.x - 160, HUDLayout.CENTER.y - 20, {
+    hud.label("GAME OVER! Press R to restart", vpW / 2, vpH / 2 - 20, {
       textColor: Colors.LOSE,
       scale: 2,
+      align: "center",
     });
   }
 });

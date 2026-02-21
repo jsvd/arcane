@@ -296,13 +296,22 @@ export function drawLabel(
   const scale = options?.scale ?? 1;
   const layer = options?.layer ?? 90;
   const ss = options?.screenSpace ?? false;
+  const align = options?.align ?? "left";
 
   const measurement = measureText(text, { scale });
   const panelW = measurement.width + padding * 2;
   const panelH = measurement.height + padding * 2;
 
+  // Apply alignment offset
+  let panelX = x;
+  if (align === "center") {
+    panelX = x - panelW / 2;
+  } else if (align === "right") {
+    panelX = x - panelW;
+  }
+
   // Background panel
-  drawPanel(x, y, panelW, panelH, {
+  drawPanel(panelX, y, panelW, panelH, {
     fillColor: options?.bgColor ?? DARK,
     borderColor: options?.borderColor ?? GRAY,
     borderWidth: options?.borderWidth ?? 1,
@@ -311,7 +320,7 @@ export function drawLabel(
   });
 
   // Text
-  drawText(text, x + padding, y + padding, {
+  drawText(text, panelX + padding, y + padding, {
     scale,
     tint: options?.textColor ?? WHITE,
     layer: layer + 3,
