@@ -320,3 +320,167 @@ deno_core::extension!(
         op_get_emitter_sprite_data,
     ],
 );
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_emitter_config_default() {
+        let cfg = EmitterConfig::default();
+        assert_eq!(cfg.spawn_rate, 10.0);
+        assert!(cfg.lifetime_min > 0.0);
+        assert!(cfg.lifetime_max >= cfg.lifetime_min);
+        assert_eq!(cfg.alpha_start, 1.0);
+        assert_eq!(cfg.alpha_end, 0.0);
+        assert_eq!(cfg.texture_id, 0);
+    }
+
+    #[test]
+    fn test_particle_emitter_new() {
+        let cfg = EmitterConfig::default();
+        let emitter = ParticleEmitter::new(1, cfg);
+
+        assert_eq!(emitter.id, 1);
+        assert!(emitter.particles.is_empty());
+        assert_eq!(emitter.time_accumulator, 0.0);
+    }
+
+    #[test]
+    fn test_emitter_deterministic_rng() {
+        let cfg = EmitterConfig::default();
+        let mut e1 = ParticleEmitter::new(42, cfg.clone());
+        let mut e2 = ParticleEmitter::new(42, cfg);
+
+        // Same seed should produce same sequence
+        let r1_a = e1.rand();
+        let r1_b = e1.rand();
+        let r2_a = e2.rand();
+        let r2_b = e2.rand();
+
+        assert_eq!(r1_a, r2_a);
+        assert_eq!(r1_b, r2_b);
+    }
+
+    #[test]
+    fn test_emitter_different_seeds_different_rng() {
+        let cfg = EmitterConfig::default();
+        let mut e1 = ParticleEmitter::new(1, cfg.clone());
+        let mut e2 = ParticleEmitter::new(2, cfg);
+
+        // Different seeds should produce different sequences
+        let r1 = e1.rand();
+        let r2 = e2.rand();
+
+        assert_ne!(r1, r2);
+    }
+
+    #[test]
+    fn test_emitter_rand_in_range() {
+        let cfg = EmitterConfig::default();
+        let mut emitter = ParticleEmitter::new(123, cfg);
+
+        for _ in 0..100 {
+            let v = emitter.rand();
+            assert!(v >= 0.0 && v < 1.0, "rand() should be in [0, 1), got {}", v);
+        }
+    }
+
+    #[test]
+    fn test_emitter_rand_range() {
+        let cfg = EmitterConfig::default();
+        let mut emitter = ParticleEmitter::new(456, cfg);
+
+        for _ in 0..100 {
+            let v = emitter.rand_range(5.0, 10.0);
+            assert!(v >= 5.0 && v <= 10.0, "rand_range(5, 10) should be in [5, 10], got {}", v);
+        }
+    }
+
+    #[test]
+    fn test_emitter_spawns_particles() {
+        let cfg = EmitterConfig {
+            spawn_rate: 100.0, // High rate for quick spawning
+            speed_min: 0.0,    // No velocity to keep particles at spawn position
+            speed_max: 0.0,
+            ..EmitterConfig::default()
+        };
+        let mut emitter = ParticleEmitter::new(1, cfg);
+
+        assert!(emitter.particles.is_empty());
+
+        // Update for 0.1 seconds at 100 particles/sec = ~10 particles
+        emitter.update(0.1, 100.0, 200.0);
+
+        assert!(!emitter.particles.is_empty());
+        // Each spawned particle should be at the spawn position (no velocity)
+        for p in &emitter.particles {
+            assert_eq!(p.x, 100.0);
+            assert_eq!(p.y, 200.0);
+        }
+    }
+
+    #[test]
+    fn test_particle_lifetime_removal() {
+        let cfg = EmitterConfig {
+            spawn_rate: 0.0, // No spawning during update
+            lifetime_min: 0.1,
+            lifetime_max: 0.1,
+            ..EmitterConfig::default()
+        };
+        let mut emitter = ParticleEmitter::new(1, cfg);
+
+        // Manually spawn a particle
+        emitter.spawn_particle(0.0, 0.0);
+        assert_eq!(emitter.particles.len(), 1);
+
+        // Update past its lifetime
+        emitter.update(0.2, 0.0, 0.0);
+
+        assert!(emitter.particles.is_empty(), "Particle should be removed after lifetime expires");
+    }
+
+    #[test]
+    fn test_particle_state_new() {
+        let state = ParticleState::new();
+        assert!(state.emitters.is_empty());
+        assert_eq!(state.next_id, 1);
+    }
+
+    #[test]
+    fn test_particle_state_find() {
+        let mut state = ParticleState::new();
+        state.emitters.push(ParticleEmitter::new(5, EmitterConfig::default()));
+        state.emitters.push(ParticleEmitter::new(10, EmitterConfig::default()));
+
+        assert_eq!(state.find(5), Some(0));
+        assert_eq!(state.find(10), Some(1));
+        assert_eq!(state.find(999), None);
+    }
+
+    #[test]
+    fn test_sprite_data_packing() {
+        let cfg = EmitterConfig {
+            spawn_rate: 0.0,
+            texture_id: 42,
+            ..EmitterConfig::default()
+        };
+        let mut emitter = ParticleEmitter::new(1, cfg);
+        emitter.spawn_particle(100.0, 200.0);
+
+        // Simulate data packing like op_get_emitter_sprite_data does
+        let p = &emitter.particles[0];
+        let mut floats = Vec::new();
+        floats.push(p.x);
+        floats.push(p.y);
+        floats.push(p.angle);
+        floats.push(p.scale);
+        floats.push(p.alpha);
+        floats.push(f32::from_bits(p.texture_id));
+
+        assert_eq!(floats.len(), 6);
+        assert_eq!(floats[0], 100.0); // x
+        assert_eq!(floats[1], 200.0); // y
+        assert_eq!(f32::to_bits(floats[5]), 42); // texture_id round-trips
+    }
+}
