@@ -58,6 +58,24 @@ drawSprite({ textureId: TEX, x: state.x - 10, y: state.y - 10, w: 20, h: 20, lay
 
 - `{ type: "circle", radius }` -- circle centered on body position.
 - `{ type: "aabb", halfW, halfH }` -- axis-aligned box centered on body position.
+- `{ type: "polygon", vertices }` -- convex polygon (max 8 vertices, CCW winding).
+
+```typescript
+// Convex polygon body (triangle)
+const wedge = createBody({
+  type: "dynamic",
+  shape: {
+    type: "polygon",
+    vertices: [
+      { x: 0, y: -20 },   // top
+      { x: 20, y: 20 },   // bottom-right
+      { x: -20, y: 20 },  // bottom-left
+    ],
+  },
+  x: 400, y: 300,
+  mass: 1.0,
+});
+```
 
 ## Forces & Impulses
 
@@ -74,6 +92,28 @@ const joint = createDistanceJoint(bodyA, bodyB, 50);           // fixed distance
 const hinge = createRevoluteJoint(bodyA, bodyB, pivotX, pivotY); // rotation around point
 ```
 
+## Soft Constraints
+
+Soft joints use spring-damper dynamics instead of rigid constraints. Great for ropes, bungees, and springy connections.
+
+```typescript
+import { createSoftDistanceJoint, createSoftRevoluteJoint } from "@arcane/runtime/physics";
+
+// Springy rope (30 Hz oscillation, critical damping)
+const rope = createSoftDistanceJoint(anchor, ball, 100, {
+  frequencyHz: 30,    // spring frequency (0 = rigid)
+  dampingRatio: 1.0,  // 1.0 = critical damping, <1 = bouncy
+});
+
+// Soft hinge (e.g., car suspension)
+const suspension = createSoftRevoluteJoint(chassis, wheel, pivotX, pivotY, {
+  frequencyHz: 5,
+  dampingRatio: 0.7,
+});
+```
+
+Soft contacts are the default for collisions (30 Hz, critical damping). This eliminates jitter in stacks and provides smoother physics overall.
+
 ## Collision Queries
 
 ```typescript
@@ -88,6 +128,35 @@ const bodies = queryAABB(x, y, w, h);
 // Raycast
 const hit = raycast(originX, originY, dirX, dirY, maxDist);
 ```
+
+## Contact Manifolds (Debug/Visualization)
+
+For visualizing physics contacts or building advanced collision response:
+
+```typescript
+import { getManifolds } from "@arcane/runtime/physics";
+
+// Get all active contact manifolds
+for (const manifold of getManifolds()) {
+  // manifold.bodyA, manifold.bodyB -- the colliding bodies
+  // manifold.normalX, manifold.normalY -- collision normal (A → B)
+  // manifold.points -- array of 1-2 contact points
+
+  for (const point of manifold.points) {
+    // point.localAX, localAY -- contact position in body A's local space
+    // point.localBX, localBY -- contact position in body B's local space
+    // point.penetration -- overlap depth (negative = speculative contact)
+
+    // Example: draw contact point in world space
+    const stateA = getBodyState(manifold.bodyA);
+    const worldX = stateA.x + point.localAX;
+    const worldY = stateA.y + point.localAY;
+    drawCircle({ x: worldX, y: worldY, radius: 3, color: rgb(255, 0, 0) });
+  }
+}
+```
+
+**Note:** Sleeping bodies don't generate manifolds (performance optimization). Wake a body with `applyImpulse(body, 0, 0)` if needed.
 
 ## Collision Layers
 
@@ -111,3 +180,15 @@ const enemy = createBody({
   mask: 0x0001,   // collides with player layer only
 });
 ```
+
+## Solver Architecture (TGS Soft)
+
+Arcane uses a modern **Temporal Gauss-Seidel with Soft Constraints** solver:
+
+- **2-point contact manifolds** — Sutherland-Hodgman clipping for stable stacking
+- **Soft constraints** — Spring-damper dynamics replace rigid Baumgarte stabilization
+- **Speculative contacts** — Predicts collisions before penetration (no tunneling)
+- **4 sub-steps** — 240 Hz effective physics rate for smooth simulation
+- **Warm starting** — Impulse caching for faster convergence
+
+This architecture follows modern physics engine best practices.

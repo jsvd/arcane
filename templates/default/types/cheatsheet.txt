@@ -437,7 +437,7 @@ declare function transaction<S>(state: S, mutations: readonly Mutation<S>[]): Tr
 declare function computeDiff<S>(before: S, after: S): Diff;
 
 === physics (@arcane/runtime/physics) ===
-Types: AABB,BodyDef,BodyId,BodyState,BodyType,ConstraintId,Contact,MaterialDef,PhysicsWorldOptions,RayHit,ShapeDef,
+Types: AABB,BodyDef,BodyId,BodyState,BodyType,ConstraintId,Contact,ContactManifold,ManifoldPoint,MaterialDef,PhysicsWorldOptions,RayHit,ShapeDef,
 declare function aabbOverlap(a: AABB, b: AABB): boolean;
 declare function circleAABBOverlap(cx: number, cy: number, radius: number, box: AABB): boolean;
 declare function circleAABBResolve(cx: number, cy: number, radius: number, box: AABB): { nx: number; ny: number; } | null;
@@ -455,11 +455,14 @@ declare function setCollisionLayers(id: BodyId, layer: number, mask: number): vo
 declare function setKinematicVelocity(id: BodyId, vx: number, vy: number): void;
 declare function getAllBodyStates(): (BodyState & { id: BodyId; })[];
 declare function createDistanceJoint(bodyA: BodyId, bodyB: BodyId, distance: number): ConstraintId;
+declare function createSoftDistanceJoint(bodyA: BodyId, bodyB: BodyId, distance: number, params: SoftConstraintParams): ConstraintId;
 declare function createRevoluteJoint(bodyA: BodyId, bodyB: BodyId, pivotX: number, pivotY: number): ConstraintId;
+declare function createSoftRevoluteJoint(bodyA: BodyId, bodyB: BodyId, pivotX: number, pivotY: number, params: SoftConstraintParams): ConstraintId;
 declare function removeConstraint(id: ConstraintId): void;
 declare function queryAABB(minX: number, minY: number, maxX: number, maxY: number): BodyId[];
 declare function raycast(originX: number, originY: number, dirX: number, dirY: number, maxDistance?: number): RayHit | null;
 declare function getContacts(): Contact[];
+declare function getManifolds(): ContactManifold[];
 declare function createPhysicsWorld(options?: PhysicsWorldOptions): void;
 declare function stepPhysics(dt: number): void;
 declare function destroyPhysicsWorld(): void;

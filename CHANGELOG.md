@@ -2,6 +2,38 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.14.0] - 2026-02-21
+
+### Added
+- **TGS Soft physics solver** — modern physics architecture with:
+  - **Contact manifolds** with 2-point Sutherland-Hodgman clipping for stable stacking
+  - **Soft constraints** with frequency (Hz) and damping ratio parameters
+  - **Speculative contacts** for continuous collision detection (prevents fast object tunneling)
+  - **`getManifolds()`** API exposes full contact point data for visualization
+- **`createSoftDistanceJoint()`**, **`createSoftRevoluteJoint()`** — spring-like joints with configurable frequency/damping
+- **Polygon bodies** — physics engine now supports arbitrary convex polygons
+- **Constraint position correction** — joints maintain accuracy under load
+- **Kinematic velocity** — `setKinematicVelocity()` for moving platforms
+- **Headless GPU testing** — infrastructure for renderer unit tests without display
+- **`hexVertices()`** helper — generates hex corner coordinates
+- **Screen-space sprites** — `screenSpace: true` option ignores camera transform
+- **`drawRectangle()`** — convenience shape for axis-aligned rectangles
+- **Custom MSDF fonts** — load custom fonts via `loadFont()` with bmfont-xml atlases
+
+### Changed
+- **Layer-interleaved rendering** — sprites and geometry now render in correct depth order per layer
+- **MSDF text rendering** — improved glyph crispness for bmfont-style atlases
+- **Documentation refresh** — compressed and optimized for AI agent consumption
+- **Physics playground demo** — polygon rotation, soft spring mode, contact visualization
+
+### Fixed
+- **Camera jitter** in `followTargetSmooth()` — floating-point accumulation issue
+- **Revolute joints** — now work correctly with proper anchor handling
+- **Seesaw anchor** — revolute joint pivot positioned correctly
+- **MSDF shadows** — correct shadow offset and color rendering
+- **MCP `run_tests`** — spawns subprocess instead of using agent protocol
+- **Color validation** — clear errors for invalid color values
+
 ## [0.13.3] - 2026-02-21
 
 ### Added
@@ -159,7 +191,7 @@ All notable changes to Arcane are documented here.
 ### Fixed
 - **Physics: bodies sticking together midair** — velocity clamping had an inverted sign for body A, removing separation velocity instead of approach velocity; overlapping dynamic bodies now correctly push apart
 - **Physics: collision events missed during sub-stepping** — `getContacts()` now accumulates contacts across all 4 sub-steps (de-duplicated by body pair), fixing breakout bricks not popping and similar collision callback issues
-- **Physics: bodies clipping through static ground** — sub-stepping (Box2D v3 approach: 4 sub-steps/frame) with Box2D-standard Baumgarte factor (0.2) and max correction clamping dramatically reduces penetration
+- **Physics: bodies clipping through static ground** — sub-stepping (4 sub-steps/frame) with Baumgarte factor (0.2) and max correction clamping dramatically reduces penetration
 - CI: type-check now validates per-module `types/*.d.ts` instead of removed monolithic `arcane.d.ts`
 
 ### Changed

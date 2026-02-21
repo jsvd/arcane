@@ -186,7 +186,7 @@ dependencies = [
 
 [[package]]
 name = "arcane-core"
-version = "0.13.3"
+version = "0.14.0"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -210,7 +210,7 @@ dependencies = [
 
 [[package]]
 name = "arcane-engine"
-version = "0.13.3"
+version = "0.14.0"
 dependencies = [
  "anyhow",
  "arcane-core",

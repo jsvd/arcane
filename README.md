@@ -154,7 +154,7 @@ Scaffolded projects include:
 
 ## Status
 
-**v0.13.3** — 2240 TS (Node) + 2364 (V8) + 295 Rust tests passing.
+**v0.14.0** — 2253 TS (Node) + 2377 (V8) + 338 Rust tests passing.
 
 **Next:** Phase 26 (Atmosphere). See [roadmap](docs/roadmap.md).
 
