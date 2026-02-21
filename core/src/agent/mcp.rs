@@ -232,9 +232,35 @@ fn call_tool(name: &str, arguments: &str, request_tx: &RequestSender, reload_fla
             reload_flag.store(true, Ordering::SeqCst);
             return json_encode("{\"ok\":true,\"reloading\":true}");
         }
-        "run_tests" => InspectorRequest::Simulate {
-            action: "__run_tests__".to_string(),
-        },
+        "run_tests" => {
+            // Spawn `arcane test` as a subprocess instead of going through the agent protocol.
+            // The old approach sent InspectorRequest::Simulate { action: "__run_tests__" }
+            // which required the game to register a "__run_tests__" action — no game does this.
+            let exe = std::env::current_exe().unwrap_or_else(|_| "arcane".into());
+            match std::process::Command::new(&exe)
+                .arg("test")
+                .output()
+            {
+                Ok(output) => {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    let combined = if stderr.is_empty() {
+                        stdout.to_string()
+                    } else {
+                        format!("{stdout}\n{stderr}")
+                    };
+                    let summary = if output.status.success() {
+                        format!("Tests passed.\n\n{combined}")
+                    } else {
+                        format!("Tests failed.\n\n{combined}")
+                    };
+                    return json_encode(&summary);
+                }
+                Err(e) => {
+                    return json_encode(&format!("Failed to run arcane test: {e}"));
+                }
+            }
+        }
         "rewind" => InspectorRequest::Rewind { steps: 0 },
         "simulate_action" => {
             let action_name = extract_json_string(arguments, "name").unwrap_or_default();
