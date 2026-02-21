@@ -470,12 +470,12 @@ fn test_shader_create_and_get() {
     let gpu = TestGpu::new().expect("Failed to create GPU context");
     let mut shaders = gpu.create_shader_store();
 
-    // Simple passthrough fragment shader
+    // Simple passthrough fragment shader (uses sprite.wgsl VertexOutput which has `tint`)
     let source = r#"
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let color = textureSample(t_diffuse, s_diffuse, in.tex_coords);
-    return color * in.color;
+    return color * in.tint;
 }
 "#;
 
