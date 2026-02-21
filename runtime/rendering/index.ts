@@ -21,6 +21,7 @@ export {
   setCameraDeadzone,
   getCameraDeadzone,
   followTargetSmooth,
+  followTargetWithShake,
   zoomTo,
   zoomToPoint,
 } from "./camera.ts";

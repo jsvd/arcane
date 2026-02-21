@@ -3,7 +3,7 @@
  *
  * Provides a minimal wrapper that handles common boilerplate:
  * - Auto-clearing sprites each frame
- * - Auto-centering the camera on the viewport (web-like top-left origin)
+ * - Optional auto-centering the camera on the viewport (web-like top-left origin)
  * - Setting background color
  * - Wiring up agent protocol for AI interaction
  *
@@ -19,6 +19,10 @@ import { clearSprites } from "../rendering/sprites.ts";
 import { setCamera } from "../rendering/camera.ts";
 import { getViewportSize, setBackgroundColor } from "../rendering/input.ts";
 import { registerAgent } from "../agent/protocol.ts";
+import { updateTweens } from "../tweening/tween.ts";
+import { updateParticles } from "../particles/emitter.ts";
+import { updateScreenTransition, drawScreenTransition } from "../rendering/transition.ts";
+import { drawScreenFlash } from "../tweening/helpers.ts";
 import type { GameConfig, GameContext, FrameCallback, GameStateConfig, Game } from "./types.ts";
 
 /**
@@ -26,7 +30,7 @@ import type { GameConfig, GameContext, FrameCallback, GameStateConfig, Game } fr
  *
  * Defaults:
  * - `autoClear: true` -- clears all sprites at the start of each frame.
- * - `autoCamera: true` -- on the first frame, sets the camera so (0,0) is top-left.
+ * - `autoCamera: true` -- on the first frame, sets camera so (0,0) is top-left. Set false when using followTargetSmooth.
  * - `zoom: 1` -- default zoom level.
  *
  * If `background` is provided (0.0-1.0 RGB), calls setBackgroundColor().
@@ -55,6 +59,7 @@ export function createGame(config?: GameConfig): Game {
   const cfg = config ?? {};
   const autoClear = cfg.autoClear !== false;
   const autoCamera = cfg.autoCamera !== false;
+  const autoSubsystems = cfg.autoSubsystems !== false;
   const zoom = cfg.zoom ?? 1;
   const name = cfg.name;
 
@@ -90,7 +95,18 @@ export function createGame(config?: GameConfig): Game {
           frame,
         };
 
+        if (autoSubsystems) {
+          updateTweens(dt);
+          updateParticles(dt);
+          updateScreenTransition(dt);
+        }
+
         callback(ctx);
+
+        if (autoSubsystems) {
+          drawScreenTransition();
+          drawScreenFlash();
+        }
       });
     },
 

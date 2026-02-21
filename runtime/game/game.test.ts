@@ -128,4 +128,34 @@ describe("createGame", () => {
     assert.equal(typeof game.onFrame, "function");
     assert.equal(typeof game.state, "function");
   });
+
+  it("should support autoSubsystems: true (default) without error", () => {
+    const game = createGame({ autoCamera: false, autoClear: false });
+    let called = false;
+    game.onFrame(() => { called = true; });
+    const cb = (globalThis as any).__frameCallback;
+    cb();
+    assert.ok(called, "frame callback should have been invoked with autoSubsystems");
+  });
+
+  it("should support autoSubsystems: false without error", () => {
+    const game = createGame({ autoCamera: false, autoClear: false, autoSubsystems: false });
+    let called = false;
+    game.onFrame(() => { called = true; });
+    const cb = (globalThis as any).__frameCallback;
+    cb();
+    assert.ok(called, "frame callback should have been invoked without autoSubsystems");
+  });
+
+  it("should default autoSubsystems to true", () => {
+    // Verify that createGame with no config still runs subsystem updates
+    // (they are no-ops in headless, so we just verify it doesn't crash)
+    const game = createGame({ autoCamera: false, autoClear: false });
+    let frameCount = 0;
+    game.onFrame(() => { frameCount++; });
+    const cb = (globalThis as any).__frameCallback;
+    cb();
+    cb();
+    assert.equal(frameCount, 2, "frame callback should run normally with default autoSubsystems");
+  });
 });

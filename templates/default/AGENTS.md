@@ -89,26 +89,19 @@ Examples by complexity:
 
 ```typescript
 import { createGame, drawColorSprite, hud } from "@arcane/runtime/game";
-import { followTargetSmooth, setCameraBounds, getViewportSize, drawSprite } from "@arcane/runtime/rendering";
-import { updateTweens, shakeCamera, getCameraShakeOffset } from "@arcane/runtime/tweening";
+import { followTargetWithShake } from "@arcane/runtime/rendering";
+import { shakeCamera } from "@arcane/runtime/tweening";
 // Particles: prefer burstParticles()/streamParticles() for quick effects,
-// createEmitter() for fine-grained control. Both need updateParticles(dt) each frame.
-import { burstParticles, streamParticles, createEmitter, updateParticles, getAllParticles } from "@arcane/runtime/particles";
-import { createInputMap, isActionDown, isActionPressed } from "@arcane/runtime/input";
-import {
-  updateScreenTransition, drawScreenTransition,
-} from "@arcane/runtime/rendering";
+// createEmitter() for fine-grained control.
+import { burstParticles, streamParticles, createEmitter, drawAllParticles } from "@arcane/runtime/particles";
+import { createInputMap, isActionDown, isActionPressed, WASD_ARROWS } from "@arcane/runtime/input";
 import { rgb } from "@arcane/runtime/ui";
 
 const SPEED = 200;
 const game = createGame({ name: "my-game", zoom: 1.0 });
 
-// Input actions — supports keyboard + gamepad + touch in one place
-const input = createInputMap({
-  left:  ["ArrowLeft", "a", { type: "gamepadAxis", axis: "LeftStickX", direction: -1 }],
-  right: ["ArrowRight", "d", { type: "gamepadAxis", axis: "LeftStickX", direction: 1 }],
-  jump:  ["Space", "ArrowUp", "w", "GamepadA"],
-});
+// Input actions — WASD_ARROWS preset gives left/right/up/down/action with keyboard+gamepad
+const input = createInputMap(WASD_ARROWS);
 
 let state = { x: 100, y: 100, score: 0 };
 
@@ -123,41 +116,29 @@ game.onFrame((ctx) => {
   // 2. Update
   state = { ...state, x: state.x + dx * SPEED * ctx.dt };
 
-  // 3. Camera — smooth follow with shake support
-  const shake = getCameraShakeOffset();
-  followTargetSmooth(state.x + shake.x, state.y + shake.y, 2.0, 0.08);
+  // 3. Camera — smooth follow (auto-reads shake offset)
+  followTargetWithShake(state.x, state.y, 2.0, 0.08);
 
-  // 4. Update subsystems — ALWAYS call these (no-ops when idle)
-  updateTweens(ctx.dt);
-  updateParticles(ctx.dt);
-  updateScreenTransition(ctx.dt);
-
-  // 5. Render — no clearSprites() needed (autoClear: true by default)
+  // 4. Render — no clearSprites() needed (autoClear: true by default)
   drawColorSprite({ color: rgb(60, 180, 255), x: state.x - 16, y: state.y - 16, w: 32, h: 32, layer: 1 });
 
-  // 6. Render particles from engine particle system
-  for (const p of getAllParticles()) {
-    drawSprite({
-      textureId: p.textureId, x: p.x - 2, y: p.y - 2,
-      w: 4 * p.scale, h: 4 * p.scale,
-      opacity: 1 - p.age / p.lifetime,
-      blendMode: "additive", layer: 5,
-    });
-  }
+  // 5. Render all particles as circles (auto-reads particle colors/positions)
+  drawAllParticles();
 
-  // 7. Transitions overlay (no-op if inactive)
-  drawScreenTransition();
-
-  // 8. HUD — hud.text/bar/label are screen-space by default
+  // 6. HUD — hud.text/bar/label are screen-space by default
   hud.text(`Score: ${state.score}`, 10, 10);
+
+  // Subsystem updates (tweens, particles, transitions, flash) are automatic
+  // via autoSubsystems (default: true). No manual calls needed.
 });
 ```
 
 **Key points:**
-- `createGame()` handles `clearSprites()`, initial camera, agent registration, and provides `ctx.dt`/`ctx.viewport`/`ctx.elapsed`/`ctx.frame`.
-- Use `createInputMap()` instead of raw `isKeyDown()` — gets you gamepad and touch for free.
-- Use `followTargetSmooth()` instead of raw `setCamera()` — smooth follow with deadzone support.
-- Always call `updateTweens(dt)`, `updateParticles(dt)`, and `updateScreenTransition(dt)` in your frame loop, even if you're not using them yet. They're no-ops when idle and ready when you need them.
+- `createGame()` handles `clearSprites()`, initial camera, agent registration, subsystem updates, and provides `ctx.dt`/`ctx.viewport`/`ctx.elapsed`/`ctx.frame`.
+- `autoSubsystems: true` (default) auto-calls `updateTweens(dt)`, `updateParticles(dt)`, `updateScreenTransition(dt)`, `drawScreenTransition()`, and `drawScreenFlash()`. No manual calls needed.
+- Use `createInputMap(WASD_ARROWS)` for standard WASD+arrows+gamepad, or spread to extend: `{ ...WASD_ARROWS, shoot: ["x"] }`.
+- Use `followTargetWithShake()` instead of manual `getCameraShakeOffset()` + `followTargetSmooth()`.
+- Use `drawAllParticles()` instead of manually looping `getAllParticles()` + `drawCircle()`.
 - Use `drawColorSprite()` for colored rectangles without pre-creating textures.
 - Use `hud.text()`/`hud.bar()`/`hud.label()` for HUD without manually passing `screenSpace: true`. Use `hud.overlay()` for full-screen effects (pause, damage flash).
 - Use `createSpriteGroup()` for multi-part characters instead of multiple manual `drawSprite()` calls.
@@ -200,10 +181,22 @@ game.onFrame((ctx) => {
 - Visible world area: `camera +/- viewport / (2 * zoom)` in each axis
 - **Viewport is not fixed** — always use `getViewportSize()`, never hardcode dimensions
 
-**Recommended pattern** — set camera so (0, 0) is top-left (web-like):
+**Which camera pattern?**
+
+| Pattern | Camera call | World (0,0) is | Best for |
+|---------|-------------|----------------|----------|
+| Centered-world (default) | `followTargetSmooth(state.x, state.y, ...)` | Screen center | Most games |
+| Web-like | `followTargetSmooth(vpW/2, vpH/2, ...)` | Top-left | Fixed-viewport |
+
+**Centered-world** (default scaffold pattern):
+```typescript
+followTargetSmooth(state.x + shake.x, state.y + shake.y, ZOOM, 0.08);
+```
+
+**Web-like** — makes (0, 0) the top-left corner:
 ```typescript
 const { width: VPW, height: VPH } = getViewportSize();
-setCamera(VPW / 2, VPH / 2);  // now (0,0) = top-left corner
+followTargetSmooth(VPW / 2 + shake.x, VPH / 2 + shake.y, ZOOM, 0.08);
 ```
 
 **Scrolling world** — smooth camera follow with bounds:
@@ -267,6 +260,12 @@ followTargetSmooth(player.x, player.y, 2.0, 0.08);
 
 **25. Using `startColor` with `burstParticles()`/`streamParticles()`** — The convenience functions take `color` (not `startColor`): `burstParticles(x, y, { color: rgb(255, 200, 50) })`. Only the lower-level `createEmitter()` uses `startColor`/`endColor`.
 
+**26. `hud.text` uses `tint:` not `color:`** — Write `hud.text("Score", 10, 10, { tint: GOLD })`. There is no `color` option; passing one silently does nothing.
+
+**27. Calling `rgb()` inside onFrame causes GC freezes** — `rgb()` allocates a new object every call. Pre-compute colors at module scope: `const WHITE = rgb(255, 255, 255);`. Use the constant inside onFrame.
+
+**28. Manual subsystem updates with createGame** — `createGame()` auto-calls `updateTweens(dt)`, `updateParticles(dt)`, `updateScreenTransition(dt)`, `drawScreenTransition()`, and `drawScreenFlash()` via `autoSubsystems: true` (default). You do NOT need to call these manually. Redundant calls are harmless but unnecessary. Only set `autoSubsystems: false` if you need custom update ordering.
+
 ## Recommended Reading by Genre
 
 Read the **Essential** guides first, then the genre-specific guides for your game type.
@@ -325,9 +324,11 @@ See [`types/cheatsheet.txt`](types/cheatsheet.txt) for every exported function a
 | `loadTexture(path)` | rendering | Load image file, returns TextureId handle |
 | `setCamera(x, y, zoom?)` | rendering | Set camera position and zoom |
 | `followTargetSmooth(x, y, zoom?, smooth?)` | rendering | Smooth camera follow with deadzone |
+| `followTargetWithShake(x, y, zoom?, smooth?)` | rendering | Smooth follow + auto camera shake offset |
 | `getViewportSize()` | rendering | Returns `{ width, height }` of viewport |
 | `isKeyDown(key)` / `isKeyPressed(key)` | rendering | Check keyboard state (held / just pressed) |
 | `createInputMap(def)` | input | Map named actions to keyboard+gamepad+touch |
+| `WASD_ARROWS` | input | Preset: WASD+arrows+gamepad sticks+action |
 | `isActionDown(action, map)` | input | Check action state (abstracts input device) |
 | `rgb(r, g, b, a?)` | ui | Create Color from 0-255 integers |
 | `drawRect(x, y, w, h, opts?)` | ui | Draw a filled rectangle (screenSpace option) |
@@ -337,6 +338,7 @@ See [`types/cheatsheet.txt`](types/cheatsheet.txt) for every exported function a
 | `updateTweens(dt)` | tweening | Advance all active tweens (call every frame) |
 | `createEmitter(config)` | particles | Create a particle emitter |
 | `updateParticles(dt)` | particles | Advance all particles (call every frame) |
+| `drawAllParticles(opts?)` | particles | Render all TS particles as circles |
 | `shakeCamera(intensity, dur, freq?)` | tweening | Trigger camera shake effect |
 
 ## Type Declarations
@@ -381,6 +383,8 @@ arcane assets download tiny-dungeon   # Download asset pack
 **IMPORTANT:** `arcane` is a native Rust binary — **never** use `npx arcane`, `node arcane`, or `npm run arcane`. It is not an npm package. Just `arcane`.
 
 **MCP / hot_reload:** If `hot_reload` returns `{"ok":false,"error":"Game window is not running..."}`, the dev server has stopped. Start it with `arcane dev src/visual.ts` and then retry.
+
+**MCP state looks empty?** Likely a TS error preventing `initGame()` from running. Check the `arcane dev` terminal for errors. Fix the TypeScript issue and hot-reload will re-run the game.
 
 File organization: see **Architecture** section above. Start with the 4 files (`config.ts`, `game.ts`, `render.ts`, `visual.ts`), split as you grow.
 

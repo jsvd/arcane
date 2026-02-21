@@ -54,3 +54,6 @@ export {
   consumeCombo,
   updateInputBuffer,
 } from "./actions.ts";
+
+// Presets
+export { WASD_ARROWS } from "./presets.ts";

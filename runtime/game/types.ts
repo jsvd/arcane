@@ -259,6 +259,16 @@ export type GameConfig = {
   autoClear?: boolean;
   /** Background color with 0.0-1.0 float components. Use rgb() to create from 0-255 values. */
   background?: { r: number; g: number; b: number };
+  /**
+   * Auto-update subsystems each frame? Default: true.
+   * When enabled, createGame() automatically calls before the user callback:
+   *   updateTweens(dt), updateParticles(dt), updateScreenTransition(dt)
+   * And after the user callback:
+   *   drawScreenTransition(), drawScreenFlash()
+   * Redundant manual calls are harmless (they're no-ops when idle).
+   * Set to false if you need full manual control over subsystem update order.
+   */
+  autoSubsystems?: boolean;
 };
 
 /** Context passed to the frame callback. */

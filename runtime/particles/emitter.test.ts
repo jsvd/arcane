@@ -14,6 +14,7 @@ import {
   setMaxTotalParticles,
   getMaxTotalParticles,
   getTotalParticleCount,
+  drawAllParticles,
 } from "./emitter.ts";
 import type { EmitterConfig } from "./types.ts";
 
@@ -505,5 +506,48 @@ describe("Global Particle Cap", () => {
 
     // Reset
     setMaxTotalParticles(10000);
+  });
+});
+
+describe("drawAllParticles", () => {
+  it("should not throw with no particles", () => {
+    clearEmitters();
+    drawAllParticles();
+  });
+
+  it("should not throw with active particles", () => {
+    clearEmitters();
+
+    const config: EmitterConfig = {
+      shape: "point",
+      x: 50,
+      y: 50,
+      mode: "burst",
+      burstCount: 5,
+      lifetime: [1, 1],
+      velocityX: [0, 0],
+      velocityY: [0, 0],
+      startColor: { r: 1, g: 0, b: 0, a: 1 },
+      endColor: { r: 1, g: 1, b: 0, a: 0 },
+      textureId: 1,
+    };
+
+    createEmitter(config);
+    updateParticles(0);
+
+    // Should draw 5 circles (no-op in headless but should not throw)
+    drawAllParticles();
+    drawAllParticles({ radius: 5 });
+    drawAllParticles({ layer: 10 });
+    drawAllParticles({ radius: 8, layer: 3 });
+
+    clearEmitters();
+  });
+
+  it("should use default radius 3 and layer 5", () => {
+    // Just verify the function signature accepts no arguments
+    clearEmitters();
+    drawAllParticles();
+    clearEmitters();
   });
 });

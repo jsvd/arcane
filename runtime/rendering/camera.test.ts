@@ -8,6 +8,7 @@ import {
   setCameraDeadzone,
   getCameraDeadzone,
   followTargetSmooth,
+  followTargetWithShake,
 } from "./camera.ts";
 
 describe("camera", () => {
@@ -106,6 +107,22 @@ describe("camera", () => {
     it("does not throw with deadzone set", () => {
       setCameraDeadzone({ width: 200, height: 150 });
       followTargetSmooth(100, 200, 1, 0.1);
+      setCameraDeadzone(null);
+    });
+  });
+
+  describe("followTargetWithShake", () => {
+    it("does not throw in headless mode", () => {
+      followTargetWithShake(100, 200, 1, 0.1);
+    });
+
+    it("accepts default parameters", () => {
+      followTargetWithShake(50, 50);
+    });
+
+    it("does not throw with deadzone set", () => {
+      setCameraDeadzone({ width: 200, height: 150 });
+      followTargetWithShake(100, 200, 2, 0.05);
       setCameraDeadzone(null);
     });
   });

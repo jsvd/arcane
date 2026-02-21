@@ -1,6 +1,7 @@
 import type { CameraState } from "./types.ts";
 import { tween } from "../tweening/tween.ts";
 import { getDeltaTime } from "./loop.ts";
+import { getCameraShakeOffset } from "../tweening/helpers.ts";
 
 const hasRenderOps =
   typeof (globalThis as any).Deno !== "undefined" &&
@@ -296,4 +297,34 @@ export function zoomToPoint(
       setCamera(finalCamX, finalCamY, targetZoom);
     },
   });
+}
+
+/**
+ * Follow a target with smooth interpolation and automatic camera shake offset.
+ * Wraps {@link followTargetSmooth} + {@link getCameraShakeOffset} into one call.
+ *
+ * Equivalent to:
+ * ```ts
+ * const shake = getCameraShakeOffset();
+ * followTargetSmooth(targetX + shake.x, targetY + shake.y, zoom, smoothness);
+ * ```
+ *
+ * @param targetX - Target X position in world units.
+ * @param targetY - Target Y position in world units.
+ * @param zoom - Zoom level. Default: 1.
+ * @param smoothness - Smoothing factor (0..1). Lower = faster follow. Default: 0.1.
+ *
+ * @example
+ * onFrame(() => {
+ *   followTargetWithShake(player.x, player.y, 2.0, 0.08);
+ * });
+ */
+export function followTargetWithShake(
+  targetX: number,
+  targetY: number,
+  zoom: number = 1,
+  smoothness: number = 0.1,
+): void {
+  const shake = getCameraShakeOffset();
+  followTargetSmooth(targetX + shake.x, targetY + shake.y, zoom, smoothness);
 }

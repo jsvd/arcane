@@ -7,30 +7,26 @@
  */
 
 import { createGame } from "@arcane/runtime/game";
-import {
-  followTargetSmooth, getViewportSize,
-  updateScreenTransition, drawScreenTransition,
-} from "@arcane/runtime/rendering";
-import { updateTweens, getCameraShakeOffset } from "@arcane/runtime/tweening";
-import { updateParticles } from "@arcane/runtime/particles";
-import { createInputMap, isActionDown, isActionPressed } from "@arcane/runtime/input";
-import { ZOOM } from "./config.ts";
+import { followTargetWithShake } from "@arcane/runtime/rendering";
+import { createInputMap, isActionDown, isActionPressed, WASD_ARROWS } from "@arcane/runtime/input";
+import { ZOOM, BG_COLOR } from "./config.ts";
 import { initGame, tick } from "./game.ts";
 import { renderWorld, renderHud } from "./render.ts";
 import type { GameState } from "./game.ts";
 
 // --- Bootstrap ---
 
-const game = createGame({ name: "{{PROJECT_NAME}}", zoom: ZOOM });
+const game = createGame({
+  name: "{{PROJECT_NAME}}",
+  zoom: ZOOM,
+  autoCamera: false,   // we drive the camera via followTargetWithShake below
+  background: BG_COLOR,
+  // autoSubsystems: true (default) — updateTweens, updateParticles,
+  // updateScreenTransition, drawScreenTransition, drawScreenFlash are automatic.
+});
 
 // Input actions — keyboard + gamepad + touch in one place
-const input = createInputMap({
-  left:   ["ArrowLeft", "a", { type: "gamepadAxis", axis: "LeftStickX", direction: -1 }],
-  right:  ["ArrowRight", "d", { type: "gamepadAxis", axis: "LeftStickX", direction: 1 }],
-  up:     ["ArrowUp", "w", { type: "gamepadAxis", axis: "LeftStickY", direction: -1 }],
-  down:   ["ArrowDown", "s", { type: "gamepadAxis", axis: "LeftStickY", direction: 1 }],
-  action: ["Space", "Enter", "GamepadA"],
-});
+const input = createInputMap(WASD_ARROWS);
 
 // --- State ---
 
@@ -51,22 +47,14 @@ game.onFrame((ctx) => {
   // 2. Update game logic (pure functions from game.ts)
   state = tick(state, ctx.dt);
 
-  // 3. Camera — smooth follow with shake support
+  // 3. Camera — smooth follow with shake (auto-reads getCameraShakeOffset)
   //    For scrolling worlds: setCameraBounds({ minX: 0, minY: 0, maxX: WORLD_W, maxY: WORLD_H });
-  const { width: vpW, height: vpH } = getViewportSize();
-  const shake = getCameraShakeOffset();
-  followTargetSmooth(vpW / 2 + shake.x, vpH / 2 + shake.y, ZOOM, 0.08);
+  followTargetWithShake(state.x, state.y, ZOOM, 0.08);
 
-  // 4. Subsystem updates — always call, they're no-ops when idle
-  updateTweens(ctx.dt);
-  updateParticles(ctx.dt);
-  updateScreenTransition(ctx.dt);
-  //    If using floating text: updateFloatingTexts(ctx.dt); drawFloatingTexts();
-
-  // 5. Render — delegates to render.ts
-  renderWorld(state, vpW, vpH);
+  // 4. Render — delegates to render.ts
+  renderWorld(state, ctx.viewport.width, ctx.viewport.height);
   renderHud(state);
 
-  // 6. Transitions — no-op if inactive
-  drawScreenTransition();
+  // Subsystem updates (tweens, particles, transitions, flash) are automatic
+  // via autoSubsystems. No manual calls needed.
 });

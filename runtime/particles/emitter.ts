@@ -15,6 +15,7 @@ import type {
 import { createSolidTexture } from "../rendering/texture.ts";
 import { drawSprite as _drawSprite } from "../rendering/sprites.ts";
 import { lerpColorInto } from "../ui/colors.ts";
+import { drawCircle } from "../ui/shapes.ts";
 
 /** Lazily-created default 1x1 white texture for particles. */
 let _defaultParticleTexture: number | undefined;
@@ -688,6 +689,29 @@ export function setRustEmitterPosition(id: number, x: number, y: number): void {
   if (pos) {
     pos.x = x;
     pos.y = y;
+  }
+}
+
+/**
+ * Draw all alive TS particles as filled circles.
+ * This is the common rendering pattern every game writes manually:
+ *
+ * ```ts
+ * for (const p of getAllParticles()) {
+ *   drawCircle(p.x, p.y, radius, { color: p.color, layer });
+ * }
+ * ```
+ *
+ * @param options - Optional radius and layer overrides.
+ * @param options.radius - Circle radius for each particle. Default: 3.
+ * @param options.layer - Draw layer. Default: 5.
+ */
+export function drawAllParticles(options?: { radius?: number; layer?: number }): void {
+  const radius = options?.radius ?? 3;
+  const layer = options?.layer ?? 5;
+  const particles = getAllParticles();
+  for (const p of particles) {
+    drawCircle(p.x, p.y, radius * p.scale, { color: p.color, layer });
   }
 }
 

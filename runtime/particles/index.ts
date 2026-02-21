@@ -34,6 +34,7 @@ export {
   destroyRustEmitter,
   updateAllRustEmitters,
   setRustEmitterPosition,
+  drawAllParticles,
 } from "./emitter.ts";
 export type { RustEmitterConfig } from "./emitter.ts";
 
