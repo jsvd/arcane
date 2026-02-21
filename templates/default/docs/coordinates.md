@@ -1,5 +1,23 @@
 # Coordinates, Camera & Viewport
 
+## Which Camera Pattern?
+
+| Pattern | Camera call | World (0,0) is | Best for |
+|---------|-------------|----------------|----------|
+| Centered-world (default) | `followTargetSmooth(state.x, state.y, ...)` | Screen center | Most games |
+| Web-like | `followTargetSmooth(vpW/2, vpH/2, ...)` | Top-left | Fixed-viewport |
+
+**Centered-world** — objects at (0,0) appear at screen center. The scaffold default:
+```typescript
+followTargetSmooth(state.x + shake.x, state.y + shake.y, ZOOM, 0.08);
+```
+
+**Web-like** — shifts the camera so (0,0) is the top-left corner:
+```typescript
+const { width: VPW, height: VPH } = getViewportSize();
+followTargetSmooth(VPW / 2, VPH / 2, ZOOM, 0.08);
+```
+
 ## Camera Basics
 
 The camera defines what part of the world is visible. By default it is at `(0, 0)` which is the **center** of the screen. This is not a web canvas.
@@ -7,12 +25,12 @@ The camera defines what part of the world is visible. By default it is at `(0, 0
 ```typescript
 import { setCamera, getCamera, getViewportSize } from "@arcane/runtime/rendering";
 
-// Make (0, 0) the top-left corner (web-like)
+// Follow a player character (centered-world)
+setCamera(player.x, player.y, 2.0);  // 2x zoom
+
+// Alternative: make (0, 0) the top-left corner (web-like)
 const { width: VPW, height: VPH } = getViewportSize();
 setCamera(VPW / 2, VPH / 2);
-
-// Follow a player character
-setCamera(player.x, player.y, 2.0);  // 2x zoom
 ```
 
 Call `setCamera()` every frame. Without it, sprites at positive coordinates appear bottom-right of center.

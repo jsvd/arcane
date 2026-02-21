@@ -13,6 +13,9 @@ import { SPEED } from "./config.ts";
 
 export type GameState = {
   rng: Rng;
+  x: number;
+  y: number;
+  score: number;
   // Add your game state here
 };
 
@@ -22,12 +25,15 @@ export type GameState = {
 export function initGame(seedValue: number): GameState {
   return {
     rng: createRng(seedValue),
+    x: 0,
+    y: 0,
+    score: 0,
   };
 }
 
 /** Advance game logic by one tick. Pure function: returns new state. */
 export function tick(state: GameState, _dt: number): GameState {
   // Update your game logic here
-  // Example: state.x += SPEED * _dt;
+  // Example: return { ...state, x: state.x + SPEED * _dt };
   return state;
 }

@@ -9,5 +9,13 @@
 export const SPEED = 200;
 export const ZOOM = 1.0;
 
+// --- Colors (pre-compute at module scope — never call rgb() inside onFrame) ---
+// import { rgb } from "@arcane/runtime/ui";
+// export const PLAYER_COLOR = rgb(60, 180, 255);
+// export const ENEMY_COLOR = rgb(255, 80, 60);
+
+/** Background color (0.0-1.0 floats, not 0-255). Used in createGame({ background }). */
+export const BG_COLOR = { r: 0.08, g: 0.08, b: 0.12 };
+
 // --- Types ---
 // Move shared types here as your game grows
