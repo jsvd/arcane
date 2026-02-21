@@ -4,7 +4,38 @@ const hasPhysicsOps =
   typeof (globalThis as any).Deno !== "undefined" &&
   typeof (globalThis as any).Deno?.core?.ops?.op_create_physics_world === "function";
 
+const hasPolygonOp =
+  typeof (globalThis as any).Deno !== "undefined" &&
+  typeof (globalThis as any).Deno?.core?.ops?.op_create_polygon_body === "function";
+
 const defaultBodyState: BodyState = { x: 0, y: 0, angle: 0, vx: 0, vy: 0, angularVelocity: 0, sleeping: false };
+
+/**
+ * Generate vertices for a box polygon shape centered at origin.
+ * Use this with createBody() and shape: { type: "polygon", vertices: ... }
+ * to create physics bodies that properly rotate (unlike AABB shapes).
+ *
+ * @param halfW - Half-width of the box.
+ * @param halfH - Half-height of the box.
+ * @returns Array of [x, y] vertices in CCW order.
+ *
+ * @example
+ * const vertices = boxPolygonVertices(30, 10);
+ * const bodyId = createBody({
+ *   type: "dynamic",
+ *   shape: { type: "polygon", vertices },
+ *   x: 400, y: 200,
+ *   mass: 2.0,
+ * });
+ */
+export function boxPolygonVertices(halfW: number, halfH: number): [number, number][] {
+  return [
+    [-halfW, -halfH],
+    [halfW, -halfH],
+    [halfW, halfH],
+    [-halfW, halfH],
+  ];
+}
 
 /**
  * Create a rigid body in the physics world.
@@ -17,12 +48,34 @@ export function createBody(def: BodyDef): BodyId {
   const btMap: Record<string, number> = { static: 0, dynamic: 1, kinematic: 2 };
   const bodyTypeNum = btMap[def.type] ?? 1;
 
+  const mass = def.mass ?? 1.0;
+  const restitution = def.material?.restitution ?? 0.3;
+  const friction = def.material?.friction ?? 0.5;
+  const layer = def.layer ?? 0x0001;
+  const mask = def.mask ?? 0xFFFF;
+  const x = def.x;
+  const y = def.y;
+
+  const shape = def.shape;
+
+  // Handle polygon shapes via dedicated serde-based op
+  if (shape.type === "polygon") {
+    if (!hasPolygonOp) return 0;
+    // Flatten vertices to [x0, y0, x1, y1, ...]
+    const flatVerts: number[] = [];
+    for (const [vx, vy] of shape.vertices) {
+      flatVerts.push(vx, vy);
+    }
+    return (globalThis as any).Deno.core.ops.op_create_polygon_body(
+      bodyTypeNum, flatVerts, x, y, mass, restitution, friction, layer, mask
+    );
+  }
+
   // Map shape type to u32: 0=circle, 1=aabb
   // shape_p1/p2: circle=(radius, 0), aabb=(halfW, halfH)
   let shapeType = 0;
   let p1 = 0;
   let p2 = 0;
-  const shape = def.shape;
   if (shape.type === "circle") {
     shapeType = 0;
     p1 = shape.radius;
@@ -32,15 +85,6 @@ export function createBody(def: BodyDef): BodyId {
     p1 = shape.halfW;
     p2 = shape.halfH;
   }
-  // polygon not supported via this fast op (would need serde)
-
-  const mass = def.mass ?? 1.0;
-  const restitution = def.material?.restitution ?? 0.3;
-  const friction = def.material?.friction ?? 0.5;
-  const layer = def.layer ?? 0x0001;
-  const mask = def.mask ?? 0xFFFF;
-  const x = def.x;
-  const y = def.y;
 
   return (globalThis as any).Deno.core.ops.op_create_body(
     bodyTypeNum, shapeType, p1, p2, x, y, mass, restitution, friction, layer, mask

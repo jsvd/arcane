@@ -5,7 +5,7 @@ use super::types::{BodyType, Contact, RigidBody};
 // before the collision solver zeroes it). A threshold of 8.0 covers gravity*dt up to ~480.
 const SLEEP_VELOCITY_THRESHOLD: f32 = 8.0;
 const SLEEP_ANGULAR_THRESHOLD: f32 = 0.5;
-const SLEEP_TIME_THRESHOLD: f32 = 0.3;
+const SLEEP_TIME_THRESHOLD: f32 = 0.5;
 
 /// Island-based sleep: groups of connected dynamic bodies sleep/wake together.
 /// This prevents cascading wake in stacks where individual bodies sleep at different

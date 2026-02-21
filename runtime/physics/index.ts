@@ -32,6 +32,7 @@ export {
   setBodyPosition,
   setCollisionLayers,
   setKinematicVelocity,
+  boxPolygonVertices,
 } from "./body.ts";
 
 // Constraints / joints

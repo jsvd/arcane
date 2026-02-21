@@ -2821,3 +2821,492 @@ fn test_box_on_platform_edge_no_clipping() {
         }
     }
 }
+
+// =========================================================================
+// Constraint behavior tests — revolute joints and rope physics
+// =========================================================================
+
+/// A seesaw (plank on revolute joint) should rotate when a weight lands on one side.
+/// This tests that revolute joints allow rotation while constraining translation.
+#[test]
+fn test_revolute_joint_allows_rotation() {
+    let mut world = PhysicsWorld::new(0.0, 200.0); // Gravity down
+
+    // Static pivot point
+    let pivot_id = world.add_body(
+        BodyType::Static,
+        Shape::Circle { radius: 2.0 },
+        100.0, 100.0, 1.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Dynamic plank centered on pivot
+    let plank_id = world.add_body(
+        BodyType::Dynamic,
+        Shape::AABB { half_w: 40.0, half_h: 3.0 },
+        100.0, 100.0, 2.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Revolute joint at pivot center (plank's anchor is at its center)
+    world.add_constraint(Constraint::Revolute {
+        id: 0,
+        body_a: plank_id,
+        body_b: pivot_id,
+        anchor_a: (0.0, 0.0), // center of plank
+        anchor_b: (0.0, 0.0), // center of pivot
+    });
+
+    // Apply torque to the plank to make it spin
+    if let Some(body) = world.get_body_mut(plank_id) {
+        body.angular_velocity = 2.0; // Initial spin
+    }
+
+    // Step physics
+    for _ in 0..60 {
+        world.step(1.0 / 60.0);
+    }
+
+    let plank = world.get_body(plank_id).unwrap();
+
+    // The plank should have rotated significantly
+    assert!(
+        plank.angle.abs() > 0.5,
+        "Revolute joint should allow rotation. Plank angle: {} rad ({} deg)",
+        plank.angle, plank.angle.to_degrees()
+    );
+
+    // The plank center should still be near the pivot (constrained position)
+    let dist_from_pivot = ((plank.x - 100.0).powi(2) + (plank.y - 100.0).powi(2)).sqrt();
+    assert!(
+        dist_from_pivot < 5.0,
+        "Revolute joint should keep plank centered on pivot. Distance: {}",
+        dist_from_pivot
+    );
+}
+
+/// A rope chain (bodies connected by distance joints) should not stretch significantly
+/// when a weight is attached. Tests velocity-level constraint damping.
+#[test]
+fn test_distance_joint_rope_does_not_stretch() {
+    let mut world = PhysicsWorld::new(0.0, 200.0); // Gravity
+
+    // Static anchor at top
+    let anchor_id = world.add_body(
+        BodyType::Static,
+        Shape::Circle { radius: 3.0 },
+        100.0, 50.0, 1.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Create rope chain: 5 segments, each 20px apart
+    let segment_dist = 20.0;
+    let mut prev_id = anchor_id;
+    let mut segment_ids = vec![];
+
+    for i in 0..5 {
+        let seg_id = world.add_body(
+            BodyType::Dynamic,
+            Shape::Circle { radius: 3.0 },
+            100.0, 50.0 + (i + 1) as f32 * segment_dist,
+            0.5, // light mass
+            Material { restitution: 0.0, friction: 0.5 },
+            0xFFFF, 0xFFFF,
+        );
+        world.add_constraint(Constraint::Distance {
+            id: 0,
+            body_a: prev_id,
+            body_b: seg_id,
+            distance: segment_dist,
+            anchor_a: (0.0, 0.0),
+            anchor_b: (0.0, 0.0),
+        });
+        segment_ids.push(seg_id);
+        prev_id = seg_id;
+    }
+
+    // Let rope swing and settle for 3 seconds
+    for _ in 0..180 {
+        world.step(1.0 / 60.0);
+    }
+
+    // Check all segment distances - they should be close to target
+    let anchor = world.get_body(anchor_id).unwrap();
+    let mut prev_pos = (anchor.x, anchor.y);
+
+    for (i, &seg_id) in segment_ids.iter().enumerate() {
+        let seg = world.get_body(seg_id).unwrap();
+        let curr_pos = (seg.x, seg.y);
+        let dist = ((curr_pos.0 - prev_pos.0).powi(2) + (curr_pos.1 - prev_pos.1).powi(2)).sqrt();
+
+        // Allow 10% tolerance for constraint error
+        let max_stretch = segment_dist * 1.10;
+        assert!(
+            dist <= max_stretch,
+            "Rope segment {} stretched too much: {} (max {})",
+            i, dist, max_stretch
+        );
+        prev_pos = curr_pos;
+    }
+}
+
+/// Bodies colliding with a rope should not gain extreme velocity.
+/// This tests that constraint solving doesn't inject energy during collision.
+#[test]
+fn test_rope_collision_does_not_launch_body() {
+    let mut world = PhysicsWorld::new(0.0, 0.0); // No gravity for clean energy test
+
+    // Static anchor
+    let anchor_id = world.add_body(
+        BodyType::Static,
+        Shape::Circle { radius: 3.0 },
+        150.0, 50.0, 1.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Short rope chain
+    let segment_dist = 15.0;
+    let mut prev_id = anchor_id;
+    for i in 0..4 {
+        let seg_id = world.add_body(
+            BodyType::Dynamic,
+            Shape::Circle { radius: 4.0 },
+            150.0, 50.0 + (i + 1) as f32 * segment_dist,
+            0.5,
+            Material { restitution: 0.3, friction: 0.5 },
+            0xFFFF, 0xFFFF,
+        );
+        world.add_constraint(Constraint::Distance {
+            id: 0,
+            body_a: prev_id,
+            body_b: seg_id,
+            distance: segment_dist,
+            anchor_a: (0.0, 0.0),
+            anchor_b: (0.0, 0.0),
+        });
+        prev_id = seg_id;
+    }
+
+    // Ball approaching rope from the side
+    let ball_id = world.add_body(
+        BodyType::Dynamic,
+        Shape::Circle { radius: 8.0 },
+        50.0, 90.0, 1.0,
+        Material { restitution: 0.5, friction: 0.3 },
+        0xFFFF, 0xFFFF,
+    );
+    world.set_velocity(ball_id, 100.0, 0.0); // Moving right toward rope
+
+    let mut max_speed = 0.0f32;
+
+    // Simulate collision
+    for _ in 0..180 {
+        world.step(1.0 / 60.0);
+        let ball = world.get_body(ball_id).unwrap();
+        let speed = (ball.vx * ball.vx + ball.vy * ball.vy).sqrt();
+        max_speed = max_speed.max(speed);
+    }
+
+    // Ball should not exceed ~2x its initial speed (100) due to collision
+    // With proper constraints, it should lose energy, not gain it
+    assert!(
+        max_speed < 250.0,
+        "Ball gained too much speed after rope collision: {} (started at 100)",
+        max_speed
+    );
+}
+
+/// Test that balls hitting a chain of UNCONNECTED circles don't gain energy.
+/// This isolates contact solver behavior from constraint solver.
+#[test]
+fn test_ball_chain_collision_no_energy_gain() {
+    let mut world = PhysicsWorld::new(0.0, 0.0); // No gravity
+
+    // Create a chain of circles (no distance joints)
+    for i in 0..4 {
+        world.add_body(
+            BodyType::Dynamic,
+            Shape::Circle { radius: 4.0 },
+            150.0, 50.0 + (i + 1) as f32 * 15.0,
+            0.5,
+            Material { restitution: 0.3, friction: 0.5 },
+            0xFFFF, 0xFFFF,
+        );
+    }
+
+    // Ball approaching from the side
+    let ball_id = world.add_body(
+        BodyType::Dynamic,
+        Shape::Circle { radius: 8.0 },
+        50.0, 80.0, 1.0,
+        Material { restitution: 0.5, friction: 0.3 },
+        0xFFFF, 0xFFFF,
+    );
+    world.set_velocity(ball_id, 100.0, 0.0);
+
+    let mut max_speed = 0.0f32;
+    for _ in 0..180 {
+        world.step(1.0 / 60.0);
+        let ball = world.get_body(ball_id).unwrap();
+        let speed = (ball.vx * ball.vx + ball.vy * ball.vy).sqrt();
+        max_speed = max_speed.max(speed);
+    }
+
+    // Without constraints, ball should just bounce off and lose some energy
+    assert!(
+        max_speed < 150.0,
+        "Ball gained energy from simple collisions: {} (started at 100)",
+        max_speed
+    );
+}
+
+/// When a ball lands on one side of a seesaw, it should cause rotation
+/// and the other side should move. This tests angular momentum transfer
+/// through revolute constraints.
+#[test]
+fn test_seesaw_rotates_when_weight_lands() {
+    let mut world = PhysicsWorld::new(0.0, 300.0);
+
+    // Static pivot at center
+    let pivot_id = world.add_body(
+        BodyType::Static,
+        Shape::Circle { radius: 3.0 },
+        200.0, 150.0, 1.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Plank (seesaw board) - use Polygon shape so it can rotate
+    // (AABBs have zero inertia in this engine - they can't rotate)
+    let plank_id = world.add_body(
+        BodyType::Dynamic,
+        Shape::Polygon {
+            vertices: vec![
+                (-60.0, -4.0), (60.0, -4.0), (60.0, 4.0), (-60.0, 4.0),
+            ],
+        },
+        200.0, 150.0, 3.0,
+        Material { restitution: 0.0, friction: 0.8 },
+        0xFFFF, 0xFFFF,
+    );
+
+    // Revolute joint attaching plank to pivot
+    world.add_constraint(Constraint::Revolute {
+        id: 0,
+        body_a: plank_id,
+        body_b: pivot_id,
+        anchor_a: (0.0, 0.0),
+        anchor_b: (0.0, 0.0),
+    });
+
+    // Heavy ball dropped onto the RIGHT side of the plank
+    let ball_id = world.add_body(
+        BodyType::Dynamic,
+        Shape::Circle { radius: 10.0 },
+        250.0, 50.0, 5.0, // positioned above right side of plank
+        Material { restitution: 0.0, friction: 0.5 },
+        0xFFFF, 0xFFFF,
+    );
+
+    // Record initial angle
+    let initial_angle = world.get_body(plank_id).unwrap().angle;
+
+    // Simulate for 2 seconds
+    for _ in 0..120 {
+        world.step(1.0 / 60.0);
+    }
+
+    let plank = world.get_body(plank_id).unwrap();
+    let _ball = world.get_body(ball_id).unwrap();
+
+    // The plank should have rotated clockwise (positive angle in standard coords)
+    // when the ball lands on the right side
+    let angle_change = (plank.angle - initial_angle).abs();
+
+    assert!(
+        angle_change > 0.1, // At least ~6 degrees
+        "Seesaw should rotate when weight lands on one side. Angle change: {} rad ({} deg)",
+        angle_change, angle_change.to_degrees()
+    );
+
+    // The plank center should still be roughly at the pivot
+    let dist_from_pivot = ((plank.x - 200.0).powi(2) + (plank.y - 150.0).powi(2)).sqrt();
+    assert!(
+        dist_from_pivot < 10.0,
+        "Plank should stay centered on pivot. Distance: {}",
+        dist_from_pivot
+    );
+}
+
+/// Distance joints in a rope should dampen relative velocity, not just
+/// correct position. This tests that the constraint applies velocity impulses.
+#[test]
+fn test_distance_joint_dampens_velocity() {
+    let mut world = PhysicsWorld::new(0.0, 0.0); // No gravity for cleaner test
+
+    // Two bodies connected by distance joint
+    let body_a = world.add_body(
+        BodyType::Dynamic,
+        Shape::Circle { radius: 5.0 },
+        0.0, 0.0, 1.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+    let body_b = world.add_body(
+        BodyType::Dynamic,
+        Shape::Circle { radius: 5.0 },
+        50.0, 0.0, 1.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+    world.add_constraint(Constraint::Distance {
+        id: 0,
+        body_a,
+        body_b,
+        distance: 50.0,
+        anchor_a: (0.0, 0.0),
+        anchor_b: (0.0, 0.0),
+    });
+
+    // Give them opposite velocities (pulling apart)
+    world.set_velocity(body_a, -100.0, 0.0);
+    world.set_velocity(body_b, 100.0, 0.0);
+
+    // Step once
+    world.step(1.0 / 60.0);
+
+    // Get velocities after constraint solving
+    let a = world.get_body(body_a).unwrap();
+    let b = world.get_body(body_b).unwrap();
+
+    // The relative velocity should have been significantly reduced
+    // If constraints only correct position, velocities will still be ~100/-100
+    // If constraints handle velocity, relative velocity should be much lower
+    let rel_vx = b.vx - a.vx;
+
+    assert!(
+        rel_vx.abs() < 100.0,
+        "Distance constraint should dampen relative velocity. Got rel_vx: {} (bodies: {}, {})",
+        rel_vx, a.vx, b.vx
+    );
+}
+
+// =========================================================================
+// Polygon physics (Phase 26)
+// =========================================================================
+
+/// Polygon bodies should have non-zero inertia (unlike AABBs which have zero).
+#[test]
+fn test_polygon_inertia_is_nonzero() {
+    let vertices = vec![(-20.0, -6.0), (20.0, -6.0), (20.0, 6.0), (-20.0, 6.0)];
+    let shape = Shape::Polygon { vertices };
+    let (inv_mass, inertia, inv_inertia) =
+        compute_mass_and_inertia(&shape, 3.0, BodyType::Dynamic);
+
+    assert!(inv_mass > 0.0, "Polygon should have positive inverse mass");
+    assert!(inertia > 0.0, "Polygon should have positive inertia (unlike AABB)");
+    assert!(inv_inertia > 0.0, "Polygon should have positive inverse inertia");
+}
+
+/// A polygon seesaw plank should rotate when weight lands on one end.
+#[test]
+fn test_polygon_seesaw_rotates() {
+    let mut world = PhysicsWorld::new(0.0, 200.0); // Gravity down
+
+    // Create polygon plank (like a seesaw)
+    let plank_vertices = vec![(-40.0, -4.0), (40.0, -4.0), (40.0, 4.0), (-40.0, 4.0)];
+    let plank = world.add_body(
+        BodyType::Dynamic,
+        Shape::Polygon { vertices: plank_vertices },
+        200.0, 200.0, 3.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Create static pivot point
+    let pivot = world.add_body(
+        BodyType::Static,
+        Shape::Circle { radius: 3.0 },
+        200.0, 210.0, 1.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Revolute joint at pivot
+    world.add_constraint(Constraint::Revolute {
+        id: 0,
+        body_a: plank,
+        body_b: pivot,
+        anchor_a: (0.0, 10.0),  // 10 units below plank center
+        anchor_b: (0.0, 0.0),
+    });
+
+    // Drop a ball on the right end of the plank
+    let ball = world.add_body(
+        BodyType::Dynamic,
+        Shape::Circle { radius: 8.0 },
+        235.0, 150.0, 2.0, // x = 235 is past the right end
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    // Step for 1 second
+    for _ in 0..60 {
+        world.step(1.0 / 60.0);
+    }
+
+    let plank_body = world.get_body(plank).unwrap();
+    let angle_deg = plank_body.angle.to_degrees();
+
+    assert!(
+        angle_deg.abs() > 5.0,
+        "Polygon plank should rotate significantly when weight lands on end. Angle: {:.2}°",
+        angle_deg
+    );
+}
+
+/// Stacked polygon boxes should reach sleep state within a reasonable time.
+#[test]
+fn test_polygon_stack_reaches_sleep() {
+    let mut world = PhysicsWorld::new(0.0, 200.0);
+
+    // Ground
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 200.0, half_h: 10.0 },
+        200.0, 300.0, 1.0,
+        Material { restitution: 0.1, friction: 0.8 },
+        0xFFFF, 0xFFFF,
+    );
+
+    // Stack of polygon boxes
+    let box_vertices = vec![(-15.0, -15.0), (15.0, -15.0), (15.0, 15.0), (-15.0, 15.0)];
+    let mut bodies = vec![];
+    for i in 0..3 {
+        let y = 280.0 - 35.0 * (i as f32); // Stack upward
+        let id = world.add_body(
+            BodyType::Dynamic,
+            Shape::Polygon { vertices: box_vertices.clone() },
+            200.0, y, 1.0,
+            Material { restitution: 0.1, friction: 0.8 },
+            0xFFFF, 0xFFFF,
+        );
+        bodies.push(id);
+    }
+
+    // Step for 5 simulated seconds (extra time due to higher solver iterations)
+    for _ in 0..300 {
+        world.step(1.0 / 60.0);
+    }
+
+    // Check that at least the bottom box is sleeping (most stable)
+    let bottom_box = world.get_body(bodies[0]).unwrap();
+    assert!(
+        bottom_box.sleeping,
+        "Bottom polygon box should reach sleep after 5 seconds of settling"
+    );
+}

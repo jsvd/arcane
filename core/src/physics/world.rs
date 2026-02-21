@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use super::broadphase::SpatialHash;
-use super::constraints::solve_constraints;
+use super::constraints::{solve_constraints, solve_constraints_position};
 use super::integrate::integrate;
 use super::narrowphase::test_collision;
 use super::resolve::{initialize_contacts, resolve_contacts_position, resolve_contacts_velocity_iteration, warm_start_contacts};
@@ -46,7 +46,9 @@ impl PhysicsWorld {
             frame_contacts: Vec::new(),
             frame_contact_pairs: HashSet::new(),
             broadphase: SpatialHash::new(64.0),
-            solver_iterations: 6,
+            // Increased from 6 to 10 for better constraint convergence (ropes/chains).
+            // Box2D uses 4 velocity + 2 position with sub-stepping; we use more iterations.
+            solver_iterations: 10,
             warm_cache: HashMap::new(),
         }
     }
@@ -203,6 +205,7 @@ impl PhysicsWorld {
                 }
             }
             resolve_contacts_position(&mut self.bodies, &self.contacts, i % 2 == 1);
+            solve_constraints_position(&mut self.bodies, &self.constraints);
         }
 
         // 6. Post-correction velocity clamping: after position correction, if bodies

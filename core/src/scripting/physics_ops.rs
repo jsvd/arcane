@@ -297,6 +297,54 @@ fn op_raycast(
     }
 }
 
+/// Create a polygon body. vertices is a flat [x0, y0, x1, y1, ...] array.
+/// body_type: 0=static, 1=dynamic, 2=kinematic.
+#[deno_core::op2]
+fn op_create_polygon_body(
+    state: &mut OpState,
+    body_type: u32,
+    #[serde] vertices: Vec<f64>,
+    x: f64,
+    y: f64,
+    mass: f64,
+    restitution: f64,
+    friction: f64,
+    layer: u32,
+    mask: u32,
+) -> u32 {
+    let physics = state.borrow_mut::<Rc<RefCell<PhysicsState>>>();
+    let mut ps = physics.borrow_mut();
+    let world = match ps.0.as_mut() {
+        Some(w) => w,
+        None => return u32::MAX,
+    };
+
+    let bt = match body_type {
+        0 => BodyType::Static,
+        1 => BodyType::Dynamic,
+        2 => BodyType::Kinematic,
+        _ => return u32::MAX,
+    };
+
+    // Convert flat vertex array to Vec<(f32, f32)>
+    if vertices.len() < 6 || vertices.len() % 2 != 0 {
+        return u32::MAX; // Need at least 3 vertices (6 values)
+    }
+    let polygon_verts: Vec<(f32, f32)> = vertices
+        .chunks(2)
+        .map(|c| (c[0] as f32, c[1] as f32))
+        .collect();
+
+    let shape = Shape::Polygon { vertices: polygon_verts };
+
+    let material = Material {
+        restitution: restitution as f32,
+        friction: friction as f32,
+    };
+
+    world.add_body(bt, shape, x as f32, y as f32, mass as f32, material, layer as u16, mask as u16)
+}
+
 /// Returns flattened contacts: [bodyA, bodyB, nx, ny, penetration, contactX, contactY, ...].
 #[deno_core::op2]
 #[serde]
@@ -357,6 +405,7 @@ deno_core::extension!(
         op_destroy_physics_world,
         op_physics_step,
         op_create_body,
+        op_create_polygon_body,
         op_remove_body,
         op_get_body_state,
         op_set_body_velocity,

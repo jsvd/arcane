@@ -7,6 +7,7 @@ import {
   setCollisionLayers, setKinematicVelocity,
   createDistanceJoint, createRevoluteJoint, removeConstraint,
   queryAABB, raycast, getContacts,
+  boxPolygonVertices,
 } from "./index.ts";
 import type {
   BodyDef, BodyState, Contact, RayHit, ShapeDef, MaterialDef,
@@ -283,6 +284,76 @@ describe("Physics API", () => {
     it("ConstraintId is a number", () => {
       const id: ConstraintId = 7;
       assert.equal(typeof id, "number");
+    });
+  });
+
+  // ---- Polygon bodies ----
+  describe("polygon bodies (headless)", () => {
+    it("createBody with polygon returns 0 in headless", () => {
+      const vertices: [number, number][] = [[-10, -10], [10, -10], [10, 10], [-10, 10]];
+      const id = createBody({
+        type: "dynamic",
+        shape: { type: "polygon", vertices },
+        x: 100, y: 100,
+        mass: 1.0,
+      });
+      assert.equal(id, 0);
+    });
+
+    it("createBody with polygon triangle returns 0 in headless", () => {
+      const vertices: [number, number][] = [[0, -10], [10, 10], [-10, 10]];
+      const id = createBody({
+        type: "dynamic",
+        shape: { type: "polygon", vertices },
+        x: 50, y: 50,
+      });
+      assert.equal(id, 0);
+    });
+
+    it("createBody with polygon and all options returns 0 in headless", () => {
+      const vertices: [number, number][] = [[-5, -5], [5, -5], [5, 5], [-5, 5]];
+      const id = createBody({
+        type: "dynamic",
+        shape: { type: "polygon", vertices },
+        x: 200, y: 150,
+        mass: 3.0,
+        material: { restitution: 0.5, friction: 0.7 },
+        layer: 0x0004,
+        mask: 0x00FF,
+      });
+      assert.equal(id, 0);
+    });
+  });
+
+  // ---- boxPolygonVertices helper ----
+  describe("boxPolygonVertices helper", () => {
+    it("returns 4 vertices for a box", () => {
+      const verts = boxPolygonVertices(10, 5);
+      assert.equal(verts.length, 4);
+    });
+
+    it("returns correct vertices for a square", () => {
+      const verts = boxPolygonVertices(5, 5);
+      assert.deepEqual(verts, [[-5, -5], [5, -5], [5, 5], [-5, 5]]);
+    });
+
+    it("returns correct vertices for a wide box", () => {
+      const verts = boxPolygonVertices(20, 5);
+      assert.deepEqual(verts, [[-20, -5], [20, -5], [20, 5], [-20, 5]]);
+    });
+
+    it("returns correct vertices for a tall box", () => {
+      const verts = boxPolygonVertices(5, 20);
+      assert.deepEqual(verts, [[-5, -20], [5, -20], [5, 20], [-5, 20]]);
+    });
+
+    it("returns CCW ordered vertices", () => {
+      const verts = boxPolygonVertices(10, 10);
+      // CCW order: top-left, top-right, bottom-right, bottom-left
+      assert.deepEqual(verts[0], [-10, -10]); // top-left
+      assert.deepEqual(verts[1], [10, -10]);  // top-right
+      assert.deepEqual(verts[2], [10, 10]);   // bottom-right
+      assert.deepEqual(verts[3], [-10, 10]);  // bottom-left
     });
   });
 
