@@ -167,6 +167,25 @@ declare module "@arcane/runtime/physics" {
   } | null;
 
   /**
+   * Generate vertices for a box polygon shape centered at origin.
+   * Use this with createBody() and shape: { type: "polygon", vertices: ... }
+   * to create physics bodies that properly rotate (unlike AABB shapes).
+   *
+   * @param halfW - Half-width of the box.
+   * @param halfH - Half-height of the box.
+   * @returns Array of [x, y] vertices in CCW order.
+   *
+   * @example
+   * const vertices = boxPolygonVertices(30, 10);
+   * const bodyId = createBody({
+   *   type: "dynamic",
+   *   shape: { type: "polygon", vertices },
+   *   x: 400, y: 200,
+   *   mass: 2.0,
+   * });
+   */
+  export declare function boxPolygonVertices(halfW: number, halfH: number): [number, number][];
+  /**
    * Create a rigid body in the physics world.
    * Returns a BodyId for future reference. Returns 0 in headless mode.
    */

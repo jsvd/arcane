@@ -442,6 +442,7 @@ declare function aabbOverlap(a: AABB, b: AABB): boolean;
 declare function circleAABBOverlap(cx: number, cy: number, radius: number, box: AABB): boolean;
 declare function circleAABBResolve(cx: number, cy: number, radius: number, box: AABB): { nx: number; ny: number; } | null;
 declare function sweepCircleAABB(cx: number, cy: number, vx: number, vy: number, radius: number, box: AABB): { t: number; nx: number; ny: number; hitX: number; hitY: number; } | null;
+declare function boxPolygonVertices(halfW: number, halfH: number): [number, number][];
 declare function createBody(def: BodyDef): BodyId;
 declare function removeBody(id: BodyId): void;
 declare function getBodyState(id: BodyId): BodyState;
