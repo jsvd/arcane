@@ -55,6 +55,10 @@ export {
 // Textures
 export { loadTexture, createSolidTexture, uploadRgbaTexture, preloadAssets, isTextureLoaded, getLoadingProgress } from "./texture.ts";
 
+// Placeholder sprites (prototyping)
+export type { PlaceholderShape, PlaceholderOptions } from "./placeholder.ts";
+export { placeholder, quickPlaceholder, PLACEHOLDER_COLORS, clearPlaceholderCache, getPlaceholderCacheSize } from "./placeholder.ts";
+
 // Game loop
 export { onFrame, getDeltaTime } from "./loop.ts";
 

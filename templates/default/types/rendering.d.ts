@@ -2535,6 +2535,104 @@ declare module "@arcane/runtime/rendering" {
   export declare function drawParallaxSprite(options: ParallaxSpriteOptions): void;
 
   /**
+   * Placeholder sprite generation for rapid prototyping.
+   * Creates simple colored shapes as textures without needing real art assets.
+   *
+   * @example
+   * ```ts
+   * import { placeholder } from "@arcane/runtime/rendering";
+   *
+   * // Create semantic placeholders for your game
+   * const plant = placeholder("plant", { shape: "circle", color: [0.2, 0.8, 0.2] });
+   * const soil = placeholder("soil", { shape: "square", color: [0.4, 0.3, 0.2] });
+   * const slug = placeholder("slug", { shape: "diamond", color: [0.6, 0.5, 0.1] });
+   *
+   * // Use like any texture
+   * drawSprite({ textureId: plant, x: 100, y: 100, w: 32, h: 32 });
+   * ```
+   */
+  /** Shape type for placeholder sprites. */
+  export type PlaceholderShape = "circle" | "square" | "diamond" | "triangle" | "hexagon" | "star";
+  /** Options for placeholder sprite creation. */
+  export interface PlaceholderOptions {
+      /** Shape to render. Default: "square" */
+      shape?: PlaceholderShape;
+      /** RGB color as [r, g, b] with values 0.0-1.0. Default: [0.7, 0.7, 0.7] (gray) */
+      color?: [number, number, number];
+      /** Size in pixels (textures are square). Default: 32 */
+      size?: number;
+      /** Add a border/outline. Default: false */
+      outline?: boolean;
+      /** Border color as [r, g, b]. Default: darker version of main color */
+      outlineColor?: [number, number, number];
+  }
+  /**
+   * Create a placeholder sprite texture with a simple colored shape.
+   * Useful for prototyping before real art is available.
+   * Textures are cached by name + options, so calling with same params returns same handle.
+   *
+   * @param name - Semantic name for the placeholder (e.g., "player", "enemy", "coin").
+   * @param options - Shape, color, size configuration.
+   * @returns Texture handle for use with drawSprite().
+   *
+   * @example
+   * const playerTex = placeholder("player", { shape: "circle", color: [0.2, 0.6, 1.0] });
+   * const enemyTex = placeholder("enemy", { shape: "diamond", color: [1.0, 0.2, 0.2] });
+   * const coinTex = placeholder("coin", { shape: "circle", color: [1.0, 0.85, 0.0], size: 16 });
+   */
+  export declare function placeholder(name: string, options?: PlaceholderOptions): TextureId;
+  /**
+   * Pre-defined placeholder palettes for common game object types.
+   * Use these as starting points for prototyping.
+   */
+  export declare const PLACEHOLDER_COLORS: {
+      player: [number, number, number];
+      enemy: [number, number, number];
+      npc: [number, number, number];
+      wall: [number, number, number];
+      floor: [number, number, number];
+      water: [number, number, number];
+      grass: [number, number, number];
+      tree: [number, number, number];
+      rock: [number, number, number];
+      coin: [number, number, number];
+      gem: [number, number, number];
+      heart: [number, number, number];
+      key: [number, number, number];
+      chest: [number, number, number];
+      potion: [number, number, number];
+      bullet: [number, number, number];
+      explosion: [number, number, number];
+      magic: [number, number, number];
+      button: [number, number, number];
+      panel: [number, number, number];
+  };
+  /**
+   * Quick placeholder creation using pre-defined colors.
+   * Shorthand for common game objects.
+   *
+   * @param type - Pre-defined placeholder type (e.g., "player", "enemy", "coin").
+   * @param options - Override shape or other options.
+   * @returns Texture handle.
+   *
+   * @example
+   * const player = quickPlaceholder("player");  // Blue circle
+   * const enemy = quickPlaceholder("enemy", { shape: "diamond" });  // Red diamond
+   * const coin = quickPlaceholder("coin", { size: 16 });  // Gold circle, 16px
+   */
+  export declare function quickPlaceholder(type: keyof typeof PLACEHOLDER_COLORS, options?: Omit<PlaceholderOptions, "color">): TextureId;
+  /**
+   * Clear the placeholder texture cache.
+   * Useful for memory management or when regenerating placeholders.
+   */
+  export declare function clearPlaceholderCache(): void;
+  /**
+   * Get the number of cached placeholder textures.
+   * Useful for debugging or monitoring memory usage.
+   */
+  export declare function getPlaceholderCacheSize(): number;
+
+  /**
    * Post-processing pipeline: fullscreen effects applied after sprite rendering.
    *
    * When effects are active, sprites render to an offscreen texture, then each

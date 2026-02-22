@@ -6,7 +6,7 @@ One-liner signatures for every exported function, grouped by module.
 For full JSDoc, argument types, and examples, see the per-module .d.ts files in types/.
 
 === rendering (@arcane/runtime/rendering) ===
-Types: AnimatedTileDef,AnimationDef,AnimationFinishedCondition,AnimationId,AnimationState,AudioBus,AutotileMapping,AutotileRule,BitmapFont,BlendState,BooleanCondition,CameraBounds,CameraDeadzone,CameraState,EffectId,FSMConfig,FSMParams,FSMState,FSMStateDef,FSMTransition,FloatingTextOptions,FrameEvent,FrameEventCallback,HexConfig,HexCoord,HexOrientation,HexTile,HexTilemap,HexTilemapConfig,ImpactConfig,ImpactFlash,ImpactParticles,ImpactShake,ImpactSound,InstanceId,IsoConfig,IsoTile,IsoTilemap,IsoTilemapConfig,KeyName,LayerOptions,LayeredTilemap,MSDFFont,MSDFGlyph,MousePosition,NeighborCheck,NineSliceBorder,NineSliceOptions,OffsetType,ParallaxSpriteOptions,PlayOptions,PoolConfig,RenderTargetId,ScreenTransitionConfig,ScreenTransitionType,ShaderId,SoundId,SpatialOptions,SpriteOptions,StaggeredIsoConfig,TextAlign,TextLayoutOptions,TextMeasurement,TextOptions,TextOutline,TextShadow,TextureId,ThresholdCondition,TileProperties,TilemapId,TilemapLayer,TilemapOptions,Trail,TrailConfig,TrailPoint,TransitionCondition,TriggerCondition,Typewriter,TypewriterConfig,TypewriterDrawOptions,
+Types: AnimatedTileDef,AnimationDef,AnimationFinishedCondition,AnimationId,AnimationState,AudioBus,AutotileMapping,AutotileRule,BitmapFont,BlendState,BooleanCondition,CameraBounds,CameraDeadzone,CameraState,EffectId,FSMConfig,FSMParams,FSMState,FSMStateDef,FSMTransition,FloatingTextOptions,FrameEvent,FrameEventCallback,HexConfig,HexCoord,HexOrientation,HexTile,HexTilemap,HexTilemapConfig,ImpactConfig,ImpactFlash,ImpactParticles,ImpactShake,ImpactSound,InstanceId,IsoConfig,IsoTile,IsoTilemap,IsoTilemapConfig,KeyName,LayerOptions,LayeredTilemap,MSDFFont,MSDFGlyph,MousePosition,NeighborCheck,NineSliceBorder,NineSliceOptions,OffsetType,ParallaxSpriteOptions,PlaceholderShape,PlayOptions,PoolConfig,RenderTargetId,ScreenTransitionConfig,ScreenTransitionType,ShaderId,SoundId,SpatialOptions,SpriteOptions,StaggeredIsoConfig,TextAlign,TextLayoutOptions,TextMeasurement,TextOptions,TextOutline,TextShadow,TextureId,ThresholdCondition,TileProperties,TilemapId,TilemapLayer,TilemapOptions,Trail,TrailConfig,TrailPoint,TransitionCondition,TriggerCondition,Typewriter,TypewriterConfig,TypewriterDrawOptions,
 declare function createAnimationFSM(config: FSMConfig): FSMState;
 declare function getCurrentState(fsm: FSMState): string;
 declare function isBlending(fsm: FSMState): boolean;
@@ -190,6 +190,13 @@ declare function getDeltaTime(): number;
 declare function drawNineSlice(textureId: TextureId, x: number, y: number, w: number, h: number, options: NineSliceOptions): void;
 declare function getNineSliceSpriteCount(w: number, h: number, border: number | NineSliceBorder): number;
 declare function drawParallaxSprite(options: ParallaxSpriteOptions): void;
+declare function placeholder(name: string, options?: PlaceholderOptions): TextureId;
+-- Constants (read-only data, not function parameters) --
+declare const PLACEHOLDER_COLORS: { player: [number, number, number]; enemy: [number, number, number]; npc: [number, number, number]; wall: [number, number, number]; floor: [number, number, number]; water: [number, number, number]; grass: [number, number, number]; tree: [number, number, number]; rock: [number, number, number]; coin: [number, number, number]; gem: [number, number, number]; heart: [number, number, number]; key: [number, number, number]; chest: [number, number, number]; potion: [number, number, number]; bullet: [number, number, number]; explosion: [number, number, number]; magic: [number, number, number]; button: [number, number, number]; panel: [number, number, number]; };
+-- Functions --
+declare function quickPlaceholder(type: keyof typeof PLACEHOLDER_COLORS, options?: Omit<PlaceholderOptions, "color">): TextureId;
+declare function clearPlaceholderCache(): void;
+declare function getPlaceholderCacheSize(): number;
 declare function addPostProcessEffect(effect: "bloom" | "blur" | "vignette" | "crt"): EffectId;
 declare function setEffectParam(effectId: EffectId, index: number, x: number, y?: number, z?: number, w?: number): void;
 declare function removeEffect(effectId: EffectId): void;
