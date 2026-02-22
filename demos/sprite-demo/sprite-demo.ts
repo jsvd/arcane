@@ -74,14 +74,11 @@ try {
 // --- Animation Setup ---
 // Real sprite is 256×128 (8 frames per direction × 4 directions = 32×32 per frame)
 //
-// Spritesheet grid layout (detected by arcane assets inspect):
+// Spritesheet grid layout:
 //   Row 0: Up/North animations (frames 0-7)
 //   Row 1: Down/South animations (frames 8-15)
 //   Row 2: Left/West animations (frames 16-23)
 //   Row 3: Right/East animations (frames 24-31)
-//
-// Detected by: arcane assets inspect --json
-// Output: { "likely_grid": [8, 4], "likely_frame_count": 32 }
 //
 const FRAME_SIZE = 32;        // Size in spritesheet (32×32)
 const DISPLAY_SIZE = 96;       // Size to draw (3x bigger)
@@ -283,7 +280,7 @@ game.onFrame((ctx) => {
     tint: state.assetsLoaded ? Colors.SUCCESS : Colors.WARNING,
   });
 
-  // Show detected spritesheet grid info (what arcane assets inspect shows)
+  // Show detected spritesheet grid info
   if (state.assetsLoaded) {
     hud.text(`Grid: ${COLS} cols × ${ROWS} rows = ${COLS * ROWS} frames @ ${FRAME_SIZE}×${FRAME_SIZE} px`, 10, 35, {
       scale: 1.5,

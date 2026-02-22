@@ -269,7 +269,6 @@ arcane/
 │       ├── describe.rs      # arcane describe (text state description)
 │       ├── inspect.rs       # arcane inspect (query state paths)
 │       ├── add.rs           # arcane add (copy recipe into project)
-│       ├── assets.rs        # arcane assets (discover + download assets)
 │       ├── init.rs          # arcane init (initialize project in current dir)
 │       ├── new.rs           # arcane new (create new project directory)
 │       ├── mcp_bridge.rs    # arcane mcp (stdio MCP bridge)

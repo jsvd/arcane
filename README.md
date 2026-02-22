@@ -115,8 +115,6 @@ arcane new <name>        # Create project from template
 arcane dev [entry.ts]    # Run with hot-reload + MCP server
 arcane test              # Run all *.test.ts files
 arcane add <recipe>      # Add a recipe (turn-based-combat, inventory, etc.)
-arcane assets search     # Find free CC0 game assets
-arcane assets download   # Download and extract asset packs
 ```
 
 ## Recipes

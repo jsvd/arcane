@@ -133,7 +133,6 @@ All engine operations are available as CLI commands:
 | `arcane describe <entry.ts>` | Print text description of game state |
 | `arcane inspect <entry.ts> <path>` | Query specific state path |
 | `arcane add <recipe>` | Copy a recipe into the project (`--list` to see available) |
-| `arcane assets list/search/download/inspect` | Discover and download game assets from catalog |
 
 ### Claude Code Skills
 
@@ -263,7 +262,7 @@ At each review:
 |---|---|
 | Initial agent definitions | Project bootstrap |
 | Add agent teams guidance | Enable coordinated multi-session development |
-| Replace asset MCP server with `arcane assets` CLI | Zero-config asset discovery (ADR-014) |
+| `/sprite` and `/sound` agentic skills | Asset discovery via Asset Palace catalog |
 | MCP server: 10 tools, JSON-RPC 2.0 | Live game interaction for AI agents |
 | Snapshot-replay + property-based testing | Determinism testing, automated regression |
 | WFC procedural generation with constraints | Code-defined level generation |

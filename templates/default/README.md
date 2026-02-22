@@ -52,15 +52,12 @@ arcane dev --inspector 4321          # HTTP inspector
 
 ## Game Assets
 
-Arcane includes built-in commands for discovering and downloading free game assets:
+Use the `/sprite` and `/sound` agentic skills to find and setup game assets:
 
-```bash
-arcane assets list                    # Browse all 25 free asset packs
-arcane assets search "dungeon"        # Search by keyword
-arcane assets download tiny-dungeon   # Download and extract to ./assets/
-```
+- `/sprite knight sword attack` — finds sprite packs, downloads, generates atlas code
+- `/sound explosion impact` — finds sound packs, downloads, generates audio code
 
-All packs are from [Kenney.nl](https://kenney.nl) (CC0 public domain, no attribution required).
+Assets come from [Asset Palace](https://github.com/anthropics/asset_palace) (CC0, no attribution required).
 
 ## For LLMs
 
