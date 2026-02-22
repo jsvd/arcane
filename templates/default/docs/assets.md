@@ -1,37 +1,127 @@
 # Assets
 
-## Built-in Asset Catalog
+## Finding Assets with Skills
 
-25 free CC0 packs from Kenney.nl (sprites, tilesets, UI, audio, fonts, VFX):
+Use the built-in skills to find and setup game assets:
 
-```bash
-arcane assets list                    # Show all available packs
-arcane assets list --type audio       # Filter: audio, 2d-sprites, ui, tilesets, fonts, vfx
-arcane assets search "dungeon"        # Search by keyword (supports synonyms)
-arcane assets download tiny-dungeon   # Download and extract to ./assets/tiny-dungeon/
-arcane assets download tiny-dungeon assets/kenney  # Custom destination
-arcane assets list --json             # JSON output for programmatic use
+```
+/sprite player spaceship        # Find sprite packs with spaceships
+/sprite dungeon tiles enemies   # Find dungeon-themed sprites
+/sound explosion laser          # Find explosion and laser sound effects
+/sound background music         # Find music tracks
 ```
 
-## OpenGameArt.org (CC0)
+The skills will:
+1. Search Asset Palace for matching packs
+2. Download the pack if not already present
+3. Generate ready-to-use TypeScript code
 
-Search and download from the full OGA catalog:
+## Asset Palace
 
-```bash
-arcane assets search-oga "dungeon"              # Search for CC0 assets
-arcane assets search-oga "platformer" --type 2d  # Filter: 2d, 3d, music, sound, texture
-arcane assets info-oga dungeon-tileset           # Details about a specific asset
-arcane assets download-oga dungeon-tileset       # Download to ./assets/oga/
-arcane assets download-oga dungeon-tileset assets/custom  # Custom destination
-```
+[Asset Palace](https://github.com/anthropics/asset_palace) is a metadata catalog of CC0 game assets. It contains JSON definitions mapping sprite names to pixel coordinates and sound names to file paths.
 
-## Using Downloaded Assets
+Supported sources:
+- **Kenney.nl** — High-quality 2D assets (most common)
+- **OpenGameArt** — Community-contributed assets
+- **itch.io** — Indie game assets
+
+All assets are CC0 (public domain) — use freely in any project.
+
+## Manual Asset Setup
+
+If you prefer to set up assets manually:
+
+### Sprites with Atlas Loader
 
 ```typescript
-import { loadTexture, loadSound } from "@arcane/runtime/rendering";
+import { loadAtlasFromDef } from "@arcane/runtime/rendering";
 
-const atlas = loadTexture("assets/tiny-dungeon/Tilemap/tilemap_packed.png");
-const sfx = loadSound("assets/digital-audio/powerUp1.ogg");
+// Define sprites (coordinates from Asset Palace JSON or measured manually)
+const atlas = loadAtlasFromDef({
+  id: "my-sprites",
+  primarySheet: "spritesheet.png",
+  sheetWidth: 512,
+  sheetHeight: 512,
+  sprites: {
+    "player": { x: 0, y: 0, w: 32, h: 32 },
+    "enemy": { x: 32, y: 0, w: 32, h: 32 },
+    "coin": { x: 64, y: 0, w: 16, h: 16 },
+  },
+}, { basePath: "assets/" });
+
+// Draw sprites (centered at position)
+atlas.draw("player", { x: 100, y: 200, scale: 2 });
+atlas.draw("enemy", { x: 300, y: 200 });
+atlas.draw("coin", { x: 150, y: 180, layer: 5 });
 ```
 
-Both `loadTexture()` and `loadSound()` cache by path -- calling twice returns the same handle.
+### Individual Textures
+
+```typescript
+import { loadTexture, drawSprite } from "@arcane/runtime/rendering";
+
+const playerTex = loadTexture("assets/player.png");
+
+drawSprite({
+  textureId: playerTex,
+  x: 100, y: 200,
+  w: 32, h: 32,
+  layer: 1,
+});
+```
+
+### Sounds
+
+```typescript
+import { loadSound, playSound, playMusic } from "@arcane/runtime/rendering";
+
+const jumpSfx = loadSound("assets/sounds/jump.wav");
+const bgMusic = loadSound("assets/music/theme.ogg");
+
+playSound(jumpSfx, { volume: 0.8 });
+playMusic(bgMusic, { loop: true, volume: 0.5 });
+```
+
+## Path Resolution
+
+Asset paths are resolved relative to your entry file:
+
+```
+my-game/
+├── src/
+│   └── visual.ts      # Entry file
+├── assets/
+│   ├── sprites/
+│   └── sounds/
+```
+
+From `src/visual.ts`, use `../assets/sprites/player.png` or use absolute paths.
+
+## Caching
+
+Both `loadTexture()` and `loadSound()` cache by path. Calling them multiple times with the same path returns the same handle — no duplicate loading.
+
+```typescript
+// These return the same handle
+const tex1 = loadTexture("assets/player.png");
+const tex2 = loadTexture("assets/player.png");
+// tex1 === tex2
+```
+
+## Preloading
+
+For loading screens, preload assets and track progress:
+
+```typescript
+import { preloadAssets, getLoadingProgress, isTextureLoaded } from "@arcane/runtime/rendering";
+
+// Start preloading
+await preloadAssets([
+  "assets/player.png",
+  "assets/enemy.png",
+  "assets/tileset.png",
+]);
+
+// Or check progress during loading
+const progress = getLoadingProgress(); // 0.0 to 1.0
+```

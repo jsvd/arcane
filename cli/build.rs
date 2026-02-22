@@ -77,7 +77,7 @@ fn clean_dir(dir: &Path) {
 }
 
 /// When building from the repo, auto-sync cli/data/ from canonical sources.
-/// This ensures `cargo publish` always packages fresh templates/recipes/assets,
+/// This ensures `cargo publish` always packages fresh templates/recipes/runtime,
 /// eliminating the manual sync step that caused stale scaffolds to ship.
 fn auto_sync_data_dir(manifest_dir: &Path) {
     let repo_root = manifest_dir.join("..");
@@ -85,9 +85,8 @@ fn auto_sync_data_dir(manifest_dir: &Path) {
     // Only sync when canonical sources exist (repo checkout, not published crate)
     let templates_src = repo_root.join("templates").join("default");
     let recipes_src = repo_root.join("recipes");
-    let assets_src = repo_root.join("assets");
 
-    if !templates_src.exists() || !recipes_src.exists() || !assets_src.exists() {
+    if !templates_src.exists() || !recipes_src.exists() {
         return; // Published crate — cli/data/ already populated by cargo package
     }
 
@@ -102,9 +101,6 @@ fn auto_sync_data_dir(manifest_dir: &Path) {
 
     let recipes_dst = data_dir.join("recipes");
     copy_dir_recursive(&recipes_src, &recipes_dst, &mut dummy);
-
-    let assets_dst = data_dir.join("assets");
-    copy_dir_recursive(&assets_src, &assets_dst, &mut dummy);
 
     let runtime_src = repo_root.join("runtime");
     let runtime_dst = data_dir.join("runtime");
@@ -128,11 +124,6 @@ fn main() {
     clean_dir(&templates_dst);
     let templates_src = find_dir("templates/default");
     copy_dir_recursive(&templates_src, &templates_dst.join("default"), &mut hasher);
-
-    let assets_dst = out_dir.join("assets");
-    clean_dir(&assets_dst);
-    let assets_src = find_dir("assets");
-    copy_dir_recursive(&assets_src, &assets_dst, &mut hasher);
 
     // Embed runtime (filtered: no test files)
     let runtime_dst = out_dir.join("runtime");

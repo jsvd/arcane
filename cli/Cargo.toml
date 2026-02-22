@@ -27,8 +27,3 @@ notify-debouncer-mini = "0.5"
 image = { version = "0.25", default-features = false, features = ["png"] }
 include_dir = "0.7"
 serde = { version = "1", features = ["derive"] }
-ureq = "2"
-zip = { version = "2", default-features = false, features = ["deflate"] }
-walkdir = "2"
-scraper = "0.22"
-urlencoding = "2"

@@ -1,5 +1,7 @@
 # Audio
 
+> **Tip:** Use `/sound explosion laser` to find and download sound packs from Asset Palace. The skill generates ready-to-use code.
+
 ## Loading & Playing Sounds
 
 ```typescript

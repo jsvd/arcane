@@ -511,6 +511,175 @@ declare module "@arcane/runtime/rendering" {
   export declare function stopAnimation(anim: AnimationState): AnimationState;
 
   /**
+   * Sprite Atlas - Load Asset Palace JSON definitions and draw sprites by name.
+   * Handles UV normalization automatically.
+   */
+  /** Static sprite definition (pixel coordinates). */
+  export type StaticSpriteDef = {
+      x: number;
+      y: number;
+      w?: number;
+      h?: number;
+      file?: string;
+  };
+  /** Animated sprite definition (multiple frames). */
+  export type AnimatedSpriteDef = {
+      frames: Array<{
+          x: number;
+          y: number;
+          w?: number;
+          h?: number;
+      }>;
+      fps?: number;
+      loop?: boolean;
+      file?: string;
+  };
+  /** Either static or animated sprite. */
+  export type SpriteDef = StaticSpriteDef | AnimatedSpriteDef;
+  /** Asset Palace pack definition. */
+  export type PackDefinition = {
+      id: string;
+      name?: string;
+      source?: string;
+      license?: string;
+      downloadUrl?: string;
+      primarySheet: string;
+      tileSize?: number;
+      /** Sheet dimensions in pixels (required for UV normalization). */
+      sheetWidth: number;
+      sheetHeight: number;
+      sprites: Record<string, SpriteDef>;
+      tags?: Record<string, string[]>;
+  };
+  /** Options for loading an atlas. */
+  export type LoadAtlasOptions = {
+      /** Base path to prepend to sheet paths. */
+      basePath?: string;
+  };
+  /** Options for drawing a sprite from an atlas. */
+  export type AtlasSpriteOptions = {
+      /** World X position (sprite is centered here). */
+      x: number;
+      /** World Y position (sprite is centered here). */
+      y: number;
+      /** Uniform scale (1 = original pixel size). */
+      scale?: number;
+      /** Override width (in pixels, pre-scale). */
+      w?: number;
+      /** Override height (in pixels, pre-scale). */
+      h?: number;
+      /** Draw order layer. */
+      layer?: number;
+      /** Rotation in radians. */
+      rotation?: number;
+      /** Rotation origin X (0-1). Default: 0.5. */
+      originX?: number;
+      /** Rotation origin Y (0-1). Default: 0.5. */
+      originY?: number;
+      /** Mirror horizontally. */
+      flipX?: boolean;
+      /** Mirror vertically. */
+      flipY?: boolean;
+      /** Opacity (0-1). */
+      opacity?: number;
+      /** Tint color. */
+      tint?: Color;
+      /** Blend mode. */
+      blendMode?: "alpha" | "additive" | "multiply" | "screen";
+      /** Screen-space rendering (for HUD). */
+      screenSpace?: boolean;
+      /** For animated sprites: frame index (0-based). */
+      frame?: number;
+  };
+  /** Sprite info returned by atlas.info(). */
+  export type SpriteInfo = {
+      /** Width in pixels. */
+      w: number;
+      /** Height in pixels. */
+      h: number;
+      /** Number of animation frames (1 for static sprites). */
+      frames: number;
+      /** Frames per second (for animated sprites). */
+      fps?: number;
+      /** Whether animation loops (for animated sprites). */
+      loop?: boolean;
+  };
+  /** Loaded sprite atlas with texture and normalized UVs. */
+  export type SpriteAtlas = {
+      /** Pack ID from the JSON. */
+      readonly id: string;
+      /** Loaded texture handle. */
+      readonly textureId: TextureId;
+      /** Sheet dimensions in pixels. */
+      readonly sheetWidth: number;
+      readonly sheetHeight: number;
+      /** Default tile size from pack. */
+      readonly tileSize: number;
+      /** Raw sprite definitions. */
+      readonly sprites: Record<string, SpriteDef>;
+      /** Tag index for lookup. */
+      readonly tags: Record<string, string[]>;
+      /** Get sprite names matching a tag. */
+      getByTag(tag: string): string[];
+      /** Check if a sprite exists. */
+      has(name: string): boolean;
+      /** Get sprite info (dimensions, frame count). */
+      info(name: string): SpriteInfo | null;
+      /** Build SpriteOptions for drawing (handles UV normalization). */
+      sprite(name: string, opts: AtlasSpriteOptions): SpriteOptions;
+      /** Draw a sprite directly (convenience). */
+      draw(name: string, opts: AtlasSpriteOptions): void;
+      /** Get all sprite names in this atlas. */
+      getSpriteNames(): string[];
+      /** Get all tags in this atlas. */
+      getTagNames(): string[];
+  };
+  /**
+   * Load a sprite atlas from a parsed Asset Palace definition.
+   *
+   * @param def - Pack definition object with sprite coordinates.
+   * @param options - Loading options (base path for textures).
+   * @returns Loaded atlas with sprite lookup methods.
+   *
+   * @example
+   * const atlas = loadAtlasFromDef({
+   *   id: "space-shooter",
+   *   primarySheet: "Spritesheet/sheet.png",
+   *   sheetWidth: 1024,
+   *   sheetHeight: 1024,
+   *   sprites: {
+   *     "player-ship": { x: 211, y: 941, w: 99, h: 75 },
+   *     "enemy-ufo": { x: 444, y: 0, w: 91, h: 91 },
+   *   },
+   * }, { basePath: "assets/space-shooter-redux/" });
+   *
+   * atlas.draw("player-ship", { x: 100, y: 200, scale: 0.5 });
+   */
+  export declare function loadAtlasFromDef(def: PackDefinition, options?: LoadAtlasOptions): SpriteAtlas;
+  /**
+   * Create an empty atlas builder for defining sprites programmatically.
+   * Useful when you don't have Asset Palace JSON but want the atlas API.
+   *
+   * @param textureId - Loaded texture handle.
+   * @param sheetWidth - Sheet width in pixels.
+   * @param sheetHeight - Sheet height in pixels.
+   * @returns Atlas builder with addSprite() method.
+   *
+   * @example
+   * const tex = loadTexture("my-sheet.png");
+   * const builder = createAtlasBuilder(tex, 256, 256);
+   * builder.addSprite("player", { x: 0, y: 0, w: 32, h: 32 });
+   * builder.addSprite("enemy", { x: 32, y: 0, w: 32, h: 32 });
+   * const atlas = builder.build();
+   */
+  export declare function createAtlasBuilder(textureId: TextureId, sheetWidth: number, sheetHeight: number): {
+      addSprite(name: string, def: StaticSpriteDef): void;
+      addAnimatedSprite(name: string, def: AnimatedSpriteDef): void;
+      addTag(tag: string, spriteNames: string[]): void;
+      build(id?: string): SpriteAtlas;
+  };
+
+  /**
    * Opaque handle to a loaded sound. Returned by {@link loadSound}.
    * A value of 0 means "no sound" (headless mode fallback).
    */

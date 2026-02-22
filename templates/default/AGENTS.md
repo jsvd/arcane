@@ -350,7 +350,7 @@ Read the **Essential** guides first, then the genre-specific guides for your gam
 | [docs/procgen.md](docs/procgen.md) | WFC, constraints, validation |
 | [docs/testing.md](docs/testing.md) | Harness, property testing, visual testing / draw call capture |
 | [docs/game-patterns.md](docs/game-patterns.md) | Angular movement, screen wrapping, cooldowns, entity lifecycle, platformer controller, seeded RNG |
-| [docs/assets.md](docs/assets.md) | Asset catalog, download commands, OpenGameArt.org |
+| [docs/assets.md](docs/assets.md) | Asset skills (`/sprite`, `/sound`), atlas loader, preloading |
 
 ## API Quick Reference
 
@@ -418,9 +418,20 @@ arcane describe src/visual.ts     # Text description of current game state (agen
 arcane inspect src/visual.ts "player"  # Query a specific state path
 arcane add turn-based-combat      # Copy a pre-built recipe into your project
 arcane add --list                 # List available recipes
-arcane assets search "platformer" # Find game assets to download
-arcane assets download tiny-dungeon   # Download asset pack
 ```
+
+### Asset Skills
+
+Use `/sprite` and `/sound` to find and setup game assets:
+
+```
+/sprite player spaceship          # Find sprite packs, download, generate atlas code
+/sprite dungeon tiles enemies     # Search by theme or category
+/sound explosion laser            # Find sound effects
+/sound background music loops     # Find music tracks
+```
+
+The skills search Asset Palace, download packs to `assets/`, and generate ready-to-use TypeScript code.
 
 **IMPORTANT:** `arcane` is a native Rust binary — **never** use `npx arcane`, `node arcane`, or `npm run arcane`. It is not an npm package. Just `arcane`.
 
@@ -449,3 +460,5 @@ File organization: see **Architecture** section above. Start with the 4 files (`
 - Use `wrapText()` / `drawTextWrapped()` for multi-line text with word wrapping. Use `drawTextAligned()` for horizontal alignment within a fixed-width area.
 - Use `createNode()` / `setNodeTransform()` / `getWorldTransform()` / `applyToSprite()` from `@arcane/runtime/game` for parent-child transform hierarchies (weapons on characters, UI grouping).
 - Use `preloadAssets()` to batch-load textures upfront. Check progress with `getLoadingProgress()` for loading screens.
+- Use `/sprite` and `/sound` skills to find game assets. They search Asset Palace, download packs, and generate ready-to-use code with proper atlas definitions.
+- Use `loadAtlasFromDef()` for sprite sheets — it handles UV normalization and provides `atlas.draw()` which centers sprites at the given position.

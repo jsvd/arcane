@@ -1,5 +1,7 @@
 # Rendering: Sprites, Text, Shaders & Effects
 
+> **Tip:** Use `/sprite player enemies tiles` to find and download sprite packs from Asset Palace. The skill generates atlas code with proper UV coordinates.
+
 ## Sprites
 
 Draw calls are not persisted. Redraw everything inside `onFrame()` every frame.
@@ -18,6 +20,35 @@ drawSprite({ textureId: TEX, x: 100, y: 200, w: 32, h: 32, layer: 1 });
 ```
 
 `drawSprite` positions the sprite's **top-left corner** in world space. It is always world-space -- there is no `screenSpace` option on sprites.
+
+### Sprite Atlases
+
+Load sprites from Asset Palace JSON definitions with automatic UV normalization:
+
+```typescript
+import { loadAtlasFromDef } from "@arcane/runtime/rendering";
+
+const atlas = loadAtlasFromDef({
+  id: "space-shooter",
+  primarySheet: "Spritesheet/sheet.png",
+  sheetWidth: 1024,
+  sheetHeight: 1024,
+  sprites: {
+    "player-ship": { x: 211, y: 941, w: 99, h: 75 },
+    "enemy-ufo": { x: 444, y: 0, w: 91, h: 91 },
+  },
+}, { basePath: "assets/space-shooter-redux/" });
+
+// Draw centered at position (unlike raw drawSprite which uses top-left)
+atlas.draw("player-ship", { x: player.x, y: player.y, scale: 0.5 });
+atlas.draw("enemy-ufo", { x: enemy.x, y: enemy.y, rotation: angle });
+
+// Or get SpriteOptions for manual control
+const opts = atlas.sprite("player-ship", { x: 100, y: 200 });
+drawSprite(opts);
+```
+
+Use `/sprite` to find packs and generate atlas definitions automatically.
 
 ### Sprite Transforms
 

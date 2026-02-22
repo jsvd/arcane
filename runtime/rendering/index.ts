@@ -55,6 +55,19 @@ export {
 // Textures
 export { loadTexture, createSolidTexture, uploadRgbaTexture, preloadAssets, isTextureLoaded, getLoadingProgress } from "./texture.ts";
 
+// Sprite Atlas
+export type {
+  StaticSpriteDef,
+  AnimatedSpriteDef,
+  SpriteDef,
+  PackDefinition,
+  LoadAtlasOptions,
+  AtlasSpriteOptions,
+  SpriteInfo,
+  SpriteAtlas,
+} from "./atlas.ts";
+export { loadAtlasFromDef, createAtlasBuilder } from "./atlas.ts";
+
 // Placeholder sprites (prototyping)
 export type { PlaceholderShape, PlaceholderOptions } from "./placeholder.ts";
 export { placeholder, quickPlaceholder, PLACEHOLDER_COLORS, clearPlaceholderCache, getPlaceholderCacheSize } from "./placeholder.ts";

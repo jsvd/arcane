@@ -27,7 +27,6 @@ arcane/
 │   ├── roadmap.md                 — Phased development plan
 │   ├── technical-decisions.md     — ADR-style decision log
 │   ├── documentation-refresh.md   — Checklist for auditing and refreshing all docs
-│   ├── asset-management.md        — `arcane assets` CLI docs (search, download, catalog)
 │   ├── publishing-guide.md        — crates.io release process and checklist
 │   ├── recipe-guide.md            — Building reusable game systems with system()/rule()
 │   ├── testing-hot-reload.md      — Hot-reload implementation details and debugging
@@ -96,10 +95,7 @@ arcane/
 │           ├── dev.rs             — `arcane dev` — window + game loop + hot-reload + inspector + audio
 │           ├── describe.rs        — `arcane describe` — text description of game state
 │           ├── inspect.rs         — `arcane inspect` — query specific state paths
-│           ├── add.rs             — `arcane add` — copy recipe into project
-│           └── assets.rs          — `arcane assets` — discover and download game assets
-├── assets/
-│   └── catalog.json               — Kenney.nl asset catalog (25 packs + synonyms)
+│           └── add.rs             — `arcane add` — copy recipe into project
 ├── runtime/
 │   ├── testing/
 │   │   ├── harness.ts             — Universal test harness (Node + V8)
@@ -132,6 +128,7 @@ arcane/
 │   │   └── index.ts               — Barrel export (aabb helpers + physics engine API)
 │   ├── rendering/
 │   │   ├── types.ts               — TextureId, SpriteOptions, CameraState, TilemapId
+│   │   ├── atlas.ts               — SpriteAtlas: loadAtlasFromDef(), UV normalization, tag queries
 │   │   ├── sprites.ts             — drawSprite(), clearSprites()
 │   │   ├── camera.ts              — setCamera(), getCamera(), followTarget(), followTargetSmooth(), setCameraBounds(), setCameraDeadzone(), zoomTo(), zoomToPoint()
 │   │   ├── parallax.ts            — drawParallaxSprite() multi-layer depth scrolling
