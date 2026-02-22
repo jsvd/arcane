@@ -1,6 +1,6 @@
 [package]
 name = "arcane-engine"
-version = "0.14.1"
+version = "0.15.0"
 edition.workspace = true
 license.workspace = true
 description = "Arcane game engine — agent-native 2D engine with embedded TypeScript runtime"
@@ -17,7 +17,7 @@ name = "arcane"
 path = "src/main.rs"
 
 [dependencies]
-arcane-core = { version = "0.14.1", path = "../core", features = ["renderer"] }
+arcane-core = { version = "0.15.0", path = "../core", features = ["renderer"] }
 clap = { version = "4", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 anyhow = "1"

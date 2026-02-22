@@ -2,6 +2,19 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.15.0] - 2026-02-22
+
+### Added
+- **SpriteAtlas runtime** — `loadAtlasFromDef()` and `createAtlasBuilder()` for loading sprite atlases with automatic UV normalization
+  - Pixel coordinates in, normalized 0-1 UVs out
+  - Tag-based sprite queries, animation support, centered drawing
+  - `atlas.sprite()` generates ready-to-use `SpriteOptions`
+- **`/sprite` and `/sound` agentic skills** — scaffolded projects include skills that search Asset Palace, download CC0 packs, and generate ready-to-use code
+- **Placeholder sprites** — `drawPlaceholder()` for rapid prototyping without art assets
+
+### Removed
+- **`arcane assets` CLI** — removed due to stale catalog URLs; replaced by agentic skills and SpriteAtlas runtime
+
 ## [0.14.1] - 2026-02-21
 
 ### Added
