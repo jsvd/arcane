@@ -2,6 +2,14 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.15.1] - 2026-02-23
+
+### Changed
+- **`/sprite` skill rewritten** — visual selector workflow replaces text-based search; browse sprite sheets interactively before generating code
+
+### Fixed
+- **CI rust-cache** — bust stale cache causing rusty_v8 link failures
+
 ## [0.15.0] - 2026-02-22
 
 ### Added
