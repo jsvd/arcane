@@ -29,7 +29,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: v1-rust
+          prefix-key: v2-rust
       - name: Install system dependencies (ALSA + udev)
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
       - run: cargo test --workspace
@@ -45,7 +45,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: v1-rust
+          prefix-key: v2-rust
       - name: Install system dependencies (ALSA + udev)
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
       - run: npm install
@@ -59,7 +59,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: v1-rust
+          prefix-key: v2-rust
       - run: cargo check -p arcane-core --no-default-features
 
   declarations-check:
@@ -90,7 +90,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: v1-rust
+          prefix-key: v2-rust
       - name: Install system dependencies (ALSA + udev)
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
       - run: cargo check --workspace
@@ -105,7 +105,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: v1-rust
+          prefix-key: v2-rust
       - name: Install system dependencies (ALSA + udev)
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
       - name: Publish arcane-core
