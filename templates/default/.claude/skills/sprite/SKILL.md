@@ -1,203 +1,177 @@
 ---
 name: sprite
-description: Find and setup sprites from Asset Palace. Downloads packs, generates atlas code. Usage: /sprite player spaceship, /sprite dungeon tiles
-allowed-tools: Read, Grep, Glob, Bash, WebFetch
+description: Open visual sprite selector to browse and pick sprites from CC0 asset packs. User selects in browser, you generate code.
+allowed-tools: Read, Bash, Write, Edit
 ---
 
-# /sprite - Find and setup sprites from Asset Palace
+# /sprite - Visual Sprite Selector
 
-You are helping a game developer find and use sprites in their Arcane game.
-
-## What You Do
-
-1. **Search** Asset Palace for sprite packs matching the user's needs
-2. **Download** the pack if not already present in `assets/`
-3. **Generate** TypeScript code to load and draw the sprites
-
-## Asset Palace Location
-
-Asset Palace repository: https://github.com/anthropics/asset_palace
-
-```
-sprites/
-  kenney/              # Kenney.nl packs (most common)
-    space-shooter-redux.json
-    tiny-dungeon.json
-    ...
-  opengameart/         # OpenGameArt packs
-  itch/                # itch.io packs
-  _index.json          # Pack catalog
-```
+Opens Asset Palace's visual UI for the user to browse and select sprites. You generate code from their selection.
 
 ## Workflow
 
-### Step 1: Check if pack already downloaded
+### Step 1: Find Asset Palace
 
-Before downloading, check if the pack exists:
-
-```bash
-ls assets/ 2>/dev/null
-test -d assets/<pack-id> && test -f assets/<pack-id>.json && echo "EXISTS"
-```
-
-If exists, skip download and use existing files.
-
-### Step 2: Search for packs
-
-Fetch and search Asset Palace for matching packs:
+Check for Asset Palace in common locations:
 
 ```bash
-# Get pack index
-curl -s "https://raw.githubusercontent.com/anthropics/asset_palace/main/sprites/kenney/_index.json"
+# Check if ASSET_PALACE_PATH is set
+echo "${ASSET_PALACE_PATH:-not set}"
 
-# Or fetch a specific pack definition
-curl -s "https://raw.githubusercontent.com/anthropics/asset_palace/main/sprites/kenney/space-shooter-redux.json"
+# Check common sibling locations
+test -f ../asset_palace/package.json && echo "Found at ../asset_palace"
+test -f ../../asset_palace/package.json && echo "Found at ../../asset_palace"
 ```
 
-Look at:
-- Pack names and descriptions
-- `sprites` object keys (sprite names)
-- `tags` object for categories like "player", "enemy", "terrain", "ui"
+If not found, tell user:
+> Asset Palace not found. Clone it from https://github.com/anthropics/asset_palace and set ASSET_PALETTE_PATH or place it as a sibling directory.
 
-### Step 3: Download if needed
+### Step 2: Launch Sprite Selector
+
+Run the catalog server. It opens a browser and waits for user selection:
 
 ```bash
-# Create assets directory
-mkdir -p assets
+# If at sibling path:
+npm --prefix ../asset_palace run catalog
 
-# Get the pack definition
-curl -o assets/space-shooter-redux.json \
-  "https://raw.githubusercontent.com/anthropics/asset_palace/main/sprites/kenney/space-shooter-redux.json"
-
-# Read downloadUrl from JSON and fetch the pack
-DOWNLOAD_URL=$(cat assets/space-shooter-redux.json | grep -o '"downloadUrl"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"\([^"]*\)"$/\1/')
-curl -L -o /tmp/pack.zip "$DOWNLOAD_URL"
-unzip -o /tmp/pack.zip -d assets/space-shooter-redux/
-rm /tmp/pack.zip
+# Or with specific pack:
+npm --prefix ../asset_palette run catalog tiny-dungeon
 ```
 
-### Step 4: Find matching sprites
+**Tell the user:**
+> Opening sprite selector in your browser. Browse packs, click to download, select the sprites you need, name them, then click "Copy & Close" to return.
 
-Read the pack JSON and find sprites matching the user's request:
+### Step 3: Capture Selection
+
+The server outputs JSON to stdout when user clicks "Copy & Close":
 
 ```json
 {
+  "packId": "tiny-dungeon",
+  "packName": "Tiny Dungeon",
+  "source": "kenney",
+  "sheetPath": "Tilemap/tilemap.png",
+  "sheetWidth": 192,
+  "sheetHeight": 176,
+  "tileSize": 16,
+  "spacing": 0,
+  "gridOffset": { "x": 0, "y": 0 },
   "sprites": {
-    "player-ship-blue": { "x": 211, "y": 941, "w": 99, "h": 75 },
-    "ufo-red": { "x": 444, "y": 0, "w": 91, "h": 91 }
+    "hero-knight": { "x": 16, "y": 96, "w": 16, "h": 16 },
+    "skeleton": { "x": 32, "y": 96, "w": 16, "h": 16 }
   },
-  "tags": {
-    "player": ["player-ship-blue", "player-ship-green"],
-    "enemy": ["ufo-red", "ufo-green"]
-  }
+  "cachePath": "/Users/you/asset_palace/.cache/tiny-dungeon"
 }
 ```
 
-### Step 5: Generate code
+### Step 4: Copy Assets to Project
 
-Provide ready-to-use TypeScript using `loadAtlasFromDef()`:
-
-```typescript
-import { loadAtlasFromDef } from "@arcane/runtime/rendering";
-
-// Sprite definitions from space-shooter-redux
-const spaceAtlas = loadAtlasFromDef({
-  id: "space-shooter-redux",
-  primarySheet: "Spritesheet/sheet.png",
-  sheetWidth: 1024,
-  sheetHeight: 1024,
-  sprites: {
-    "player-ship-blue": { x: 211, y: 941, w: 99, h: 75 },
-    "ufo-red": { x: 444, y: 0, w: 91, h: 91 },
-  },
-}, { basePath: "assets/space-shooter-redux/" });
-
-// In your render function:
-spaceAtlas.draw("player-ship-blue", { x: player.x, y: player.y, scale: 0.5 });
-spaceAtlas.draw("ufo-red", { x: enemy.x, y: enemy.y });
-```
-
-## Output Format
-
-Always provide:
-
-1. **Pack name** and what it contains
-2. **Sprite names** matching the request (with pixel dimensions)
-3. **Download commands** (only if pack not already present)
-4. **Complete TypeScript code** ready to copy-paste
-
-## Example Interaction
-
-**User:** `/sprite I need a player spaceship and some enemy UFOs`
-
-**Response:**
-
-Found **space-shooter-redux** (Kenney) with matching sprites:
-
-**Player ships:**
-- `player-ship-blue` (99×75 px)
-- `player-ship-green` (99×75 px)
-- `player-ship-orange` (99×75 px)
-
-**Enemy UFOs:**
-- `ufo-red` (91×91 px)
-- `ufo-green` (91×91 px)
-- `ufo-blue` (91×91 px)
+Copy the downloaded pack to the project's assets directory:
 
 ```bash
-# Download (run once)
 mkdir -p assets
-curl -o assets/space-shooter-redux.json "https://raw.githubusercontent.com/anthropics/asset_palace/main/sprites/kenney/space-shooter-redux.json"
-curl -L -o /tmp/space.zip "https://kenney.nl/media/pages/assets/space-shooter-redux/..."
-unzip -o /tmp/space.zip -d assets/space-shooter-redux/
+cp -r "/path/from/cachePath" "assets/tiny-dungeon"
 ```
+
+### Step 5: Generate Code
+
+Generate `loadAtlasFromDef()` code from the selection:
 
 ```typescript
 import { loadAtlasFromDef } from "@arcane/runtime/rendering";
 
-const spaceAtlas = loadAtlasFromDef({
-  id: "space-shooter-redux",
-  primarySheet: "Spritesheet/sheet.png",
-  sheetWidth: 1024,
-  sheetHeight: 1024,
+// Sprites from Tiny Dungeon (kenney.nl, CC0)
+const dungeonAtlas = loadAtlasFromDef({
+  id: "tiny-dungeon",
+  primarySheet: "Tilemap/tilemap.png",
+  sheetWidth: 192,
+  sheetHeight: 176,
   sprites: {
-    "player-ship-blue": { x: 211, y: 941, w: 99, h: 75 },
-    "ufo-red": { x: 444, y: 0, w: 91, h: 91 },
-    "ufo-green": { x: 434, y: 234, w: 91, h: 91 },
+    "hero-knight": { x: 16, y: 96, w: 16, h: 16 },
+    "skeleton": { x: 32, y: 96, w: 16, h: 16 },
   },
-}, { basePath: "assets/space-shooter-redux/" });
+}, { basePath: "assets/tiny-dungeon/" });
 
-// Draw sprites (centered at position)
-spaceAtlas.draw("player-ship-blue", { x: player.x, y: player.y, scale: 0.5 });
-spaceAtlas.draw("ufo-red", { x: enemy.x, y: enemy.y });
+// Usage:
+// dungeonAtlas.draw("hero-knight", { x: 100, y: 100 });
+// dungeonAtlas.draw("skeleton", { x: 200, y: 100, scale: 2 });
 ```
 
-## Atlas API Reference
+## Field Mapping
+
+| Selection JSON | loadAtlasFromDef field |
+|----------------|------------------------|
+| `packId` | `id` |
+| `sheetPath` | `primarySheet` |
+| `sheetWidth` | `sheetWidth` |
+| `sheetHeight` | `sheetHeight` |
+| `sprites` | `sprites` (copy verbatim) |
+| `cachePath` | source for `cp -r` |
+| `packId` | `basePath: "assets/{packId}/"` |
+
+## Atlas API Quick Reference
 
 ```typescript
-// Load atlas from definition
-const atlas = loadAtlasFromDef(packDef, { basePath: "assets/pack-name/" });
+// Draw sprite centered at position
+atlas.draw("sprite-name", { x, y, scale?, rotation?, flipX?, opacity?, tint?, layer? });
 
-// Draw a sprite (centered at x, y)
-atlas.draw("sprite-name", { x, y, scale?, rotation?, layer?, flipX?, opacity?, tint? });
+// Get SpriteOptions for manual drawSprite()
+const opts = atlas.sprite("sprite-name", { x, y });
 
-// Get SpriteOptions for manual drawSprite() call
-const opts = atlas.sprite("sprite-name", { x, y, scale: 2 });
-drawSprite(opts);
-
-// Check if sprite exists
+// Check existence
 atlas.has("sprite-name");
 
-// Get sprite dimensions
-atlas.info("sprite-name"); // { w, h, frames }
+// Get dimensions
+atlas.info("sprite-name"); // { w, h, frames? }
 
-// Get sprites by tag
-atlas.getByTag("enemy"); // ["ufo-red", "ufo-green", ...]
+// Get by tag (if defined)
+atlas.getByTag("enemy");
 ```
 
-## Important Notes
+## Example Session
 
-- Paths are relative to entry file. If entry is `src/visual.ts`, use `../assets/` or absolute paths.
-- Atlas `draw()` centers sprites at the given position (unlike raw `drawSprite()` which uses top-left).
-- For animated sprites, pass `frame` option: `atlas.draw("hero-walk", { x, y, frame: frameIndex })`.
-- Sheet dimensions (`sheetWidth`, `sheetHeight`) are required for UV normalization.
+**User:** `/sprite`
+
+**You:** Opening sprite selector in your browser...
+
+```bash
+npm --prefix ../asset_palace run catalog
+```
+
+> Browse packs, select sprites, name them, click "Copy & Close" when done.
+
+*[User selects sprites, server outputs JSON]*
+
+**You:** Got your selection! Setting up the assets...
+
+```bash
+mkdir -p assets
+cp -r "/Users/you/asset_palace/.cache/tiny-dungeon" "assets/tiny-dungeon"
+```
+
+Here's the code to use your sprites:
+
+```typescript
+import { loadAtlasFromDef } from "@arcane/runtime/rendering";
+
+const dungeonAtlas = loadAtlasFromDef({
+  id: "tiny-dungeon",
+  primarySheet: "Tilemap/tilemap.png",
+  sheetWidth: 192,
+  sheetHeight: 176,
+  sprites: {
+    "hero-knight": { x: 16, y: 96, w: 16, h: 16 },
+    "skeleton": { x: 32, y: 96, w: 16, h: 16 },
+  },
+}, { basePath: "assets/tiny-dungeon/" });
+```
+
+**Sprites available:**
+- `hero-knight` (16x16)
+- `skeleton` (16x16)
+
+## Notes
+
+- Asset paths are relative to your entry file. Adjust `basePath` if entry is in a subdirectory.
+- The `draw()` method centers sprites at the position. Use `atlas.sprite()` + `drawSprite()` for top-left positioning.
+- For animations, use `frame` option: `atlas.draw("walk", { x, y, frame: idx })`
