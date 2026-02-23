@@ -31,7 +31,7 @@ The engine must serve the breadth of 2D games, not just RPGs. These initial demo
 
 ---
 
-## Completed Phases (0-25.5)
+## Completed Phases (0-27)
 
 ### Phase 0: Design Documents
 **Status: COMPLETE** — Vision, architecture, agent protocol, state management, systems/recipes, world authoring specs. CLAUDE.md for agent instructions.
@@ -123,14 +123,19 @@ The engine must serve the breadth of 2D games, not just RPGs. These initial demo
 ### Phase 25: Input Systems
 **Status: COMPLETE** — Gamepad support (gilrs), multi-touch (up to 10), input action mapping with rebinding/buffering. Demo: Gamepad Platformer. 78 tests.
 
-### Phase 25.5: Performance & Architecture
-**Status: COMPLETE** — GPU geometry pipeline, Rust-native particle simulation, bulk sprite/physics submission, transform hierarchy, component index, text layout (wrapping/alignment), async asset loading.
+### Phase 26: Performance & Architecture
+**Status: COMPLETE** — GPU geometry pipeline, Rust-native particle simulation, bulk sprite/physics submission, transform hierarchy, component index, text layout (wrapping/alignment), async asset loading. Demo: Shapes Showcase.
+
+### Phase 27: SpriteAtlas Runtime & Agentic Assets
+**Status: COMPLETE** — SpriteAtlas runtime with UV normalization and tag queries, placeholder sprite system for rapid prototyping, `/sprite` skill with visual selector workflow, removed `arcane assets` CLI in favor of agentic skills. Asset handling is now fully code-first and agent-native.
 
 ---
 
-## Phase 26: Atmosphere
+## Backlog
 
-**Status: Planned**
+### Atmosphere
+
+**Status: Backlog**
 
 Managed subsystem features — the engine owns a particle emitter or post-process pass, the caller gets a one-liner. Lower priority than juice (genre-specific rather than universal) but compounds beautifully. Sidescrollers, RPGs, and overworlds benefit most.
 
@@ -167,9 +172,9 @@ Managed subsystem features — the engine owns a particle emitter or post-proces
 
 ---
 
-## Phase 27: Community Building
+### Community Building
 
-**Status: Planned**
+**Status: Backlog**
 
 Focus on adoption, ecosystem growth, and documentation polish. Can run in parallel with engineering phases.
 
