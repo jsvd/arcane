@@ -270,6 +270,17 @@ fn op_destroy_emitter(state: &mut OpState, id: u32) {
     }
 }
 
+/// Set the spawn rate of a Rust-native emitter.
+/// Set to 0 to stop spawning (useful for burst effects).
+#[deno_core::op2(fast)]
+fn op_set_emitter_spawn_rate(state: &mut OpState, id: u32, spawn_rate: f64) {
+    let ps = state.borrow_mut::<Rc<RefCell<ParticleState>>>();
+    let mut ps = ps.borrow_mut();
+    if let Some(idx) = ps.find(id) {
+        ps.emitters[idx].config.spawn_rate = spawn_rate as f32;
+    }
+}
+
 /// Get the number of live particles in an emitter.
 #[deno_core::op2(fast)]
 fn op_get_emitter_particle_count(state: &mut OpState, id: u32) -> u32 {
@@ -316,6 +327,7 @@ deno_core::extension!(
         op_create_emitter,
         op_update_emitter,
         op_destroy_emitter,
+        op_set_emitter_spawn_rate,
         op_get_emitter_particle_count,
         op_get_emitter_sprite_data,
     ],

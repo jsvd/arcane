@@ -43,6 +43,7 @@ import {
   drawRustEmitter,
   destroyRustEmitter,
   getRustEmitterParticleCount,
+  setRustEmitterSpawnRate,
 } from "../../runtime/particles/index.ts";
 
 // --- Textures ---
@@ -236,9 +237,12 @@ state.buttons = [
 
 // --- Particle Effects (Rust-native emitters) ---
 
+// Track emitters that need delayed spawn rate cutoff
+const emitterStopTimers: Map<number, number> = new Map();
+
 function spawnExplosion(x: number, y: number) {
   const id = createRustEmitter({
-    spawnRate: 500, // high rate for burst effect
+    spawnRate: 300, // spawn many particles quickly
     lifetimeMin: 0.5,
     lifetimeMax: 1.5,
     speedMin: 50,
@@ -256,6 +260,8 @@ function spawnExplosion(x: number, y: number) {
     y,
   });
   activeRustEmitters.push(id);
+  // Schedule spawn rate cutoff after 0.15 seconds (burst duration)
+  emitterStopTimers.set(id, 0.15);
 
   // Also spawn a shockwave ring at the same location
   shockwaves.push({
@@ -270,7 +276,7 @@ function spawnExplosion(x: number, y: number) {
 
 function spawnTrail(x: number, y: number) {
   const id = createRustEmitter({
-    spawnRate: 30,
+    spawnRate: 100, // continuous trail effect
     lifetimeMin: 0.3,
     lifetimeMax: 0.6,
     speedMin: 5,
@@ -286,6 +292,8 @@ function spawnTrail(x: number, y: number) {
     y,
   });
   activeRustEmitters.push(id);
+  // Schedule spawn rate cutoff after 0.5 seconds
+  emitterStopTimers.set(id, 0.5);
 }
 
 function spawnShockwave(x: number, y: number) {
@@ -375,11 +383,23 @@ game.onFrame((ctx) => {
     if (hc.life <= 0) hitCones.splice(i, 1);
   }
 
+  // Update emitter stop timers (for burst effects)
+  for (const [id, remaining] of emitterStopTimers.entries()) {
+    const newTime = remaining - dt;
+    if (newTime <= 0) {
+      setRustEmitterSpawnRate(id, 0);
+      emitterStopTimers.delete(id);
+    } else {
+      emitterStopTimers.set(id, newTime);
+    }
+  }
+
   // Clean up finished Rust emitters (after ~2 seconds)
   for (let i = activeRustEmitters.length - 1; i >= 0; i--) {
     const id = activeRustEmitters[i];
     if (getRustEmitterParticleCount(id) === 0) {
       destroyRustEmitter(id);
+      emitterStopTimers.delete(id);
       activeRustEmitters.splice(i, 1);
     }
   }

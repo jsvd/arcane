@@ -665,6 +665,19 @@ export function destroyRustEmitter(id: number): void {
 }
 
 /**
+ * Set the spawn rate of a Rust-native emitter.
+ * Set to 0 to stop spawning new particles (useful for burst effects).
+ * Existing particles will continue to update and fade out.
+ *
+ * @param id - Emitter ID from createRustEmitter().
+ * @param spawnRate - New spawn rate in particles per second. Use 0 to stop spawning.
+ */
+export function setRustEmitterSpawnRate(id: number, spawnRate: number): void {
+  if (!hasParticleOps || id === 0) return;
+  (globalThis as any).Deno.core.ops.op_set_emitter_spawn_rate(id, spawnRate);
+}
+
+/**
  * Update all registered Rust-native emitters.
  * Convenience function that calls updateRustEmitter for each active emitter.
  *
