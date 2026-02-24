@@ -609,6 +609,9 @@ export function drawText(
       worldY = y / cam.zoom + cam.y - viewportH / (2 * cam.zoom);
       spriteW = (font.glyphW * scale) / cam.zoom;
       spriteH = (font.glyphH * scale) / cam.zoom;
+      // Round to prevent sub-pixel jitter from camera interpolation
+      worldX = Math.round(worldX * cam.zoom) / cam.zoom;
+      worldY = Math.round(worldY * cam.zoom) / cam.zoom;
     } else {
       worldX = drawX;
       worldY = y;
@@ -750,6 +753,9 @@ function drawMSDFTextInternal(
       worldY = drawY / cam.zoom + cam.y - viewportH / (2 * cam.zoom);
       wW = spriteW / cam.zoom;
       wH = spriteH / cam.zoom;
+      // Round to prevent sub-pixel jitter from camera interpolation
+      worldX = Math.round(worldX * cam.zoom) / cam.zoom;
+      worldY = Math.round(worldY * cam.zoom) / cam.zoom;
     } else {
       worldX = drawX;
       worldY = drawY;

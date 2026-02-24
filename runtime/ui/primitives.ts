@@ -40,9 +40,12 @@ function toWorld(
   if (!screenSpace) return { x: sx, y: sy, w: sw, h: sh };
   const cam = getCamera();
   const { width: vpW, height: vpH } = getViewportSize();
+  // Round positions to prevent sub-pixel jitter from camera interpolation
+  const rawX = sx / cam.zoom + cam.x - vpW / (2 * cam.zoom);
+  const rawY = sy / cam.zoom + cam.y - vpH / (2 * cam.zoom);
   return {
-    x: sx / cam.zoom + cam.x - vpW / (2 * cam.zoom),
-    y: sy / cam.zoom + cam.y - vpH / (2 * cam.zoom),
+    x: Math.round(rawX * cam.zoom) / cam.zoom,
+    y: Math.round(rawY * cam.zoom) / cam.zoom,
     w: sw / cam.zoom,
     h: sh / cam.zoom,
   };

@@ -120,6 +120,9 @@ export function drawSprite(opts: SpriteOptions): void {
     const { width: vpW, height: vpH } = getViewportSize();
     x = x / cam.zoom + cam.x - vpW / (2 * cam.zoom);
     y = y / cam.zoom + cam.y - vpH / (2 * cam.zoom);
+    // Round positions to prevent sub-pixel jitter from camera interpolation
+    x = Math.round(x * cam.zoom) / cam.zoom;
+    y = Math.round(y * cam.zoom) / cam.zoom;
     w = w / cam.zoom;
     h = h / cam.zoom;
   }
