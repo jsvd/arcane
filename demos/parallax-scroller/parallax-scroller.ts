@@ -335,41 +335,41 @@ function render(): void {
   });
 
   // --- HUD (layer 100+, screen space) ---
-  const hudX = cam.x - vp.width / (2 * cam.zoom);
-  const hudY = cam.y - vp.height / (2 * cam.zoom);
-  const scale = 1 / cam.zoom;
+  // Use screenSpace: true to avoid sub-pixel jitter from camera interpolation
 
   // Info panel background
   drawSprite({
     textureId: TEX_SKY_FAR,
-    x: hudX + 4 * scale,
-    y: hudY + 4 * scale,
-    w: 320 * scale,
-    h: 120 * scale,
+    x: 4,
+    y: 4,
+    w: 320,
+    h: 120,
     layer: 100,
+    screenSpace: true,
     tint: { r: 0, g: 0, b: 0, a: 0.6 },
   });
 
-  const textScale = scale;
-  drawText(`Coins: ${playerCoins}/${coins.length}`, hudX + 10 * scale, hudY + 10 * scale, {
-    scale: textScale,
+  drawText(`Coins: ${playerCoins}/${coins.length}`, 10, 10, {
+    scale: 1,
     layer: 101,
+    screenSpace: true,
   });
   drawText(
     `Camera: (${cam.x.toFixed(0)}, ${cam.y.toFixed(0)}) zoom=${cam.zoom.toFixed(2)}`,
-    hudX + 10 * scale,
-    hudY + 24 * scale,
-    { scale: textScale, layer: 101 },
+    10,
+    24,
+    { scale: 1, layer: 101, screenSpace: true },
   );
   drawText(
     `Smooth: ${useSmoothFollow ? "ON" : "OFF"}  Deadzone: ${useDeadzone ? "ON" : "OFF"}  Bounds: ${useBounds ? "ON" : "OFF"}`,
-    hudX + 10 * scale,
-    hudY + 38 * scale,
-    { scale: textScale, layer: 101 },
+    10,
+    38,
+    { scale: 1, layer: 101, screenSpace: true },
   );
-  drawText("Arrows=Move  Z/X=Zoom  S=Smooth  F=Deadzone  B=Bounds", hudX + 10 * scale, hudY + 52 * scale, {
-    scale: textScale * 0.9,
+  drawText("Arrows=Move  Z/X=Zoom  S=Smooth  F=Deadzone  B=Bounds", 10, 52, {
+    scale: 0.9,
     layer: 101,
+    screenSpace: true,
     color: { r: 0.7, g: 0.7, b: 0.7, a: 1 },
   });
 
