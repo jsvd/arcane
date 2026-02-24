@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "arcane check 2>&1 || echo '\n[hook] Type errors detected - fix before continuing'"
+          }
+        ]
+      }
+    ]
+  }
+}

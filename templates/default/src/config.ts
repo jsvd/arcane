@@ -2,21 +2,26 @@
  * {{PROJECT_NAME}} - Configuration
  *
  * Constants, tuning values, and shared types.
- * Import from here in game.ts, render.ts, and visual.ts.
+ * As your game grows, centralize constants here and import where needed.
  */
 
-// --- Tuning ---
-export const SPEED = 200;
-export const ZOOM = 1.0;
+// --- Example constants (customize for your game) ---
 
-// --- Colors (pre-compute at module scope — never call rgb() inside onFrame) ---
-// import { rgb } from "@arcane-engine/runtime/ui";
-// export const BG_COLOR = rgb(20, 20, 31);
+// Movement and physics
+// export const SPEED = 200;
+// export const GRAVITY = 800;
+// export const JUMP_VELOCITY = -400;
+
+// Visual settings
+// export const ZOOM = 1.0;
+// export const BG_COLOR = { r: 0.08, g: 0.08, b: 0.12 };
+
+// Pre-computed colors (call rgb() here, not in onFrame)
+// import { rgb } from "@arcane/runtime/ui";
 // export const PLAYER_COLOR = rgb(60, 180, 255);
 // export const ENEMY_COLOR = rgb(255, 80, 60);
+// export const GOLD = rgb(255, 215, 0);
 
-/** Background color (0.0-1.0 floats). Use rgb(20, 20, 31) if you prefer 0-255. */
-export const BG_COLOR = { r: 0.08, g: 0.08, b: 0.12 };
-
-// --- Types ---
+// --- Shared types ---
 // Move shared types here as your game grows
+// export type EntityType = "player" | "enemy" | "pickup";

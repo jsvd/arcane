@@ -43,107 +43,103 @@ Imports use `@arcane/runtime/{module}`:
 
 ## Development Workflow
 
-**Think iteratively, not all at once.** Do NOT design the entire game upfront and then implement it in one pass. Instead, start with the simplest possible version and grow it step by step.
+**Run `/check` after every code change.** Type errors break hot-reload silently — the game window shows the last working state while errors accumulate. The first few edits to a scaffolded project often introduce type errors (missing exports, wrong property names). Verify proactively; don't wait for the user to notice.
 
-### How to Think About It
-
-A game is built in layers, not all at once. Each layer should be **playable** before you add the next:
-
-1. **A thing on screen that moves** — colored rectangle + input. Run `arcane dev`. Done.
-2. **The core mechanic** — what makes this game *this game*? Add just that. Verify.
-3. **One enemy / obstacle / interaction** — not all of them, just one. Verify.
-4. **Scoring / win / lose** — basic game loop is now complete. Verify.
-5. **More content** — additional enemies, levels, items. One at a time. Verify each.
-6. **Polish** — particles, sound, screen shake, transitions. One at a time.
-
-Each step is a small code change (20-50 lines), verified with `arcane dev` before moving on. **Never write more than ~50 lines without checking that the game still runs.**
+**Visual richness should permeate the development process, this is a game for humans** A game with good mechanics but flat visuals feels unfinished. Add particles, glows, multiple layers, and shape variety as you build.
 
 ### The Iteration Cycle
 
 For each step above:
 
-1. **Write the smallest change** — a single function, entity, or visual element
-2. **Run `arcane dev`** — verify it works visually, fix immediately if not
-3. **Write a test** — cover the logic in `*.test.ts`, run `arcane test`
-4. **Commit** — small, working increments
-
-### File Planning
-
-Before writing code, decide the file structure. Each file should own **one concept**. The natural boundaries are:
-
-- **An algorithm** — dungeon generation, FOV, pathfinding. One algorithm = one file.
-- **A game domain** — combat logic, character creation, inventory, spawning. Group the pure functions and constants for one feature together.
-- **A constant/type table** — stat tables, level data, shared type definitions. Data that multiple files reference.
-- **A rendering scope** — world drawing vs HUD drawing. Render files read state but never call game logic.
-
-Don't split by entity type (no `player.ts`, `enemy.ts`) — entities are data in arrays, not classes. Split by what the code *does*.
-
-Examples by complexity:
-
-- **Simple game** → `visual.ts` + `config.ts`
-- **Game with logic** → add `game.ts` for pure state functions
-- **Game with multiple domains** → `combat.ts`, `levels.ts`, `spawning.ts`
-- **Complex rendering** → split `render.ts` into `render-world.ts` + `render-hud.ts`
+1. **Write a change** 
+2. **Run `/check`** — catches type errors immediately (hot-reload fails silently on TS errors)
+4. **Write a test** — cover the logic in `*.test.ts`, run `/check` again
+5. **Commit** — small, working increments
 
 ## Quick Start
 
 ```typescript
 import { createGame, drawColorSprite, hud } from "@arcane/runtime/game";
-import { followTargetWithShake } from "@arcane/runtime/rendering";
+import { followTargetWithShake, getViewportSize, setBackgroundColor } from "@arcane/runtime/rendering";
 import { shakeCamera } from "@arcane/runtime/tweening";
-// Particles: prefer burstParticles()/streamParticles() for quick effects,
-// createEmitter() for fine-grained control.
-import { burstParticles, streamParticles, createEmitter, drawAllParticles } from "@arcane/runtime/particles";
+import { burstParticles, streamParticles, drawAllParticles } from "@arcane/runtime/particles";
 import { createInputMap, isActionDown, isActionPressed, WASD_ARROWS } from "@arcane/runtime/input";
-import { rgb } from "@arcane/runtime/ui";
+import { rgb, drawCircle, withAlpha } from "@arcane/runtime/ui";
+
+// --- Colors (pre-compute at module scope, never inside onFrame) ---
+const BG_DARK = rgb(15, 10, 30);
+const PLAYER_CORE = rgb(60, 180, 255);
+const PLAYER_GLOW = rgb(100, 200, 255);
+const STAR_DIM = rgb(80, 80, 100);
+const STAR_BRIGHT = rgb(200, 200, 255);
+
+// --- Pre-generate starfield (don't create arrays in onFrame) ---
+const STARS = Array.from({ length: 80 }, (_, i) => ({
+  x: (i * 97) % 800 - 400,
+  y: (i * 53) % 600 - 300,
+  r: 1 + (i % 3),
+  twinkleOffset: i * 0.7,
+}));
 
 const SPEED = 200;
 const game = createGame({ name: "my-game", zoom: 1.0 });
-
-// Input actions — WASD_ARROWS preset gives left/right/up/down/action with keyboard+gamepad
 const input = createInputMap(WASD_ARROWS);
 
-let state = { x: 100, y: 100, score: 0 };
-
+let state = { x: 0, y: 0, score: 0 };
 game.state({ get: () => state, set: (s) => { state = s; } });
 
 game.onFrame((ctx) => {
-  // 1. Input — use action map, not raw keys
-  let dx = 0;
+  // 1. Input
+  let dx = 0, dy = 0;
   if (isActionDown("left", input)) dx = -1;
   if (isActionDown("right", input)) dx = 1;
+  if (isActionDown("up", input)) dy = -1;
+  if (isActionDown("down", input)) dy = 1;
 
-  // 2. Update
-  state = { ...state, x: state.x + dx * SPEED * ctx.dt };
+  // 2. Update + spawn trail particles when moving
+  const moving = dx !== 0 || dy !== 0;
+  if (moving) {
+    state = { ...state, x: state.x + dx * SPEED * ctx.dt, y: state.y + dy * SPEED * ctx.dt };
+    streamParticles(state.x, state.y, { color: PLAYER_GLOW, count: 1, speed: 20, lifetime: 0.3 });
+  }
 
-  // 3. Camera — smooth follow (auto-reads shake offset)
+  // 3. Camera
   followTargetWithShake(state.x, state.y, 2.0, 0.08);
 
-  // 4. Render — no clearSprites() needed (autoClear: true by default)
-  drawColorSprite({ color: rgb(60, 180, 255), x: state.x - 16, y: state.y - 16, w: 32, h: 32, layer: 1 });
+  // 4. Background — deep space with twinkling stars
+  setBackgroundColor(BG_DARK.r / 255, BG_DARK.g / 255, BG_DARK.b / 255);
+  for (const s of STARS) {
+    const twinkle = 0.5 + 0.5 * Math.sin(ctx.elapsed * 2 + s.twinkleOffset);
+    const color = twinkle > 0.7 ? STAR_BRIGHT : STAR_DIM;
+    drawCircle(s.x, s.y, s.r * twinkle, { color, layer: 0 });
+  }
 
-  // 5. Render all particles as circles (auto-reads particle colors/positions)
+  // 5. Player — layered glow + core for depth
+  drawCircle(state.x, state.y, 24, { color: withAlpha(PLAYER_GLOW, 0.3), layer: 1 }); // outer glow
+  drawCircle(state.x, state.y, 18, { color: withAlpha(PLAYER_GLOW, 0.5), layer: 1 }); // inner glow
+  drawCircle(state.x, state.y, 12, { color: PLAYER_CORE, layer: 2 });                 // core
+  drawCircle(state.x - 4, state.y - 4, 4, { color: withAlpha(rgb(255,255,255), 0.6), layer: 2 }); // highlight
+
+  // 6. Particles (trail from movement)
   drawAllParticles();
 
-  // 6. HUD — hud.text/bar/label are screen-space by default
+  // 7. HUD
   hud.text(`Score: ${state.score}`, 10, 10);
-
-  // Subsystem updates (tweens, particles, transitions, flash) are automatic
-  // via autoSubsystems (default: true). No manual calls needed.
 });
 ```
 
 **Key points:**
-- `createGame()` handles `clearSprites()`, initial camera, agent registration, subsystem updates, and provides `ctx.dt`/`ctx.viewport`/`ctx.elapsed`/`ctx.frame`.
-- `autoSubsystems: true` (default) auto-calls `updateTweens(dt)`, `updateParticles(dt)`, `updateScreenTransition(dt)`, `drawScreenTransition()`, and `drawScreenFlash()`. No manual calls needed.
+- **Layer visuals for depth** — outer glow → inner glow → core → highlight. Multiple overlapping shapes with transparency create rich visuals.
+- **Pre-generate static data** — starfields, color constants, lookup tables at module scope. Never allocate in onFrame.
+- **Particles for feedback** — `streamParticles()` on movement, `burstParticles()` on events. Visual feedback makes games feel alive.
+- `createGame()` handles `clearSprites()`, camera, agent registration, subsystem updates. Provides `ctx.dt`/`ctx.elapsed`/`ctx.frame`.
+- `autoSubsystems: true` (default) auto-calls `updateTweens(dt)`, `updateParticles(dt)`, `updateScreenTransition(dt)`, etc. No manual calls needed.
 - Use `createInputMap(WASD_ARROWS)` for standard WASD+arrows+gamepad, or spread to extend: `{ ...WASD_ARROWS, shoot: ["x"] }`.
-- Use `followTargetWithShake()` instead of manual `getCameraShakeOffset()` + `followTargetSmooth()`.
-- Use `drawAllParticles()` instead of manually looping `getAllParticles()` + `drawCircle()`.
-- Use `drawColorSprite()` for colored rectangles without pre-creating textures.
-- Use `hud.text()`/`hud.bar()`/`hud.label()` for HUD without manually passing `screenSpace: true`. Use `hud.overlay()` for full-screen effects (pause, damage flash).
-- Use `createSpriteGroup()` for multi-part characters instead of multiple manual `drawSprite()` calls.
-- Use `createRng(seed)` for ergonomic deterministic randomness instead of threading `PRNGState` through every call.
-- Use `drawCircle()`/`drawLine()`/`drawTriangle()` for shape primitives instead of manual sprite hacks.
+- Use `followTargetWithShake()` for camera with built-in shake offset.
+- Use `withAlpha(color, alpha)` to create transparent versions of colors for glows and layering.
+- Use `drawColorSprite()` for colored rectangles, `hud.text()`/`hud.bar()` for screen-space UI.
+- Use `createSpriteGroup()` for multi-part characters, `createRng(seed)` for deterministic randomness.
+- Use **SDF** (`sdfEntity()`) for procedural vector graphics — stars, hearts, glowing pickups, gradients. See [docs/sdf.md](docs/sdf.md).
 
 ## Coordinate System
 
@@ -155,19 +151,19 @@ game.onFrame((ctx) => {
 
   Default camera at (0, 0):
   ┌───────────────────────────────────┐
-  │ (-VPW/2, -VPH/2)  (VPW/2, -VPH/2)│
-  │                                    │
-  │            (0, 0)                  │  <- center of screen, NOT top-left
-  │                                    │
-  │ (-VPW/2,  VPH/2)  (VPW/2,  VPH/2)│
+  │ (-VPW/2, -VPH/2)  (VPW/2, -VPH/2) │
+  │                                   │
+  │            (0, 0)                 │  <- center of screen, NOT top-left
+  │                                   │
+  │ (-VPW/2,  VPH/2)  (VPW/2,  VPH/2) │
   └───────────────────────────────────┘
 
   After setCamera(VPW/2, VPH/2):
   ┌───────────────────────────────────┐
   │ (0, 0)                  (VPW, 0)  │  <- now (0,0) is top-left!
-  │                                    │
+  │                                   │
   │          (VPW/2, VPH/2)           │
-  │                                    │
+  │                                   │
   │ (0, VPH)              (VPW, VPH)  │
   └───────────────────────────────────┘
 ```
@@ -246,7 +242,7 @@ followTargetSmooth(player.x, player.y, 2.0, 0.08);
 
 **18. Multiple drawSprite() calls for multi-part characters** — Use `createSpriteGroup()` + `drawSpriteGroup()`. Handles offsets, flip mirroring, opacity, per-part visibility. See [docs/entities.md](docs/entities.md).
 
-**19. Using drawRect() for circles/lines/arcs** — Use `drawCircle()`, `drawEllipse()`, `drawRing()`, `drawLine()`, `drawTriangle()`, `drawArc()`, `drawSector()`, `drawCapsule()`, `drawPolygon()` from `@arcane/runtime/ui`. See [docs/ui.md](docs/ui.md).
+**19. Using only one shape type** — Combine shapes for visual interest: triangles for pointed objects (ships, crystals), polygons for irregular surfaces (asteroids, terrain), rectangles for structures (buildings, platforms), circles for rounded elements (heads, wheels, glows). See "Visual Composition" section and [docs/ui.md](docs/ui.md).
 
 **20. Mixing up color ranges** — `rgb(r, g, b)` takes **0-255 integers** and returns a `Color`. All other APIs (`setBackgroundColor`, `flashScreen`, particle `startColor`/`endColor`, `createSolidTexture`) expect a `Color` with **0.0-1.0 float** components. Always use `rgb()` to convert from 0-255: `rgb(255, 0, 0)` not `{ r: 255, g: 0, b: 0 }`.
 
@@ -266,6 +262,10 @@ followTargetSmooth(player.x, player.y, 2.0, 0.08);
 
 **28. Manual subsystem updates with createGame** — `createGame()` auto-calls `updateTweens(dt)`, `updateParticles(dt)`, `updateScreenTransition(dt)`, `drawScreenTransition()`, and `drawScreenFlash()` via `autoSubsystems: true` (default). You do NOT need to call these manually. Redundant calls are harmless but unnecessary. Only set `autoSubsystems: false` if you need custom update ordering.
 
+**29. Changing function signatures without updating callers** — If you change `tick(state, dt)` to `tick(state, dt, input)`, you must also update `visual.ts` and `game.test.ts` which call `tick()`. Same for changing `GameState` fields — update all files that access them. Run `/check` after each edit to catch these immediately.
+
+**30. Calling `rng.float(min, max)` — float takes no arguments** — `rng.float()` returns a float in [0, 1) with no arguments. For a range, use `rng.float() * (max - min) + min`. For integers in a range, use `rng.int(min, max)`. Check `types/state.d.ts` for the `Rng` interface.
+
 ## What Should I Draw?
 
 Pick the right function for what you're rendering:
@@ -277,9 +277,11 @@ Pick the right function for what you're rendering:
 │   ├── Game world (layer 0) → drawRectangle(x, y, w, h, { color })
 │   ├── HUD / UI (layer 90) → drawRect(x, y, w, h, { color, screenSpace: true })
 │   └── With rotation/blend → drawColorSprite({ color, x, y, w, h, rotation })
-├── A circle / shape
-│   ├── Filled → drawCircle() / drawPolygon() / drawTriangle()
-│   └── Outline → drawArc() / drawRing() / drawLine()
+├── Shapes (see Visual Composition below for examples)
+│   ├── Pointed → drawTriangle() (ships, arrows, crystals)
+│   ├── Irregular → drawPolygon() (asteroids, terrain, shields)
+│   ├── Rounded → drawCircle(), drawEllipse(), drawCapsule()
+│   └── Outline → drawLine(), drawArc(), drawRing()
 ├── Text
 │   ├── HUD text → hud.text("Score", 10, 10)
 │   ├── World text → drawText("Hello", x, y)
@@ -288,7 +290,110 @@ Pick the right function for what you're rendering:
 │   ├── HUD → hud.bar(x, y, fillRatio)
 │   └── World (above enemy) → drawBar(x, y, w, h, fillRatio, { screenSpace: false })
 ├── A panel / dialog box → drawPanel() or drawNineSlice()
-└── A tilemap → createTilemap() + drawTilemap()
+├── A tilemap → createTilemap() + drawTilemap()
+└── Procedural vector graphics (gradients, glows, stars, hearts, mountains)
+    └── SDF shapes → sdfEntity() + circle/star/heart/union/gradient (see docs/sdf.md)
+```
+
+## Visual Composition
+
+Build game objects by combining different shapes. Each example mixes primitives for visual interest:
+
+```typescript
+// Spaceship — triangle body + rectangle wings + circle cockpit
+function drawShip(x: number, y: number, angle: number) {
+  drawTriangle(x, y - 20, x - 12, y + 10, x + 12, y + 10, { color: HULL, rotation: angle });
+  drawRect(x - 18, y - 2, 8, 12, { color: WING });   // left wing
+  drawRect(x + 10, y - 2, 8, 12, { color: WING });   // right wing
+  drawCircle(x, y - 8, 5, { color: COCKPIT });       // cockpit
+  drawCircle(x, y + 8, 3, { color: ENGINE_GLOW });   // engine
+}
+
+// Crystal — stacked triangles with glow
+function drawCrystal(x: number, y: number, h: number) {
+  drawTriangle(x, y - h, x - 8, y, x + 8, y, { color: CRYSTAL_BRIGHT });
+  drawTriangle(x - 4, y - h * 0.6, x - 10, y, x + 2, y, { color: CRYSTAL_DARK });
+  drawTriangle(x + 4, y - h * 0.6, x - 2, y, x + 10, y, { color: CRYSTAL_MID });
+}
+
+// Character — ellipse body + circle head + rect limbs
+function drawCharacter(x: number, y: number) {
+  drawEllipse(x, y + 8, 10, 14, { color: BODY });    // torso
+  drawCircle(x, y - 10, 8, { color: SKIN });         // head
+  drawRect(x - 14, y + 2, 4, 12, { color: BODY });   // left arm
+  drawRect(x + 10, y + 2, 4, 12, { color: BODY });   // right arm
+  drawRect(x - 6, y + 20, 5, 10, { color: LEGS });   // left leg
+  drawRect(x + 1, y + 20, 5, 10, { color: LEGS });   // right leg
+}
+
+// Tree — trapezoid trunk + layered triangles for foliage
+function drawTree(x: number, y: number) {
+  drawRect(x - 6, y, 12, 30, { color: BARK });       // trunk
+  drawTriangle(x, y - 40, x - 25, y, x + 25, y, { color: LEAVES_DARK });
+  drawTriangle(x, y - 55, x - 20, y - 20, x + 20, y - 20, { color: LEAVES_MID });
+  drawTriangle(x, y - 65, x - 15, y - 35, x + 15, y - 35, { color: LEAVES_BRIGHT });
+}
+
+// Asteroid — polygon base + circle craters
+function drawAsteroid(x: number, y: number, r: number) {
+  drawPolygon([/* irregular 8-point polygon coords */], { color: ROCK });
+  drawCircle(x - r * 0.3, y - r * 0.2, r * 0.15, { color: SHADOW }); // crater
+  drawCircle(x + r * 0.4, y + r * 0.3, r * 0.1, { color: SHADOW });  // crater
+}
+```
+
+**Shape selection guide:**
+| Shape | Best for |
+|-------|----------|
+| `drawTriangle()` | Ships, arrows, crystals, roofs, trees |
+| `drawRect()` | Buildings, platforms, limbs, bars, UI panels |
+| `drawPolygon()` | Irregular terrain, asteroids, shields, explosions |
+| `drawCircle()` | Heads, wheels, projectiles, glows, joints |
+| `drawEllipse()` | Bodies, clouds, shadows, stretched elements |
+| `drawLine()` | Lasers, connections, grid lines, trajectories |
+| `drawCapsule()` | Pills, rounded platforms, characters |
+| `drawArc()` / `drawRing()` | Health rings, radar sweeps, partial circles |
+
+**For complex procedural graphics** (gradients, glows, stars, hearts, mountains), use **SDF shapes** instead. SDF creates resolution-independent vector graphics entirely in code — no image assets needed. See [docs/sdf.md](docs/sdf.md).
+
+### Visual Depth Techniques
+
+Rich visuals come from **layering**, not complexity. These patterns make flat shapes feel alive:
+
+```typescript
+// Glow effect — larger transparent shape behind solid core
+drawCircle(x, y, r + 8, { color: withAlpha(GLOW_COLOR, 0.3), layer: 1 });  // outer glow
+drawCircle(x, y, r + 4, { color: withAlpha(GLOW_COLOR, 0.5), layer: 1 });  // inner glow
+drawCircle(x, y, r, { color: CORE_COLOR, layer: 2 });                       // solid core
+
+// Highlight/shine — small bright spot offset toward light source
+drawCircle(x - r * 0.3, y - r * 0.3, r * 0.25, { color: withAlpha(WHITE, 0.6), layer: 3 });
+
+// Shadow/depth — darker shape offset down-right
+drawCircle(x + 2, y + 2, r, { color: withAlpha(BLACK, 0.3), layer: 0 });   // shadow
+drawCircle(x, y, r, { color: MAIN_COLOR, layer: 1 });                       // main shape
+
+// Rim lighting — thin bright edge
+drawCircle(x, y, r, { color: DARK_COLOR, layer: 1 });                       // base
+drawCircle(x, y, r - 2, { color: MAIN_COLOR, layer: 1 });                   // inset creates rim
+
+// Pulsing glow (animated) — use elapsed time
+const pulse = 0.7 + 0.3 * Math.sin(elapsed * 3);
+drawCircle(x, y, r * (1 + pulse * 0.2), { color: withAlpha(GLOW, 0.3 * pulse), layer: 1 });
+```
+
+**Starfield / background particles** — pre-generate at module scope, animate with `elapsed`:
+```typescript
+const STARS = Array.from({ length: 100 }, (_, i) => ({
+  x: (i * 97) % 1000 - 500, y: (i * 53) % 800 - 400,
+  size: 1 + (i % 3), twinkle: i * 0.5,
+}));
+
+// In onFrame:
+for (const s of STARS) {
+  const brightness = 0.4 + 0.6 * Math.sin(elapsed * 2 + s.twinkle);
+  drawCircle(s.x, s.y, s.size * brightness, { color: withAlpha(WHITE, brightness), layer: 0 });
+}
 ```
 
 ## Layer Map
@@ -463,3 +568,4 @@ File organization: see **Architecture** section above. Start with the 4 files (`
 - Use `preloadAssets()` to batch-load textures upfront. Check progress with `getLoadingProgress()` for loading screens.
 - Use `/sprite` and `/sound` skills to find game assets. They search Asset Palace, download packs, and generate ready-to-use code with proper atlas definitions.
 - Use `loadAtlasFromDef()` for sprite sheets — it handles UV normalization and provides `atlas.draw()` which centers sprites at the given position.
+- Use **SDF** for procedural backgrounds, glowing pickups, and UI without image assets. `sdfEntity({ shape: star(20, 5, 0.4), fill: glow("#gold", 0.2), ... })` creates resolution-independent vector graphics. See [docs/sdf.md](docs/sdf.md).

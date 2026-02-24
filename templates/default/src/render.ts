@@ -22,10 +22,11 @@ export function renderWorld(_state: GameState, _vpw: number, _vph: number): void
 }
 
 /** Draw HUD elements. Called every frame from visual.ts. */
-export function renderHud(state: GameState): void {
+export function renderHud(_state: GameState): void {
   // hud.text uses `tint:` (not `color:`) for text color
   const { width: vpW } = getViewportSize();
   hud.text("{{PROJECT_NAME}}", 10, 10, { tint: WHITE });
-  hud.text(`Score: ${state.score}`, vpW - 120, 10, { tint: GOLD });
-  // hud.bar(10, 30, state.hp / state.maxHp);
+  // Adapt to your state structure:
+  // hud.text(`Score: ${_state.score}`, vpW - 120, 10, { tint: GOLD });
+  // hud.bar(10, 30, _state.hp / _state.maxHp);
 }

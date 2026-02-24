@@ -68,6 +68,11 @@ enum Commands {
     },
     /// Initialize an Arcane project in the current directory
     Init,
+    /// Type-check the project (fast, no tests). Use after every edit.
+    Check {
+        /// Optional directory or entry file
+        path: Option<String>,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -89,5 +94,6 @@ fn main() -> anyhow::Result<()> {
         Commands::Add { name, list } => commands::add::run(name, list),
         Commands::New { name } => commands::new::run(&name),
         Commands::Init => commands::init::run(),
+        Commands::Check { path } => commands::check::run(path),
     }
 }

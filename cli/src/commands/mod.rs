@@ -4,6 +4,7 @@ pub mod describe;
 pub mod inspect;
 pub mod add;
 pub mod type_check;
+pub mod check;
 pub mod new;
 pub mod init;
 pub mod mcp_bridge;
