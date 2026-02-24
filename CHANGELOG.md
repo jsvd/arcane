@@ -2,6 +2,33 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.16.0] - 2026-02-24
+
+### Added
+- **SDF Rendering Pipeline** — full signed distance field rendering system for procedural 2D graphics
+  - 8 primitive shapes: `circle`, `box`, `roundedBox`, `triangle`, `star`, `heart`, `line`, `polygon`
+  - CSG operations: `union`, `smoothUnion`, `subtract`, `intersect`
+  - Domain transforms: `offset`, `mirrorX`, `repeat`, `round`, `outline`, `outlineN`
+  - Fill types: `solid`, `glow`, `gradient`, `solidOutline`, `cosinePalette`
+  - Animation helpers: `pulse`, `spin`, `bob`, `breathe`
+  - Layer constants: `LAYERS.BACKGROUND`, `LAYERS.GROUND`, `LAYERS.ENTITIES`, `LAYERS.FOREGROUND`
+  - `sdfEntity()` for declarative SDF rendering, `createSdfFrame()` for frame management
+  - Gradient scale parameter for correct gradient mapping on non-square shapes
+  - fwidth-based adaptive anti-aliasing for crisp edges at any scale
+- **AI Asset Generation Tooling** — MCP server for AI-powered sprite generation
+  - Multiple backend support: Recraft V3, Imagen 3, DALL-E 3, Stable Diffusion
+  - Automatic palette extraction and color quantization
+  - Spritesheet grid generation and metadata
+  - `/asset-generation` skill in scaffolded projects
+- **SDF Demos**
+  - `sdf-effects` — 9 unique SDF capabilities (fills, animations, domain transforms)
+  - `sdf-scene` — complete platformer scene with mountains, clouds, trees, collectibles
+- **SDF Documentation** — comprehensive guide in `templates/default/docs/sdf.md`
+
+### Changed
+- Scaffolded project docs updated with SDF guidance (juice.md, sdf.md)
+- MSDF text showcase demo cleaned up (removed unused 515KB TTF font file)
+
 ## [0.15.1] - 2026-02-23
 
 ### Changed
