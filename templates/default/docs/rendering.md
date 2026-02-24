@@ -2,6 +2,8 @@
 
 > **Tip:** Use `/sprite player enemies tiles` to find and download sprite packs from Asset Palace. The skill generates atlas code with proper UV coordinates.
 
+> **Procedural graphics:** For resolution-independent vector shapes without image assets, see [sdf.md](sdf.md).
+
 ## Sprites
 
 Draw calls are not persisted. Redraw everything inside `onFrame()` every frame.

@@ -1,0 +1,23 @@
+{
+  "name": "@arcane/asset-gen-mcp",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Local AI sprite and tileset generation for Arcane games",
+  "main": "src/server.ts",
+  "bin": {
+    "arcane-asset-gen": "src/server.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node --experimental-strip-types src/server.ts",
+    "test": "node --test --experimental-strip-types src/__tests__/*.test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "sharp": "^0.33.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^22.0.0"
+  }
+}

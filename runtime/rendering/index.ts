@@ -423,3 +423,84 @@ export { drawCircle, drawLine, drawTriangle, drawArc, drawSector } from "../ui/s
 
 // Camera shake + screen flash (canonical home: tweening/helpers.ts)
 export { shakeCamera, getCameraShakeOffset, flashScreen, drawScreenFlash } from "../tweening/helpers.ts";
+
+// SDF Shapes (code-defined visuals)
+export type {
+  SdfNode,
+  SdfPrimitiveNode,
+  SdfBoolOpNode,
+  SdfTransformNode,
+  SdfModifierNode,
+  SdfFill,
+  SolidFill,
+  OutlineFill,
+  GradientFill,
+  GlowFill,
+  SolidOutlineFill,
+  CosinePaletteFill,
+  Vec2 as SdfVec2,
+} from "./sdf.ts";
+export {
+  // Layer constants
+  LAYERS,
+  // Primitives
+  circle as sdfCircle,
+  box as sdfBox,
+  roundedBox as sdfRoundedBox,
+  ellipse as sdfEllipse,
+  triangle as sdfTriangle,
+  segment as sdfSegment,
+  egg as sdfEgg,
+  heart as sdfHeart,
+  moon as sdfMoon,
+  hexagon as sdfHexagon,
+  pentagon as sdfPentagon,
+  star as sdfStar,
+  cross as sdfCross,
+  ring as sdfRing,
+  // Composition
+  union as sdfUnion,
+  subtract as sdfSubtract,
+  intersect as sdfIntersect,
+  smoothUnion as sdfSmoothUnion,
+  smoothSubtract as sdfSmoothSubtract,
+  // Transforms
+  offset as sdfOffset,
+  rotate as sdfRotate,
+  scale as sdfScale,
+  mirrorX as sdfMirrorX,
+  repeat as sdfRepeat,
+  repeatBounded as sdfRepeatBounded,
+  // Modifiers
+  round as sdfRound,
+  outline as sdfOutline,
+  outlineN as sdfOutlineN,
+  // Fill shorthand functions
+  solid,
+  glow,
+  gradient,
+  outlineFill,
+  solidOutline,
+  cosinePalette,
+  // Animation helpers
+  pulse,
+  spin,
+  bob,
+  breathe,
+  // Layout helpers
+  createGrid,
+  // Frame management
+  createSdfFrame,
+  // Code generation
+  compileToWgsl,
+  calculateBounds,
+  generateFillWgsl,
+  parseColor,
+  // Entity creation
+  sdfEntity,
+  // Entity management
+  getSdfEntity,
+  getSdfEntityCount,
+  clearSdfEntities,
+  flushSdfEntities,
+} from "./sdf.ts";

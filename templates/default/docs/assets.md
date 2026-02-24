@@ -1,5 +1,7 @@
 # Assets
 
+> **No assets?** For procedural graphics without image files (backgrounds, UI, effects, prototyping), see [sdf.md](sdf.md). SDF shapes are resolution-independent and defined entirely in code.
+
 ## Finding Assets with Skills
 
 Use the built-in skills to find and setup game assets:

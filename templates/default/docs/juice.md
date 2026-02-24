@@ -95,3 +95,40 @@ if (isKeyPressed("Space")) {
 updateTypewriter(tw, dt);
 drawTypewriter(tw, 70, 420, { scale: 1, layer: 100, screenSpace: true });
 ```
+
+## SDF Glow Effects
+
+Use SDF shapes with glow fills and animation helpers for juicy collectibles and pickups:
+
+```typescript
+import {
+  star, heart, circle,
+  sdfEntity, clearSdfEntities, flushSdfEntities,
+  glow, pulse, spin, breathe, bob,
+  LAYERS,
+} from "@arcane/runtime/rendering";
+
+// Glowing collectible gem
+sdfEntity({
+  shape: star(14, 4, 0.5),
+  fill: glow("#00ffaa", 0.2),  // lower intensity = bigger glow
+  position: [gemX, gemY + bob(time, 2, 3)],  // gentle bobbing
+  rotation: spin(time, 45),                   // slow spin
+  scale: pulse(time, 3, 0.9, 1.1),           // pulsing size
+  bounds: 50,  // large bounds for glow effect
+  layer: LAYERS.ENTITIES + 5,
+});
+
+// Pulsing heart pickup
+sdfEntity({
+  shape: heart(18),
+  fill: glow("#ff3366", 0.15),
+  position: [heartX, heartY],
+  scale: pulse(time, 2.5, 0.95, 1.15),
+  opacity: breathe(time, 2.5, 0.75, 1.0),
+  bounds: 70,
+  layer: LAYERS.ENTITIES + 5,
+});
+```
+
+See [sdf.md](sdf.md) for full SDF documentation including shape composition and gradient fills.

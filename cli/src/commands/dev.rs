@@ -537,6 +537,20 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
             }
         }
 
+        // Drain SDF commands from SdfState and pass to renderer
+        {
+            use arcane_core::scripting::sdf_ops::SdfState;
+            let sdf_cmds = {
+                let op_state = rt.inner().op_state();
+                let op_state = op_state.borrow();
+                let sdf = op_state.borrow::<Rc<RefCell<SdfState>>>();
+                std::mem::take(&mut sdf.borrow_mut().commands)
+            };
+            if let Some(ref mut renderer) = state.renderer {
+                renderer.set_sdf_commands(sdf_cmds);
+            }
+        }
+
         // Process render targets: create/destroy GPU resources, render target sprite queues
         {
             use arcane_core::scripting::target_ops::TargetState;

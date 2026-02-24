@@ -6,7 +6,7 @@ One-liner signatures for every exported function, grouped by module.
 For full JSDoc, argument types, and examples, see the per-module .d.ts files in types/.
 
 === rendering (@arcane/runtime/rendering) ===
-Types: AnimatedSpriteDef,AnimatedTileDef,AnimationDef,AnimationFinishedCondition,AnimationId,AnimationState,AtlasSpriteOptions,AudioBus,AutotileMapping,AutotileRule,BitmapFont,BlendState,BooleanCondition,CameraBounds,CameraDeadzone,CameraState,EffectId,FSMConfig,FSMParams,FSMState,FSMStateDef,FSMTransition,FloatingTextOptions,FrameEvent,FrameEventCallback,HexConfig,HexCoord,HexOrientation,HexTile,HexTilemap,HexTilemapConfig,ImpactConfig,ImpactFlash,ImpactParticles,ImpactShake,ImpactSound,InstanceId,IsoConfig,IsoTile,IsoTilemap,IsoTilemapConfig,KeyName,LayerOptions,LayeredTilemap,LoadAtlasOptions,MSDFFont,MSDFGlyph,MousePosition,NeighborCheck,NineSliceBorder,NineSliceOptions,OffsetType,PackDefinition,ParallaxSpriteOptions,PlaceholderShape,PlayOptions,PoolConfig,RenderTargetId,ScreenTransitionConfig,ScreenTransitionType,ShaderId,SoundId,SpatialOptions,SpriteAtlas,SpriteDef,SpriteInfo,SpriteOptions,StaggeredIsoConfig,StaticSpriteDef,TextAlign,TextLayoutOptions,TextMeasurement,TextOptions,TextOutline,TextShadow,TextureId,ThresholdCondition,TileProperties,TilemapId,TilemapLayer,TilemapOptions,Trail,TrailConfig,TrailPoint,TransitionCondition,TriggerCondition,Typewriter,TypewriterConfig,TypewriterDrawOptions,
+Types: AnimatedSpriteDef,AnimatedTileDef,AnimationDef,AnimationFinishedCondition,AnimationId,AnimationState,AtlasSpriteOptions,AudioBus,AutotileMapping,AutotileRule,BitmapFont,BlendState,BooleanCondition,CameraBounds,CameraDeadzone,CameraState,EffectId,FSMConfig,FSMParams,FSMState,FSMStateDef,FSMTransition,FloatingTextOptions,FrameEvent,FrameEventCallback,HexConfig,HexCoord,HexOrientation,HexTile,HexTilemap,HexTilemapConfig,ImpactConfig,ImpactFlash,ImpactParticles,ImpactShake,ImpactSound,InstanceId,IsoConfig,IsoTile,IsoTilemap,IsoTilemapConfig,KeyName,LayerOptions,LayeredTilemap,LoadAtlasOptions,MSDFFont,MSDFGlyph,MousePosition,NeighborCheck,NineSliceBorder,NineSliceOptions,OffsetType,PackDefinition,ParallaxSpriteOptions,PlaceholderShape,PlayOptions,PoolConfig,RenderTargetId,ScreenTransitionConfig,ScreenTransitionType,SdfFill,SdfNode,SdfNodeType,SdfOpType,SdfPrimitiveKind,ShaderId,SoundId,SpatialOptions,SpriteAtlas,SpriteDef,SpriteInfo,SpriteOptions,StaggeredIsoConfig,StaticSpriteDef,TextAlign,TextLayoutOptions,TextMeasurement,TextOptions,TextOutline,TextShadow,TextureId,ThresholdCondition,TileProperties,TilemapId,TilemapLayer,TilemapOptions,Trail,TrailConfig,TrailPoint,TransitionCondition,TriggerCondition,Typewriter,TypewriterConfig,TypewriterDrawOptions,Vec2,
 declare function createAnimationFSM(config: FSMConfig): FSMState;
 declare function getCurrentState(fsm: FSMState): string;
 declare function isBlending(fsm: FSMState): boolean;
@@ -208,6 +208,58 @@ declare function beginRenderTarget(id: RenderTargetId): void;
 declare function endRenderTarget(): void;
 declare function getRenderTargetTextureId(id: RenderTargetId): TextureId;
 declare function destroyRenderTarget(id: RenderTargetId): void;
+-- Constants (read-only data, not function parameters) --
+declare const LAYERS: { /** Far background elements (sky, distant mountains) */ readonly BACKGROUND: 0; /** Ground-level terrain and platforms */ readonly GROUND: 10; /** Game objects like items, enemies, player */ readonly ENTITIES: 20; /** Near foreground elements (foliage, particles) */ readonly FOREGROUND: 30; /** UI overlays */ readonly UI: 40; };
+-- Functions --
+declare function solid(color: string): SolidFill;
+declare function glow(color: string, intensity?: number): GlowFill;
+declare function gradient(from: string, to: string, angle?: number, scale?: number): GradientFill;
+declare function outlineFill(color: string, thickness: number): OutlineFill;
+declare function solidOutline(fillColor: string, outlineColor: string, thickness: number): SolidOutlineFill;
+declare function cosinePalette(a: [number, number, number], b: [number, number, number], c: [number, number, number], d: [number, number, number]): CosinePaletteFill;
+declare function parseColor(color: string): [number, number, number, number];
+declare function circle(radius: number): SdfNode;
+declare function box(width: number, height: number): SdfNode;
+declare function roundedBox(width: number, height: number, radius: number | [number, number, number, number]): SdfNode;
+declare function ellipse(width: number, height: number): SdfNode;
+declare function triangle(p0: Vec2, p1: Vec2, p2: Vec2): SdfNode;
+declare function egg(ra: number, rb: number): SdfNode;
+declare function heart(size: number): SdfNode;
+declare function star(radius: number, points: number, innerRadius: number): SdfNode;
+declare function hexagon(radius: number): SdfNode;
+declare function pentagon(radius: number): SdfNode;
+declare function segment(from: Vec2, to: Vec2): SdfNode;
+declare function moon(d: number, ra: number, rb: number): SdfNode;
+declare function cross(width: number, height: number, radius: number): SdfNode;
+declare function ring(radius: number, width: number): SdfNode;
+declare function union(...shapes: SdfNode[]): SdfNode;
+declare function subtract(base: SdfNode, ...cutouts: SdfNode[]): SdfNode;
+declare function intersect(...shapes: SdfNode[]): SdfNode;
+declare function smoothUnion(k: number, ...shapes: SdfNode[]): SdfNode;
+declare function smoothSubtract(k: number, base: SdfNode, ...cutouts: SdfNode[]): SdfNode;
+declare function offset(shape: SdfNode, x: number, y: number): SdfNode;
+declare function rotate(shape: SdfNode, degrees: number): SdfNode;
+declare function scale(shape: SdfNode, factor: number): SdfNode;
+declare function mirrorX(shape: SdfNode): SdfNode;
+declare function repeat(shape: SdfNode, spacingX: number, spacingY: number): SdfNode;
+declare function round(shape: SdfNode, radius: number): SdfNode;
+declare function outline(shape: SdfNode, thickness: number): SdfNode;
+declare function outlineN(shape: SdfNode, thickness: number, count: number): SdfNode;
+declare function repeatBounded(shape: SdfNode, spacingX: number, spacingY: number, countX: number, countY: number): SdfNode;
+declare function pulse(time: number, speed?: number, min?: number, max?: number): number;
+declare function spin(time: number, degreesPerSecond?: number): number;
+declare function bob(time: number, speed?: number, amplitude?: number): number;
+declare function breathe(time: number, speed?: number, min?: number, max?: number): number;
+declare function createGrid(columns: number, rows: number, cellWidth: number, cellHeight: number, originX?: number, originY?: number): [number, number, number, number][];
+declare function createSdfFrame(callback: () => void): void;
+declare function compileToWgsl(node: SdfNode): string;
+declare function calculateBounds(node: SdfNode): number;
+declare function generateFillWgsl(fill: SdfFill): string;
+declare function sdfEntity(config: { shape: SdfNode; fill: SdfFill; position?: Vec2; layer?: number; bounds?: number; rotation?: number; scale?: number; opacity?: number; }): string;
+declare function getSdfEntity(id: string): { shape: SdfNode; fill: SdfFill; position: Vec2; layer: number; bounds: number; wgsl: string; rotation: number; scale: number; opacity: number; } | undefined;
+declare function getSdfEntityCount(): number;
+declare function clearSdfEntities(): void;
+declare function flushSdfEntities(): void;
 declare function createShaderFromSource(name: string, wgslSource: string): ShaderId;
 declare function setShaderParam(shaderId: ShaderId, index: number, x: number, y?: number, z?: number, w?: number): void;
 declare function drawSprite(opts: SpriteOptions): void;

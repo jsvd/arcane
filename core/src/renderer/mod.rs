@@ -11,6 +11,7 @@ pub mod postprocess;
 pub mod radiance;
 pub mod geometry;
 pub mod rendertarget;
+pub mod sdf;
 // Test harness is always public for integration tests
 pub mod test_harness;
 
@@ -26,61 +27,75 @@ pub use postprocess::PostProcessPipeline;
 pub use radiance::{RadiancePipeline, RadianceState, EmissiveSurface, Occluder, DirectionalLight, SpotLight};
 pub use geometry::GeometryBatch;
 pub use rendertarget::RenderTargetStore;
+pub use sdf::{SdfPipelineStore, SdfCommand, SdfFill};
 
 use crate::scripting::geometry_ops::GeoCommand;
+use crate::scripting::sdf_ops::SdfDrawCommand;
 use anyhow::Result;
 
 /// A single step in the interleaved render schedule.
-/// Sprites and geometry are merged by layer so that layer ordering is respected
-/// across both pipeline types.
+/// Sprites, geometry, and SDF commands are merged by layer so that layer ordering
+/// is respected across all pipeline types.
 enum RenderOp {
     /// Render a contiguous range of sorted sprite commands.
     Sprites { start: usize, end: usize },
     /// Render a contiguous range of sorted geometry commands.
     Geometry { start: usize, end: usize },
+    /// Render a contiguous range of sorted SDF commands.
+    Sdf { start: usize, end: usize },
 }
 
-/// Build an interleaved render schedule from sorted sprite and geometry commands.
+/// Build an interleaved render schedule from sorted sprite, geometry, and SDF commands.
 ///
-/// Both input slices must be pre-sorted by layer. The schedule merges them so that
-/// lower layers render first. At the same layer, sprites render before geometry.
+/// All input slices must be pre-sorted by layer. The schedule merges them so that
+/// lower layers render first. At the same layer, the order is: sprites, then geometry, then SDF.
 fn build_render_schedule(
     sprites: &[SpriteCommand],
     geo: &[GeoCommand],
+    sdf: &[SdfCommand],
 ) -> Vec<RenderOp> {
     let mut schedule = Vec::new();
     let mut si = 0;
     let mut gi = 0;
+    let mut di = 0;
 
-    while si < sprites.len() || gi < geo.len() {
-        // Decide whether to emit sprites or geometry next.
-        // At the same layer, sprites go first.
-        let do_sprites = if si >= sprites.len() {
-            false
-        } else if gi >= geo.len() {
-            true
-        } else {
-            sprites[si].layer <= geo[gi].layer()
-        };
+    while si < sprites.len() || gi < geo.len() || di < sdf.len() {
+        // Get current layer for each type (MAX if exhausted)
+        let sprite_layer = if si < sprites.len() { sprites[si].layer } else { i32::MAX };
+        let geo_layer = if gi < geo.len() { geo[gi].layer() } else { i32::MAX };
+        let sdf_layer = if di < sdf.len() { sdf[di].layer } else { i32::MAX };
 
-        if do_sprites {
+        // Find minimum layer
+        let min_layer = sprite_layer.min(geo_layer).min(sdf_layer);
+
+        // At the same layer: sprites first, then geo, then SDF
+        if sprite_layer == min_layer {
             let start = si;
-            // Consume sprites whose layer is <= the next geo command's layer.
-            // This groups all sprites that should render before the next geo block.
-            let bound = if gi < geo.len() { geo[gi].layer() } else { i32::MAX };
+            // Consume all sprites at or before the next geo/sdf layer
+            let bound = geo_layer.min(sdf_layer);
             while si < sprites.len() && sprites[si].layer <= bound {
                 si += 1;
             }
             schedule.push(RenderOp::Sprites { start, end: si });
-        } else {
+        } else if geo_layer == min_layer {
             let start = gi;
-            // Consume geo commands whose layer is strictly < the next sprite's layer.
-            // Strict < because at the same layer, sprites go first.
-            let bound = if si < sprites.len() { sprites[si].layer } else { i32::MAX };
-            while gi < geo.len() && geo[gi].layer() < bound {
+            // Consume geo commands at layers < next sprite layer and <= next sdf layer
+            // (sprites come before geo at same layer, but geo comes before sdf)
+            let sprite_bound = if si < sprites.len() { sprites[si].layer } else { i32::MAX };
+            let sdf_bound = if di < sdf.len() { sdf[di].layer } else { i32::MAX };
+            while gi < geo.len() && geo[gi].layer() < sprite_bound && geo[gi].layer() <= sdf_bound {
                 gi += 1;
             }
             schedule.push(RenderOp::Geometry { start, end: gi });
+        } else {
+            let start = di;
+            // Consume SDF commands at layers < next sprite/geo layer
+            let sprite_bound = if si < sprites.len() { sprites[si].layer } else { i32::MAX };
+            let geo_bound = if gi < geo.len() { geo[gi].layer() } else { i32::MAX };
+            while di < sdf.len() && sdf[di].layer < sprite_bound && sdf[di].layer < geo_bound {
+                di += 1;
+            }
+            schedule.push(RenderOp::Sdf { start, end: di });
         }
     }
 
@@ -105,6 +120,10 @@ pub struct Renderer {
     pub frame_commands: Vec<SpriteCommand>,
     /// Geometry commands queued for the current frame (drained from GeoState).
     pub geo_commands: Vec<GeoCommand>,
+    /// SDF commands queued for the current frame (drained from SdfState).
+    pub sdf_commands: Vec<SdfCommand>,
+    /// SDF pipeline store for rendering signed distance field shapes.
+    pub sdf_pipeline: SdfPipelineStore,
     /// Display scale factor (e.g. 2.0 on Retina). Used to convert physical → logical pixels.
     pub scale_factor: f32,
     /// Clear color for the render pass background. Default: dark blue-gray.
@@ -120,6 +139,7 @@ impl Renderer {
         let geometry = GeometryBatch::new(&gpu);
         let shaders = ShaderStore::new(&gpu);
         let postprocess = PostProcessPipeline::new(&gpu);
+        let sdf_pipeline = SdfPipelineStore::new(&gpu);
         let radiance_pipeline = RadiancePipeline::new(&gpu);
         let textures = TextureStore::new();
         // Set camera viewport to logical pixels so world units are DPI-independent
@@ -143,6 +163,8 @@ impl Renderer {
             render_targets: RenderTargetStore::new(),
             frame_commands: Vec::new(),
             geo_commands: Vec::new(),
+            sdf_commands: Vec::new(),
+            sdf_pipeline,
             scale_factor,
             clear_color: [0.1, 0.1, 0.15, 1.0],
         })
@@ -153,7 +175,39 @@ impl Renderer {
         self.geo_commands = cmds;
     }
 
-    /// Render the current frame's sprite and geometry commands, interleaved by layer.
+    /// Set SDF commands for the current frame.
+    /// Converts SdfDrawCommand (from scripting ops) to SdfCommand (for rendering).
+    pub fn set_sdf_commands(&mut self, cmds: Vec<SdfDrawCommand>) {
+        self.sdf_commands = cmds.into_iter().map(|c| {
+            let fill = match c.fill_type {
+                0 => SdfFill::Solid { color: c.color },
+                1 => SdfFill::Outline { color: c.color, thickness: c.fill_param },
+                2 => SdfFill::SolidWithOutline { fill: c.color, outline: c.color2, thickness: c.fill_param },
+                3 => SdfFill::Gradient { from: c.color, to: c.color2, angle: c.fill_param, scale: c.gradient_scale },
+                4 => SdfFill::Glow { color: c.color, intensity: c.fill_param },
+                5 => SdfFill::CosinePalette {
+                    a: [c.palette_params[0], c.palette_params[1], c.palette_params[2]],
+                    b: [c.palette_params[3], c.palette_params[4], c.palette_params[5]],
+                    c: [c.palette_params[6], c.palette_params[7], c.palette_params[8]],
+                    d: [c.palette_params[9], c.palette_params[10], c.palette_params[11]],
+                },
+                _ => SdfFill::Solid { color: c.color },
+            };
+            SdfCommand {
+                sdf_expr: c.sdf_expr,
+                fill,
+                x: c.x,
+                y: c.y,
+                bounds: c.bounds,
+                layer: c.layer,
+                rotation: c.rotation,
+                scale: c.scale,
+                opacity: c.opacity,
+            }
+        }).collect();
+    }
+
+    /// Render the current frame's sprite, geometry, and SDF commands, interleaved by layer.
     pub fn render_frame(&mut self) -> Result<()> {
         let output = self.gpu.surface.get_current_texture()?;
         let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -174,8 +228,11 @@ impl Renderer {
         // Sort geometry commands by layer
         self.geo_commands.sort_by_key(|c| c.layer());
 
+        // Sort SDF commands by layer
+        self.sdf_commands.sort_by_key(|c| c.layer);
+
         // Build interleaved render schedule
-        let schedule = build_render_schedule(&self.frame_commands, &self.geo_commands);
+        let schedule = build_render_schedule(&self.frame_commands, &self.geo_commands, &self.sdf_commands);
 
         // Flush dirty custom shader uniforms
         self.shaders.flush(&self.gpu.queue);
@@ -190,6 +247,7 @@ impl Renderer {
 
         // Write camera + lighting uniforms once for the whole frame
         self.sprites.prepare(&self.gpu.device, &self.gpu.queue, &self.camera, &lighting_uniform);
+        self.sdf_pipeline.prepare(&self.gpu.queue, &self.camera, 0.0);
 
         // Run radiance cascade GI compute pass (if enabled)
         let gi_active = self.radiance.compute(
@@ -234,6 +292,12 @@ impl Renderer {
                                     camera_bg, &self.geo_commands[*start..*end], cc,
                                 );
                             }
+                            RenderOp::Sdf { start, end } => {
+                                self.sdf_pipeline.render(
+                                    &self.gpu.device, &mut encoder, sprite_target,
+                                    &self.sdf_commands[*start..*end], cc,
+                                );
+                            }
                         }
                     }
                 }
@@ -273,6 +337,12 @@ impl Renderer {
                                 camera_bg, &self.geo_commands[*start..*end], cc,
                             );
                         }
+                        RenderOp::Sdf { start, end } => {
+                            self.sdf_pipeline.render(
+                                &self.gpu.device, &mut encoder, &view,
+                                &self.sdf_commands[*start..*end], cc,
+                            );
+                        }
                     }
                 }
             }
@@ -287,6 +357,7 @@ impl Renderer {
 
         self.frame_commands.clear();
         self.geo_commands.clear();
+        self.sdf_commands.clear();
         Ok(())
     }
 

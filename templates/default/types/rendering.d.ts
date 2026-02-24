@@ -2951,6 +2951,713 @@ declare module "@arcane/runtime/rendering" {
   export declare function destroyRenderTarget(id: RenderTargetId): void;
 
   /**
+   * Composable Signed Distance Function (SDF) API for building shape trees
+   * that compile to WGSL shader code.
+   *
+   * SDF nodes are pure data structures -- constructing them has no side effects.
+   * Call {@link compileToWgsl} to generate WGSL expressions, or {@link sdfEntity}
+   * to register a renderable SDF shape (headless-safe).
+   *
+   * ## Coordinate System
+   *
+   * After the vertex shader Y-flip, the coordinate system is:
+   * - **+X** = right
+   * - **+Y** = up (screen top)
+   * - **-Y** = down (screen bottom)
+   *
+   * This matches typical math conventions but differs from some 2D graphics APIs
+   * where Y increases downward. Keep this in mind when using:
+   * - `offset(shape, x, y)` - positive Y moves the shape UP
+   * - `gradient(..., angle)` - 90° goes from bottom to top
+   * - triangle/polygon vertices - Y increases upward
+   *
+   * ## Performance Tips
+   *
+   * - Use instance-level transforms (`rotation`, `scale`, `opacity` in sdfEntity)
+   *   for animation. These are GPU-efficient and don't cause shader recompilation.
+   * - Avoid animating fill parameters or SDF-level transforms (`rotate()`, `scale()`)
+   *   as these bake values into the shader and trigger recompilation each frame.
+   * - Call `clearSdfEntities()` at the start of each frame for animated scenes,
+   *   or use `createSdfFrame()` which handles clear+flush automatically.
+   *
+   * @example
+   * ```ts
+   * import { circle, box, union, offset, smoothUnion, compileToWgsl, sdfEntity } from "@arcane/runtime/rendering";
+   *
+   * // Build a snowman shape
+   * const snowman = union(
+   *   circle(20),
+   *   offset(circle(14), 0, -30),
+   *   offset(circle(10), 0, -54),
+   * );
+   *
+   * // Compile to WGSL
+   * const wgsl = compileToWgsl(snowman);
+   *
+   * // Or create a renderable entity
+   * const id = sdfEntity({
+   *   shape: snowman,
+   *   fill: { type: "solid", color: "#ffffff" },
+   *   position: [100, 200],
+   * });
+   * ```
+   */
+  /** A 2D vector as a two-element tuple: [x, y]. */
+  export type Vec2 = [number, number];
+  /** Discriminant for SDF node categories. */
+  export type SdfNodeType = "primitive" | "bool_op" | "transform" | "modifier";
+  /** Supported SDF primitive kinds. */
+  export type SdfPrimitiveKind = "circle" | "box" | "rounded_box" | "ellipse" | "segment" | "triangle" | "egg" | "heart" | "moon" | "vesica" | "arc" | "hexagon" | "pentagon" | "octogon" | "star5" | "star" | "cross" | "ring" | "pie" | "rounded_x";
+  /** Boolean operation types for combining SDF shapes. */
+  export type SdfOpType = "union" | "subtract" | "intersect" | "smooth_union" | "smooth_subtract";
+  /** A primitive SDF node -- a single geometric shape. */
+  export interface SdfPrimitiveNode {
+      type: "primitive";
+      kind: SdfPrimitiveKind;
+      params: number[];
+      /** For triangle/segment: additional vec2 params. */
+      points?: Vec2[];
+  }
+  /** A boolean operation node combining two or more child SDF nodes. */
+  export interface SdfBoolOpNode {
+      type: "bool_op";
+      op: SdfOpType;
+      children: SdfNode[];
+      /** Blend radius for smooth operations. */
+      blendFactor?: number;
+  }
+  /** A transform node that repositions/rotates/scales a child SDF node. */
+  export interface SdfTransformNode {
+      type: "transform";
+      child: SdfNode;
+      offset?: Vec2;
+      /** Rotation angle in radians. */
+      rotation?: number;
+      scale?: number;
+      symmetry?: "x";
+      repeatSpacing?: Vec2;
+  }
+  /** A modifier node that adjusts the distance field of a child (round, onion). */
+  export interface SdfModifierNode {
+      type: "modifier";
+      child: SdfNode;
+      modifier: "round" | "onion";
+      amount: number;
+  }
+  /** Any SDF node in the composition tree. */
+  export type SdfNode = SdfPrimitiveNode | SdfBoolOpNode | SdfTransformNode | SdfModifierNode;
+  /**
+   * Predefined render layer constants for common use cases.
+   * Higher numbers render on top of lower numbers.
+   *
+   * @example
+   * sdfEntity({
+   *   shape: circle(20),
+   *   fill: solid("#ff0000"),
+   *   layer: LAYERS.FOREGROUND,
+   * });
+   */
+  export declare const LAYERS: {
+      /** Far background elements (sky, distant mountains) */
+      readonly BACKGROUND: 0;
+      /** Ground-level terrain and platforms */
+      readonly GROUND: 10;
+      /** Game objects like items, enemies, player */
+      readonly ENTITIES: 20;
+      /** Near foreground elements (foliage, particles) */
+      readonly FOREGROUND: 30;
+      /** UI overlays */
+      readonly UI: 40;
+  };
+  /** Solid color fill. */
+  export interface SolidFill {
+      type: "solid";
+      color: string;
+  }
+  /** Outline-only fill (renders the border of the shape). */
+  export interface OutlineFill {
+      type: "outline";
+      color: string;
+      thickness: number;
+  }
+  /** Linear gradient fill between two colors at a given angle. */
+  export interface GradientFill {
+      type: "gradient";
+      from: string;
+      to: string;
+      /** Angle in degrees (0 = left-to-right, 90 = bottom-to-top). */
+      angle: number;
+      /** Scale factor for gradient mapping (default 1.0). Scale > 1 makes gradient span a smaller region. */
+      scale: number;
+  }
+  /** Glow/bloom fill around the shape boundary. */
+  export interface GlowFill {
+      type: "glow";
+      color: string;
+      intensity: number;
+  }
+  /** Combined solid fill with outline stroke. */
+  export interface SolidOutlineFill {
+      type: "solid_outline";
+      fill: string;
+      outline: string;
+      thickness: number;
+  }
+  /**
+   * Cosine palette fill using the formula:
+   * color = a + b * cos(2*PI * (c*t + d))
+   * where t is derived from the SDF distance.
+   */
+  export interface CosinePaletteFill {
+      type: "cosine_palette";
+      a: [number, number, number];
+      b: [number, number, number];
+      c: [number, number, number];
+      d: [number, number, number];
+  }
+  /** All supported fill types for SDF entities. */
+  export type SdfFill = SolidFill | OutlineFill | GradientFill | GlowFill | SolidOutlineFill | CosinePaletteFill;
+  /**
+   * Create a solid color fill.
+   * @param color - Hex color string (e.g., "#ff0000").
+   * @returns SolidFill object.
+   *
+   * @example
+   * sdfEntity({ shape: circle(20), fill: solid("#ff0000") });
+   */
+  export declare function solid(color: string): SolidFill;
+  /**
+   * Create a glow fill effect.
+   * Note: Lower intensity = larger glow (counterintuitive but mathematically correct).
+   * @param color - Hex color string.
+   * @param intensity - Glow intensity (0.1-1.0 typical, lower = bigger glow).
+   * @returns GlowFill object.
+   *
+   * @example
+   * // Soft, wide glow
+   * sdfEntity({ shape: heart(30), fill: glow("#ff3366", 0.25), bounds: 90 });
+   */
+  export declare function glow(color: string, intensity?: number): GlowFill;
+  /**
+   * Create a linear gradient fill.
+   * @param from - Start color (hex string).
+   * @param to - End color (hex string).
+   * @param angle - Gradient angle in degrees (0 = left-to-right, 90 = bottom-to-top).
+   * @param scale - Scale factor for gradient mapping (default 1.0). Use scale > 1 to
+   *   make the gradient span a smaller region, useful when bounds is larger than the
+   *   shape's extent in the gradient direction. For example, if bounds=50 but the shape
+   *   only spans ±37 in the gradient direction, use scale=50/37≈1.35.
+   * @returns GradientFill object.
+   *
+   * @example
+   * // Bottom-to-top gradient (green to white)
+   * sdfEntity({
+   *   shape: triangle([0, 30], [-50, -30], [50, -30]),
+   *   fill: gradient("#2d4a1c", "#f0f8ff", 90),
+   *   bounds: 35, // Tight bounds for visible gradient
+   * });
+   *
+   * @example
+   * // Equilateral triangle with properly scaled gradient
+   * // bounds=43 (for width), but triangle Y extent is ±37
+   * sdfEntity({
+   *   shape: triangle([0, 37], [-43, -37], [43, -37]),
+   *   fill: gradient("#000066", "#ff0000", 90, 43/37),
+   *   bounds: 43,
+   * });
+   */
+  export declare function gradient(from: string, to: string, angle?: number, scale?: number): GradientFill;
+  /**
+   * Create an outline-only fill.
+   * @param color - Hex color string.
+   * @param thickness - Outline thickness in pixels.
+   * @returns OutlineFill object.
+   *
+   * @example
+   * sdfEntity({ shape: circle(30), fill: outlineFill("#ffffff", 2) });
+   */
+  export declare function outlineFill(color: string, thickness: number): OutlineFill;
+  /**
+   * Create a solid fill with an outline stroke.
+   * @param fillColor - Interior fill color (hex string).
+   * @param outlineColor - Outline color (hex string).
+   * @param thickness - Outline thickness in pixels.
+   * @returns SolidOutlineFill object.
+   *
+   * @example
+   * sdfEntity({
+   *   shape: star(30, 5, 0.4),
+   *   fill: solidOutline("#ffd700", "#000000", 2),
+   * });
+   */
+  export declare function solidOutline(fillColor: string, outlineColor: string, thickness: number): SolidOutlineFill;
+  /**
+   * Create a cosine palette fill for rainbow/gradient distance effects.
+   * Uses the formula: color = a + b * cos(2π * (c*t + d))
+   *
+   * @param a - Base color offset [r, g, b] (0-1 each).
+   * @param b - Color amplitude [r, g, b].
+   * @param c - Frequency multiplier [r, g, b].
+   * @param d - Phase offset [r, g, b].
+   * @returns CosinePaletteFill object.
+   *
+   * @example
+   * // Classic rainbow palette
+   * sdfEntity({
+   *   shape: circle(40),
+   *   fill: cosinePalette(
+   *     [0.5, 0.5, 0.5],
+   *     [0.5, 0.5, 0.5],
+   *     [1.0, 1.0, 1.0],
+   *     [0.0, 0.33, 0.67],
+   *   ),
+   * });
+   */
+  export declare function cosinePalette(a: [number, number, number], b: [number, number, number], c: [number, number, number], d: [number, number, number]): CosinePaletteFill;
+  /**
+   * Parse a hex color string into normalized [r, g, b, a] (each 0.0-1.0).
+   * Accepts #RGB, #RRGGBB, #RRGGBBAA formats.
+   *
+   * @param color - Hex color string (e.g., "#ff0000", "#f00", "#ff000080").
+   * @returns Normalized RGBA tuple.
+   * @throws Error if the color string is not a valid hex color.
+   */
+  export declare function parseColor(color: string): [number, number, number, number];
+  /**
+   * Create an SDF circle primitive.
+   * @param radius - Circle radius in world units.
+   * @returns SDF node representing a circle.
+   */
+  export declare function circle(radius: number): SdfNode;
+  /**
+   * Create an SDF axis-aligned box primitive.
+   * @param width - Half-width of the box.
+   * @param height - Half-height of the box.
+   * @returns SDF node representing a box.
+   */
+  export declare function box(width: number, height: number): SdfNode;
+  /**
+   * Create an SDF rounded box primitive.
+   * @param width - Half-width of the box.
+   * @param height - Half-height of the box.
+   * @param radius - Corner radius (uniform number or per-corner [tl, tr, br, bl]).
+   * @returns SDF node representing a rounded box.
+   */
+  export declare function roundedBox(width: number, height: number, radius: number | [number, number, number, number]): SdfNode;
+  /**
+   * Create an SDF ellipse primitive.
+   * @param width - Semi-major axis width.
+   * @param height - Semi-minor axis height.
+   * @returns SDF node representing an ellipse.
+   */
+  export declare function ellipse(width: number, height: number): SdfNode;
+  /**
+   * Create an SDF triangle primitive from three points.
+   * @param p0 - First vertex.
+   * @param p1 - Second vertex.
+   * @param p2 - Third vertex.
+   * @returns SDF node representing a triangle.
+   */
+  export declare function triangle(p0: Vec2, p1: Vec2, p2: Vec2): SdfNode;
+  /**
+   * Create an SDF egg primitive.
+   * @param ra - Primary radius.
+   * @param rb - Bulge factor.
+   * @returns SDF node representing an egg shape.
+   */
+  export declare function egg(ra: number, rb: number): SdfNode;
+  /**
+   * Create an SDF heart primitive.
+   * @param size - Overall heart size.
+   * @returns SDF node representing a heart shape.
+   */
+  export declare function heart(size: number): SdfNode;
+  /**
+   * Create an SDF star primitive with configurable point count.
+   * @param radius - Outer radius.
+   * @param points - Number of star points.
+   * @param innerRadius - Inner radius between points.
+   * @returns SDF node representing a star shape.
+   */
+  export declare function star(radius: number, points: number, innerRadius: number): SdfNode;
+  /**
+   * Create an SDF regular hexagon primitive.
+   * @param radius - Hexagon circumradius.
+   * @returns SDF node representing a hexagon.
+   */
+  export declare function hexagon(radius: number): SdfNode;
+  /**
+   * Create an SDF regular pentagon primitive.
+   * @param radius - Pentagon circumradius.
+   * @returns SDF node representing a pentagon.
+   */
+  export declare function pentagon(radius: number): SdfNode;
+  /**
+   * Create an SDF line segment primitive.
+   * @param from - Start point.
+   * @param to - End point.
+   * @returns SDF node representing a line segment.
+   */
+  export declare function segment(from: Vec2, to: Vec2): SdfNode;
+  /**
+   * Create an SDF crescent moon primitive.
+   * @param d - Distance between the two circle centers.
+   * @param ra - Radius of the outer circle.
+   * @param rb - Radius of the inner circle (subtracted).
+   * @returns SDF node representing a moon shape.
+   */
+  export declare function moon(d: number, ra: number, rb: number): SdfNode;
+  /**
+   * Create an SDF cross/plus primitive.
+   * @param width - Arm width (half-extent).
+   * @param height - Arm height (half-extent).
+   * @param radius - Corner rounding radius.
+   * @returns SDF node representing a cross shape.
+   */
+  export declare function cross(width: number, height: number, radius: number): SdfNode;
+  /**
+   * Create an SDF ring (annular) primitive.
+   * @param radius - Center radius.
+   * @param width - Ring thickness.
+   * @returns SDF node representing a ring.
+   */
+  export declare function ring(radius: number, width: number): SdfNode;
+  /**
+   * Combine multiple SDF shapes with a union (logical OR / min distance).
+   * @param shapes - Two or more SDF nodes to combine.
+   * @returns SDF node representing the union.
+   */
+  export declare function union(...shapes: SdfNode[]): SdfNode;
+  /**
+   * Subtract cutout shapes from a base shape.
+   * @param base - The shape to cut from.
+   * @param cutouts - One or more shapes to subtract.
+   * @returns SDF node representing the subtraction.
+   */
+  export declare function subtract(base: SdfNode, ...cutouts: SdfNode[]): SdfNode;
+  /**
+   * Intersect multiple SDF shapes (logical AND / max distance).
+   * @param shapes - Two or more SDF nodes to intersect.
+   * @returns SDF node representing the intersection.
+   */
+  export declare function intersect(...shapes: SdfNode[]): SdfNode;
+  /**
+   * Smooth union of multiple SDF shapes (blended boundary).
+   * @param k - Blend radius (larger = smoother blend).
+   * @param shapes - Two or more SDF nodes to combine.
+   * @returns SDF node representing the smooth union.
+   */
+  export declare function smoothUnion(k: number, ...shapes: SdfNode[]): SdfNode;
+  /**
+   * Smooth subtraction of cutout shapes from a base.
+   * @param k - Blend radius (larger = smoother blend).
+   * @param base - The shape to cut from.
+   * @param cutouts - One or more shapes to subtract.
+   * @returns SDF node representing the smooth subtraction.
+   */
+  export declare function smoothSubtract(k: number, base: SdfNode, ...cutouts: SdfNode[]): SdfNode;
+  /**
+   * Translate an SDF shape by (x, y).
+   * @param shape - The shape to translate.
+   * @param x - Horizontal offset.
+   * @param y - Vertical offset.
+   * @returns SDF node with the translation applied.
+   */
+  export declare function offset(shape: SdfNode, x: number, y: number): SdfNode;
+  /**
+   * Rotate an SDF shape by the given angle in degrees.
+   * @param shape - The shape to rotate.
+   * @param degrees - Rotation angle in degrees.
+   * @returns SDF node with the rotation applied.
+   */
+  export declare function rotate(shape: SdfNode, degrees: number): SdfNode;
+  /**
+   * Uniformly scale an SDF shape.
+   * @param shape - The shape to scale.
+   * @param factor - Scale factor (>1 = larger, <1 = smaller).
+   * @returns SDF node with the scale applied.
+   */
+  export declare function scale(shape: SdfNode, factor: number): SdfNode;
+  /**
+   * Mirror an SDF shape along the X axis (left-right symmetry).
+   * @param shape - The shape to mirror.
+   * @returns SDF node with X-axis symmetry applied.
+   */
+  export declare function mirrorX(shape: SdfNode): SdfNode;
+  /**
+   * Repeat an SDF shape infinitely on a 2D grid.
+   * @param shape - The shape to repeat.
+   * @param spacingX - Horizontal spacing between repetitions.
+   * @param spacingY - Vertical spacing between repetitions.
+   * @returns SDF node with the repeat pattern applied.
+   */
+  export declare function repeat(shape: SdfNode, spacingX: number, spacingY: number): SdfNode;
+  /**
+   * Round the edges of an SDF shape by expanding the boundary outward.
+   * @param shape - The shape to round.
+   * @param radius - Rounding radius.
+   * @returns SDF node with rounding applied.
+   */
+  export declare function round(shape: SdfNode, radius: number): SdfNode;
+  /**
+   * Turn a filled SDF shape into an outline (onion skinning).
+   * @param shape - The shape to outline.
+   * @param thickness - Outline thickness.
+   * @returns SDF node with onion modifier applied.
+   */
+  export declare function outline(shape: SdfNode, thickness: number): SdfNode;
+  /**
+   * Create multiple nested outlines (concentric rings).
+   * @param shape - The base shape.
+   * @param thickness - Thickness of each ring.
+   * @param count - Number of nested outlines.
+   * @returns SDF node with nested onion modifiers.
+   *
+   * @example
+   * // Create 3 concentric rings
+   * sdfEntity({
+   *   shape: outlineN(circle(45), 8, 3),
+   *   fill: solid("#e67e22"),
+   * });
+   */
+  export declare function outlineN(shape: SdfNode, thickness: number, count: number): SdfNode;
+  /**
+   * Repeat an SDF shape in a bounded region (no infinite tiling).
+   * Clips the repeat pattern to a rectangular area.
+   *
+   * @param shape - The shape to repeat.
+   * @param spacingX - Horizontal spacing between repetitions.
+   * @param spacingY - Vertical spacing between repetitions.
+   * @param countX - Number of horizontal repetitions.
+   * @param countY - Number of vertical repetitions.
+   * @returns SDF node with bounded repeat pattern.
+   *
+   * @example
+   * // 4x3 grid of circles
+   * sdfEntity({
+   *   shape: repeatBounded(circle(8), 30, 30, 4, 3),
+   *   fill: solid("#2ecc71"),
+   * });
+   */
+  export declare function repeatBounded(shape: SdfNode, spacingX: number, spacingY: number, countX: number, countY: number): SdfNode;
+  /**
+   * Calculate a pulsing scale value (oscillates between min and max).
+   * @param time - Current time in seconds.
+   * @param speed - Oscillation speed (cycles per second).
+   * @param min - Minimum scale value. Default: 0.8.
+   * @param max - Maximum scale value. Default: 1.2.
+   * @returns Scale value between min and max.
+   *
+   * @example
+   * sdfEntity({
+   *   shape: star(30, 5, 0.4),
+   *   fill: glow("#FFD700", 0.8),
+   *   scale: pulse(time, 4),
+   * });
+   */
+  export declare function pulse(time: number, speed?: number, min?: number, max?: number): number;
+  /**
+   * Calculate a spinning rotation angle.
+   * @param time - Current time in seconds.
+   * @param degreesPerSecond - Rotation speed. Default: 90.
+   * @returns Rotation angle in degrees.
+   *
+   * @example
+   * sdfEntity({
+   *   shape: star(35, 6, 0.5),
+   *   fill: solid("#e74c3c"),
+   *   rotation: spin(time, 60),
+   * });
+   */
+  export declare function spin(time: number, degreesPerSecond?: number): number;
+  /**
+   * Calculate a bobbing vertical offset (smooth up/down motion).
+   * @param time - Current time in seconds.
+   * @param speed - Oscillation speed.
+   * @param amplitude - Maximum displacement from center. Default: 10.
+   * @returns Y offset value.
+   *
+   * @example
+   * sdfEntity({
+   *   shape: circle(20),
+   *   fill: solid("#3498db"),
+   *   position: [100, 200 + bob(time, 2, 15)],
+   * });
+   */
+  export declare function bob(time: number, speed?: number, amplitude?: number): number;
+  /**
+   * Calculate a breathing opacity value (pulsing alpha).
+   * @param time - Current time in seconds.
+   * @param speed - Oscillation speed.
+   * @param min - Minimum opacity. Default: 0.5.
+   * @param max - Maximum opacity. Default: 1.0.
+   * @returns Opacity value between min and max.
+   *
+   * @example
+   * sdfEntity({
+   *   shape: heart(30),
+   *   fill: glow("#ff3366", 0.25),
+   *   opacity: breathe(time, 3),
+   *   bounds: 90,
+   * });
+   */
+  export declare function breathe(time: number, speed?: number, min?: number, max?: number): number;
+  /**
+   * Generate positions for a grid layout.
+   * Returns an array of [x, y, column, row] tuples for each cell.
+   *
+   * @param columns - Number of columns.
+   * @param rows - Number of rows.
+   * @param cellWidth - Width of each cell.
+   * @param cellHeight - Height of each cell.
+   * @param originX - X origin (default: cellWidth/2 for centering first cell).
+   * @param originY - Y origin (default: cellHeight/2 for centering first cell).
+   * @returns Array of [x, y, col, row] positions.
+   *
+   * @example
+   * // Create a 3x3 grid of effects
+   * const grid = createGrid(3, 3, 200, 200, 100, 100);
+   * for (const [x, y, col, row] of grid) {
+   *   sdfEntity({
+   *     shape: circle(20),
+   *     fill: solid("#ff0000"),
+   *     position: [x, y],
+   *   });
+   * }
+   */
+  export declare function createGrid(columns: number, rows: number, cellWidth: number, cellHeight: number, originX?: number, originY?: number): [number, number, number, number][];
+  /**
+   * Create an SDF frame context for animated scenes.
+   * Automatically clears entities at the start and flushes at the end.
+   *
+   * @param callback - Frame rendering callback.
+   * @returns A function that executes the frame.
+   *
+   * @example
+   * let time = 0;
+   * game.onFrame(() => {
+   *   const dt = getDeltaTime();
+   *   time += dt;
+   *
+   *   createSdfFrame(() => {
+   *     sdfEntity({
+   *       shape: star(30, 5, 0.4),
+   *       fill: glow("#FFD700", 0.8),
+   *       scale: pulse(time, 4),
+   *     });
+   *   });
+   * });
+   */
+  export declare function createSdfFrame(callback: () => void): void;
+  /**
+   * Compile an SDF node tree to a WGSL expression string.
+   * The expression uses variable `p` as the input coordinate of type `vec2<f32>`.
+   *
+   * @param node - The root SDF node to compile.
+   * @returns WGSL expression string computing the signed distance.
+   *
+   * @example
+   * const wgsl = compileToWgsl(circle(10));
+   * // Returns: "sd_circle(p, 10.0)"
+   *
+   * @example
+   * const wgsl = compileToWgsl(offset(circle(10), 20, 30));
+   * // Returns: "sd_circle((p - vec2<f32>(20.0, 30.0)), 10.0)"
+   */
+  export declare function compileToWgsl(node: SdfNode): string;
+  /**
+   * Calculate the bounding box half-size for an SDF node tree.
+   * Returns a conservative estimate of the maximum extent from the origin.
+   *
+   * @param node - The SDF node to measure.
+   * @returns The bounding half-size in world units.
+   */
+  export declare function calculateBounds(node: SdfNode): number;
+  /**
+   * Generate WGSL code for a fill type.
+   * Returns a WGSL expression that produces a `vec4<f32>` color given a
+   * distance value `d` and coordinate `p`.
+   *
+   * @param fill - The fill configuration.
+   * @returns WGSL expression string producing a color.
+   */
+  export declare function generateFillWgsl(fill: SdfFill): string;
+  /**
+   * Create a renderable SDF entity.
+   * Returns a unique entity ID string. The entity is stored in an internal
+   * registry and can be queried later. Headless-safe (no GPU calls).
+   *
+   * @param config - Entity configuration.
+   * @param config.shape - The SDF node tree defining the shape.
+   * @param config.fill - How the shape should be colored/rendered.
+   * @param config.position - World position [x, y]. Default: [0, 0].
+   * @param config.layer - Draw order layer. Default: 0.
+   * @param config.bounds - Override bounding half-size. Auto-calculated if omitted.
+   * @param config.rotation - Rotation in degrees. Default: 0. (GPU-efficient, no shader recompile)
+   * @param config.scale - Uniform scale factor. Default: 1. (GPU-efficient, no shader recompile)
+   * @param config.opacity - Opacity 0-1. Default: 1.
+   * @returns Entity ID string (e.g., "sdf_1").
+   *
+   * @example
+   * const id = sdfEntity({
+   *   shape: circle(20),
+   *   fill: { type: "solid", color: "#ff0000" },
+   *   position: [100, 200],
+   *   rotation: 45,
+   *   scale: 1.5,
+   *   layer: 5,
+   * });
+   */
+  export declare function sdfEntity(config: {
+      shape: SdfNode;
+      fill: SdfFill;
+      position?: Vec2;
+      layer?: number;
+      bounds?: number;
+      rotation?: number;
+      scale?: number;
+      opacity?: number;
+  }): string;
+  /**
+   * Get an SDF entity by ID. Returns undefined if not found.
+   * Useful for testing and inspection.
+   *
+   * @param id - Entity ID string from {@link sdfEntity}.
+   * @returns The entity data, or undefined.
+   */
+  export declare function getSdfEntity(id: string): {
+      shape: SdfNode;
+      fill: SdfFill;
+      position: Vec2;
+      layer: number;
+      bounds: number;
+      wgsl: string;
+      rotation: number;
+      scale: number;
+      opacity: number;
+  } | undefined;
+  /**
+   * Get the number of registered SDF entities.
+   * Useful for testing and debugging.
+   */
+  export declare function getSdfEntityCount(): number;
+  /**
+   * Clear all registered SDF entities and reset the ID counter.
+   * Useful for testing.
+   */
+  export declare function clearSdfEntities(): void;
+  /**
+   * Flush all registered SDF entities to the Rust renderer.
+   * Call this once per frame in your game loop.
+   *
+   * @example
+   * onFrame(() => {
+   *   flushSdfEntities();
+   * });
+   */
+  export declare function flushSdfEntities(): void;
+
+  /**
    * Custom shader support for user-defined WGSL fragment shaders.
    *
    * Custom shaders replace the fragment stage while keeping the standard

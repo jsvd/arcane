@@ -181,6 +181,7 @@ impl ArcaneRuntime {
                 super::geometry_ops::geometry_ext::init(),
                 super::particle_ops::particle_ext::init(),
                 super::target_ops::target_ext::init(),
+                super::sdf_ops::sdf_ext::init(),
             ],
             ..Default::default()
         });
@@ -196,6 +197,7 @@ impl ArcaneRuntime {
             state.put(Rc::new(RefCell::new(super::geometry_ops::GeoState::new())));
             state.put(Rc::new(RefCell::new(super::particle_ops::ParticleState::new())));
             state.put(Rc::new(RefCell::new(super::target_ops::TargetState::new())));
+            state.put(Rc::new(RefCell::new(super::sdf_ops::SdfState::new())));
         }
 
         rt.runtime

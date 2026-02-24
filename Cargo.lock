@@ -188,6 +188,7 @@ dependencies = [
  "gilrs",
  "image",
  "log",
+ "naga",
  "notify",
  "notify-debouncer-mini",
  "pollster",

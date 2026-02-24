@@ -64,14 +64,17 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     let dist = msdf_sample_distance(in.tex_coords, screen_px_range);
 
+    // Compute adaptive AA width using screen-space derivative
+    let aa_width = fwidth(dist) * 0.5;
+
     var outline_alpha = 0.0;
     if (outline_width > 0.0 && outline_a > 0.0) {
         // Outline extends outward from the glyph edge
-        outline_alpha = smoothstep(-outline_width - 0.5, -outline_width + 0.5, dist) * outline_a;
+        outline_alpha = smoothstep(-outline_width - aa_width, -outline_width + aa_width, dist) * outline_a;
     }
 
-    // --- Fill pass ---
-    let fill_alpha = smoothstep(-0.5, 0.5, dist);
+    // --- Fill pass with adaptive AA (fwidth-based) ---
+    let fill_alpha = smoothstep(-aa_width, aa_width, dist);
 
     // Composite: shadow behind outline behind fill
     var color = vec4<f32>(0.0);

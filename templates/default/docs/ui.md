@@ -48,6 +48,8 @@ drawCircle(20, 20, 8, { color: rgb(255, 0, 0), screenSpace: true, layer: 100 });
 
 Shapes are rendered via scanline sprites (circles, triangles) or a rotated rectangle (lines). They work in headless mode for testing via the draw call capture system.
 
+> **Complex shapes:** For stars, hearts, rounded shapes, gradients, and glow effects, use SDF shapes instead. See [sdf.md](sdf.md).
+
 ## Screen-Space Rendering
 
 `drawText`, `drawBar`, `drawLabel`, `drawRect`, `drawPanel` all accept `screenSpace: true` to render fixed to the viewport (ignores camera). `drawSprite` does NOT support `screenSpace` -- use the above for HUD elements.
