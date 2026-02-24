@@ -49,10 +49,9 @@ Imports use `@arcane/runtime/{module}`:
 
 ### The Iteration Cycle
 
-For each step above:
-
-1. **Write a change** 
+1. **Write a change**
 2. **Run `/check`** — catches type errors immediately (hot-reload fails silently on TS errors)
+3. **Run `arcane dev`** — verify visually, iterate on look and feel
 4. **Write a test** — cover the logic in `*.test.ts`, run `/check` again
 5. **Commit** — small, working increments
 
@@ -72,6 +71,7 @@ const PLAYER_CORE = rgb(60, 180, 255);
 const PLAYER_GLOW = rgb(100, 200, 255);
 const STAR_DIM = rgb(80, 80, 100);
 const STAR_BRIGHT = rgb(200, 200, 255);
+const WHITE = rgb(255, 255, 255);
 
 // --- Pre-generate starfield (don't create arrays in onFrame) ---
 const STARS = Array.from({ length: 80 }, (_, i) => ({
@@ -107,7 +107,7 @@ game.onFrame((ctx) => {
   followTargetWithShake(state.x, state.y, 2.0, 0.08);
 
   // 4. Background — deep space with twinkling stars
-  setBackgroundColor(BG_DARK.r / 255, BG_DARK.g / 255, BG_DARK.b / 255);
+  setBackgroundColor(BG_DARK.r, BG_DARK.g, BG_DARK.b);
   for (const s of STARS) {
     const twinkle = 0.5 + 0.5 * Math.sin(ctx.elapsed * 2 + s.twinkleOffset);
     const color = twinkle > 0.7 ? STAR_BRIGHT : STAR_DIM;
@@ -118,7 +118,7 @@ game.onFrame((ctx) => {
   drawCircle(state.x, state.y, 24, { color: withAlpha(PLAYER_GLOW, 0.3), layer: 1 }); // outer glow
   drawCircle(state.x, state.y, 18, { color: withAlpha(PLAYER_GLOW, 0.5), layer: 1 }); // inner glow
   drawCircle(state.x, state.y, 12, { color: PLAYER_CORE, layer: 2 });                 // core
-  drawCircle(state.x - 4, state.y - 4, 4, { color: withAlpha(rgb(255,255,255), 0.6), layer: 2 }); // highlight
+  drawCircle(state.x - 4, state.y - 4, 4, { color: withAlpha(WHITE, 0.6), layer: 2 }); // highlight
 
   // 6. Particles (trail from movement)
   drawAllParticles();
@@ -519,6 +519,7 @@ Use `/api <function>` to look up specific function signatures without reading th
 ```
 arcane dev                        # Opens window, hot-reloads on save (defaults to src/visual.ts)
 arcane dev src/visual.ts          # Explicit entry point
+arcane check                      # Fast type-check — run after every edit (catches silent hot-reload failures)
 arcane test                       # Discovers and runs all *.test.ts files headlessly
 arcane describe src/visual.ts     # Text description of current game state (agent protocol)
 arcane inspect src/visual.ts "player"  # Query a specific state path
@@ -549,23 +550,17 @@ File organization: see **Architecture** section above. Start with the 4 files (`
 
 ## Tips
 
-- Always multiply velocities/movement by `dt` for frame-rate independence.
 - State functions are pure: state in, state out. Never mutate state directly.
 - `loadTexture()` and `loadSound()` cache by path — calling twice returns the same handle.
-- Layer ordering: 0 = background, 1-10 = game objects, 100+ = HUD.
-- Use `createSolidTexture(name, color)` or `drawColorSprite()` for quick colored rectangles without image assets. Colors use 0-1 float components; use `rgb(r, g, b)` to convert from 0-255.
-- See [docs/game-patterns.md](docs/game-patterns.md) for state architecture: how to integrate PlatformerState with your game state, and how to use knockback with `platformerApplyImpulse()`.
-- Test game logic in `*.test.ts` files using `describe`, `it`, `assert` from `@arcane/runtime/testing`.
-- Tests run in both Node.js and V8 — avoid Node-specific APIs in test files.
-- Key names: `"Space"` not `" "`, `"Enter"` not `"\n"`. Check type declarations if unsure.
+- `drawColorSprite()` auto-caches solid-color textures. Use for quick colored rectangles without image assets.
+- See [docs/game-patterns.md](docs/game-patterns.md) for state architecture and platformer helpers.
+- Test game logic in `*.test.ts` files using `describe`, `it`, `assert` from `@arcane/runtime/testing`. Tests run in both Node.js and V8 — avoid Node-specific APIs.
 - For rotation, `0` = no rotation, positive = clockwise. Ship sprites facing "up" need `angle - Math.PI/2` offset.
 - Use `blendMode: "additive"` for glowing effects (exhaust, fire, magic).
 - Use `impact()` or `impactLight()` when something hits — one call gives you shake + flash + particles.
-- Use `burstParticles(x, y, opts)` or `streamParticles(x, y, opts)` for quick effects (explosions, fire, dust). They take `color` (not `startColor`). Use `createEmitter()` only when you need full control over every parameter.
-- Use `startScreenTransition()` for level changes — don't hand-roll fade overlays.
-- Use `wrapText()` / `drawTextWrapped()` for multi-line text with word wrapping. Use `drawTextAligned()` for horizontal alignment within a fixed-width area.
-- Use `createNode()` / `setNodeTransform()` / `getWorldTransform()` / `applyToSprite()` from `@arcane/runtime/game` for parent-child transform hierarchies (weapons on characters, UI grouping).
+- Use `wrapText()` / `drawTextWrapped()` for multi-line text with word wrapping. Use `drawTextAligned()` for horizontal alignment.
+- Use `createNode()` / `setNodeTransform()` / `getWorldTransform()` / `applyToSprite()` from `@arcane/runtime/game` for parent-child transform hierarchies.
 - Use `preloadAssets()` to batch-load textures upfront. Check progress with `getLoadingProgress()` for loading screens.
-- Use `/sprite` and `/sound` skills to find game assets. They search Asset Palace, download packs, and generate ready-to-use code with proper atlas definitions.
-- Use `loadAtlasFromDef()` for sprite sheets — it handles UV normalization and provides `atlas.draw()` which centers sprites at the given position.
-- Use **SDF** for procedural backgrounds, glowing pickups, and UI without image assets. `sdfEntity({ shape: star(20, 5, 0.4), fill: glow("#gold", 0.2), ... })` creates resolution-independent vector graphics. See [docs/sdf.md](docs/sdf.md).
+- Use `/sprite` and `/sound` skills to find game assets. They search Asset Palace, download packs, and generate ready-to-use code.
+- Use `loadAtlasFromDef()` for sprite sheets — it handles UV normalization and provides `atlas.draw()` which centers sprites.
+- Use **SDF** for procedural backgrounds, glowing pickups, and UI without image assets. See [docs/sdf.md](docs/sdf.md).
