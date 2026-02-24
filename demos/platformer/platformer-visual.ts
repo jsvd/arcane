@@ -79,7 +79,8 @@ game.onFrame((ctx) => {
   followTargetSmooth(
     Math.max(vpW / 2, Math.min(state.playerX, vpW / 2)),
     Math.max(vpH / 2, Math.min(state.playerY, vpH / 2)),
-    0.1,
+    1.0,   // zoom
+    0.1,   // smoothness
   );
 
   // --- Render ---
