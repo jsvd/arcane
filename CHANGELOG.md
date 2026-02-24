@@ -2,6 +2,26 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.16.1] - 2026-02-24
+
+### Added
+- **`arcane check` command** — fast type-checking without running tests; catches silent hot-reload failures
+- **`/check` skill** — scaffolded projects include skill for proactive type checking
+- **PostToolUse hook** — auto-runs type check after file edits in scaffolded projects
+
+### Changed
+- **Scaffold files now self-contained** — no cross-file import dependencies that break when agents modify code
+  - `game.ts`: minimal GameState with just `rng`, no external imports
+  - `visual.ts`: inlined ZOOM/BG_COLOR, commented camera follow
+  - `config.ts`: all exports commented (template examples only)
+  - `game.test.ts`: minimal test without signature assumptions
+- **AGENTS.md visual guidance** — enriched Quick Start with starfield, layered glows, particle trails; added Visual Depth Techniques and Visual Composition sections with shape variety examples
+- **Tips section deduplicated** — removed advice that overlapped with Common Mistakes
+
+### Fixed
+- **AGENTS.md accuracy errors** — `setBackgroundColor` example no longer divides by 255 (rgb() already returns 0-1 floats); `rgb()` call moved outside onFrame to avoid GC
+- **Iteration cycle numbering** — was 1,2,4,5; now correctly 1,2,3,4,5
+
 ## [0.16.0] - 2026-02-24
 
 ### Added
