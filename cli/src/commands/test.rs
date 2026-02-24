@@ -128,6 +128,7 @@ fn walk_dir(dir: &PathBuf, files: &mut Vec<PathBuf>) -> anyhow::Result<()> {
                 || name == "node_modules"
                 || name == "templates"
                 || name == "packages"
+                || name == "tools"
                 || name.starts_with('.')
             {
                 continue;
