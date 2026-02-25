@@ -161,6 +161,11 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
             }
             // Sync clear color from bridge → renderer (TS can set it via op)
             renderer.clear_color = bridge.clear_color;
+
+            // Sync built-in shader uniform sources to renderer
+            renderer.elapsed_time = bridge.elapsed_time as f32;
+            renderer.delta_time = bridge.delta_time as f32;
+            renderer.mouse_pos = [bridge.mouse_x, bridge.mouse_y];
         }
 
         // Check for hung frame recovery (watchdog triggered)
@@ -207,6 +212,7 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
             bridge.mouse_buttons_down = state.input.mouse_buttons.clone();
             bridge.mouse_buttons_pressed = state.input.mouse_buttons_pressed.clone();
             bridge.delta_time = state.delta_time;
+            bridge.elapsed_time += state.delta_time;
         }
 
         // Poll gamepad state and sync to bridge
@@ -969,6 +975,7 @@ fn reload_runtime(
         b.effect_param_queue.clear();
         b.effect_remove_queue.clear();
         b.effect_clear = true;
+        b.elapsed_time = 0.0;
         b.emissives.clear();
         b.occluders.clear();
         b.directional_lights.clear();

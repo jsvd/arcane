@@ -128,6 +128,12 @@ pub struct Renderer {
     pub scale_factor: f32,
     /// Clear color for the render pass background. Default: dark blue-gray.
     pub clear_color: [f32; 4],
+    /// Elapsed time in seconds (accumulated, for shader built-ins).
+    pub elapsed_time: f32,
+    /// Frame delta time in seconds (for shader built-ins).
+    pub delta_time: f32,
+    /// Mouse position in screen pixels (for shader built-ins).
+    pub mouse_pos: [f32; 2],
 }
 
 impl Renderer {
@@ -167,6 +173,9 @@ impl Renderer {
             sdf_pipeline,
             scale_factor,
             clear_color: [0.1, 0.1, 0.15, 1.0],
+            elapsed_time: 0.0,
+            delta_time: 0.0,
+            mouse_pos: [0.0, 0.0],
         })
     }
 
@@ -234,8 +243,14 @@ impl Renderer {
         // Build interleaved render schedule
         let schedule = build_render_schedule(&self.frame_commands, &self.geo_commands, &self.sdf_commands);
 
-        // Flush dirty custom shader uniforms
-        self.shaders.flush(&self.gpu.queue);
+        // Flush custom shader uniforms with auto-injected built-ins
+        self.shaders.flush(
+            &self.gpu.queue,
+            self.elapsed_time,
+            self.delta_time,
+            self.camera.viewport_size,
+            self.mouse_pos,
+        );
 
         let lighting_uniform = self.lighting.to_uniform();
         let clear_color = wgpu::Color {

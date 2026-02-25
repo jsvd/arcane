@@ -503,8 +503,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     shaders.create(&gpu.device, 1, "tint", source);
     shaders.set_param(1, 0, 1.0, 0.5, 0.5, 1.0); // Red tint
 
-    // Flush to GPU
-    shaders.flush(&gpu.queue);
+    // Flush to GPU with built-in uniform values
+    shaders.flush(&gpu.queue, 0.0, 0.016, [800.0, 600.0], [0.0, 0.0]);
 
     // If we got here without panicking, param setting works
     assert!(shaders.get_pipeline(1).is_some());

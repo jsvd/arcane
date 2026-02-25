@@ -66,6 +66,8 @@ pub struct RenderBridgeState {
     /// True when TS called setCamera() this frame (prevents sync-back from overwriting it).
     pub camera_dirty: bool,
     pub delta_time: f64,
+    /// Accumulated elapsed time in seconds (reset on hot-reload).
+    pub elapsed_time: f64,
     /// Input state snapshot (updated each frame by the event loop).
     pub keys_down: std::collections::HashSet<String>,
     pub keys_pressed: std::collections::HashSet<String>,
@@ -182,6 +184,7 @@ impl RenderBridgeState {
             camera_zoom: 1.0,
             camera_dirty: false,
             delta_time: 0.0,
+            elapsed_time: 0.0,
             keys_down: std::collections::HashSet::new(),
             keys_pressed: std::collections::HashSet::new(),
             mouse_x: 0.0,

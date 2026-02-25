@@ -6,7 +6,7 @@ One-liner signatures for every exported function, grouped by module.
 For full JSDoc, argument types, and examples, see the per-module .d.ts files in types/.
 
 === rendering (@arcane/runtime/rendering) ===
-Types: AnimatedSpriteDef,AnimatedTileDef,AnimationDef,AnimationFinishedCondition,AnimationId,AnimationState,AtlasSpriteOptions,AudioBus,AutotileMapping,AutotileRule,BitmapFont,BlendState,BooleanCondition,CameraBounds,CameraDeadzone,CameraState,EffectId,FSMConfig,FSMParams,FSMState,FSMStateDef,FSMTransition,FloatingTextOptions,FrameEvent,FrameEventCallback,HexConfig,HexCoord,HexOrientation,HexTile,HexTilemap,HexTilemapConfig,ImpactConfig,ImpactFlash,ImpactParticles,ImpactShake,ImpactSound,InstanceId,IsoConfig,IsoTile,IsoTilemap,IsoTilemapConfig,KeyName,LayerOptions,LayeredTilemap,LoadAtlasOptions,MSDFFont,MSDFGlyph,MousePosition,NeighborCheck,NineSliceBorder,NineSliceOptions,OffsetType,PackDefinition,ParallaxSpriteOptions,PlaceholderShape,PlayOptions,PoolConfig,RenderTargetId,ScreenTransitionConfig,ScreenTransitionType,SdfFill,SdfNode,SdfNodeType,SdfOpType,SdfPrimitiveKind,ShaderId,SoundId,SpatialOptions,SpriteAtlas,SpriteDef,SpriteInfo,SpriteOptions,StaggeredIsoConfig,StaticSpriteDef,TextAlign,TextLayoutOptions,TextMeasurement,TextOptions,TextOutline,TextShadow,TextureId,ThresholdCondition,TileProperties,TilemapId,TilemapLayer,TilemapOptions,Trail,TrailConfig,TrailPoint,TransitionCondition,TriggerCondition,Typewriter,TypewriterConfig,TypewriterDrawOptions,Vec2,
+Types: AnimatedSpriteDef,AnimatedTileDef,AnimationDef,AnimationFinishedCondition,AnimationId,AnimationState,AtlasSpriteOptions,AudioBus,AutotileMapping,AutotileRule,BitmapFont,BlendState,BooleanCondition,CameraBounds,CameraDeadzone,CameraState,EffectId,FSMConfig,FSMParams,FSMState,FSMStateDef,FSMTransition,FloatingTextOptions,FrameEvent,FrameEventCallback,HexConfig,HexCoord,HexOrientation,HexTile,HexTilemap,HexTilemapConfig,ImpactConfig,ImpactFlash,ImpactParticles,ImpactShake,ImpactSound,InstanceId,IsoConfig,IsoTile,IsoTilemap,IsoTilemapConfig,KeyName,LayerOptions,LayeredTilemap,LoadAtlasOptions,MSDFFont,MSDFGlyph,MousePosition,NeighborCheck,NineSliceBorder,NineSliceOptions,OffsetType,PackDefinition,ParallaxSpriteOptions,PlaceholderShape,PlayOptions,PoolConfig,RenderTargetId,ScreenTransitionConfig,ScreenTransitionType,SdfFill,SdfNode,SdfNodeType,SdfOpType,SdfPrimitiveKind,ShaderId,SoundId,SpatialOptions,SpriteAtlas,SpriteDef,SpriteInfo,SpriteOptions,StaggeredIsoConfig,StaticSpriteDef,TextAlign,TextLayoutOptions,TextMeasurement,TextOptions,TextOutline,TextShadow,TextureId,ThresholdCondition,TileProperties,TilemapId,TilemapLayer,TilemapOptions,Trail,TrailConfig,TrailPoint,TransitionCondition,TriggerCondition,Typewriter,TypewriterConfig,TypewriterDrawOptions,UniformDef,UniformType,Vec2,
 declare function createAnimationFSM(config: FSMConfig): FSMState;
 declare function getCurrentState(fsm: FSMState): string;
 declare function isBlending(fsm: FSMState): boolean;
@@ -72,6 +72,14 @@ declare function followTargetSmooth(targetX: number, targetY: number, zoom?: num
 declare function zoomTo(targetZoom: number, duration: number, easing?: (t: number) => number): void;
 declare function zoomToPoint(targetZoom: number, worldX: number, worldY: number, duration: number, easing?: (t: number) => number): void;
 declare function followTargetWithShake(targetX: number, targetY: number, zoom?: number, smoothness?: number): void;
+declare function outline(opts?: OutlineOptions): ShaderEffect;
+declare function flash(opts?: FlashOptions): ShaderEffect;
+declare function dissolve(opts?: DissolveOptions): ShaderEffect;
+declare function pixelate(opts?: PixelateOptions): ShaderEffect;
+declare function hologram(opts?: HologramOptions): ShaderEffect;
+declare function water(opts?: WaterOptions): ShaderEffect;
+declare function glow(opts?: GlowOptions): ShaderEffect;
+declare function grayscale(opts?: GrayscaleOptions): ShaderEffect;
 declare function spawnFloatingText(x: number, y: number, text: string, options?: FloatingTextOptions): void;
 declare function updateFloatingTexts(dt: number): void;
 declare function drawFloatingTexts(): void;
@@ -262,6 +270,9 @@ declare function clearSdfEntities(): void;
 declare function flushSdfEntities(): void;
 declare function createShaderFromSource(name: string, wgslSource: string): ShaderId;
 declare function setShaderParam(shaderId: ShaderId, index: number, x: number, y?: number, z?: number, w?: number): void;
+declare function createShader(name: string, source: string, uniforms?: UniformDef): ShaderId;
+declare function setShaderUniform(id: ShaderId, name: string, ...values: number[]): void;
+declare function getShaderUniformNames(id: ShaderId): string[];
 declare function drawSprite(opts: SpriteOptions): void;
 declare function _flushSpriteBatch(): void;
 declare function clearSprites(): void;
@@ -607,6 +618,7 @@ declare function getRustEmitterParticleCount(id: number): number;
 declare function getRustEmitterSpriteData(id: number): Float32Array | null;
 declare function drawRustEmitter(id: number, opts?: { w?: number; h?: number; layer?: number; }): void;
 declare function destroyRustEmitter(id: number): void;
+declare function setRustEmitterSpawnRate(id: number, spawnRate: number): void;
 declare function updateAllRustEmitters(dt: number): void;
 declare function setRustEmitterPosition(id: number, x: number, y: number): void;
 declare function drawAllParticles(options?: { radius?: number; size?: number; layer?: number; textureId?: number; blendMode?: "alpha" | "additive" | "multiply" | "screen"; }): void;

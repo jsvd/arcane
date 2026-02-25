@@ -231,8 +231,37 @@ export {
 } from "./audio.ts";
 
 // Custom Shaders
-export type { ShaderId } from "./shader.ts";
-export { createShaderFromSource, setShaderParam } from "./shader.ts";
+export type { ShaderId, UniformType, UniformDef } from "./shader.ts";
+export {
+  createShaderFromSource,
+  setShaderParam,
+  createShader,
+  setShaderUniform,
+  getShaderUniformNames,
+} from "./shader.ts";
+
+// Shader Effect Presets
+export type {
+  ShaderEffect,
+  OutlineOptions,
+  FlashOptions,
+  DissolveOptions,
+  PixelateOptions,
+  HologramOptions,
+  WaterOptions,
+  GlowOptions,
+  GrayscaleOptions,
+} from "./effects.ts";
+export {
+  outline as outlineEffect,
+  flash as flashEffect,
+  dissolve as dissolveEffect,
+  pixelate as pixelateEffect,
+  hologram as hologramEffect,
+  water as waterEffect,
+  glow as glowEffect,
+  grayscale as grayscaleEffect,
+} from "./effects.ts";
 
 // Render Targets
 export type { RenderTargetId } from "./rendertarget.ts";

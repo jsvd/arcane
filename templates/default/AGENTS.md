@@ -432,7 +432,8 @@ Read the **Essential** guides first, then the genre-specific guides for your gam
 
 | Guide | Contents |
 |-------|----------|
-| [docs/rendering.md](docs/rendering.md) | Sprites, textures, drawColorSprite, text/MSDF, nine-slice, post-processing, shaders, lighting |
+| [docs/rendering.md](docs/rendering.md) | Sprites, textures, drawColorSprite, text/MSDF, nine-slice, post-processing, lighting |
+| [docs/shaders.md](docs/shaders.md) | Effect presets (outline, flash, dissolve...), named shader uniforms, custom WGSL, built-in time/resolution |
 | [docs/sdf.md](docs/sdf.md) | SDF procedural graphics: shapes, fills, gradients, code organization |
 | [docs/coordinates.md](docs/coordinates.md) | Camera follow, smooth follow, bounds, deadzone, parallax, zoom |
 | [docs/tweening.md](docs/tweening.md) | `tween()`, 30 easing functions, `sequence()`/`parallel()`/`stagger()`, camera shake, screen flash |

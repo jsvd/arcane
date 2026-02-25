@@ -202,21 +202,27 @@ clearEffects();
 
 ## Custom Shaders
 
-User-defined WGSL fragment shaders with 16 vec4 uniform slots:
+Three tiers of shader usage — from zero-WGSL to full control. See [docs/shaders.md](shaders.md) for the complete guide.
 
+**Tier 1: Effect presets** (most common — no WGSL needed):
 ```typescript
-import { createShaderFromSource, setShaderParam } from "@arcane/runtime/rendering";
+import { outline, dissolve } from "@arcane/runtime/rendering/effects";
 
-const shader = createShaderFromSource("dissolve", `
-  @fragment fn main(@location(0) uv: vec2<f32>, @location(1) color: vec4<f32>) -> @location(0) vec4<f32> {
-    let threshold = params[0].x;
-    // ... WGSL fragment shader code
-    return color;
-  }
-`);
-setShaderParam(shader, 0, 0.5, 0, 0, 0);
-drawSprite({ textureId: TEX, x, y, w: 32, h: 32, shaderId: shader, layer: 1 });
+const fx = outline({ color: [1, 0, 0, 1], width: 2 });
+drawSprite({ textureId: tex, x, y, w: 64, h: 64, shaderId: fx.shaderId });
+fx.set("outlineWidth", 3.0); // update at runtime
 ```
+
+**Tier 2: Named uniforms** (custom WGSL with ergonomic params):
+```typescript
+import { createShader, setShaderUniform } from "@arcane/runtime/rendering";
+
+const fx = createShader("tint", wgslSource, { color: "vec3", intensity: "float" });
+setShaderUniform(fx, "color", 1.0, 0.5, 0.0);
+setShaderUniform(fx, "intensity", 0.8);
+```
+
+All shaders get auto-injected built-ins: `shader_params.time`, `.delta`, `.resolution`, `.mouse`.
 
 ## Lighting
 

@@ -237,6 +237,35 @@ game.onFrame((dt) => {
 
 With `autoSubsystems: true` (default), you don't need to manually call `updateTweens()`, `updateParticles()`, `updateScreenTransition()`, `drawScreenTransition()`, or `drawScreenFlash()`. They're handled automatically.
 
+## Three Shader Tiers
+
+Custom shaders provide a progressive disclosure path from zero-WGSL to full control:
+
+### Tier 1: Effect Presets (no WGSL)
+```ts
+const fx = outline({ color: [1, 0, 0, 1], width: 2 });
+drawSprite({ textureId: tex, x, y, w: 64, h: 64, shaderId: fx.shaderId });
+fx.set("outlineWidth", 3.0);
+```
+8 presets: `outline`, `flash`, `dissolve`, `pixelate`, `hologram`, `water`, `glow`, `grayscale`. Each is a factory returning a `ShaderEffect` with named uniform accessors.
+
+### Tier 2: Named Uniform API (custom WGSL, ergonomic params)
+```ts
+const fx = createShader("dissolve", wgslSource, { threshold: "float", edgeColor: "vec3" });
+setShaderUniform(fx, "threshold", 0.5);
+setShaderUniform(fx, "edgeColor", 1.0, 0.5, 0.0);
+```
+You write WGSL, but reference uniforms by name instead of slot index.
+
+### Tier 3: Raw WGSL (full control)
+```ts
+const fx = createShaderFromSource("custom", wgslSource);
+setShaderParam(fx, 0, 1.0, 0.5, 0.0, 1.0);
+```
+Direct slot-indexed access. 14 user vec4 slots.
+
+All three tiers get auto-injected built-in uniforms: `shader_params.time`, `.delta`, `.resolution`, `.mouse`.
+
 ## Architecture Summary
 
 ```

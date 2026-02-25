@@ -1183,6 +1183,93 @@ declare module "@arcane/runtime/rendering" {
   export declare function followTargetWithShake(targetX: number, targetY: number, zoom?: number, smoothness?: number): void;
 
   /**
+   * Effect presets: common 2D shader effects as one-liner factories.
+   * Each factory returns a {@link ShaderEffect} with named uniforms and sensible defaults.
+   *
+   * Built-in uniforms (`shader_params.time`, `.delta`, `.resolution`, `.mouse`) are
+   * auto-injected by the engine — no per-frame boilerplate needed for time-based effects.
+   *
+   * @example
+   * import { outline, dissolve } from "@arcane/runtime/rendering";
+   * const fx = outline({ color: [1, 0, 0, 1], width: 2 });
+   * drawSprite({ textureId: tex, x, y, w: 64, h: 64, shaderId: fx.shaderId });
+   * fx.set("outlineWidth", 3.0); // update at runtime
+   */
+  /** A shader effect with named uniform accessors. */
+  export interface ShaderEffect {
+      /** The underlying shader ID for use in `drawSprite({ shaderId })`. */
+      shaderId: ShaderId;
+      /** Set a named uniform on this effect. */
+      set(name: string, ...values: number[]): void;
+  }
+  export interface OutlineOptions {
+      /** Outline color [r, g, b, a] in 0-1 range. Default: white. */
+      color?: [number, number, number, number];
+      /** Outline width in pixels. Default: 1. */
+      width?: number;
+  }
+  /** Sprite outline via 4-neighbor alpha sampling. */
+  export declare function outline(opts?: OutlineOptions): ShaderEffect;
+  export interface FlashOptions {
+      /** Flash color [r, g, b] in 0-1 range. Default: white. */
+      color?: [number, number, number];
+      /** Flash intensity 0-1. Default: 0 (no flash). */
+      intensity?: number;
+  }
+  /** Mix sprite with a flat color. Useful for hit feedback. */
+  export declare function flash(opts?: FlashOptions): ShaderEffect;
+  export interface DissolveOptions {
+      /** Edge glow color [r, g, b]. Default: orange. */
+      edgeColor?: [number, number, number];
+      /** Edge glow width (0-1). Default: 0.05. */
+      edgeWidth?: number;
+  }
+  /** Hash-noise dissolve with glowing edges. Animate `threshold` from 0→1. */
+  export declare function dissolve(opts?: DissolveOptions): ShaderEffect;
+  export interface PixelateOptions {
+      /** Pixel block size. Default: 8. */
+      pixelSize?: number;
+  }
+  /** UV grid-snapping pixelation. */
+  export declare function pixelate(opts?: PixelateOptions): ShaderEffect;
+  export interface HologramOptions {
+      /** Scanline scroll speed. Default: 2. */
+      speed?: number;
+      /** Scanline spacing in UV units. Default: 100. */
+      lineSpacing?: number;
+      /** Chromatic aberration offset. Default: 0.005. */
+      aberration?: number;
+  }
+  /** Scanlines + chromatic aberration + time flicker. Uses `shader_params.time`. */
+  export declare function hologram(opts?: HologramOptions): ShaderEffect;
+  export interface WaterOptions {
+      /** Wave amplitude (UV offset). Default: 0.02. */
+      amplitude?: number;
+      /** Wave frequency. Default: 10. */
+      frequency?: number;
+      /** Animation speed. Default: 2. */
+      speed?: number;
+  }
+  /** Sine-wave UV distortion. Uses `shader_params.time`. */
+  export declare function water(opts?: WaterOptions): ShaderEffect;
+  export interface GlowOptions {
+      /** Glow color [r, g, b]. Default: white. */
+      color?: [number, number, number];
+      /** Glow radius in pixels. Default: 3. */
+      radius?: number;
+      /** Glow intensity multiplier. Default: 1. */
+      intensity?: number;
+  }
+  /** Multi-sample outer glow around sprite edges. */
+  export declare function glow(opts?: GlowOptions): ShaderEffect;
+  export interface GrayscaleOptions {
+      /** Desaturation amount 0-1. Default: 1 (fully grayscale). */
+      amount?: number;
+  }
+  /** Luminance-weighted desaturation. */
+  export declare function grayscale(opts?: GrayscaleOptions): ShaderEffect;
+
+  /**
    * Floating text / damage numbers.
    *
    * Auto-animating text that rises and fades. Used for damage numbers, XP gains,
@@ -3660,27 +3747,42 @@ declare module "@arcane/runtime/rendering" {
   /**
    * Custom shader support for user-defined WGSL fragment shaders.
    *
-   * Custom shaders replace the fragment stage while keeping the standard
-   * vertex shader (rotation, transforms, camera projection). The standard
-   * declarations (camera, texture, lighting, VertexOutput) are prepended
-   * automatically — you only write the @fragment function.
+   * Three tiers of shader usage:
    *
-   * Custom uniforms are available via `shader_params.values[0..15]` (16 vec4 slots).
+   * 1. **Effect presets** — One-liner factories in `effects.ts` (outline, flash, dissolve, etc.)
+   * 2. **Named uniform API** — `createShader()` + `setShaderUniform()` for custom WGSL with ergonomic names
+   * 3. **Raw WGSL** — `createShaderFromSource()` + `setShaderParam()` for full control
+   *
+   * Built-in uniforms are auto-injected into every custom shader:
+   * - `shader_params.time` — elapsed seconds
+   * - `shader_params.delta` — frame delta time
+   * - `shader_params.resolution` — viewport size (logical pixels)
+   * - `shader_params.mouse` — mouse position (screen pixels)
+   *
+   * User uniforms: `shader_params.values[0..13]` (14 vec4 slots).
    *
    * @example
+   * // Named uniform API (recommended)
+   * const fx = createShader("dissolve", dissolveWgsl, { threshold: "float", edgeColor: "vec3" });
+   * setShaderUniform(fx, "threshold", 0.5);
+   *
+   * @example
+   * // Raw WGSL (full control)
    * const crt = createShaderFromSource("crt", `
-   *   @fragment
-   *   fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+   *   @fragment fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
    *     let tex = textureSample(t_diffuse, s_diffuse, in.tex_coords);
    *     let scanline = sin(in.tex_coords.y * shader_params.values[0].x) * 0.5 + 0.5;
    *     return vec4<f32>(tex.rgb * in.tint.rgb * scanline, tex.a * in.tint.a);
    *   }
    * `);
-   * setShaderParam(crt, 0, 800.0); // scanline frequency
-   * drawSprite({ textureId: tex, x: 0, y: 0, w: 800, h: 600, shaderId: crt });
+   * setShaderParam(crt, 0, 800.0);
    */
   /** Opaque handle to a custom shader. Returned by {@link createShaderFromSource}. */
   export type ShaderId = number;
+  /** Uniform type for named shader uniforms. */
+  export type UniformType = "float" | "vec2" | "vec3" | "vec4";
+  /** Uniform layout definition for {@link createShader}. */
+  export type UniformDef = Record<string, UniformType>;
   /**
    * Create a custom fragment shader from WGSL source.
    * The source must contain a `@fragment fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>`.
@@ -3690,7 +3792,8 @@ declare module "@arcane/runtime/rendering" {
    * - `VertexOutput` struct with `tex_coords`, `tint`, `world_position`
    * - Standard vertex shader (`vs_main`)
    *
-   * Custom uniforms: `shader_params.values[0..15]` (group 3, 16 vec4 slots).
+   * Built-in uniforms: `shader_params.time`, `.delta`, `.resolution`, `.mouse` (auto-injected).
+   * User uniforms: `shader_params.values[0..13]` (group 3, 14 vec4 slots).
    *
    * @param name - Shader name (for debugging).
    * @param wgslSource - WGSL fragment shader source.
@@ -3702,13 +3805,47 @@ declare module "@arcane/runtime/rendering" {
    * Values are accessible in the shader as `shader_params.values[index]`.
    *
    * @param shaderId - Shader handle from {@link createShaderFromSource}.
-   * @param index - Slot index (0-15).
+   * @param index - Slot index (0-13).
    * @param x - First component (or the only value for scalar params).
    * @param y - Second component. Default: 0.
    * @param z - Third component. Default: 0.
    * @param w - Fourth component. Default: 0.
    */
   export declare function setShaderParam(shaderId: ShaderId, index: number, x: number, y?: number, z?: number, w?: number): void;
+  /**
+   * Create a custom fragment shader with named uniforms.
+   * Wraps {@link createShaderFromSource} with a name→slot registry for ergonomic uniform access.
+   *
+   * @param name - Shader name (for debugging).
+   * @param source - WGSL fragment shader source.
+   * @param uniforms - Optional named uniform definitions. Slots allocated sequentially (max 14).
+   * @returns ShaderId for use in drawSprite's `shaderId` option.
+   *
+   * @example
+   * const fx = createShader("dissolve", wgslCode, {
+   *   threshold: "float",
+   *   edgeColor: "vec3",
+   *   edgeWidth: "float",
+   * });
+   */
+  export declare function createShader(name: string, source: string, uniforms?: UniformDef): ShaderId;
+  /**
+   * Set a named uniform on a custom shader.
+   * The uniform name must match one declared in {@link createShader}'s `uniforms` parameter.
+   *
+   * @param id - Shader handle from {@link createShader}.
+   * @param name - Uniform name.
+   * @param values - 1-4 float values depending on uniform type.
+   */
+  export declare function setShaderUniform(id: ShaderId, name: string, ...values: number[]): void;
+  /**
+   * Get the names of all named uniforms registered for a shader.
+   * Useful for agent introspection and debugging.
+   *
+   * @param id - Shader handle from {@link createShader}.
+   * @returns Array of uniform names, or empty array if not a named-uniform shader.
+   */
+  export declare function getShaderUniformNames(id: ShaderId): string[];
 
   /**
    * Queue a sprite to be drawn this frame.

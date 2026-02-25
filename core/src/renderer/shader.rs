@@ -4,9 +4,12 @@ use wgpu::util::DeviceExt;
 
 use super::gpu::GpuContext;
 
-/// Maximum number of vec4 uniform slots per custom shader.
+/// Maximum number of vec4 uniform slots per custom shader (built-in + user).
+/// Layout: 2 vec4s for built-ins (time, delta, resolution, mouse, padding) + 14 user vec4s.
 const MAX_PARAM_SLOTS: usize = 16;
-/// Size of uniform buffer in bytes (16 vec4s × 16 bytes each).
+/// Number of vec4 slots reserved for built-in uniforms (time, delta, resolution, mouse, pad).
+const BUILTIN_SLOTS: usize = 2;
+/// Size of uniform buffer in bytes (16 vec4s × 16 bytes each = 256 bytes).
 const UNIFORM_BUFFER_SIZE: usize = MAX_PARAM_SLOTS * 16;
 
 /// Extract the vertex shader + shared declarations from sprite.wgsl.
@@ -26,9 +29,14 @@ fn shader_preamble() -> &'static str {
 fn build_custom_wgsl(user_fragment: &str) -> String {
     format!(
         r#"{}
-// Custom shader uniform params (16 vec4 slots = 64 floats)
+// Custom shader params: 2 built-in vec4s + 14 user vec4 slots = 256 bytes
 struct ShaderParams {{
-    values: array<vec4<f32>, 16>,
+    time: f32,              // elapsed seconds (auto-injected)
+    delta: f32,             // frame delta time (auto-injected)
+    resolution: vec2<f32>,  // viewport size in logical pixels (auto-injected)
+    mouse: vec2<f32>,       // mouse position in screen pixels (auto-injected)
+    _pad: vec2<f32>,
+    values: array<vec4<f32>, 14>,  // user-defined uniform slots
 }};
 
 @group(3) @binding(0)
@@ -297,10 +305,12 @@ impl ShaderStore {
         );
     }
 
-    /// Set a vec4 parameter slot for a shader. Index 0-15.
+    /// Set a vec4 user parameter slot for a shader. Index 0-13 maps to WGSL `values[0..13]`.
+    /// Internally offset by BUILTIN_SLOTS so user slot 0 → param_data[8..11].
     pub fn set_param(&mut self, id: u32, index: u32, x: f32, y: f32, z: f32, w: f32) {
         if let Some(entry) = self.shaders.get_mut(&id) {
-            let i = (index as usize).min(MAX_PARAM_SLOTS - 1) * 4;
+            let offset_index = (index as usize + BUILTIN_SLOTS).min(MAX_PARAM_SLOTS - 1);
+            let i = offset_index * 4;
             entry.param_data[i] = x;
             entry.param_data[i + 1] = y;
             entry.param_data[i + 2] = z;
@@ -309,17 +319,34 @@ impl ShaderStore {
         }
     }
 
-    /// Flush dirty uniform buffers to GPU.
-    pub fn flush(&mut self, queue: &wgpu::Queue) {
+    /// Flush uniform buffers to GPU, auto-injecting built-in values.
+    /// Built-ins (time, delta, resolution, mouse) are written every frame for all shaders.
+    pub fn flush(
+        &mut self,
+        queue: &wgpu::Queue,
+        time: f32,
+        delta: f32,
+        resolution: [f32; 2],
+        mouse: [f32; 2],
+    ) {
         for entry in self.shaders.values_mut() {
-            if entry.dirty {
-                queue.write_buffer(
-                    &entry.uniform_buffer,
-                    0,
-                    bytemuck::cast_slice(&entry.param_data),
-                );
-                entry.dirty = false;
-            }
+            // Always write built-ins (first 8 floats = 2 vec4 slots)
+            entry.param_data[0] = time;
+            entry.param_data[1] = delta;
+            entry.param_data[2] = resolution[0];
+            entry.param_data[3] = resolution[1];
+            entry.param_data[4] = mouse[0];
+            entry.param_data[5] = mouse[1];
+            entry.param_data[6] = 0.0; // _pad.x
+            entry.param_data[7] = 0.0; // _pad.y
+
+            // Always upload — built-ins change every frame
+            queue.write_buffer(
+                &entry.uniform_buffer,
+                0,
+                bytemuck::cast_slice(&entry.param_data),
+            );
+            entry.dirty = false;
         }
     }
 

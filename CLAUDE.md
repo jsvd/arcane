@@ -4,7 +4,7 @@
 
 Arcane is a code-first, test-native, agent-native 2D game engine. Rust core for performance, TypeScript scripting for game logic.
 
-**Current status: v0.16.1 — Scaffold robustness + agent visual guidance. 2420 TS (Node) + 2544 (V8) + 351 Rust tests passing. Phases 0-27 complete.**
+**Current status: v0.17.0 — Shader authoring experience. 2453 TS (Node) + 2577 (V8) + 351 Rust tests passing. Phases 0-28 complete.**
 
 ## Repository Structure
 
@@ -142,6 +142,8 @@ arcane/
 │   │   ├── text.ts                — drawText(), measureText(), loadFont(), getDefaultFont(), MSDF font support, wrapText(), drawTextWrapped(), drawTextAligned()
 │   │   ├── animation.ts           — createAnimation(), updateAnimation(), drawAnimatedSprite()
 │   │   ├── audio.ts               — loadSound(), playSound(), playMusic(), stopSound(), setVolume(), instance-based playback, spatial audio, bus mixing, crossfade, pooling
+│   │   ├── shader.ts              — createShaderFromSource(), setShaderParam(), createShader(), setShaderUniform(), getShaderUniformNames()
+│   │   ├── effects.ts             — 8 effect presets: outline, flash, dissolve, pixelate, hologram, water, glow, grayscale
 │   │   └── index.ts               — Barrel export
 │   ├── ui/
 │   │   ├── types.ts               — Color, RectOptions, PanelOptions, BarOptions, LabelOptions
@@ -209,6 +211,7 @@ arcane/
 │   ├── physics-playground/        — Phase 11 demo: rigid body physics sandbox
 │   ├── platformer/                — Phase 4 demo: gravity, platforms, coins, text HUD, UI bars
 │   ├── roguelike/                 — Phase 2b demo: procedural dungeon, FOV, fog of war
+│   ├── shader-showcase/            — Phase 28 demo: effect presets, named uniforms, time-based animation
 │   ├── shapes-showcase/           — Phase 25 demo: geometry pipeline shapes, colors, layers
 │   ├── sokoban/                   — Phase 1 demo: grid puzzle + Phase 2a visual demo
 │   ├── sprite-demo/               — Phase 5.5 demo: asset loading validation with sprite sheet + sound

@@ -129,6 +129,9 @@ The engine must serve the breadth of 2D games, not just RPGs. These initial demo
 ### Phase 27: SpriteAtlas Runtime & Agentic Assets
 **Status: COMPLETE** — SpriteAtlas runtime with UV normalization and tag queries, placeholder sprite system for rapid prototyping, `/sprite` skill with visual selector workflow, removed `arcane assets` CLI in favor of agentic skills. Asset handling is now fully code-first and agent-native.
 
+### Phase 28: Shader Authoring Experience
+**Status: COMPLETE** — Auto-injected built-in uniforms (time, delta, resolution, mouse), named uniform API (`createShader` + `setShaderUniform`), 8 effect preset factories (outline, flash, dissolve, pixelate, hologram, water, glow, grayscale). Demo: Shader Showcase.
+
 ---
 
 ## Backlog
