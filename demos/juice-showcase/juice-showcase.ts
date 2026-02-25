@@ -48,6 +48,7 @@ import {
 
 // --- Textures ---
 const TEX_PARTICLE = createSolidTexture("particle", rgb(255, 255, 255));
+const TEX_TRAIL = createSolidTexture("trail", rgb(128, 200, 255));
 
 // --- Shockwave ring effects ---
 type ShockwaveRing = {
@@ -73,6 +74,7 @@ let hitCones: HitCone[] = [];
 
 // --- Rust emitter tracking ---
 let activeRustEmitters: number[] = [];
+const stoppedEmitters: Set<number> = new Set();
 
 // --- State ---
 interface DemoState {
@@ -276,24 +278,23 @@ function spawnExplosion(x: number, y: number) {
 
 function spawnTrail(x: number, y: number) {
   const id = createRustEmitter({
-    spawnRate: 100, // continuous trail effect
+    spawnRate: 30,
     lifetimeMin: 0.3,
     lifetimeMax: 0.6,
     speedMin: 5,
     speedMax: 20,
-    direction: -Math.PI / 2,
-    spread: Math.PI,
-    scaleMin: 0.3,
-    scaleMax: 0.8,
+    direction: 0,
+    spread: Math.PI * 2,
+    scaleMin: 0.5,
+    scaleMax: 1.0,
     alphaStart: 1,
     alphaEnd: 0,
-    textureId: TEX_PARTICLE,
+    textureId: TEX_TRAIL,
     x,
     y,
   });
   activeRustEmitters.push(id);
-  // Schedule spawn rate cutoff after 0.5 seconds
-  emitterStopTimers.set(id, 0.5);
+  // No stop timer — continuous fountain, capped by cleanup when all particles die
 }
 
 function spawnShockwave(x: number, y: number) {
@@ -389,17 +390,19 @@ game.onFrame((ctx) => {
     if (newTime <= 0) {
       setRustEmitterSpawnRate(id, 0);
       emitterStopTimers.delete(id);
+      // Mark as stopped so cleanup can reclaim it once particles die
+      stoppedEmitters.add(id);
     } else {
       emitterStopTimers.set(id, newTime);
     }
   }
 
-  // Clean up finished Rust emitters (after ~2 seconds)
+  // Clean up stopped Rust emitters once all their particles have died
   for (let i = activeRustEmitters.length - 1; i >= 0; i--) {
     const id = activeRustEmitters[i];
-    if (getRustEmitterParticleCount(id) === 0) {
+    if (stoppedEmitters.has(id) && getRustEmitterParticleCount(id) === 0) {
       destroyRustEmitter(id);
-      emitterStopTimers.delete(id);
+      stoppedEmitters.delete(id);
       activeRustEmitters.splice(i, 1);
     }
   }

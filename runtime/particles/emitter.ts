@@ -645,7 +645,6 @@ export function drawRustEmitter(
       layer: pLayer,
       rotation: angle,
       opacity: alpha,
-      tint: { r: 1, g: 1, b: 1, a: alpha },
     });
   }
 }
