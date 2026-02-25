@@ -7,6 +7,17 @@ const hasRenderOps =
   typeof (globalThis as any).Deno !== "undefined" &&
   typeof (globalThis as any).Deno?.core?.ops?.op_set_camera === "function";
 
+const hasViewportOp =
+  typeof (globalThis as any).Deno !== "undefined" &&
+  typeof (globalThis as any).Deno?.core?.ops?.op_get_viewport_size === "function";
+
+/** Get viewport size for internal use (avoids circular import with input.ts). */
+function getViewportInternal(): { width: number; height: number } {
+  if (!hasViewportOp) return { width: 800, height: 600 };
+  const [w, h] = (globalThis as any).Deno.core.ops.op_get_viewport_size();
+  return { width: w, height: h };
+}
+
 /** Camera bounds: world-space limits the camera cannot exceed. */
 export type CameraBounds = {
   minX: number;
@@ -23,8 +34,9 @@ export type CameraDeadzone = {
   height: number;
 };
 
-// Module-level state for deadzone
+// Module-level state for deadzone and bounds
 let currentDeadzone: CameraDeadzone | null = null;
+let currentBounds: CameraBounds | null = null;
 
 /**
  * Set the camera position and zoom level.
@@ -55,7 +67,42 @@ let currentDeadzone: CameraDeadzone | null = null;
  */
 export function setCamera(x: number, y: number, zoom: number = 1): void {
   if (!hasRenderOps) return;
-  (globalThis as any).Deno.core.ops.op_set_camera(x, y, zoom);
+
+  // Round to pixel boundaries to prevent sub-pixel jitter.
+  let finalX = Math.round(x);
+  let finalY = Math.round(y);
+
+  // Apply bounds clamping on the TS side to match what the GPU will use.
+  // Without this, getCamera() would return the unclamped value while the GPU
+  // uses the clamped value, causing screenSpace/parallax sprites to jitter.
+  if (currentBounds !== null) {
+    const vp = getViewportInternal();
+    const halfW = vp.width / (2 * zoom);
+    const halfH = vp.height / (2 * zoom);
+
+    const boundsW = currentBounds.maxX - currentBounds.minX;
+    const boundsH = currentBounds.maxY - currentBounds.minY;
+
+    // If visible area wider than bounds, center on bounds
+    if (halfW * 2 >= boundsW) {
+      finalX = Math.round(currentBounds.minX + boundsW / 2);
+    } else {
+      const minX = currentBounds.minX + halfW;
+      const maxX = currentBounds.maxX - halfW;
+      finalX = Math.round(Math.max(minX, Math.min(maxX, finalX)));
+    }
+
+    // If visible area taller than bounds, center on bounds
+    if (halfH * 2 >= boundsH) {
+      finalY = Math.round(currentBounds.minY + boundsH / 2);
+    } else {
+      const minY = currentBounds.minY + halfH;
+      const maxY = currentBounds.maxY - halfH;
+      finalY = Math.round(Math.max(minY, Math.min(maxY, finalY)));
+    }
+  }
+
+  (globalThis as any).Deno.core.ops.op_set_camera(finalX, finalY, zoom);
 }
 
 /**
@@ -67,7 +114,8 @@ export function setCamera(x: number, y: number, zoom: number = 1): void {
 export function getCamera(): CameraState {
   if (!hasRenderOps) return { x: 0, y: 0, zoom: 1 };
   const [x, y, zoom] = (globalThis as any).Deno.core.ops.op_get_camera();
-  return { x, y, zoom };
+  // Round to ensure pixel-aligned values (guards against f32/f64 precision drift)
+  return { x: Math.round(x), y: Math.round(y), zoom };
 }
 
 /**
@@ -100,7 +148,8 @@ export function followTarget(
     if (targetY < cy - halfH) cy = targetY + halfH;
     else if (targetY > cy + halfH) cy = targetY - halfH;
 
-    setCamera(cx, cy, zoom);
+    // Snap to pixel boundaries to prevent sub-pixel oscillation
+    setCamera(Math.round(cx), Math.round(cy), zoom);
   } else {
     setCamera(targetX, targetY, zoom);
   }
@@ -123,6 +172,9 @@ export function followTarget(
  * setCameraBounds(null);
  */
 export function setCameraBounds(bounds: CameraBounds | null): void {
+  // Cache bounds locally for TS-side clamping in setCamera()
+  currentBounds = bounds;
+
   if (!hasRenderOps) return;
   if (bounds) {
     (globalThis as any).Deno.core.ops.op_set_camera_bounds(
@@ -212,21 +264,31 @@ export function followTargetSmooth(
     else if (targetY > cam.y + halfH) desiredY = targetY - halfH;
   }
 
+  // Round the desired position to prevent chasing sub-pixel targets
+  const roundedDesiredX = Math.round(desiredX);
+  const roundedDesiredY = Math.round(desiredY);
+
+  // If already at the rounded target, don't move at all
+  if (cam.x === roundedDesiredX && cam.y === roundedDesiredY) {
+    // Already there - don't change anything (prevents micro-oscillation)
+    return;
+  }
+
   // Frame-rate independent exponential smoothing
   const dt = getDeltaTime();
   const clampedSmoothness = Math.max(0.001, Math.min(smoothness, 0.999));
   const lerpFactor = 1 - Math.pow(clampedSmoothness, dt);
 
-  const newX = cam.x + (desiredX - cam.x) * lerpFactor;
-  const newY = cam.y + (desiredY - cam.y) * lerpFactor;
+  const newX = cam.x + (roundedDesiredX - cam.x) * lerpFactor;
+  const newY = cam.y + (roundedDesiredY - cam.y) * lerpFactor;
 
-  // Prevent tiny movements that cause jitter - if movement is less than threshold, don't move
-  const threshold = 0.01;
-  const deltaX = newX - cam.x;
-  const deltaY = newY - cam.y;
+  // Snap to target when within 1 pixel to prevent infinite approaching
+  const distToTargetX = Math.abs(newX - roundedDesiredX);
+  const distToTargetY = Math.abs(newY - roundedDesiredY);
+  const snapThreshold = 1.0;
 
-  const finalX = Math.abs(deltaX) < threshold ? cam.x : newX;
-  const finalY = Math.abs(deltaY) < threshold ? cam.y : newY;
+  const finalX = distToTargetX < snapThreshold ? roundedDesiredX : Math.round(newX);
+  const finalY = distToTargetY < snapThreshold ? roundedDesiredY : Math.round(newY);
 
   setCamera(finalX, finalY, zoom);
 }

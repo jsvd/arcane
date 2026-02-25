@@ -47,8 +47,18 @@ export function drawParallaxSprite(options: ParallaxSpriteOptions): void {
   // Offset position based on camera and parallax factor
   // At factor=1, no offset (sprite moves with world normally)
   // At factor=0, sprite is offset by full camera position (appears fixed)
-  const offsetX = cam.x * (1 - parallaxFactor);
-  const offsetY = cam.y * (1 - parallaxFactor);
+  //
+  // To prevent sub-pixel jitter, we quantize the parallax offset based on
+  // the parallax factor. This ensures that small camera movements don't
+  // cause visible parallax layer shifts.
+  const rawOffsetX = cam.x * (1 - parallaxFactor);
+  const rawOffsetY = cam.y * (1 - parallaxFactor);
+
+  // Use floor for deterministic quantization - the offset only changes
+  // when it crosses an integer boundary, preventing jitter from small
+  // camera movements that oscillate around a rounding threshold.
+  const offsetX = Math.floor(rawOffsetX);
+  const offsetY = Math.floor(rawOffsetY);
 
   drawSprite({
     ...spriteOpts,

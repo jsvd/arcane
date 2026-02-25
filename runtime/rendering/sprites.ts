@@ -118,11 +118,13 @@ export function drawSprite(opts: SpriteOptions): void {
   if (opts.screenSpace) {
     const cam = getCamera();
     const { width: vpW, height: vpH } = getViewportSize();
-    x = x / cam.zoom + cam.x - vpW / (2 * cam.zoom);
-    y = y / cam.zoom + cam.y - vpH / (2 * cam.zoom);
-    // Round positions to prevent sub-pixel jitter from camera interpolation
-    x = Math.round(x * cam.zoom) / cam.zoom;
-    y = Math.round(y * cam.zoom) / cam.zoom;
+    // Compute world position that corresponds to screen pixel position.
+    // Round intermediate values to ensure pixel-perfect screen alignment.
+    const halfVpW = Math.floor(vpW / 2);
+    const halfVpH = Math.floor(vpH / 2);
+    // World position = screen position offset from camera center, scaled by zoom
+    x = cam.x + (x - halfVpW) / cam.zoom;
+    y = cam.y + (y - halfVpH) / cam.zoom;
     w = w / cam.zoom;
     h = h / cam.zoom;
   }
