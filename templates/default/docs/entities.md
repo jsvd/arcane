@@ -86,6 +86,8 @@ setPartVisible(character, "sword", entity.hasSword);
 
 Use `textureId` instead of `color` on parts when using loaded sprite sheets. See [rendering.md](rendering.md) for full sprite group API.
 
+**Flip multiplier for shape-based characters:** Use `const flip = facingRight ? 1 : -1` and multiply X offsets: `drawEllipse(x + flip * 5, ...)`. One set of draw calls handles both directions. See [visual-composition.md](visual-composition.md) for Cat/Unicorn examples.
+
 ## Collision Events
 
 Event-driven collision system on top of the physics engine:

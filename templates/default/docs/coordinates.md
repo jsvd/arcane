@@ -22,6 +22,29 @@ followTargetSmooth(VPW / 2, VPH / 2, ZOOM, 0.08);
 
 The camera defines what part of the world is visible. By default it is at `(0, 0)` which is the **center** of the screen. This is not a web canvas.
 
+```
+  World space (where sprites live):
+  VPW = viewport width, VPH = viewport height
+
+  Default camera at (0, 0):
+  +-----------------------------------+
+  | (-VPW/2, -VPH/2)  (VPW/2, -VPH/2) |
+  |                                   |
+  |            (0, 0)                 |  <- center of screen, NOT top-left
+  |                                   |
+  | (-VPW/2,  VPH/2)  (VPW/2,  VPH/2) |
+  +-----------------------------------+
+
+  After setCamera(VPW/2, VPH/2):
+  +-----------------------------------+
+  | (0, 0)                  (VPW, 0)  |  <- now (0,0) is top-left!
+  |                                   |
+  |          (VPW/2, VPH/2)           |
+  |                                   |
+  | (0, VPH)              (VPW, VPH)  |
+  +-----------------------------------+
+```
+
 ```typescript
 import { setCamera, getCamera, getViewportSize } from "@arcane/runtime/rendering";
 
