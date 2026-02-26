@@ -35,7 +35,15 @@ export type ParticleOptions = {
   color?: Color;
   /** End color. */
   endColor?: Color;
-  /** Speed multiplier (scales velocity range). Default: 1. */
+  /**
+   * Speed multiplier (scales velocity range). Default: 1.
+   *
+   * @remarks
+   * This multiplies the preset's built-in velocity ranges, NOT an absolute speed.
+   * The "sparks" preset has ±120 px/s velocity, so `speed: 10` = ±1200 px/s.
+   * For gentle or precise particle motion, specify `velocityX`/`velocityY` directly
+   * and omit `speed`.
+   */
   speed?: number;
   /** Particle lifetime range [min, max] in seconds. */
   lifetime?: [number, number];
@@ -147,14 +155,24 @@ export function burstParticles(x: number, y: number, options?: ParticleOptions):
 /**
  * Create a continuous particle stream at a position.
  *
+ * @remarks
+ * **Do not call this every frame.** Each call creates a new continuous emitter.
+ * Calling `streamParticles()` inside `onFrame()` creates unbounded emitters and
+ * leaks particles. Call once (on init or on event), then move the returned emitter
+ * via `emitter.config.x`/`emitter.config.y`. For repeated one-shot effects
+ * (movement trails, impacts), use {@link burstParticles} instead.
+ *
  * @param x - World X position.
  * @param y - World Y position.
  * @param options - Override preset defaults. Use `preset` to pick a base config.
  * @returns The created emitter. Move it by updating `emitter.config.x/y`.
  *
  * @example
+ * // Call once:
  * const smoke = streamParticles(chimney.x, chimney.y, { preset: "smoke" });
- * const fire = streamParticles(torch.x, torch.y, { preset: "fire", count: 30 });
+ * // Move each frame:
+ * smoke.config.x = chimney.x;
+ * smoke.config.y = chimney.y;
  */
 export function streamParticles(x: number, y: number, options?: ParticleOptions): Emitter {
   const preset = ParticlePresets[options?.preset ?? "fire"];

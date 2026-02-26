@@ -104,6 +104,85 @@ createEmitter({
 });
 ```
 
+## Convenience Functions
+
+For most particle effects, use `burstParticles()` and `streamParticles()` instead of `createEmitter()` directly. They provide preset-based defaults with simple overrides.
+
+```typescript
+import { burstParticles, streamParticles, drawAllParticles } from "@arcane/runtime/particles";
+```
+
+### `burstParticles(x, y, options?)`
+
+Creates a one-shot burst of particles. Safe to call repeatedly (e.g., on impact, on pickup, on frame intervals for trails).
+
+```typescript
+// Default sparks burst
+burstParticles(enemy.x, enemy.y);
+
+// Custom color + gravity
+burstParticles(x, y, { color: rgb(0, 255, 0), count: 20, gravity: 150 });
+
+// Movement trail — use frame gating, NOT streamParticles per-frame
+if (moving && ctx.frame % 3 === 0) {
+  burstParticles(player.x, player.y, {
+    color: TRAIL_COLOR, count: 3,
+    velocityX: [-15, 15], velocityY: [-15, 15],
+    lifetime: [0.2, 0.5], gravity: 20,
+  });
+}
+```
+
+### `streamParticles(x, y, options?)`
+
+Creates a **continuous emitter** that spawns particles every frame. Returns the emitter so you can move or stop it.
+
+**Call once, not per-frame.** Each call creates a new emitter. Calling in `onFrame()` creates unbounded emitters and leaks particles.
+
+```typescript
+// Create once (e.g., on init or on event)
+const smoke = streamParticles(chimney.x, chimney.y, { preset: "smoke" });
+
+// Move the emitter each frame — don't create a new one
+smoke.config.x = chimney.x;
+smoke.config.y = chimney.y;
+```
+
+### The `speed` Multiplier Trap
+
+The `speed` option multiplies the preset's built-in velocity ranges. This is often much faster than expected:
+
+| Preset | Velocity X | Velocity Y | `speed: 10` result |
+|--------|-----------|-----------|-------------------|
+| dust | ±30 px/s | -40 to -10 px/s | ±300 px/s, -400 to -100 px/s |
+| fire | ±20 px/s | -80 to -30 px/s | ±200 px/s, -800 to -300 px/s |
+| sparks | ±120 px/s | ±120 px/s | ±1200 px/s, ±1200 px/s |
+| smoke | ±10 px/s | -30 to -10 px/s | ±100 px/s, -300 to -100 px/s |
+
+**For gentle or precise particle motion**, specify `velocityX`/`velocityY` directly and omit `speed`:
+
+```typescript
+// Too fast — speed multiplies sparks preset's ±120 px/s
+burstParticles(x, y, { speed: 5 }); // ±600 px/s!
+
+// Correct — explicit velocity for a gentle puff
+burstParticles(x, y, { velocityX: [-15, 15], velocityY: [-20, -5] });
+```
+
+### Rendering: `drawAllParticles()` Required
+
+`autoSubsystems: true` (the `createGame()` default) auto-calls `updateParticles(dt)` to advance particle physics. But it does **not** draw them. You must call `drawAllParticles()` explicitly:
+
+```typescript
+game.onFrame((ctx) => {
+  // ... game logic and drawing ...
+
+  drawAllParticles(); // Required! Without this, particles are invisible
+});
+```
+
+`drawAllParticles()` renders each particle as a circle with color interpolation, scale, and opacity based on age. For custom rendering (sprites, additive blending), use `getAllParticles()` and draw manually — see the Particle Emitters section above.
+
 ## Floating Text
 
 Auto-animating text that rises and fades. Use for damage numbers, XP gains, gold pickups — don't hand-roll rising text with manual timers.
