@@ -11,20 +11,20 @@
 import { drawText } from "../../runtime/rendering/index.ts";
 import { createGame } from "../../runtime/game/index.ts";
 import {
-  circle,
-  box,
-  roundedBox,
-  ellipse,
-  segment,
-  triangle,
-  egg,
-  heart,
-  moon,
-  hexagon,
-  pentagon,
-  star,
-  cross,
-  ring,
+  sdfCircle,
+  sdfBox,
+  sdfRoundedBox,
+  sdfEllipse,
+  sdfSegment,
+  sdfTriangle,
+  sdfEgg,
+  sdfHeart,
+  sdfMoon,
+  sdfHexagon,
+  sdfPentagon,
+  sdfStar,
+  sdfCross,
+  sdfRing,
   sdfEntity,
   flushSdfEntities,
 } from "../../runtime/rendering/sdf.ts";
@@ -47,22 +47,22 @@ const COLORS = [
 ];
 
 // Define all primitives with their shapes and labels
-const primitives: Array<{ label: string; shape: ReturnType<typeof circle> }> = [
-  { label: "circle", shape: circle(20) },
-  { label: "box", shape: box(30, 20) },
-  { label: "rounded_box", shape: roundedBox(30, 20, 5) },
-  { label: "ellipse", shape: ellipse(28, 14) },
-  { label: "segment", shape: segment([-15, -10], [15, 10]) },
-  { label: "triangle", shape: triangle([0, 18], [-16, -10], [16, -10]) },
-  { label: "egg", shape: egg(16, 8) },
-  { label: "heart", shape: heart(16) },
-  { label: "moon", shape: moon(8, 18, 14) },
-  { label: "hexagon", shape: hexagon(18) },
-  { label: "pentagon", shape: pentagon(18) },
-  { label: "star(5)", shape: star(18, 5, 0.4) },
-  { label: "star(6)", shape: star(18, 6, 0.5) },
-  { label: "cross", shape: cross(20, 6, 2) },
-  { label: "ring", shape: ring(16, 3) },
+const primitives: Array<{ label: string; shape: ReturnType<typeof sdfCircle> }> = [
+  { label: "circle", shape: sdfCircle(20) },
+  { label: "box", shape: sdfBox(30, 20) },
+  { label: "rounded_box", shape: sdfRoundedBox(30, 20, 5) },
+  { label: "ellipse", shape: sdfEllipse(28, 14) },
+  { label: "segment", shape: sdfSegment([-15, -10], [15, 10]) },
+  { label: "triangle", shape: sdfTriangle([0, 18], [-16, -10], [16, -10]) },
+  { label: "egg", shape: sdfEgg(16, 8) },
+  { label: "heart", shape: sdfHeart(16) },
+  { label: "moon", shape: sdfMoon(8, 18, 14) },
+  { label: "hexagon", shape: sdfHexagon(18) },
+  { label: "pentagon", shape: sdfPentagon(18) },
+  { label: "star(5)", shape: sdfStar(18, 5, 0.4) },
+  { label: "star(6)", shape: sdfStar(18, 6, 0.5) },
+  { label: "cross", shape: sdfCross(20, 6, 2) },
+  { label: "ring", shape: sdfRing(16, 3) },
 ];
 
 // Create SDF entities in a grid

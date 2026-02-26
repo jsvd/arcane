@@ -13,16 +13,16 @@
 import { drawText, getDeltaTime } from "../../runtime/rendering/index.ts";
 import { createGame } from "../../runtime/game/index.ts";
 import {
-  circle,
-  box,
-  roundedBox,
-  triangle,
-  star,
-  heart,
-  union,
-  smoothUnion,
-  offset,
-  round,
+  sdfCircle,
+  sdfBox,
+  sdfRoundedBox,
+  sdfTriangle,
+  sdfStar,
+  sdfHeart,
+  sdfUnion,
+  sdfSmoothUnion,
+  sdfOffset,
+  sdfRound,
   sdfEntity,
   clearSdfEntities,
   flushSdfEntities,
@@ -84,31 +84,31 @@ const trees: Array<[number, number, number]> = [
 // =============================================
 
 const cloudShape = (scale: number) =>
-  smoothUnion(
+  sdfSmoothUnion(
     8 * scale,
-    circle(20 * scale),
-    offset(circle(28 * scale), 24 * scale, 4 * scale),
-    offset(circle(18 * scale), -20 * scale, -2 * scale),
-    offset(circle(22 * scale), 10 * scale, 12 * scale),
+    sdfCircle(20 * scale),
+    sdfOffset(sdfCircle(28 * scale), 24 * scale, 4 * scale),
+    sdfOffset(sdfCircle(18 * scale), -20 * scale, -2 * scale),
+    sdfOffset(sdfCircle(22 * scale), 10 * scale, 12 * scale),
   );
 
 // Mountain range - rounded peaks with sharp valleys, overlapping bases
 // Using union (sharp joins) with round() on individual peaks (soft tops)
 // Wider bases ensure continuous mountain range with no gaps
 const MOUNTAIN_BASE = -120; // Bottom of mountains (below screen)
-const mountainPeaks = union(
+const mountainPeaks = sdfUnion(
   // Tallest peak (center-left) - height 180, most rounded, wide base
-  offset(round(triangle([0, 180], [-140, MOUNTAIN_BASE], [140, MOUNTAIN_BASE]), 25), -60, 0),
+  sdfOffset(sdfRound(sdfTriangle([0, 180], [-140, MOUNTAIN_BASE], [140, MOUNTAIN_BASE]), 25), -60, 0),
   // Second tallest (center-right) - height 160, medium-high roundness
-  offset(round(triangle([0, 160], [-130, MOUNTAIN_BASE], [130, MOUNTAIN_BASE]), 20), 120, 0),
+  sdfOffset(sdfRound(sdfTriangle([0, 160], [-130, MOUNTAIN_BASE], [130, MOUNTAIN_BASE]), 20), 120, 0),
   // Medium peak (far left) - height 130, subtle roundness
-  offset(round(triangle([0, 130], [-120, MOUNTAIN_BASE], [120, MOUNTAIN_BASE]), 12), -250, 0),
+  sdfOffset(sdfRound(sdfTriangle([0, 130], [-120, MOUNTAIN_BASE], [120, MOUNTAIN_BASE]), 12), -250, 0),
   // Medium peak (far right) - height 140, moderate roundness
-  offset(round(triangle([0, 140], [-125, MOUNTAIN_BASE], [125, MOUNTAIN_BASE]), 16), 300, 0),
+  sdfOffset(sdfRound(sdfTriangle([0, 140], [-125, MOUNTAIN_BASE], [125, MOUNTAIN_BASE]), 16), 300, 0),
   // Left edge peak - height 100, minimal roundness, extends past screen
-  offset(round(triangle([0, 100], [-130, MOUNTAIN_BASE], [130, MOUNTAIN_BASE]), 8), -400, 0),
+  sdfOffset(sdfRound(sdfTriangle([0, 100], [-130, MOUNTAIN_BASE], [130, MOUNTAIN_BASE]), 8), -400, 0),
   // Right edge peak - height 110, light roundness, extends past screen
-  offset(round(triangle([0, 110], [-130, MOUNTAIN_BASE], [130, MOUNTAIN_BASE]), 10), 420, 0),
+  sdfOffset(sdfRound(sdfTriangle([0, 110], [-130, MOUNTAIN_BASE], [130, MOUNTAIN_BASE]), 10), 420, 0),
 );
 // Mountain vertical extent: from MOUNTAIN_BASE (-120) to tallest peak (180) = 300 units
 // Bounds must cover half the screen width (400) to render the full range
@@ -117,14 +117,14 @@ const MOUNTAIN_BOUNDS = W / 2; // 400 - covers full screen width
 
 // Bushy tree foliage - overlapping circles in a more organic arrangement
 const foliageShape = (scale: number) =>
-  smoothUnion(
+  sdfSmoothUnion(
     10 * scale, // Larger blend for softer, bushier look
-    circle(26 * scale),                              // Center
-    offset(circle(20 * scale), -22 * scale, 0),      // Left
-    offset(circle(20 * scale), 22 * scale, 0),       // Right
-    offset(circle(18 * scale), -12 * scale, 16 * scale),  // Upper-left
-    offset(circle(18 * scale), 12 * scale, 16 * scale),   // Upper-right
-    offset(circle(16 * scale), 0, 22 * scale),       // Top
+    sdfCircle(26 * scale),                              // Center
+    sdfOffset(sdfCircle(20 * scale), -22 * scale, 0),      // Left
+    sdfOffset(sdfCircle(20 * scale), 22 * scale, 0),       // Right
+    sdfOffset(sdfCircle(18 * scale), -12 * scale, 16 * scale),  // Upper-left
+    sdfOffset(sdfCircle(18 * scale), 12 * scale, 16 * scale),   // Upper-right
+    sdfOffset(sdfCircle(16 * scale), 0, 22 * scale),       // Top
   );
 
 // =============================================
@@ -149,7 +149,7 @@ game.onFrame((_ctx) => {
   // SKY BACKGROUND (static)
   // =============================================
   sdfEntity({
-    shape: box(W, H),
+    shape: sdfBox(W, H),
     fill: gradient("#1C3A5F", "#87CEEB", 90),
     position: [W / 2, H / 2],
     layer: LAYERS.BACKGROUND - 10,
@@ -159,7 +159,7 @@ game.onFrame((_ctx) => {
   // SUN (with animated glow)
   // =============================================
   sdfEntity({
-    shape: circle(45),
+    shape: sdfCircle(45),
     fill: glow("#FFD700", 0.15), // Lower intensity = bigger glow
     position: [680, 80],
     scale: pulse(time, 0.5, 0.95, 1.05), // Subtle pulse
@@ -201,7 +201,7 @@ game.onFrame((_ctx) => {
   for (const [tx, ty, scale] of trees) {
     // Trunk - darker brown
     sdfEntity({
-      shape: roundedBox(10 * scale, 50 * scale, 4),
+      shape: sdfRoundedBox(10 * scale, 50 * scale, 4),
       fill: solid("#3a2510"),
       position: [tx, ty + 25 * scale],
       layer: LAYERS.GROUND - 2,
@@ -220,7 +220,7 @@ game.onFrame((_ctx) => {
   // GROUND (static)
   // =============================================
   sdfEntity({
-    shape: box(W, 60),
+    shape: sdfBox(W, 60),
     fill: solidOutline("#5a8a3e", "#3d6b2a", 3),
     position: [W / 2, H - 30],
     layer: LAYERS.GROUND,
@@ -228,7 +228,7 @@ game.onFrame((_ctx) => {
 
   // Grass detail strip
   sdfEntity({
-    shape: box(W, 8),
+    shape: sdfBox(W, 8),
     fill: solid("#6a9a4e"),
     position: [W / 2, H - 64],
     layer: LAYERS.GROUND + 1,
@@ -239,7 +239,7 @@ game.onFrame((_ctx) => {
   // =============================================
   for (const [px, py, pw] of platforms) {
     sdfEntity({
-      shape: round(box(pw, 12), 4),
+      shape: sdfRound(sdfBox(pw, 12), 4),
       fill: solidOutline("#8B7355", "#5C4033", 2),
       position: [px, py],
       layer: LAYERS.ENTITIES,
@@ -256,7 +256,7 @@ game.onFrame((_ctx) => {
     // Stagger animation phase for each gem
     const phase = i * 0.7;
     sdfEntity({
-      shape: star(14, 4, 0.5),
+      shape: sdfStar(14, 4, 0.5),
       fill: glow("#00ffaa", 0.2), // Lower intensity = bigger glow
       position: [gx, gy + bob(time + phase, 2, 3)], // Gentle bobbing
       rotation: spin(time + phase, 45), // Slow spin
@@ -275,7 +275,7 @@ game.onFrame((_ctx) => {
     const [hx, hy] = heartPositions[i];
     const phase = i * 1.2;
     sdfEntity({
-      shape: heart(18),
+      shape: sdfHeart(18),
       fill: glow("#ff3366", 0.15), // Lower intensity = bigger glow
       position: [hx, hy],
       scale: pulse(time + phase, 2.5, 0.95, 1.15),
@@ -287,7 +287,7 @@ game.onFrame((_ctx) => {
 
   // Big star bonus - prominent glow and spin
   sdfEntity({
-    shape: star(22, 5, 0.4),
+    shape: sdfStar(22, 5, 0.4),
     fill: glow("#FFD700", 0.12), // Even lower intensity for big glow
     position: [420, 120],
     rotation: spin(time, 30),
@@ -304,7 +304,7 @@ game.onFrame((_ctx) => {
 
   // Head
   sdfEntity({
-    shape: circle(12),
+    shape: sdfCircle(12),
     fill: playerFill,
     position: [120, 490],
     layer: LAYERS.ENTITIES + 10,
@@ -312,7 +312,7 @@ game.onFrame((_ctx) => {
 
   // Body
   sdfEntity({
-    shape: roundedBox(8, 22, 3),
+    shape: sdfRoundedBox(8, 22, 3),
     fill: playerFill,
     position: [120, 520],
     layer: LAYERS.ENTITIES + 10,
@@ -320,7 +320,7 @@ game.onFrame((_ctx) => {
 
   // Left leg
   sdfEntity({
-    shape: roundedBox(5, 18, 2),
+    shape: sdfRoundedBox(5, 18, 2),
     fill: playerFill,
     position: [112, 555],
     layer: LAYERS.ENTITIES + 9,
@@ -328,7 +328,7 @@ game.onFrame((_ctx) => {
 
   // Right leg
   sdfEntity({
-    shape: roundedBox(5, 18, 2),
+    shape: sdfRoundedBox(5, 18, 2),
     fill: playerFill,
     position: [128, 555],
     layer: LAYERS.ENTITIES + 9,
@@ -336,7 +336,7 @@ game.onFrame((_ctx) => {
 
   // Left arm
   sdfEntity({
-    shape: roundedBox(4, 14, 2),
+    shape: sdfRoundedBox(4, 14, 2),
     fill: playerFill,
     position: [100, 518],
     layer: LAYERS.ENTITIES + 9,
@@ -344,7 +344,7 @@ game.onFrame((_ctx) => {
 
   // Right arm
   sdfEntity({
-    shape: roundedBox(4, 14, 2),
+    shape: sdfRoundedBox(4, 14, 2),
     fill: playerFill,
     position: [140, 518],
     layer: LAYERS.ENTITIES + 9,

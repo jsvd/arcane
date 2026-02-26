@@ -89,7 +89,7 @@ drawColorSprite({ color: rgb(255, 0, 0), x: 100, y: 200, w: 32, h: 32, layer: 1 
 Bundle multiple sprite parts with relative offsets. Draw multi-part characters, equipment, or vehicles with a single call.
 
 ```typescript
-import { createSpriteGroup, drawSpriteGroup, setPartVisible, getSpritePart } from "@arcane/runtime/game";
+import { createSpriteGroup, drawSpriteGroup, setPartVisible } from "@arcane/runtime/game";
 import { rgb } from "@arcane/runtime/ui";
 
 const knight = createSpriteGroup([
@@ -206,9 +206,9 @@ Three tiers of shader usage — from zero-WGSL to full control. See [docs/shader
 
 **Tier 1: Effect presets** (most common — no WGSL needed):
 ```typescript
-import { outline, dissolve } from "@arcane/runtime/rendering/effects";
+import { outlineEffect, dissolveEffect } from "@arcane/runtime/rendering";
 
-const fx = outline({ color: [1, 0, 0, 1], width: 2 });
+const fx = outlineEffect({ color: [1, 0, 0, 1], width: 2 });
 drawSprite({ textureId: tex, x, y, w: 64, h: 64, shaderId: fx.shaderId });
 fx.set("outlineWidth", 3.0); // update at runtime
 ```
@@ -248,7 +248,8 @@ addPointLight(fireX, fireY, 80 * flicker, 1.0, 0.6, 0.2, flicker);
 ```typescript
 import {
   enableGlobalIllumination, setGIQuality, setAmbientLight,
-  addPointLight, addDirectionalLight, addSpotLight, drawSprite,
+  addPointLight, addDirectionalLight, addSpotLight,
+  addEmissive, addOccluder,
 } from "@arcane/runtime/rendering";
 
 enableGlobalIllumination();
@@ -260,11 +261,11 @@ addPointLight(player.x, player.y, 120, 1.0, 0.8, 0.5, 1.5);
 addDirectionalLight({ angle: Math.PI * 0.75, r: 0.3, g: 0.3, b: 0.5, intensity: 0.4 });  // moonlight
 addSpotLight({ x: guardX, y: guardY, angle: guardAngle, spread: Math.PI / 4, range: 200, r: 1, g: 1, b: 0.8, intensity: 2.0 });
 
-// Emissive sprites emit light into GI
-drawSprite({ textureId: TEX_LAVA, x: 100, y: 200, w: 32, h: 8, emissive: true, layer: 1 });
+// Emissive regions emit light into GI (separate from sprites)
+addEmissive({ x: 100, y: 200, w: 32, h: 8, r: 1, g: 0.5, b: 0.1, intensity: 2.0 });
 
-// Occluder sprites block light
-drawSprite({ textureId: TEX_WALL, x: 150, y: 200, w: 16, h: 64, occluder: true, layer: 1 });
+// Occluder regions block light (separate from sprites)
+addOccluder({ x: 150, y: 200, w: 16, h: 64 });
 ```
 
 ### Day/Night Cycle
@@ -277,12 +278,4 @@ setAmbientLight(0.1 + 0.4 * brightness, 0.1 + 0.35 * brightness, 0.15 + 0.25 * b
 addDirectionalLight({ angle: sunAngle, r: 1.0, g: 0.9, b: 0.7, intensity: brightness * 0.6 });
 ```
 
-## Layer Ordering
-
-Lower layer numbers draw behind higher ones:
-- 0: background / ground tiles
-- 1-10: game objects
-- 90+: UI primitives
-- 100+: HUD text
-
-If something is invisible, it may be drawn behind something else on a higher layer.
+Layer ordering: lower numbers draw behind higher ones. Use the `LAYERS` constants (`BACKGROUND=0`, `GROUND=10`, `ENTITIES=20`, `FOREGROUND=30`, `UI=40`) or custom numbers. If something is invisible, check it isn't behind a higher-layer element.

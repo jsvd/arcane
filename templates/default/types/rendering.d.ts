@@ -757,7 +757,6 @@ declare module "@arcane/runtime/rendering" {
   /**
    * Load and play a sound file as looping background music.
    * Convenience function combining loadSound() + playSound() with loop: true and bus: "music".
-   * Returns 0 in headless mode.
    *
    * @param path - File path to an audio file.
    * @param volume - Playback volume, 0.0-1.0. Default: 1.0.
@@ -768,7 +767,7 @@ declare module "@arcane/runtime/rendering" {
    * Stop a specific playing sound.
    * No-op in headless mode.
    *
-   * @param id - Sound handle from loadSound() or playMusic().
+   * @param id - Sound handle from loadSound().
    */
   export declare function stopSound(id: SoundId): void;
   /**
@@ -1190,8 +1189,8 @@ declare module "@arcane/runtime/rendering" {
    * auto-injected by the engine — no per-frame boilerplate needed for time-based effects.
    *
    * @example
-   * import { outline, dissolve } from "@arcane/runtime/rendering";
-   * const fx = outline({ color: [1, 0, 0, 1], width: 2 });
+   * import { outlineEffect, dissolveEffect } from "@arcane/runtime/rendering";
+   * const fx = outlineEffect({ color: [1, 0, 0, 1], width: 2 });
    * drawSprite({ textureId: tex, x, y, w: 64, h: 64, shaderId: fx.shaderId });
    * fx.set("outlineWidth", 3.0); // update at runtime
    */
@@ -1209,7 +1208,7 @@ declare module "@arcane/runtime/rendering" {
       width?: number;
   }
   /** Sprite outline via 4-neighbor alpha sampling. */
-  export declare function outline(opts?: OutlineOptions): ShaderEffect;
+  export declare function outlineEffect(opts?: OutlineOptions): ShaderEffect;
   export interface FlashOptions {
       /** Flash color [r, g, b] in 0-1 range. Default: white. */
       color?: [number, number, number];
@@ -1217,7 +1216,7 @@ declare module "@arcane/runtime/rendering" {
       intensity?: number;
   }
   /** Mix sprite with a flat color. Useful for hit feedback. */
-  export declare function flash(opts?: FlashOptions): ShaderEffect;
+  export declare function flashEffect(opts?: FlashOptions): ShaderEffect;
   export interface DissolveOptions {
       /** Edge glow color [r, g, b]. Default: orange. */
       edgeColor?: [number, number, number];
@@ -1225,13 +1224,13 @@ declare module "@arcane/runtime/rendering" {
       edgeWidth?: number;
   }
   /** Hash-noise dissolve with glowing edges. Animate `threshold` from 0→1. */
-  export declare function dissolve(opts?: DissolveOptions): ShaderEffect;
+  export declare function dissolveEffect(opts?: DissolveOptions): ShaderEffect;
   export interface PixelateOptions {
       /** Pixel block size. Default: 8. */
       pixelSize?: number;
   }
   /** UV grid-snapping pixelation. */
-  export declare function pixelate(opts?: PixelateOptions): ShaderEffect;
+  export declare function pixelateEffect(opts?: PixelateOptions): ShaderEffect;
   export interface HologramOptions {
       /** Scanline scroll speed. Default: 2. */
       speed?: number;
@@ -1241,7 +1240,7 @@ declare module "@arcane/runtime/rendering" {
       aberration?: number;
   }
   /** Scanlines + chromatic aberration + time flicker. Uses `shader_params.time`. */
-  export declare function hologram(opts?: HologramOptions): ShaderEffect;
+  export declare function hologramEffect(opts?: HologramOptions): ShaderEffect;
   export interface WaterOptions {
       /** Wave amplitude (UV offset). Default: 0.02. */
       amplitude?: number;
@@ -1251,7 +1250,7 @@ declare module "@arcane/runtime/rendering" {
       speed?: number;
   }
   /** Sine-wave UV distortion. Uses `shader_params.time`. */
-  export declare function water(opts?: WaterOptions): ShaderEffect;
+  export declare function waterEffect(opts?: WaterOptions): ShaderEffect;
   export interface GlowOptions {
       /** Glow color [r, g, b]. Default: white. */
       color?: [number, number, number];
@@ -1261,13 +1260,13 @@ declare module "@arcane/runtime/rendering" {
       intensity?: number;
   }
   /** Multi-sample outer glow around sprite edges. */
-  export declare function glow(opts?: GlowOptions): ShaderEffect;
+  export declare function glowEffect(opts?: GlowOptions): ShaderEffect;
   export interface GrayscaleOptions {
       /** Desaturation amount 0-1. Default: 1 (fully grayscale). */
       amount?: number;
   }
   /** Luminance-weighted desaturation. */
-  export declare function grayscale(opts?: GrayscaleOptions): ShaderEffect;
+  export declare function grayscaleEffect(opts?: GrayscaleOptions): ShaderEffect;
 
   /**
    * Floating text / damage numbers.
@@ -3054,7 +3053,7 @@ declare module "@arcane/runtime/rendering" {
    *
    * This matches typical math conventions but differs from some 2D graphics APIs
    * where Y increases downward. Keep this in mind when using:
-   * - `offset(shape, x, y)` - positive Y moves the shape UP
+   * - `sdfOffset(shape, x, y)` - positive Y moves the shape UP
    * - `gradient(..., angle)` - 90° goes from bottom to top
    * - triangle/polygon vertices - Y increases upward
    *
@@ -3062,20 +3061,20 @@ declare module "@arcane/runtime/rendering" {
    *
    * - Use instance-level transforms (`rotation`, `scale`, `opacity` in sdfEntity)
    *   for animation. These are GPU-efficient and don't cause shader recompilation.
-   * - Avoid animating fill parameters or SDF-level transforms (`rotate()`, `scale()`)
+   * - Avoid animating fill parameters or SDF-level transforms (`sdfRotate()`, `sdfScale()`)
    *   as these bake values into the shader and trigger recompilation each frame.
    * - Call `clearSdfEntities()` at the start of each frame for animated scenes,
    *   or use `createSdfFrame()` which handles clear+flush automatically.
    *
    * @example
    * ```ts
-   * import { circle, box, union, offset, smoothUnion, compileToWgsl, sdfEntity } from "@arcane/runtime/rendering";
+   * import { sdfCircle, sdfBox, sdfUnion, sdfOffset, sdfSmoothUnion, compileToWgsl, sdfEntity } from "@arcane/runtime/rendering";
    *
    * // Build a snowman shape
-   * const snowman = union(
-   *   circle(20),
-   *   offset(circle(14), 0, -30),
-   *   offset(circle(10), 0, -54),
+   * const snowman = sdfUnion(
+   *   sdfCircle(20),
+   *   sdfOffset(sdfCircle(14), 0, -30),
+   *   sdfOffset(sdfCircle(10), 0, -54),
    * );
    *
    * // Compile to WGSL
@@ -3139,7 +3138,7 @@ declare module "@arcane/runtime/rendering" {
    *
    * @example
    * sdfEntity({
-   *   shape: circle(20),
+   *   shape: sdfCircle(20),
    *   fill: solid("#ff0000"),
    *   layer: LAYERS.FOREGROUND,
    * });
@@ -3210,7 +3209,7 @@ declare module "@arcane/runtime/rendering" {
    * @returns SolidFill object.
    *
    * @example
-   * sdfEntity({ shape: circle(20), fill: solid("#ff0000") });
+   * sdfEntity({ shape: sdfCircle(20), fill: solid("#ff0000") });
    */
   export declare function solid(color: string): SolidFill;
   /**
@@ -3222,7 +3221,7 @@ declare module "@arcane/runtime/rendering" {
    *
    * @example
    * // Soft, wide glow
-   * sdfEntity({ shape: heart(30), fill: glow("#ff3366", 0.25), bounds: 90 });
+   * sdfEntity({ shape: sdfHeart(30), fill: glow("#ff3366", 0.25), bounds: 90 });
    */
   export declare function glow(color: string, intensity?: number): GlowFill;
   /**
@@ -3239,7 +3238,7 @@ declare module "@arcane/runtime/rendering" {
    * @example
    * // Bottom-to-top gradient (green to white)
    * sdfEntity({
-   *   shape: triangle([0, 30], [-50, -30], [50, -30]),
+   *   shape: sdfTriangle([0, 30], [-50, -30], [50, -30]),
    *   fill: gradient("#2d4a1c", "#f0f8ff", 90),
    *   bounds: 35, // Tight bounds for visible gradient
    * });
@@ -3248,7 +3247,7 @@ declare module "@arcane/runtime/rendering" {
    * // Equilateral triangle with properly scaled gradient
    * // bounds=43 (for width), but triangle Y extent is ±37
    * sdfEntity({
-   *   shape: triangle([0, 37], [-43, -37], [43, -37]),
+   *   shape: sdfTriangle([0, 37], [-43, -37], [43, -37]),
    *   fill: gradient("#000066", "#ff0000", 90, 43/37),
    *   bounds: 43,
    * });
@@ -3261,7 +3260,7 @@ declare module "@arcane/runtime/rendering" {
    * @returns OutlineFill object.
    *
    * @example
-   * sdfEntity({ shape: circle(30), fill: outlineFill("#ffffff", 2) });
+   * sdfEntity({ shape: sdfCircle(30), fill: outlineFill("#ffffff", 2) });
    */
   export declare function outlineFill(color: string, thickness: number): OutlineFill;
   /**
@@ -3273,7 +3272,7 @@ declare module "@arcane/runtime/rendering" {
    *
    * @example
    * sdfEntity({
-   *   shape: star(30, 5, 0.4),
+   *   shape: sdfStar(30, 5, 0.4),
    *   fill: solidOutline("#ffd700", "#000000", 2),
    * });
    */
@@ -3291,7 +3290,7 @@ declare module "@arcane/runtime/rendering" {
    * @example
    * // Classic rainbow palette
    * sdfEntity({
-   *   shape: circle(40),
+   *   shape: sdfCircle(40),
    *   fill: cosinePalette(
    *     [0.5, 0.5, 0.5],
    *     [0.5, 0.5, 0.5],
@@ -3315,14 +3314,14 @@ declare module "@arcane/runtime/rendering" {
    * @param radius - Circle radius in world units.
    * @returns SDF node representing a circle.
    */
-  export declare function circle(radius: number): SdfNode;
+  export declare function sdfCircle(radius: number): SdfNode;
   /**
    * Create an SDF axis-aligned box primitive.
    * @param width - Half-width of the box.
    * @param height - Half-height of the box.
    * @returns SDF node representing a box.
    */
-  export declare function box(width: number, height: number): SdfNode;
+  export declare function sdfBox(width: number, height: number): SdfNode;
   /**
    * Create an SDF rounded box primitive.
    * @param width - Half-width of the box.
@@ -3330,14 +3329,14 @@ declare module "@arcane/runtime/rendering" {
    * @param radius - Corner radius (uniform number or per-corner [tl, tr, br, bl]).
    * @returns SDF node representing a rounded box.
    */
-  export declare function roundedBox(width: number, height: number, radius: number | [number, number, number, number]): SdfNode;
+  export declare function sdfRoundedBox(width: number, height: number, radius: number | [number, number, number, number]): SdfNode;
   /**
    * Create an SDF ellipse primitive.
    * @param width - Semi-major axis width.
    * @param height - Semi-minor axis height.
    * @returns SDF node representing an ellipse.
    */
-  export declare function ellipse(width: number, height: number): SdfNode;
+  export declare function sdfEllipse(width: number, height: number): SdfNode;
   /**
    * Create an SDF triangle primitive from three points.
    * @param p0 - First vertex.
@@ -3345,20 +3344,20 @@ declare module "@arcane/runtime/rendering" {
    * @param p2 - Third vertex.
    * @returns SDF node representing a triangle.
    */
-  export declare function triangle(p0: Vec2, p1: Vec2, p2: Vec2): SdfNode;
+  export declare function sdfTriangle(p0: Vec2, p1: Vec2, p2: Vec2): SdfNode;
   /**
    * Create an SDF egg primitive.
    * @param ra - Primary radius.
    * @param rb - Bulge factor.
    * @returns SDF node representing an egg shape.
    */
-  export declare function egg(ra: number, rb: number): SdfNode;
+  export declare function sdfEgg(ra: number, rb: number): SdfNode;
   /**
    * Create an SDF heart primitive.
    * @param size - Overall heart size.
    * @returns SDF node representing a heart shape.
    */
-  export declare function heart(size: number): SdfNode;
+  export declare function sdfHeart(size: number): SdfNode;
   /**
    * Create an SDF star primitive with configurable point count.
    * @param radius - Outer radius.
@@ -3366,26 +3365,26 @@ declare module "@arcane/runtime/rendering" {
    * @param innerRadius - Inner radius between points.
    * @returns SDF node representing a star shape.
    */
-  export declare function star(radius: number, points: number, innerRadius: number): SdfNode;
+  export declare function sdfStar(radius: number, points: number, innerRadius: number): SdfNode;
   /**
    * Create an SDF regular hexagon primitive.
    * @param radius - Hexagon circumradius.
    * @returns SDF node representing a hexagon.
    */
-  export declare function hexagon(radius: number): SdfNode;
+  export declare function sdfHexagon(radius: number): SdfNode;
   /**
    * Create an SDF regular pentagon primitive.
    * @param radius - Pentagon circumradius.
    * @returns SDF node representing a pentagon.
    */
-  export declare function pentagon(radius: number): SdfNode;
+  export declare function sdfPentagon(radius: number): SdfNode;
   /**
    * Create an SDF line segment primitive.
    * @param from - Start point.
    * @param to - End point.
    * @returns SDF node representing a line segment.
    */
-  export declare function segment(from: Vec2, to: Vec2): SdfNode;
+  export declare function sdfSegment(from: Vec2, to: Vec2): SdfNode;
   /**
    * Create an SDF crescent moon primitive.
    * @param d - Distance between the two circle centers.
@@ -3393,7 +3392,7 @@ declare module "@arcane/runtime/rendering" {
    * @param rb - Radius of the inner circle (subtracted).
    * @returns SDF node representing a moon shape.
    */
-  export declare function moon(d: number, ra: number, rb: number): SdfNode;
+  export declare function sdfMoon(d: number, ra: number, rb: number): SdfNode;
   /**
    * Create an SDF cross/plus primitive.
    * @param width - Arm width (half-extent).
@@ -3401,40 +3400,40 @@ declare module "@arcane/runtime/rendering" {
    * @param radius - Corner rounding radius.
    * @returns SDF node representing a cross shape.
    */
-  export declare function cross(width: number, height: number, radius: number): SdfNode;
+  export declare function sdfCross(width: number, height: number, radius: number): SdfNode;
   /**
    * Create an SDF ring (annular) primitive.
    * @param radius - Center radius.
    * @param width - Ring thickness.
    * @returns SDF node representing a ring.
    */
-  export declare function ring(radius: number, width: number): SdfNode;
+  export declare function sdfRing(radius: number, width: number): SdfNode;
   /**
    * Combine multiple SDF shapes with a union (logical OR / min distance).
    * @param shapes - Two or more SDF nodes to combine.
    * @returns SDF node representing the union.
    */
-  export declare function union(...shapes: SdfNode[]): SdfNode;
+  export declare function sdfUnion(...shapes: SdfNode[]): SdfNode;
   /**
    * Subtract cutout shapes from a base shape.
    * @param base - The shape to cut from.
    * @param cutouts - One or more shapes to subtract.
    * @returns SDF node representing the subtraction.
    */
-  export declare function subtract(base: SdfNode, ...cutouts: SdfNode[]): SdfNode;
+  export declare function sdfSubtract(base: SdfNode, ...cutouts: SdfNode[]): SdfNode;
   /**
    * Intersect multiple SDF shapes (logical AND / max distance).
    * @param shapes - Two or more SDF nodes to intersect.
    * @returns SDF node representing the intersection.
    */
-  export declare function intersect(...shapes: SdfNode[]): SdfNode;
+  export declare function sdfIntersect(...shapes: SdfNode[]): SdfNode;
   /**
    * Smooth union of multiple SDF shapes (blended boundary).
    * @param k - Blend radius (larger = smoother blend).
    * @param shapes - Two or more SDF nodes to combine.
    * @returns SDF node representing the smooth union.
    */
-  export declare function smoothUnion(k: number, ...shapes: SdfNode[]): SdfNode;
+  export declare function sdfSmoothUnion(k: number, ...shapes: SdfNode[]): SdfNode;
   /**
    * Smooth subtraction of cutout shapes from a base.
    * @param k - Blend radius (larger = smoother blend).
@@ -3442,7 +3441,7 @@ declare module "@arcane/runtime/rendering" {
    * @param cutouts - One or more shapes to subtract.
    * @returns SDF node representing the smooth subtraction.
    */
-  export declare function smoothSubtract(k: number, base: SdfNode, ...cutouts: SdfNode[]): SdfNode;
+  export declare function sdfSmoothSubtract(k: number, base: SdfNode, ...cutouts: SdfNode[]): SdfNode;
   /**
    * Translate an SDF shape by (x, y).
    * @param shape - The shape to translate.
@@ -3450,27 +3449,27 @@ declare module "@arcane/runtime/rendering" {
    * @param y - Vertical offset.
    * @returns SDF node with the translation applied.
    */
-  export declare function offset(shape: SdfNode, x: number, y: number): SdfNode;
+  export declare function sdfOffset(shape: SdfNode, x: number, y: number): SdfNode;
   /**
    * Rotate an SDF shape by the given angle in degrees.
    * @param shape - The shape to rotate.
    * @param degrees - Rotation angle in degrees.
    * @returns SDF node with the rotation applied.
    */
-  export declare function rotate(shape: SdfNode, degrees: number): SdfNode;
+  export declare function sdfRotate(shape: SdfNode, degrees: number): SdfNode;
   /**
    * Uniformly scale an SDF shape.
    * @param shape - The shape to scale.
    * @param factor - Scale factor (>1 = larger, <1 = smaller).
    * @returns SDF node with the scale applied.
    */
-  export declare function scale(shape: SdfNode, factor: number): SdfNode;
+  export declare function sdfScale(shape: SdfNode, factor: number): SdfNode;
   /**
    * Mirror an SDF shape along the X axis (left-right symmetry).
    * @param shape - The shape to mirror.
    * @returns SDF node with X-axis symmetry applied.
    */
-  export declare function mirrorX(shape: SdfNode): SdfNode;
+  export declare function sdfMirrorX(shape: SdfNode): SdfNode;
   /**
    * Repeat an SDF shape infinitely on a 2D grid.
    * @param shape - The shape to repeat.
@@ -3478,21 +3477,21 @@ declare module "@arcane/runtime/rendering" {
    * @param spacingY - Vertical spacing between repetitions.
    * @returns SDF node with the repeat pattern applied.
    */
-  export declare function repeat(shape: SdfNode, spacingX: number, spacingY: number): SdfNode;
+  export declare function sdfRepeat(shape: SdfNode, spacingX: number, spacingY: number): SdfNode;
   /**
    * Round the edges of an SDF shape by expanding the boundary outward.
    * @param shape - The shape to round.
    * @param radius - Rounding radius.
    * @returns SDF node with rounding applied.
    */
-  export declare function round(shape: SdfNode, radius: number): SdfNode;
+  export declare function sdfRound(shape: SdfNode, radius: number): SdfNode;
   /**
    * Turn a filled SDF shape into an outline (onion skinning).
    * @param shape - The shape to outline.
    * @param thickness - Outline thickness.
    * @returns SDF node with onion modifier applied.
    */
-  export declare function outline(shape: SdfNode, thickness: number): SdfNode;
+  export declare function sdfOutline(shape: SdfNode, thickness: number): SdfNode;
   /**
    * Create multiple nested outlines (concentric rings).
    * @param shape - The base shape.
@@ -3503,11 +3502,11 @@ declare module "@arcane/runtime/rendering" {
    * @example
    * // Create 3 concentric rings
    * sdfEntity({
-   *   shape: outlineN(circle(45), 8, 3),
+   *   shape: sdfOutlineN(sdfCircle(45), 8, 3),
    *   fill: solid("#e67e22"),
    * });
    */
-  export declare function outlineN(shape: SdfNode, thickness: number, count: number): SdfNode;
+  export declare function sdfOutlineN(shape: SdfNode, thickness: number, count: number): SdfNode;
   /**
    * Repeat an SDF shape in a bounded region (no infinite tiling).
    * Clips the repeat pattern to a rectangular area.
@@ -3522,11 +3521,11 @@ declare module "@arcane/runtime/rendering" {
    * @example
    * // 4x3 grid of circles
    * sdfEntity({
-   *   shape: repeatBounded(circle(8), 30, 30, 4, 3),
+   *   shape: sdfRepeatBounded(sdfCircle(8), 30, 30, 4, 3),
    *   fill: solid("#2ecc71"),
    * });
    */
-  export declare function repeatBounded(shape: SdfNode, spacingX: number, spacingY: number, countX: number, countY: number): SdfNode;
+  export declare function sdfRepeatBounded(shape: SdfNode, spacingX: number, spacingY: number, countX: number, countY: number): SdfNode;
   /**
    * Calculate a pulsing scale value (oscillates between min and max).
    * @param time - Current time in seconds.
@@ -3537,7 +3536,7 @@ declare module "@arcane/runtime/rendering" {
    *
    * @example
    * sdfEntity({
-   *   shape: star(30, 5, 0.4),
+   *   shape: sdfStar(30, 5, 0.4),
    *   fill: glow("#FFD700", 0.8),
    *   scale: pulse(time, 4),
    * });
@@ -3551,7 +3550,7 @@ declare module "@arcane/runtime/rendering" {
    *
    * @example
    * sdfEntity({
-   *   shape: star(35, 6, 0.5),
+   *   shape: sdfStar(35, 6, 0.5),
    *   fill: solid("#e74c3c"),
    *   rotation: spin(time, 60),
    * });
@@ -3566,7 +3565,7 @@ declare module "@arcane/runtime/rendering" {
    *
    * @example
    * sdfEntity({
-   *   shape: circle(20),
+   *   shape: sdfCircle(20),
    *   fill: solid("#3498db"),
    *   position: [100, 200 + bob(time, 2, 15)],
    * });
@@ -3582,7 +3581,7 @@ declare module "@arcane/runtime/rendering" {
    *
    * @example
    * sdfEntity({
-   *   shape: heart(30),
+   *   shape: sdfHeart(30),
    *   fill: glow("#ff3366", 0.25),
    *   opacity: breathe(time, 3),
    *   bounds: 90,
@@ -3606,7 +3605,7 @@ declare module "@arcane/runtime/rendering" {
    * const grid = createGrid(3, 3, 200, 200, 100, 100);
    * for (const [x, y, col, row] of grid) {
    *   sdfEntity({
-   *     shape: circle(20),
+   *     shape: sdfCircle(20),
    *     fill: solid("#ff0000"),
    *     position: [x, y],
    *   });
@@ -3628,7 +3627,7 @@ declare module "@arcane/runtime/rendering" {
    *
    *   createSdfFrame(() => {
    *     sdfEntity({
-   *       shape: star(30, 5, 0.4),
+   *       shape: sdfStar(30, 5, 0.4),
    *       fill: glow("#FFD700", 0.8),
    *       scale: pulse(time, 4),
    *     });
@@ -3644,11 +3643,11 @@ declare module "@arcane/runtime/rendering" {
    * @returns WGSL expression string computing the signed distance.
    *
    * @example
-   * const wgsl = compileToWgsl(circle(10));
+   * const wgsl = compileToWgsl(sdfCircle(10));
    * // Returns: "sd_circle(p, 10.0)"
    *
    * @example
-   * const wgsl = compileToWgsl(offset(circle(10), 20, 30));
+   * const wgsl = compileToWgsl(sdfOffset(sdfCircle(10), 20, 30));
    * // Returns: "sd_circle((p - vec2<f32>(20.0, 30.0)), 10.0)"
    */
   export declare function compileToWgsl(node: SdfNode): string;
@@ -3687,7 +3686,7 @@ declare module "@arcane/runtime/rendering" {
    *
    * @example
    * const id = sdfEntity({
-   *   shape: circle(20),
+   *   shape: sdfCircle(20),
    *   fill: { type: "solid", color: "#ff0000" },
    *   position: [100, 200],
    *   rotation: 45,
@@ -4104,15 +4103,15 @@ declare module "@arcane/runtime/rendering" {
    *   msdfFont: font,
    *   scale: 3,
    *   screenSpace: true,
-   *   outline: { width: 1.0, color: rgb(0, 0, 0) },
-   *   shadow: { offsetX: 2, offsetY: 2, color: rgb(0, 0, 0, 128) },
+   *   outline: { width: 1.0, color: { r: 0, g: 0, b: 0, a: 1 } },
+   *   shadow: { offsetX: 2, offsetY: 2, color: { r: 0, g: 0, b: 0, a: 0.5 } },
    * });
    *
    * @example
    * // Multiple drawText calls with different params in the same frame work correctly.
    * // Each unique outline/shadow combo gets its own shader slot from the pool.
-   * drawText("Red outline", 10, 10, { msdfFont: font, outline: { width: 1, color: rgb(255, 0, 0) } });
-   * drawText("Blue outline", 10, 40, { msdfFont: font, outline: { width: 2, color: rgb(0, 0, 255) } });
+   * drawText("Red outline", 10, 10, { msdfFont: font, outline: { width: 1, color: { r: 1, g: 0, b: 0, a: 1 } } });
+   * drawText("Blue outline", 10, 40, { msdfFont: font, outline: { width: 2, color: { r: 0, g: 0, b: 1, a: 1 } } });
    * drawText("No effects", 10, 70, { msdfFont: font });
    */
   export declare function drawText(text: string, x: number, y: number, options?: TextOptions): void;

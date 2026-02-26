@@ -77,12 +77,4 @@ if (flash) {
 
 ## Common Easing Functions
 
-| Function | Use case |
-|----------|----------|
-| `easeOutBounce` | Bouncy landing, pickup pop |
-| `easeOutBack` | Overshoot, snappy UI entrance |
-| `easeInOutCubic` | Smooth camera zoom, menu slides |
-| `easeOutElastic` | Springy hit reaction |
-| `linear` | Constant speed (timers, progress bars) |
-
 See `types/tweening.d.ts` for all 30 easing functions.

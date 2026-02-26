@@ -81,7 +81,7 @@ const jumpSfx = loadSound("assets/sounds/jump.wav");
 const bgMusic = loadSound("assets/music/theme.ogg");
 
 playSound(jumpSfx, { volume: 0.8 });
-playMusic(bgMusic, { loop: true, volume: 0.5 });
+playMusic("assets/music/theme.ogg", 0.5);
 ```
 
 ## Path Resolution
@@ -99,31 +99,6 @@ my-game/
 
 From `src/visual.ts`, use `../assets/sprites/player.png` or use absolute paths.
 
-## Caching
+## Caching & Preloading
 
-Both `loadTexture()` and `loadSound()` cache by path. Calling them multiple times with the same path returns the same handle — no duplicate loading.
-
-```typescript
-// These return the same handle
-const tex1 = loadTexture("assets/player.png");
-const tex2 = loadTexture("assets/player.png");
-// tex1 === tex2
-```
-
-## Preloading
-
-For loading screens, preload assets and track progress:
-
-```typescript
-import { preloadAssets, getLoadingProgress, isTextureLoaded } from "@arcane/runtime/rendering";
-
-// Start preloading
-await preloadAssets([
-  "assets/player.png",
-  "assets/enemy.png",
-  "assets/tileset.png",
-]);
-
-// Or check progress during loading
-const progress = getLoadingProgress(); // 0.0 to 1.0
-```
+Both `loadTexture()` and `loadSound()` cache by path — calling multiple times returns the same handle. For loading screens, use `preloadAssets(paths)` and check `getLoadingProgress()` (0.0 to 1.0).

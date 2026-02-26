@@ -20,10 +20,10 @@ import { isKeyPressed, isKeyDown } from "../../runtime/rendering/input.ts";
 import { drawCircle, drawLine } from "../../runtime/ui/shapes.ts";
 import { drawColorSprite } from "../../runtime/game/color-sprite.ts";
 import {
-  circle,
-  box,
-  star,
-  heart,
+  sdfCircle,
+  sdfBox,
+  sdfStar,
+  sdfHeart,
   sdfEntity,
   clearSdfEntities,
   flushSdfEntities,
@@ -113,7 +113,7 @@ function frame(): void {
 
   // SDF circle
   sdfEntity({
-    shape: circle(baseSize),
+    shape: sdfCircle(baseSize),
     fill: { type: "solid", color: "#e74c3c" },
     position: [START_X, row1Y],
     layer: 10,
@@ -138,7 +138,7 @@ function frame(): void {
 
   // SDF box
   sdfEntity({
-    shape: box(baseSize * 1.5, baseSize),
+    shape: sdfBox(baseSize * 1.5, baseSize),
     fill: { type: "solid", color: "#3498db" },
     position: [START_X, row2Y],
     layer: 10,
@@ -170,7 +170,7 @@ function frame(): void {
 
   // SDF star
   sdfEntity({
-    shape: star(baseSize, 5, 0.4),
+    shape: sdfStar(baseSize, 5, 0.4),
     fill: { type: "solid", color: "#2ecc71" },
     position: [START_X, row3Y],
     layer: 10,
@@ -203,7 +203,7 @@ function frame(): void {
 
   // SDF heart
   sdfEntity({
-    shape: heart(baseSize * 0.8),
+    shape: sdfHeart(baseSize * 0.8),
     fill: { type: "solid", color: "#e91e63" },
     position: [START_X, row4Y],
     layer: 10,

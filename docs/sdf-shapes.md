@@ -6,31 +6,31 @@ SDF (Signed Distance Function) shapes let agents create beautiful 2D visuals ent
 
 ```ts
 import {
-  circle, box, roundedBox, offset, smoothUnion,
+  sdfCircle, sdfBox, sdfRoundedBox, sdfOffset, sdfSmoothUnion,
   sdfEntity, compileToWgsl,
 } from "@arcane/runtime/rendering/sdf.ts";
 
 // A glowing orb
 sdfEntity({
-  shape: circle(16),
+  shape: sdfCircle(16),
   fill: { type: "glow", color: "#44aaff", intensity: 3.0 },
   position: [100, 100],
 });
 
 // A stone platform
 sdfEntity({
-  shape: roundedBox(60, 10, 3),
+  shape: sdfRoundedBox(60, 10, 3),
   fill: { type: "gradient", from: "#6b6b6b", to: "#3d3d3d", angle: 90 },
   position: [200, 300],
 });
 
 // A tree
-const tree = smoothUnion(4,
-  roundedBox(4, 15, 2),        // trunk
-  offset(circle(12), 0, -20),  // main canopy
-  offset(circle(9), -8, -15),  // left canopy
-  offset(circle(9), 8, -15),   // right canopy
-  offset(circle(7), 0, -30),   // top
+const tree = sdfSmoothUnion(4,
+  sdfRoundedBox(4, 15, 2),        // trunk
+  sdfOffset(sdfCircle(12), 0, -20),  // main canopy
+  sdfOffset(sdfCircle(9), -8, -15),  // left canopy
+  sdfOffset(sdfCircle(9), 8, -15),   // right canopy
+  sdfOffset(sdfCircle(7), 0, -30),   // top
 );
 sdfEntity({
   shape: tree,
@@ -43,7 +43,7 @@ sdfEntity({
 
 ```
 TypeScript SDF API
-  circle(), box(), smoothUnion(), offset(), ...
+  sdfCircle(), sdfBox(), sdfSmoothUnion(), sdfOffset(), ...
            |
            v
       SdfNode tree (pure data, no side effects)
@@ -74,7 +74,7 @@ SDF nodes are pure data structures. Constructing them has no side effects -- the
 
 ### Basic Shapes
 
-#### `circle(radius)`
+#### `sdfCircle(radius)`
 
 A circle centered at the origin.
 
@@ -83,11 +83,11 @@ A circle centered at the origin.
 | `radius` | `number` | Circle radius in world units |
 
 ```ts
-const orb = circle(20);
+const orb = sdfCircle(20);
 // Looks like: a perfect circle, 40 units across
 ```
 
-#### `box(width, height)`
+#### `sdfBox(width, height)`
 
 An axis-aligned rectangle. Parameters are **half-extents** (half the total width/height).
 
@@ -97,11 +97,11 @@ An axis-aligned rectangle. Parameters are **half-extents** (half the total width
 | `height` | `number` | Half-height of the box |
 
 ```ts
-const platform = box(50, 8);
+const platform = sdfBox(50, 8);
 // Looks like: a 100x16 rectangle, sharp corners
 ```
 
-#### `roundedBox(width, height, radius)`
+#### `sdfRoundedBox(width, height, radius)`
 
 A rectangle with rounded corners.
 
@@ -112,14 +112,14 @@ A rectangle with rounded corners.
 | `radius` | `number \| [tl, tr, br, bl]` | Corner radius (uniform or per-corner) |
 
 ```ts
-const button = roundedBox(40, 12, 4);
+const button = sdfRoundedBox(40, 12, 4);
 // Looks like: a pill-shaped rectangle
 
-const badge = roundedBox(20, 20, [8, 8, 0, 0]);
+const badge = sdfRoundedBox(20, 20, [8, 8, 0, 0]);
 // Looks like: rounded top, sharp bottom
 ```
 
-#### `ellipse(width, height)`
+#### `sdfEllipse(width, height)`
 
 An ellipse (stretched circle).
 
@@ -129,11 +129,11 @@ An ellipse (stretched circle).
 | `height` | `number` | Semi-minor axis height |
 
 ```ts
-const shadow = ellipse(30, 8);
+const shadow = sdfEllipse(30, 8);
 // Looks like: a wide, flat oval (good for drop shadows)
 ```
 
-#### `segment(from, to)`
+#### `sdfSegment(from, to)`
 
 A line segment between two points. Returns unsigned distance (no interior).
 
@@ -143,11 +143,11 @@ A line segment between two points. Returns unsigned distance (no interior).
 | `to` | `[x, y]` | End point |
 
 ```ts
-const beam = round(segment([0, 0], [40, 0]), 2);
-// Looks like: a thick horizontal line (use round() to give it width)
+const beam = sdfRound(sdfSegment([0, 0], [40, 0]), 2);
+// Looks like: a thick horizontal line (use sdfRound() to give it width)
 ```
 
-#### `triangle(p0, p1, p2)`
+#### `sdfTriangle(p0, p1, p2)`
 
 A triangle defined by three vertices.
 
@@ -158,13 +158,13 @@ A triangle defined by three vertices.
 | `p2` | `[x, y]` | Third vertex |
 
 ```ts
-const arrowHead = triangle([0, -15], [-10, 5], [10, 5]);
+const arrowHead = sdfTriangle([0, -15], [-10, 5], [10, 5]);
 // Looks like: an upward-pointing triangle
 ```
 
 ### Organic Shapes
 
-#### `egg(ra, rb)`
+#### `sdfEgg(ra, rb)`
 
 An egg shape, wider at the bottom, narrower at the top.
 
@@ -174,11 +174,11 @@ An egg shape, wider at the bottom, narrower at the top.
 | `rb` | `number` | Bulge factor (small radius) |
 
 ```ts
-const eggShape = egg(15, 5);
+const eggShape = sdfEgg(15, 5);
 // Looks like: an egg oriented vertically, wider at bottom
 ```
 
-#### `heart(size)`
+#### `sdfHeart(size)`
 
 A heart shape with the point facing downward.
 
@@ -187,11 +187,11 @@ A heart shape with the point facing downward.
 | `size` | `number` | Overall heart size |
 
 ```ts
-const hp = heart(12);
+const hp = sdfHeart(12);
 // Looks like: a heart symbol, point down
 ```
 
-#### `moon(d, ra, rb)`
+#### `sdfMoon(d, ra, rb)`
 
 A crescent moon shape, created by subtracting one circle from another.
 
@@ -202,7 +202,7 @@ A crescent moon shape, created by subtracting one circle from another.
 | `rb` | `number` | Inner circle radius (subtracted) |
 
 ```ts
-const crescent = moon(8, 15, 13);
+const crescent = sdfMoon(8, 15, 13);
 // Looks like: a crescent moon, opening to the right
 ```
 
@@ -222,7 +222,7 @@ const lens = vesica(20, 8);
 
 ### Geometric Shapes
 
-#### `hexagon(radius)`
+#### `sdfHexagon(radius)`
 
 A regular hexagon.
 
@@ -231,11 +231,11 @@ A regular hexagon.
 | `radius` | `number` | Inradius (flat-to-flat distance / 2) |
 
 ```ts
-const tile = hexagon(16);
+const tile = sdfHexagon(16);
 // Looks like: a flat-topped hexagon
 ```
 
-#### `pentagon(radius)`
+#### `sdfPentagon(radius)`
 
 A regular pentagon.
 
@@ -244,7 +244,7 @@ A regular pentagon.
 | `radius` | `number` | Inradius |
 
 ```ts
-const pent = pentagon(14);
+const pent = sdfPentagon(14);
 // Looks like: a regular five-sided polygon
 ```
 
@@ -275,7 +275,7 @@ const twinkle = star5(12, 0.4);
 // Looks like: a classic five-pointed star
 ```
 
-#### `star(radius, points, innerRadius)`
+#### `sdfStar(radius, points, innerRadius)`
 
 A general n-pointed star with configurable sharpness.
 
@@ -286,11 +286,11 @@ A general n-pointed star with configurable sharpness.
 | `innerRadius` | `number` | Angular sharpness (2 = minimal, higher = sharper) |
 
 ```ts
-const burst = star(16, 8, 3);
+const burst = sdfStar(16, 8, 3);
 // Looks like: an 8-pointed star with moderate sharpness
 ```
 
-#### `cross(width, height, radius)`
+#### `sdfCross(width, height, radius)`
 
 A cross (plus sign) shape.
 
@@ -301,11 +301,11 @@ A cross (plus sign) shape.
 | `radius` | `number` | Corner rounding radius |
 
 ```ts
-const plus = cross(12, 4, 1);
+const plus = sdfCross(12, 4, 1);
 // Looks like: a + sign with slightly rounded corners
 ```
 
-#### `ring(radius, width)`
+#### `sdfRing(radius, width)`
 
 A ring (annulus).
 
@@ -315,7 +315,7 @@ A ring (annulus).
 | `width` | `number` | Ring thickness |
 
 ```ts
-const halo = ring(20, 3);
+const halo = sdfRing(20, 3);
 // Looks like: a thin ring
 ```
 
@@ -340,7 +340,7 @@ A rounded X (multiplication sign) shape.
 | `radius` | `number` | Tip rounding radius |
 
 ```ts
-const closeBtn = round(cross(8, 2, 0), 1);
+const closeBtn = sdfRound(sdfCross(8, 2, 0), 1);
 // Alternative: use rounded_x for a more natural X shape
 ```
 
@@ -358,44 +358,44 @@ A circular arc (partial ring). The arc opens upward, centered on the y-axis.
 
 ## Composition Operations
 
-### `union(...shapes)`
+### `sdfUnion(...shapes)`
 
 Combine shapes. The result contains the interior of all input shapes.
 
 ```ts
-const snowman = union(
-  circle(20),                   // body
-  offset(circle(14), 0, -30),  // head
-  offset(circle(10), 0, -54),  // hat? top
+const snowman = sdfUnion(
+  sdfCircle(20),                   // body
+  sdfOffset(sdfCircle(14), 0, -30),  // head
+  sdfOffset(sdfCircle(10), 0, -54),  // hat? top
 );
 // Looks like: three circles stacked vertically with hard edges at overlap
 ```
 
-### `subtract(base, ...cutouts)`
+### `sdfSubtract(base, ...cutouts)`
 
 Carve cutout shapes from a base shape. The interior of each cutout becomes exterior.
 
 ```ts
-const window = subtract(
-  box(20, 20),                 // wall
-  box(6, 6),                   // window hole
+const window = sdfSubtract(
+  sdfBox(20, 20),                 // wall
+  sdfBox(6, 6),                   // window hole
 );
 // Looks like: a square with a square hole in the center
 ```
 
-### `intersect(...shapes)`
+### `sdfIntersect(...shapes)`
 
 Keep only the region inside ALL input shapes.
 
 ```ts
-const lens = intersect(
-  offset(circle(20), -8, 0),
-  offset(circle(20), 8, 0),
+const lens = sdfIntersect(
+  sdfOffset(sdfCircle(20), -8, 0),
+  sdfOffset(sdfCircle(20), 8, 0),
 );
 // Looks like: a lens/vesica shape (overlap of two circles)
 ```
 
-### `smoothUnion(k, ...shapes)`
+### `sdfSmoothUnion(k, ...shapes)`
 
 Blend shapes together with smooth transitions at boundaries. The `k` parameter controls blend radius -- larger values produce smoother, more organic merging.
 
@@ -407,98 +407,98 @@ Blend shapes together with smooth transitions at boundaries. The `k` parameter c
 | 15+ | Extreme melting effect |
 
 ```ts
-const blob = smoothUnion(5,
-  circle(15),
-  offset(circle(12), 20, 0),
-  offset(circle(10), 10, -15),
+const blob = sdfSmoothUnion(5,
+  sdfCircle(15),
+  sdfOffset(sdfCircle(12), 20, 0),
+  sdfOffset(sdfCircle(10), 10, -15),
 );
 // Looks like: an organic blob, shapes melt into each other
 ```
 
-### `smoothSubtract(k, base, ...cutouts)`
+### `sdfSmoothSubtract(k, base, ...cutouts)`
 
 Smooth subtraction with a fillet at the cut boundary.
 
 ```ts
-const bitten = smoothSubtract(3,
-  circle(20),                   // apple
-  offset(circle(8), 15, -5),   // bite
+const bitten = sdfSmoothSubtract(3,
+  sdfCircle(20),                   // apple
+  sdfOffset(sdfCircle(8), 15, -5),   // bite
 );
 // Looks like: a circle with a smooth bite taken out
 ```
 
 ## Transforms
 
-### `offset(shape, x, y)`
+### `sdfOffset(shape, x, y)`
 
 Translate a shape by (x, y).
 
 ```ts
-const raised = offset(circle(10), 0, -30);
+const raised = sdfOffset(sdfCircle(10), 0, -30);
 // Moves the circle 30 units up (negative y = up in screen coords)
 ```
 
-### `rotate(shape, degrees)`
+### `sdfRotate(shape, degrees)`
 
 Rotate a shape around the origin. Angle in degrees.
 
 ```ts
-const diamond = rotate(box(10, 10), 45);
+const diamond = sdfRotate(sdfBox(10, 10), 45);
 // Looks like: a diamond (square rotated 45 degrees)
 ```
 
-### `scale(shape, factor)`
+### `sdfScale(shape, factor)`
 
 Uniformly scale a shape. Factor > 1 enlarges, < 1 shrinks.
 
 ```ts
-const big = scale(star5(10, 0.4), 2.0);
+const big = sdfScale(star5(10, 0.4), 2.0);
 // Looks like: a star twice the original size
 ```
 
-### `mirrorX(shape)`
+### `sdfMirrorX(shape)`
 
 Mirror a shape along the X axis (left-right symmetry). Build one half, get both.
 
 ```ts
-const wing = mirrorX(
-  offset(ellipse(20, 8), 15, 0),  // one wing
+const wing = sdfMirrorX(
+  sdfOffset(sdfEllipse(20, 8), 15, 0),  // one wing
 );
 // Looks like: two wings mirrored around the center
 ```
 
-### `repeat(shape, spacingX, spacingY)`
+### `sdfRepeat(shape, spacingX, spacingY)`
 
 Repeat a shape infinitely on a 2D grid. Each repetition is spaced by (spacingX, spacingY).
 
 ```ts
-const dots = repeat(circle(3), 20, 20);
+const dots = sdfRepeat(sdfCircle(3), 20, 20);
 // Looks like: an infinite grid of small circles, 20 units apart
 ```
 
 ## Modifiers
 
-### `round(shape, radius)`
+### `sdfRound(shape, radius)`
 
 Expand the boundary outward, rounding all corners and edges. Equivalent to a Minkowski sum with a circle.
 
 ```ts
-const softBox = round(box(15, 15), 3);
-// Looks like: a box with rounded corners (similar to roundedBox but works on any shape)
+const softBox = sdfRound(sdfBox(15, 15), 3);
+// Looks like: a box with rounded corners (similar to sdfRoundedBox but works on any shape)
 
-const thickLine = round(segment([0, 0], [40, 0]), 2);
+const thickLine = sdfRound(sdfSegment([0, 0], [40, 0]), 2);
 // Looks like: a horizontal capsule (gives width to a zero-width segment)
 ```
 
-### `outline(shape, thickness)`
+### `sdfOutline(shape, thickness)`
 
 Convert a filled shape into a hollow outline (onion skinning).
 
 ```ts
-const ringFromCircle = outline(circle(20), 3);
-// Looks like: a ring with 3-unit walls (same as ring(20, 3))
+const ringFromCircle = sdfOutline(sdfCircle(20), 3);
+// Looks like: a ring with 3-unit walls (same as sdfRing(20, 3))
 
-const hollowStar = outline(star5(15, 0.4), 2);
+const hollowStar = sdfOutline(star5(15, 0.4), 2);
 // Looks like: a star outline (no fill, just the border)
 ```
 
@@ -590,12 +590,12 @@ Copy-paste ready recipes for common game entities. Each includes the shape, sugg
 ### Tree (Oak)
 
 ```ts
-const tree = smoothUnion(4,
-  roundedBox(4, 15, 2),        // trunk
-  offset(circle(14), 0, -20),  // main canopy
-  offset(circle(10), -9, -15), // left canopy
-  offset(circle(10), 9, -15),  // right canopy
-  offset(circle(8), 0, -32),   // top
+const tree = sdfSmoothUnion(4,
+  sdfRoundedBox(4, 15, 2),        // trunk
+  sdfOffset(sdfCircle(14), 0, -20),  // main canopy
+  sdfOffset(sdfCircle(10), -9, -15), // left canopy
+  sdfOffset(sdfCircle(10), 9, -15),  // right canopy
+  sdfOffset(sdfCircle(8), 0, -32),   // top
 );
 ```
 
@@ -610,11 +610,11 @@ const tree = smoothUnion(4,
 ### Tree (Pine)
 
 ```ts
-const pine = smoothUnion(2,
-  roundedBox(3, 18, 1),                       // trunk
-  offset(triangle([0, -50], [-18, -15], [18, -15]), 0, 0),  // bottom tier
-  offset(triangle([0, -55], [-14, -25], [14, -25]), 0, 0),  // middle tier
-  offset(triangle([0, -60], [-10, -35], [10, -35]), 0, 0),  // top tier
+const pine = sdfSmoothUnion(2,
+  sdfRoundedBox(3, 18, 1),                       // trunk
+  sdfOffset(sdfTriangle([0, -50], [-18, -15], [18, -15]), 0, 0),  // bottom tier
+  sdfOffset(sdfTriangle([0, -55], [-14, -25], [14, -25]), 0, 0),  // middle tier
+  sdfOffset(sdfTriangle([0, -60], [-10, -35], [10, -35]), 0, 0),  // top tier
 );
 ```
 
@@ -629,10 +629,10 @@ const pine = smoothUnion(2,
 ### Mountain
 
 ```ts
-const mountain = smoothUnion(6,
-  triangle([0, -40], [-50, 10], [50, 10]),       // main peak
-  offset(triangle([0, -25], [-35, 10], [35, 10]), -20, 5), // left foothill
-  offset(triangle([0, -20], [-25, 10], [25, 10]), 25, 8),  // right foothill
+const mountain = sdfSmoothUnion(6,
+  sdfTriangle([0, -40], [-50, 10], [50, 10]),       // main peak
+  sdfOffset(sdfTriangle([0, -25], [-35, 10], [35, 10]), -20, 5), // left foothill
+  sdfOffset(sdfTriangle([0, -20], [-25, 10], [25, 10]), 25, 8),  // right foothill
 );
 ```
 
@@ -647,12 +647,12 @@ const mountain = smoothUnion(6,
 ### Cloud
 
 ```ts
-const cloud = smoothUnion(6,
-  ellipse(20, 10),              // center body
-  offset(circle(12), -14, -4),  // left bump
-  offset(circle(14), 8, -6),    // right bump
-  offset(circle(9), -22, 2),    // far left
-  offset(circle(10), 20, 0),    // far right
+const cloud = sdfSmoothUnion(6,
+  sdfEllipse(20, 10),              // center body
+  sdfOffset(sdfCircle(12), -14, -4),  // left bump
+  sdfOffset(sdfCircle(14), 8, -6),    // right bump
+  sdfOffset(sdfCircle(9), -22, 2),    // far left
+  sdfOffset(sdfCircle(10), 20, 0),    // far right
 );
 ```
 
@@ -667,7 +667,7 @@ const cloud = smoothUnion(6,
 ### Platform (Stone)
 
 ```ts
-const stonePlatform = round(box(48, 6), 2);
+const stonePlatform = sdfRound(sdfBox(48, 6), 2);
 ```
 
 **Fill:** `{ type: "solid_outline", fill: "#6b6b6b", outline: "#4a4a4a", thickness: 1.5 }`
@@ -681,7 +681,7 @@ const stonePlatform = round(box(48, 6), 2);
 ### Platform (Wooden)
 
 ```ts
-const woodPlatform = roundedBox(48, 5, 1);
+const woodPlatform = sdfRoundedBox(48, 5, 1);
 ```
 
 **Fill:** `{ type: "gradient", from: "#8B6914", to: "#A07828", angle: 0 }`
@@ -695,11 +695,11 @@ const woodPlatform = roundedBox(48, 5, 1);
 ### Gem / Diamond Collectible
 
 ```ts
-const gem = rotate(box(8, 12), 0);
+const gem = sdfRotate(sdfBox(8, 12), 0);
 // Or for a more faceted look:
-const facetedGem = intersect(
-  rotate(box(10, 14), 0),
-  rotate(box(10, 14), 30),
+const facetedGem = sdfIntersect(
+  sdfRotate(sdfBox(10, 14), 0),
+  sdfRotate(sdfBox(10, 14), 30),
 );
 ```
 
@@ -714,7 +714,7 @@ const facetedGem = intersect(
 ### Heart (Health Pickup)
 
 ```ts
-const healthHeart = heart(10);
+const healthHeart = sdfHeart(10);
 ```
 
 **Fill:** `{ type: "glow", color: "#ff3355", intensity: 4.0 }`
@@ -742,12 +742,12 @@ const bonusStar = star5(12, 0.4);
 ### Shield
 
 ```ts
-const shield = smoothUnion(2,
-  intersect(
-    circle(16),
-    offset(box(16, 20), 0, 4),  // clip bottom into flat base
+const shield = sdfSmoothUnion(2,
+  sdfIntersect(
+    sdfCircle(16),
+    sdfOffset(sdfBox(16, 20), 0, 4),  // clip bottom into flat base
   ),
-  offset(cross(10, 3, 0), 0, 0),  // cross emblem
+  sdfOffset(sdfCross(10, 3, 0), 0, 0),  // cross emblem
 );
 ```
 
@@ -762,9 +762,9 @@ const shield = smoothUnion(2,
 ### House (Simple)
 
 ```ts
-const house = union(
-  box(16, 12),                                    // walls
-  offset(triangle([0, -20], [-20, -4], [20, -4]), 0, 0),  // roof
+const house = sdfUnion(
+  sdfBox(16, 12),                                    // walls
+  sdfOffset(sdfTriangle([0, -20], [-20, -4], [20, -4]), 0, 0),  // roof
 );
 ```
 
@@ -779,11 +779,11 @@ const house = union(
 ### Sword
 
 ```ts
-const sword = union(
-  roundedBox(2, 20, 1),          // blade
-  offset(roundedBox(7, 2, 1), 0, 16),  // crossguard
-  offset(roundedBox(2, 6, 1), 0, 22),  // grip
-  offset(circle(3), 0, 28),     // pommel
+const sword = sdfUnion(
+  sdfRoundedBox(2, 20, 1),          // blade
+  sdfOffset(sdfRoundedBox(7, 2, 1), 0, 16),  // crossguard
+  sdfOffset(sdfRoundedBox(2, 6, 1), 0, 22),  // grip
+  sdfOffset(sdfCircle(3), 0, 28),     // pommel
 );
 ```
 
@@ -798,9 +798,9 @@ const sword = union(
 ### Arrow
 
 ```ts
-const arrow = union(
-  roundedBox(1, 18, 0.5),                         // shaft
-  offset(triangle([0, -22], [-5, -14], [5, -14]), 0, 0), // head
+const arrow = sdfUnion(
+  sdfRoundedBox(1, 18, 0.5),                         // shaft
+  sdfOffset(sdfTriangle([0, -22], [-5, -14], [5, -14]), 0, 0), // head
 );
 ```
 
@@ -815,11 +815,11 @@ const arrow = union(
 ### Coin
 
 ```ts
-const coin = outline(circle(10), 2);
+const coin = sdfOutline(sdfCircle(10), 2);
 // Or with inner detail:
-const detailedCoin = union(
-  outline(circle(10), 2),
-  circle(2),  // center dot
+const detailedCoin = sdfUnion(
+  sdfOutline(sdfCircle(10), 2),
+  sdfCircle(2),  // center dot
 );
 ```
 
@@ -834,10 +834,10 @@ const detailedCoin = union(
 ### Water Surface
 
 ```ts
-const water = smoothUnion(8,
-  ellipse(60, 4),
-  offset(ellipse(40, 3), 15, -2),
-  offset(ellipse(35, 3), -20, 1),
+const water = sdfSmoothUnion(8,
+  sdfEllipse(60, 4),
+  sdfOffset(sdfEllipse(40, 3), 15, -2),
+  sdfOffset(sdfEllipse(35, 3), -20, 1),
 );
 ```
 
@@ -852,12 +852,12 @@ const water = smoothUnion(8,
 ### Grass Clump
 
 ```ts
-const grass = smoothUnion(2,
-  offset(ellipse(3, 10), -4, 0),
-  offset(ellipse(3, 12), 0, -1),
-  offset(ellipse(3, 10), 4, 0),
-  offset(ellipse(2, 8), -7, 2),
-  offset(ellipse(2, 8), 7, 2),
+const grass = sdfSmoothUnion(2,
+  sdfOffset(sdfEllipse(3, 10), -4, 0),
+  sdfOffset(sdfEllipse(3, 12), 0, -1),
+  sdfOffset(sdfEllipse(3, 10), 4, 0),
+  sdfOffset(sdfEllipse(2, 8), -7, 2),
+  sdfOffset(sdfEllipse(2, 8), 7, 2),
 );
 ```
 
@@ -872,11 +872,11 @@ const grass = smoothUnion(2,
 ### Bush
 
 ```ts
-const bush = smoothUnion(5,
-  ellipse(14, 10),
-  offset(circle(8), -10, -3),
-  offset(circle(9), 8, -4),
-  offset(circle(6), 0, -10),
+const bush = sdfSmoothUnion(5,
+  sdfEllipse(14, 10),
+  sdfOffset(sdfCircle(8), -10, -3),
+  sdfOffset(sdfCircle(9), 8, -4),
+  sdfOffset(sdfCircle(6), 0, -10),
 );
 ```
 
@@ -891,10 +891,10 @@ const bush = smoothUnion(5,
 ### Rock / Boulder
 
 ```ts
-const rock = smoothUnion(3,
-  ellipse(14, 10),
-  offset(ellipse(10, 8), 6, -3),
-  offset(ellipse(8, 6), -5, -5),
+const rock = sdfSmoothUnion(3,
+  sdfEllipse(14, 10),
+  sdfOffset(sdfEllipse(10, 8), 6, -3),
+  sdfOffset(sdfEllipse(8, 6), -5, -5),
 );
 ```
 
@@ -909,13 +909,13 @@ const rock = smoothUnion(3,
 ### Castle Turret
 
 ```ts
-const turret = union(
-  box(12, 18),                                          // tower body
-  offset(box(15, 3), 0, -18),                           // parapet base
+const turret = sdfUnion(
+  sdfBox(12, 18),                                          // tower body
+  sdfOffset(sdfBox(15, 3), 0, -18),                           // parapet base
   // Crenellations
-  offset(box(3, 4), -10, -24),
-  offset(box(3, 4), 0, -24),
-  offset(box(3, 4), 10, -24),
+  sdfOffset(sdfBox(3, 4), -10, -24),
+  sdfOffset(sdfBox(3, 4), 0, -24),
+  sdfOffset(sdfBox(3, 4), 10, -24),
 );
 ```
 
@@ -930,14 +930,14 @@ const turret = union(
 ### Flower
 
 ```ts
-const petal = offset(ellipse(4, 8), 0, -8);
-const flower = smoothUnion(2,
-  circle(4),                  // center
+const petal = sdfOffset(sdfEllipse(4, 8), 0, -8);
+const flower = sdfSmoothUnion(2,
+  sdfCircle(4),                  // center
   petal,                      // top petal
-  rotate(petal, 72),          // petals around center
-  rotate(petal, 144),
-  rotate(petal, 216),
-  rotate(petal, 288),
+  sdfRotate(petal, 72),          // petals around center
+  sdfRotate(petal, 144),
+  sdfRotate(petal, 216),
+  sdfRotate(petal, 288),
 );
 ```
 
@@ -952,17 +952,17 @@ const flower = smoothUnion(2,
 ### Sun
 
 ```ts
-const sunRay = offset(roundedBox(2, 8, 1), 0, -18);
-const sun = smoothUnion(3,
-  circle(10),
+const sunRay = sdfOffset(sdfRoundedBox(2, 8, 1), 0, -18);
+const sun = sdfSmoothUnion(3,
+  sdfCircle(10),
   sunRay,
-  rotate(sunRay, 45),
-  rotate(sunRay, 90),
-  rotate(sunRay, 135),
-  rotate(sunRay, 180),
-  rotate(sunRay, 225),
-  rotate(sunRay, 270),
-  rotate(sunRay, 315),
+  sdfRotate(sunRay, 45),
+  sdfRotate(sunRay, 90),
+  sdfRotate(sunRay, 135),
+  sdfRotate(sunRay, 180),
+  sdfRotate(sunRay, 225),
+  sdfRotate(sunRay, 270),
+  sdfRotate(sunRay, 315),
 );
 ```
 
@@ -977,7 +977,7 @@ const sun = smoothUnion(3,
 ### Moon (Crescent)
 
 ```ts
-const crescentMoon = moon(8, 14, 12);
+const crescentMoon = sdfMoon(8, 14, 12);
 ```
 
 **Fill:** `{ type: "solid", color: "#eeeedd" }`
@@ -991,14 +991,14 @@ const crescentMoon = moon(8, 14, 12);
 ### Torch / Flame
 
 ```ts
-const flame = smoothUnion(4,
-  egg(8, 3),                     // main flame body
-  offset(egg(5, 2), 0, -10),    // upper tongue
-  offset(circle(3), -3, -4),    // left flicker
-  offset(circle(3), 3, -4),     // right flicker
+const flame = sdfSmoothUnion(4,
+  sdfEgg(8, 3),                     // main flame body
+  sdfOffset(sdfEgg(5, 2), 0, -10),    // upper tongue
+  sdfOffset(sdfCircle(3), -3, -4),    // left flicker
+  sdfOffset(sdfCircle(3), 3, -4),     // right flicker
 );
-const torch = union(
-  offset(roundedBox(3, 10, 1), 0, 16),  // handle
+const torch = sdfUnion(
+  sdfOffset(sdfRoundedBox(3, 10, 1), 0, 16),  // handle
   flame,                                   // flame
 );
 ```
@@ -1016,11 +1016,11 @@ const torch = union(
 ### Key
 
 ```ts
-const key = union(
-  ring(5, 2),                          // bow (ring at top)
-  offset(roundedBox(1.5, 10, 0.5), 0, 12),  // shaft
-  offset(roundedBox(4, 1.5, 0.5), 2, 20),   // bit (teeth)
-  offset(roundedBox(3, 1.5, 0.5), 1.5, 16), // second bit
+const key = sdfUnion(
+  sdfRing(5, 2),                          // bow (ring at top)
+  sdfOffset(sdfRoundedBox(1.5, 10, 0.5), 0, 12),  // shaft
+  sdfOffset(sdfRoundedBox(4, 1.5, 0.5), 2, 20),   // bit (teeth)
+  sdfOffset(sdfRoundedBox(3, 1.5, 0.5), 1.5, 16), // second bit
 );
 ```
 
@@ -1035,10 +1035,10 @@ const key = union(
 ### Potion Bottle
 
 ```ts
-const potion = smoothUnion(2,
-  ellipse(8, 10),                         // bottle body
-  offset(roundedBox(3, 5, 1), 0, -12),   // neck
-  offset(roundedBox(5, 2, 1), 0, -16),   // cap
+const potion = sdfSmoothUnion(2,
+  sdfEllipse(8, 10),                         // bottle body
+  sdfOffset(sdfRoundedBox(3, 5, 1), 0, -12),   // neck
+  sdfOffset(sdfRoundedBox(5, 2, 1), 0, -16),   // cap
 );
 ```
 
@@ -1053,16 +1053,16 @@ const potion = smoothUnion(2,
 ### Skull
 
 ```ts
-const skull = smoothUnion(2,
-  ellipse(10, 12),                        // cranium
-  offset(roundedBox(8, 4, 2), 0, 10),    // jaw
+const skull = sdfSmoothUnion(2,
+  sdfEllipse(10, 12),                        // cranium
+  sdfOffset(sdfRoundedBox(8, 4, 2), 0, 10),    // jaw
 );
 // Subtract eye sockets and nose
-const skullComplete = subtract(
+const skullComplete = sdfSubtract(
   skull,
-  offset(circle(3), -4, -2),    // left eye
-  offset(circle(3), 4, -2),     // right eye
-  offset(triangle([0, 3], [-2, 6], [2, 6]), 0, 0),  // nose
+  sdfOffset(sdfCircle(3), -4, -2),    // left eye
+  sdfOffset(sdfCircle(3), 4, -2),     // right eye
+  sdfOffset(sdfTriangle([0, 3], [-2, 6], [2, 6]), 0, 0),  // nose
 );
 ```
 
@@ -1077,10 +1077,10 @@ const skullComplete = subtract(
 ### Crystal
 
 ```ts
-const crystal = intersect(
-  rotate(box(8, 16), 0),
-  rotate(box(8, 16), 30),
-  rotate(box(8, 16), -30),
+const crystal = sdfIntersect(
+  sdfRotate(sdfBox(8, 16), 0),
+  sdfRotate(sdfBox(8, 16), 30),
+  sdfRotate(sdfBox(8, 16), -30),
 );
 ```
 
@@ -1095,9 +1095,9 @@ const crystal = intersect(
 ### Flag
 
 ```ts
-const flag = union(
-  roundedBox(1.5, 25, 0.5),                                // pole
-  offset(triangle([0, -25], [20, -20], [0, -15]), 0, 0),   // flag pennant
+const flag = sdfUnion(
+  sdfRoundedBox(1.5, 25, 0.5),                                // pole
+  sdfOffset(sdfTriangle([0, -25], [20, -20], [0, -15]), 0, 0),   // flag pennant
 );
 ```
 
@@ -1125,26 +1125,26 @@ const flag = union(
 
 - SDF entities sharing the same shape + fill are instanced into a **single draw call**. Drawing 100 trees with the same SDF = 1 draw call.
 - Each unique (expression, fill) pair compiles to its own WGSL shader and render pipeline. Aim for **fewer than 100 unique SDF expressions** per scene.
-- Simple shapes (`circle`, `box`) evaluate in nanoseconds per pixel. They are extremely fast.
+- Simple shapes (`sdfCircle`, `sdfBox`) evaluate in nanoseconds per pixel. They are extremely fast.
 - Complex compositions (10+ operations) are still fast for decoration and terrain. The GPU evaluates SDF math efficiently.
-- Use `repeat()` for tiled patterns (e.g., a grid of dots) instead of creating separate entities.
+- Use `sdfRepeat()` for tiled patterns (e.g., a grid of dots) instead of creating separate entities.
 - Pipeline compilation happens once and is cached by hash. Subsequent frames reuse the cached pipeline.
 
 ## Tips for Agents
 
 1. **Start with SDF for everything**, switch to sprites only when a shape is too complex to express as geometry (characters, creatures, detailed items).
-2. **Use `smoothUnion` with k=3-6** for organic, natural-looking shapes. Trees, clouds, and rocks all benefit from smooth blending.
+2. **Use `sdfSmoothUnion` with k=3-6** for organic, natural-looking shapes. Trees, clouds, and rocks all benefit from smooth blending.
 3. **Layer gradient fills for depth.** Use angle 90 (bottom-to-top) with dark colors at the bottom and light at the top. This gives a natural sense of ground shadow and sky light.
 4. **Use `glow` fill for collectibles and magical effects.** It makes items instantly recognizable as interactive.
 5. **Extract palette from your first sprite** and use those same hex colors in SDF fills. This keeps the visual style cohesive across SDF and sprite content.
-6. **Combine transforms for complex effects.** A `mirrorX` wrapping an `offset` shape builds symmetric designs with half the work.
+6. **Combine transforms for complex effects.** A `sdfMirrorX` wrapping an `sdfOffset` shape builds symmetric designs with half the work.
 7. **Test shapes with `compileToWgsl()`** to see the generated WGSL expression. If the expression is extremely long (hundreds of characters), consider simplifying.
 8. **Use `solid_outline` fill** to make shapes pop against busy backgrounds. The outline provides visual separation.
 9. **Reserve `cosine_palette` fill** for magical/alien/special effects. It produces complex color patterns that draw attention.
 10. **Keep recipes in constants** so the same shape tree can be reused across many entities without recompilation:
     ```ts
     // Define once
-    const TREE_SHAPE = smoothUnion(4, ...);
+    const TREE_SHAPE = sdfSmoothUnion(4, ...);
     const TREE_FILL: SdfFill = { type: "gradient", from: "#5a3a1a", to: "#2d8a4e", angle: 90 };
 
     // Stamp many times -- same pipeline, instanced rendering

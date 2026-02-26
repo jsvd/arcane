@@ -521,15 +521,15 @@ export function measureText(
  *   msdfFont: font,
  *   scale: 3,
  *   screenSpace: true,
- *   outline: { width: 1.0, color: rgb(0, 0, 0) },
- *   shadow: { offsetX: 2, offsetY: 2, color: rgb(0, 0, 0, 128) },
+ *   outline: { width: 1.0, color: { r: 0, g: 0, b: 0, a: 1 } },
+ *   shadow: { offsetX: 2, offsetY: 2, color: { r: 0, g: 0, b: 0, a: 0.5 } },
  * });
  *
  * @example
  * // Multiple drawText calls with different params in the same frame work correctly.
  * // Each unique outline/shadow combo gets its own shader slot from the pool.
- * drawText("Red outline", 10, 10, { msdfFont: font, outline: { width: 1, color: rgb(255, 0, 0) } });
- * drawText("Blue outline", 10, 40, { msdfFont: font, outline: { width: 2, color: rgb(0, 0, 255) } });
+ * drawText("Red outline", 10, 10, { msdfFont: font, outline: { width: 1, color: { r: 1, g: 0, b: 0, a: 1 } } });
+ * drawText("Blue outline", 10, 40, { msdfFont: font, outline: { width: 2, color: { r: 0, g: 0, b: 1, a: 1 } } });
  * drawText("No effects", 10, 70, { msdfFont: font });
  */
 export function drawText(

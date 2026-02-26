@@ -104,67 +104,20 @@ if (volume.changed) { setMusicVolume(volume.value / 100); }
 
 ## Toggles
 
-Checkboxes and radio groups:
+Checkboxes and radio groups follow the same create/update/draw pattern. Check `.toggled` (checkbox) or `.changed` (radio) each frame:
 
 ```typescript
-import { createCheckbox, updateCheckbox, drawCheckbox } from "@arcane/runtime/ui";
-import { createRadioGroup, updateRadioGroup, drawRadioGroup } from "@arcane/runtime/ui";
+import { createCheckbox, updateCheckbox, drawCheckbox,
+         createRadioGroup, updateRadioGroup, drawRadioGroup } from "@arcane/runtime/ui";
 
 const muteBox = createCheckbox(100, 100, "Mute Audio", false);
 const diffRadio = createRadioGroup(100, 140, ["Easy", "Normal", "Hard"], 1);
-
-// In onFrame:
-const { x: mx, y: my, leftDown } = getMousePosition();
-updateCheckbox(muteBox, mx, my, leftDown);
-drawCheckbox(muteBox);
-if (muteBox.toggled) { toggleMute(muteBox.checked); }
-
-updateRadioGroup(diffRadio, mx, my, leftDown,
-  isKeyPressed("ArrowUp"), isKeyPressed("ArrowDown"));
-drawRadioGroup(diffRadio);
-if (diffRadio.changed) { setDifficulty(diffRadio.selectedIndex); }
-```
-
-## Text Input
-
-```typescript
-import { createTextInput, updateTextInput, drawTextInput } from "@arcane/runtime/ui";
-
-const nameInput = createTextInput(100, 200, 200, "Enter name...", {
-  focusedBorderColor: { r: 0.3, g: 0.6, b: 1, a: 1 },
-});
-nameInput.maxLength = 20;
-
-// In onFrame:
-const keys: { key: string; pressed: boolean }[] = [];
-for (const k of ["a", "b", "c", "Backspace", "Delete", "ArrowLeft", "ArrowRight"]) {
-  if (isKeyPressed(k)) keys.push({ key: k, pressed: true });
-}
-const { x: mx, y: my, leftDown } = getMousePosition();
-updateTextInput(nameInput, mx, my, leftDown, keys);
-drawTextInput(nameInput, totalTime);  // totalTime for cursor blink
-if (nameInput.changed) { playerName = nameInput.text; }
+// update*(widget, mx, my, leftDown, ...) then draw*(widget) each frame
 ```
 
 ## Layout Helpers
 
-Compute widget positions with stacks, rows, and viewport anchoring:
-
-```typescript
-import { verticalStack, horizontalRow, anchorPosition } from "@arcane/runtime/ui";
-import { getViewportSize } from "@arcane/runtime/rendering";
-
-const { width: VPW, height: VPH } = getViewportSize();
-
-// Center a menu of 4 buttons
-const menuPos = anchorPosition("center", VPW, VPH, 160, 200, 0);
-const slots = verticalStack(menuPos.x, menuPos.y, 40, 4, 8);
-// slots[0] = {x, y} for first button, slots[1] for second, etc.
-
-// Bottom-right row of 3 action buttons
-const barPos = anchorPosition("bottom-right", VPW, VPH, 3 * 50 + 2 * 4, 50, 10);
-const actionSlots = horizontalRow(barPos.x, barPos.y, 50, 3, 4);
-```
+`verticalStack()`, `horizontalRow()`, and `anchorPosition()` compute widget positions for stacks, rows, and viewport anchoring. See `types/ui.d.ts` for signatures and options.
 
 ## Focus / Keyboard Navigation
 
@@ -179,7 +132,7 @@ registerFocusable(fm, slider);
 registerFocusable(fm, checkbox);
 
 // In onFrame:
-updateFocus(fm, isKeyPressed("Tab"), isKeyDown("ShiftLeft"));
+updateFocus(fm, isKeyPressed("Tab"), isKeyDown("Shift"));
 ```
 
 ## Widget Auto-Input (Convenience)

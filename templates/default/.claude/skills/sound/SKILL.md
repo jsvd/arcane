@@ -101,9 +101,9 @@ Read the pack JSON and find sounds matching the user's request:
 Provide ready-to-use TypeScript:
 
 ```typescript
-import { loadSound, playSound, playMusic } from "@arcane/runtime/rendering";
+import { loadSound, playSound, playMusic, crossfadeMusic } from "@arcane/runtime/rendering";
 
-// Load sounds (do once at startup)
+// Load sound effects (cached by path)
 const explosionSfx = loadSound("assets/impact-sounds/Audio/explosion_01.wav");
 const laserSfx = loadSound("assets/impact-sounds/Audio/laserShoot.wav");
 
@@ -113,9 +113,8 @@ playSound(explosionSfx);
 // Play with options
 playSound(laserSfx, { volume: 0.7, pitchVariation: 0.1 });
 
-// For background music
-const bgMusic = loadSound("assets/music-loops/track_01.ogg");
-playMusic(bgMusic, { loop: true, volume: 0.5 });
+// Music — pass path directly, not a SoundId
+playMusic("assets/music-loops/track_01.ogg", 0.5);
 ```
 
 ## Output Format
@@ -202,19 +201,16 @@ updateSpatialAudio();
 playSoundAt(explosionSfx, { x: enemy.x, y: enemy.y, maxDistance: 500 });
 ```
 
-### Music Crossfade
+### Music & Crossfade
 
 ```typescript
 import { playMusic, crossfadeMusic } from "@arcane/runtime/rendering";
 
-const menuMusic = loadSound("assets/music/menu.ogg");
-const battleMusic = loadSound("assets/music/battle.ogg");
+// Start menu music (pass path directly, not a SoundId)
+playMusic("assets/music/menu.ogg", 0.6);
 
-// Start menu music
-playMusic(menuMusic, { loop: true, volume: 0.6 });
-
-// Crossfade to battle (2 second transition)
-crossfadeMusic(battleMusic, { duration: 2.0, volume: 0.7 });
+// Crossfade to battle music (duration in ms, default 2000)
+crossfadeMusic("assets/music/battle.ogg", 2000, 0.7);
 ```
 
 ### Bus Mixing
@@ -240,40 +236,11 @@ import { setPoolConfig } from "@arcane/runtime/rendering";
 setPoolConfig(laserSfx, { maxInstances: 3, policy: "oldest" });
 ```
 
-## Audio API Reference
-
-```typescript
-// Load (cached by path)
-const sfx = loadSound("path/to/sound.wav");
-
-// Play one-shot
-playSound(sfx);
-playSound(sfx, { volume: 0.8, bus: "sfx", pitchVariation: 0.1 });
-
-// Play at position (spatial)
-playSoundAt(sfx, { x, y, maxDistance: 400, volume: 0.8 });
-
-// Music (auto-loops)
-playMusic(music, { volume: 0.6, loop: true });
-
-// Crossfade between tracks
-crossfadeMusic(newTrack, { duration: 2.0 });
-
-// Instance control
-const id = playSound(sfx);
-setInstanceVolume(id, 0.5);
-stopInstance(id);
-
-// Global control
-stopSound(sfx);      // Stop all instances of this sound
-stopAll();           // Stop everything
-setVolume(0.5);      // Master volume
-```
-
 ## Important Notes
 
 - Paths are relative to entry file. If entry is `src/visual.ts`, use `../assets/` or absolute paths.
 - `loadSound()` caches by path — calling twice returns the same handle.
+- `playMusic()` and `crossfadeMusic()` take a **path string**, not a SoundId.
 - Supported formats: `.wav`, `.ogg`, `.mp3`, `.flac`
 - Use `pitchVariation` for natural-sounding repeated effects (e.g., footsteps, gunfire).
 - Call `updateSpatialAudio()` every frame when using spatial audio.

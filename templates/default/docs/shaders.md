@@ -7,10 +7,10 @@ Custom fragment shaders for per-sprite visual effects. Three tiers from zero-WGS
 One-liner factories that return a `ShaderEffect` with named uniform accessors. No WGSL needed.
 
 ```typescript
-import { outline, flash, dissolve, pixelate, hologram, water, glow, grayscale } from "@arcane/runtime/rendering/effects";
+import { outlineEffect, flashEffect, dissolveEffect, pixelateEffect, hologramEffect, waterEffect, glowEffect, grayscaleEffect } from "@arcane/runtime/rendering/effects";
 
 // Create an effect with options
-const fx = outline({ color: [1, 0, 0, 1], width: 2 });
+const fx = outlineEffect({ color: [1, 0, 0, 1], width: 2 });
 
 // Apply to a sprite
 drawSprite({ textureId: tex, x, y, w: 64, h: 64, shaderId: fx.shaderId });
@@ -23,21 +23,21 @@ fx.set("outlineWidth", 3.0);
 
 | Preset | Uniforms | Description |
 |--------|----------|-------------|
-| `outline({ color?, width? })` | `outlineColor` (vec4), `outlineWidth` (float) | 4-neighbor edge detection outline |
-| `flash({ color?, intensity? })` | `flashColor` (vec3), `intensity` (float) | Mix with solid color (hit feedback) |
-| `dissolve({ edgeColor?, edgeWidth? })` | `threshold` (float), `edgeColor` (vec3), `edgeWidth` (float) | Hash noise dissolve with glowing edge |
-| `pixelate({ pixelSize? })` | `pixelSize` (float) | UV grid-snapping pixelation |
-| `hologram({ speed?, lineSpacing?, aberration? })` | `speed` (float), `lineSpacing` (float), `aberration` (float) | Scanlines + chromatic aberration |
-| `water({ amplitude?, frequency?, speed? })` | `amplitude` (float), `frequency` (float), `speed` (float) | Sine-wave UV distortion |
-| `glow({ color?, radius?, intensity? })` | `glowColor` (vec3), `glowRadius` (float), `glowIntensity` (float) | Multi-sample outer glow |
-| `grayscale({ amount? })` | `amount` (float) | Luminance-weighted desaturation |
+| `outlineEffect({ color?, width? })` | `outlineColor` (vec4), `outlineWidth` (float) | 4-neighbor edge detection outline |
+| `flashEffect({ color?, intensity? })` | `flashColor` (vec3), `intensity` (float) | Mix with solid color (hit feedback) |
+| `dissolveEffect({ edgeColor?, edgeWidth? })` | `threshold` (float), `edgeColor` (vec3), `edgeWidth` (float) | Hash noise dissolve with glowing edge |
+| `pixelateEffect({ pixelSize? })` | `pixelSize` (float) | UV grid-snapping pixelation |
+| `hologramEffect({ speed?, lineSpacing?, aberration? })` | `speed` (float), `lineSpacing` (float), `aberration` (float) | Scanlines + chromatic aberration |
+| `waterEffect({ amplitude?, frequency?, speed? })` | `amplitude` (float), `frequency` (float), `speed` (float) | Sine-wave UV distortion |
+| `glowEffect({ color?, radius?, intensity? })` | `glowColor` (vec3), `glowRadius` (float), `glowIntensity` (float) | Multi-sample outer glow |
+| `grayscaleEffect({ amount? })` | `amount` (float) | Luminance-weighted desaturation |
 
 Time-based presets (dissolve, hologram, water) use `shader_params.time` automatically — no per-frame boilerplate.
 
 ### Animating Presets
 
 ```typescript
-const fx = dissolve();
+const fx = dissolveEffect();
 
 onFrame((dt) => {
   const t = Math.sin(elapsed * 0.8) * 0.5 + 0.5;
@@ -140,7 +140,7 @@ struct VertexOutput {
 Shaders and post-processing are independent. A sprite can have a custom shader AND the scene can have post-process effects:
 
 ```typescript
-const fx = hologram();
+const fx = hologramEffect();
 addPostProcessEffect("bloom");
 addPostProcessEffect("vignette");
 // Hologram shader applied per-sprite, bloom/vignette applied to the whole frame

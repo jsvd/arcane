@@ -78,24 +78,4 @@ const saves = listSaves();  // sorted by timestamp desc
 deleteSave("save1");
 ```
 
-## Auto-Save
-
-```typescript
-enableAutoSave({ getState: () => gameState, interval: 30, options: { slot: "autosave" } });
-
-// In onFrame or scene manager onUpdate:
-updateAutoSave(dt);
-```
-
-## Schema Migrations
-
-Handle save format changes between versions:
-
-```typescript
-configureSaveSystem({ version: 2 });
-registerMigration({
-  version: 2, description: "Add inventory",
-  up: (data: any) => ({ ...data, inventory: [] }),
-});
-// Old v1 saves automatically migrate to v2 on load
-```
+Auto-save and schema migrations are available -- see `types/persistence.d.ts`.

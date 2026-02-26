@@ -24,16 +24,16 @@
 import { drawText, getDeltaTime } from "../../runtime/rendering/index.ts";
 import { createGame } from "../../runtime/game/index.ts";
 import {
-  circle,
-  triangle,
-  star,
-  heart,
-  smoothUnion,
-  offset,
-  mirrorX,
-  repeat,
-  round,
-  outlineN,
+  sdfCircle,
+  sdfTriangle,
+  sdfStar,
+  sdfHeart,
+  sdfSmoothUnion,
+  sdfOffset,
+  sdfMirrorX,
+  sdfRepeat,
+  sdfRound,
+  sdfOutlineN,
   sdfEntity,
   // Fill shorthand functions
   solid,
@@ -78,11 +78,11 @@ game.onFrame((_ctx) => {
 
     // 1. Cosine Palette - distance-based rainbow coloring
     sdfEntity({
-      shape: smoothUnion(
+      shape: sdfSmoothUnion(
         8,
-        circle(40),
-        offset(circle(30), 30, 10),
-        offset(circle(25), -20, 20),
+        sdfCircle(40),
+        sdfOffset(sdfCircle(30), 30, 10),
+        sdfOffset(sdfCircle(25), -20, 20),
       ),
       fill: cosinePalette(
         [0.5, 0.5, 0.5],
@@ -97,7 +97,7 @@ game.onFrame((_ctx) => {
     // 2. Gradient Fill - equilateral triangle (blue to red)
     // bounds=43 for width, but triangle Y extent is ±37, so scale=43/37
     sdfEntity({
-      shape: triangle([0, 37], [-43, -37], [43, -37]),
+      shape: sdfTriangle([0, 37], [-43, -37], [43, -37]),
       fill: gradient("#000066", "#ff0000", 90, 43 / 37),
       position: [GRID[1][0], GRID[1][1]],
       bounds: 43,
@@ -106,7 +106,7 @@ game.onFrame((_ctx) => {
 
     // 3. Glow Heart - pulsing glow effect (using breathe() helper)
     sdfEntity({
-      shape: heart(30),
+      shape: sdfHeart(30),
       fill: glow("#ff3366", 0.25),
       position: [GRID[2][0], GRID[2][1]],
       scale: pulse(time, 3, 1.0, 1.15),
@@ -119,7 +119,7 @@ game.onFrame((_ctx) => {
 
     // 4. Pulsing Star - animated scale (using pulse() helper)
     sdfEntity({
-      shape: star(30, 5, 0.4),
+      shape: sdfStar(30, 5, 0.4),
       fill: glow("#FFD700", 0.8),
       position: [GRID[3][0], GRID[3][1]],
       scale: pulse(time, 4, 0.7, 1.3),
@@ -128,7 +128,7 @@ game.onFrame((_ctx) => {
 
     // 5. Spinning Star - animated rotation (using spin() helper)
     sdfEntity({
-      shape: star(35, 6, 0.5),
+      shape: sdfStar(35, 6, 0.5),
       fill: solid("#e74c3c"),
       position: [GRID[4][0], GRID[4][1]],
       rotation: spin(time, 60),
@@ -137,7 +137,7 @@ game.onFrame((_ctx) => {
 
     // 6. Breathing Circle - glow pulse (using breathe() helper)
     sdfEntity({
-      shape: circle(25),
+      shape: sdfCircle(25),
       fill: glow("#3498db", 0.25),
       position: [GRID[5][0], GRID[5][1]],
       scale: pulse(time, 2, 1.0, 1.2),
@@ -150,7 +150,7 @@ game.onFrame((_ctx) => {
 
     // 7. Repeat Pattern - infinite tiling (using spin() helper)
     sdfEntity({
-      shape: repeat(circle(8), 30, 30),
+      shape: sdfRepeat(sdfCircle(8), 30, 30),
       fill: solid("#2ecc71"),
       position: [GRID[6][0], GRID[6][1]],
       rotation: spin(time, 20),
@@ -160,7 +160,7 @@ game.onFrame((_ctx) => {
 
     // 8. Mirror X - symmetry transform (using spin() helper)
     sdfEntity({
-      shape: mirrorX(offset(star(20, 5, 0.4), 30, 0)),
+      shape: sdfMirrorX(sdfOffset(sdfStar(20, 5, 0.4), 30, 0)),
       fill: solid("#9b59b6"),
       position: [GRID[7][0], GRID[7][1]],
       rotation: spin(time, 30),
@@ -169,7 +169,7 @@ game.onFrame((_ctx) => {
 
     // 9. Onion Rings - using outlineN() helper for concise nesting
     sdfEntity({
-      shape: outlineN(circle(45), 8, 3),
+      shape: sdfOutlineN(sdfCircle(45), 8, 3),
       fill: solid("#e67e22"),
       position: [GRID[8][0], GRID[8][1]],
       scale: pulse(time, 2.5, 0.85, 1.15),

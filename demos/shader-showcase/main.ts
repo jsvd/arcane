@@ -27,14 +27,14 @@ import {
   createSolidTexture,
 } from "../../runtime/rendering/index.ts";
 import {
-  outline,
-  flash,
-  dissolve,
-  pixelate,
-  hologram,
-  water,
-  glow,
-  grayscale,
+  outlineEffect,
+  flashEffect,
+  dissolveEffect,
+  pixelateEffect,
+  hologramEffect,
+  waterEffect,
+  glowEffect,
+  grayscaleEffect,
   type ShaderEffect,
 } from "../../runtime/rendering/effects.ts";
 import { rgb } from "../../runtime/ui/types.ts";
@@ -63,13 +63,13 @@ const effects: EffectEntry[] = [
   {
     name: "Outline",
     key: "1",
-    effect: outline({ color: [1, 0.3, 0.1, 1], width: 2.0 }),
+    effect: outlineEffect({ color: [1, 0.3, 0.1, 1], width: 2.0 }),
     description: "4-neighbor edge detection outline",
   },
   {
     name: "Flash",
     key: "2",
-    effect: flash({ color: [1, 1, 1], intensity: 0 }),
+    effect: flashEffect({ color: [1, 1, 1], intensity: 0 }),
     description: "Mix with solid color (pulsing)",
     animate(dt, elapsed) {
       const intensity = (Math.sin(elapsed * 3) * 0.5 + 0.5) * 0.8;
@@ -79,7 +79,7 @@ const effects: EffectEntry[] = [
   {
     name: "Dissolve",
     key: "3",
-    effect: dissolve({ edgeColor: [1, 0.5, 0], edgeWidth: 0.05 }),
+    effect: dissolveEffect({ edgeColor: [1, 0.5, 0], edgeWidth: 0.05 }),
     description: "Noise threshold dissolve with edge glow",
     animate(dt, elapsed) {
       // Ping-pong dissolve threshold
@@ -90,7 +90,7 @@ const effects: EffectEntry[] = [
   {
     name: "Pixelate",
     key: "4",
-    effect: pixelate({ pixelSize: 8 }),
+    effect: pixelateEffect({ pixelSize: 8 }),
     description: "UV grid snapping pixelation",
     animate(dt, elapsed) {
       const size = 2 + Math.abs(Math.sin(elapsed * 1.5)) * 14;
@@ -100,19 +100,19 @@ const effects: EffectEntry[] = [
   {
     name: "Hologram",
     key: "5",
-    effect: hologram({ speed: 2, lineSpacing: 100, aberration: 0.005 }),
+    effect: hologramEffect({ speed: 2, lineSpacing: 100, aberration: 0.005 }),
     description: "Scanlines + chromatic aberration + flicker",
   },
   {
     name: "Water",
     key: "6",
-    effect: water({ amplitude: 0.02, frequency: 10, speed: 2 }),
+    effect: waterEffect({ amplitude: 0.02, frequency: 10, speed: 2 }),
     description: "Sine wave UV distortion",
   },
   {
     name: "Glow",
     key: "7",
-    effect: glow({ color: [0.3, 0.7, 1], radius: 3, intensity: 1.5 }),
+    effect: glowEffect({ color: [0.3, 0.7, 1], radius: 3, intensity: 1.5 }),
     description: "Multi-sample outer glow",
     animate(dt, elapsed) {
       const intensity = 1.0 + Math.sin(elapsed * 2) * 0.5;
@@ -122,7 +122,7 @@ const effects: EffectEntry[] = [
   {
     name: "Grayscale",
     key: "8",
-    effect: grayscale({ amount: 1.0 }),
+    effect: grayscaleEffect({ amount: 1.0 }),
     description: "Luminance-weighted desaturation",
     animate(dt, elapsed) {
       const amount = (Math.sin(elapsed * 1.2) * 0.5 + 0.5);

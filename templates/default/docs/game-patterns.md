@@ -68,17 +68,12 @@ import {
 import type { Platform } from "@arcane/runtime/game";
 import { isActionDown, isActionPressed } from "@arcane/runtime/input";
 
-const config = {
-  playerWidth: 16, playerHeight: 24,
-  gravity: 980, jumpForce: -400,
-  walkSpeed: 160, runSpeed: 280,
-  coyoteTime: 0.08, jumpBuffer: 0.1,
-};
+const config = { playerWidth: 16, playerHeight: 24, jumpForce: -400 }; // see PlatformerConfig defaults in .d.ts
 
 const platforms: Platform[] = [
-  { x: 0, y: 500, w: 800, h: 50 },                           // ground
-  { x: 200, y: 380, w: 120, h: 16 },                         // solid platform
-  { x: 400, y: 300, w: 100, h: 16, oneWay: true },          // jump-through platform
+  { x: 0, y: 500, w: 800, h: 50 },                  // ground
+  { x: 200, y: 380, w: 120, h: 16 },                // solid
+  { x: 400, y: 300, w: 100, h: 16, oneWay: true },  // jump-through
 ];
 
 let player = createPlatformerState(100, 100);
@@ -101,53 +96,11 @@ drawColorSprite({
 
 **One-way platforms**: set `oneWay: true` — the player passes through from below and lands on top.
 
-## State Architecture: Integrating PlatformerState with Game State
-
-The platformer controller returns a `PlatformerState` (x, y, vx, vy, onGround, etc.) — but your game has more state (score, lives, enemies, phase). The recommended pattern is to embed the controller state inside your game state and sync with helper functions:
-
-```typescript
-// Your game state owns everything
-type GameState = {
-  player: PlatformerState;  // embed directly
-  score: number;
-  lives: number;
-  enemies: Enemy[];
-  phase: "playing" | "won" | "dead";
-};
-
-let state: GameState = {
-  player: createPlatformerState(100, 100),
-  score: 0,
-  lives: 3,
-  enemies: [],
-  phase: "playing",
-};
-
-// In onFrame — update the embedded controller state:
-const dir = (isKeyDown("d") ? 1 : 0) - (isKeyDown("a") ? 1 : 0);
-let p = state.player;
-p = platformerMove(p, dir as -1 | 0 | 1, false, config);
-if (isKeyPressed("Space")) p = platformerJump(p, config);
-p = platformerStep(p, dt, platforms, config);
-state = { ...state, player: p };
-
-// Apply knockback from enemy hit:
-if (hitByEnemy) {
-  state = {
-    ...state,
-    player: platformerApplyImpulse(state.player, knockbackVx, -200),
-    lives: state.lives - 1,
-  };
-}
-```
-
-**Key principle**: The controller functions are pure — they don't know about your game state. You compose them by threading the `PlatformerState` through your update loop and writing it back into your game state.
-
-**External velocity** (`externalVx`/`externalVy`): Use `platformerApplyImpulse()` for knockback, bounce pads, wind, or any force that should temporarily override player input. External velocity decays automatically each frame (×0.85).
+**External velocity**: Use `platformerApplyImpulse()` for knockback, bounce pads, wind. External velocity decays automatically each frame (x0.85).
 
 ## Grid Movement with Smooth Interpolation
 
-For grid-based games (roguelikes, puzzle, tactics), entities snap to grid cells but should visually slide between positions. The key pattern: store the **logical** grid position separately from the **visual** position, and interpolate.
+For grid-based games, store the **logical** grid position separately from the **visual** position, and interpolate.
 
 ```typescript
 type GridEntity = {
@@ -184,45 +137,34 @@ function gridRenderPos(e: GridEntity): { x: number; y: number } {
 
 ## Seeded Random Numbers
 
-Use `createRng()` for ergonomic deterministic randomness. Same sequences as the pure `seed()`/`randomInt()` functions, but holds state in a closure so you don't need to thread state through every call.
+Use `createRng()` for ergonomic deterministic randomness. Holds state in a closure so you don't need to thread PRNG state through every call.
 
 ```typescript
 import { createRng } from "@arcane/runtime/state";
 
 const rng = createRng(42);  // deterministic seed
-
 const damage = rng.roll("2d6+3");
 const enemy = rng.pick(["goblin", "orc", "troll"]);
-const loot = rng.shuffle(items);
 const x = rng.int(0, 800);
-const chance = rng.float();  // [0, 1)
 
-// Save/restore state
+// Save/restore for replay
 const checkpoint = rng.snapshot();
-// ... do things ...
 rng.restore(checkpoint);  // replay exact same sequence
 
 // Fork for independent streams (e.g., world gen vs combat)
-const combatRng = rng.fork();  // parent advances, child is independent
+const combatRng = rng.fork();
 ```
 
 ## Jump Physics Helpers
 
-Three utility functions for reasoning about platformer jump geometry. Useful for level design validation -- checking whether gaps are clearable, sizing platforms, and tuning jump feel.
+Utility functions for level design validation -- checking clearable gaps, sizing platforms, tuning jump feel.
 
-**Formulas:**
-- Jump height: `h = v^2 / (2g)` -- maximum height above launch point
-- Airtime: `t = 2v / g` -- total time in the air (up + down)
-- Jump reach: `reach = speed * airtime` -- horizontal distance covered
+**Formulas:** `h = v^2/(2g)` (jump height), `t = 2v/g` (airtime), `reach = speed * airtime` (horizontal distance).
 
 ```typescript
 import { getJumpHeight, getAirtime, getJumpReach } from "@arcane/runtime/game";
 
-const config = {
-  playerWidth: 16, playerHeight: 24,
-  gravity: 980, jumpForce: -400,
-  walkSpeed: 160, runSpeed: 280,
-};
+const config = { gravity: 980, jumpForce: -400, walkSpeed: 160, runSpeed: 280 };
 
 const height = getJumpHeight(config);    // ~81.6 px
 const airtime = getAirtime(config);      // ~0.816 sec
@@ -230,17 +172,14 @@ const walkReach = getJumpReach(config);  // ~130.6 px
 const runReach = getJumpReach(config, true); // ~228.6 px
 
 // Level design check: can the player clear this gap?
-const gapWidth = 200;
-if (runReach > gapWidth) {
-  // Clearable at full run speed
-}
+if (runReach > gapWidth) { /* clearable at full run speed */ }
 ```
 
-All three functions use the existing `PlatformerConfig` type and respect its defaults (gravity=980, jumpForce=-400, walkSpeed=160, runSpeed=280).
+All three accept `PlatformerConfig` and respect its defaults.
 
 ## Grid-to-Platforms
 
-Convert a tile grid (2D number array or tilemap layer) into merged `Platform[]` rectangles for use with the platformer controller. Uses greedy rectangle merging to produce fewer, larger rectangles instead of one per tile.
+Convert a tile grid or tilemap layer into merged `Platform[]` rectangles. Greedy merging produces fewer, larger rectangles.
 
 ```typescript
 import { gridToPlatforms, platformsFromTilemap } from "@arcane/runtime/game";
@@ -254,31 +193,12 @@ const grid = [
   [1, 1, 1, 1, 1],
 ];
 const platforms = gridToPlatforms(grid, 16, [1]);
-// Merges adjacent solid tiles into larger rectangles
 
 // From a LayeredTilemap layer
 defineTileProperties(1, { solid: true });
-defineTileProperties(2, { solid: true });
 const tilemapPlatforms = platformsFromTilemap(myMap, "collision");
 
 // Custom solid check
 const customPlatforms = platformsFromTilemap(myMap, "ground", (id) => id >= 1 && id <= 10);
 ```
 
-**Algorithm:** Scan each row left-to-right finding horizontal spans of consecutive solid tiles. For each span, extend it downward as far as all columns remain solid. Mark merged cells as visited. This produces optimal horizontal merges.
-
-## Particle Effects for Game Feel
-
-Use additive blending for fire/explosions:
-
-```typescript
-for (const p of particles) {
-  drawSprite({
-    textureId: TEX_PARTICLE, x: p.x - 2, y: p.y - 2,
-    w: 4 * p.scale, h: 4 * p.scale,
-    opacity: 1 - p.age / p.lifetime,
-    blendMode: "additive",
-    layer: 5,
-  });
-}
-```

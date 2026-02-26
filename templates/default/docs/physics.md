@@ -92,27 +92,7 @@ const joint = createDistanceJoint(bodyA, bodyB, 50);           // fixed distance
 const hinge = createRevoluteJoint(bodyA, bodyB, pivotX, pivotY); // rotation around point
 ```
 
-## Soft Constraints
-
-Soft joints use spring-damper dynamics instead of rigid constraints. Great for ropes, bungees, and springy connections.
-
-```typescript
-import { createSoftDistanceJoint, createSoftRevoluteJoint } from "@arcane/runtime/physics";
-
-// Springy rope (30 Hz oscillation, critical damping)
-const rope = createSoftDistanceJoint(anchor, ball, 100, {
-  frequencyHz: 30,    // spring frequency (0 = rigid)
-  dampingRatio: 1.0,  // 1.0 = critical damping, <1 = bouncy
-});
-
-// Soft hinge (e.g., car suspension)
-const suspension = createSoftRevoluteJoint(chassis, wheel, pivotX, pivotY, {
-  frequencyHz: 5,
-  dampingRatio: 0.7,
-});
-```
-
-Soft contacts are the default for collisions (30 Hz, critical damping). This eliminates jitter in stacks and provides smoother physics overall.
+Soft variants (`createSoftDistanceJoint`, `createSoftRevoluteJoint`) use spring-damper dynamics for ropes, bungees, and springy connections — see `types/physics.d.ts` for parameters.
 
 ## Collision Queries
 
@@ -181,30 +161,6 @@ const enemy = createBody({
 });
 ```
 
-## Solver Architecture (TGS Soft)
+## Solver Architecture
 
-Arcane uses a modern **Temporal Gauss-Seidel with Soft Constraints** solver:
-
-- **2-point contact manifolds** — Sutherland-Hodgman clipping for stable stacking
-- **Soft constraints** — Spring-damper dynamics replace rigid Baumgarte stabilization
-- **Speculative contacts** — Predicts collisions before penetration (no tunneling)
-- **Friction anchors** — Persistent friction state for rock-solid stacking
-- **4 sub-steps** — 240 Hz effective physics rate for smooth simulation
-- **Warm starting** — Impulse caching for faster convergence
-
-This architecture follows modern physics engine best practices.
-
-## Default Tuning Parameters
-
-These are the built-in defaults. Override per-joint or per-body as needed.
-
-| Parameter | Default | Notes |
-|-----------|---------|-------|
-| Contact frequency | 30 Hz | Stiff but not rigid; eliminates jitter |
-| Contact damping | 1.0 | Critical damping (no bounce from softness) |
-| Speculative margin | 5 px | How far ahead to predict collisions |
-| Friction Baumgarte | 0.1 | Correction rate for friction anchors |
-| Sleep threshold | 0.5 px/s | Velocity below which bodies start sleep timer |
-| Sleep time | 0.5 s | How long at rest before sleeping |
-| Sub-steps | 4 | Internal physics rate = 240 Hz |
-| Velocity iterations | 10 | Constraint solver passes per sub-step |
+Arcane uses a **Temporal Gauss-Seidel with Soft Constraints** solver. It runs 4 sub-steps per frame (240 Hz effective rate) with speculative contacts to prevent tunneling and warm starting for fast convergence. Stacking is stable out of the box.

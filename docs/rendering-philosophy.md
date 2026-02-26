@@ -243,11 +243,11 @@ Custom shaders provide a progressive disclosure path from zero-WGSL to full cont
 
 ### Tier 1: Effect Presets (no WGSL)
 ```ts
-const fx = outline({ color: [1, 0, 0, 1], width: 2 });
+const fx = outlineEffect({ color: [1, 0, 0, 1], width: 2 });
 drawSprite({ textureId: tex, x, y, w: 64, h: 64, shaderId: fx.shaderId });
 fx.set("outlineWidth", 3.0);
 ```
-8 presets: `outline`, `flash`, `dissolve`, `pixelate`, `hologram`, `water`, `glow`, `grayscale`. Each is a factory returning a `ShaderEffect` with named uniform accessors.
+8 presets: `outlineEffect`, `flashEffect`, `dissolveEffect`, `pixelateEffect`, `hologramEffect`, `waterEffect`, `glowEffect`, `grayscaleEffect`. Each is a factory returning a `ShaderEffect` with named uniform accessors.
 
 ### Tier 2: Named Uniform API (custom WGSL, ergonomic params)
 ```ts

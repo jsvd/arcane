@@ -12,7 +12,7 @@ if (isKeyDown("ArrowRight")) player.x += speed * dt;
 if (isKeyPressed("Space")) jump();
 ```
 
-Key names use the `KeyName` type: `"ArrowLeft"`, `"ArrowRight"`, `"ArrowUp"`, `"ArrowDown"`, `"Space"`, `"Enter"`, `"Escape"`, `"ShiftLeft"`, `"a"` through `"z"`, `"Digit0"` through `"Digit9"`. Space is `"Space"`, not `" "`.
+Key names use the `KeyName` type: `"ArrowLeft"`, `"ArrowRight"`, `"ArrowUp"`, `"ArrowDown"`, `"Space"`, `"Enter"`, `"Escape"`, `"Shift"`, `"Control"`, `"Alt"`, `"a"` through `"z"`, `"Digit0"` through `"Digit9"`. Space is `"Space"`, not `" "`.
 
 ## Gamepad
 
@@ -40,9 +40,7 @@ if (isGamepadConnected(0)) {
 }
 ```
 
-Button names: `"A"`, `"B"`, `"X"`, `"Y"`, `"LeftBumper"`, `"RightBumper"`, `"LeftTrigger"`, `"RightTrigger"`, `"DPadUp"`, `"DPadDown"`, `"DPadLeft"`, `"DPadRight"`, `"Select"`, `"Start"`, `"LeftStick"`, `"RightStick"`, `"Guide"`.
-
-Axis names: `"LeftStickX"`, `"LeftStickY"`, `"RightStickX"`, `"RightStickY"`, `"LeftTrigger"`, `"RightTrigger"`.
+See `types/input.d.ts` for the full `GamepadButton` and `GamepadAxis` type definitions.
 
 ## Touch
 
@@ -101,7 +99,7 @@ player.x += moveX * speed * dt;
 setActionBindings(input, "jump", ["w", "GamepadB"]);
 ```
 
-String shorthands: `"Space"`, `"a"`-`"z"`, `"ArrowLeft"`, `"GamepadA"`, `"GamepadLB"`, `"GamepadDPadUp"`, `"MouseLeft"`. Or use full `InputSource` objects for analog axes.
+String shorthands: `"Space"`, `"a"`-`"z"`, `"ArrowLeft"`, `"GamepadA"`, `"GamepadDPadUp"`, `"MouseLeft"`. Or use full `InputSource` objects for analog axes. See `types/input.d.ts` for all bindings.
 
 ## Input Buffering & Combos
 

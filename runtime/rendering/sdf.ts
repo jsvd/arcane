@@ -15,7 +15,7 @@
  *
  * This matches typical math conventions but differs from some 2D graphics APIs
  * where Y increases downward. Keep this in mind when using:
- * - `offset(shape, x, y)` - positive Y moves the shape UP
+ * - `sdfOffset(shape, x, y)` - positive Y moves the shape UP
  * - `gradient(..., angle)` - 90° goes from bottom to top
  * - triangle/polygon vertices - Y increases upward
  *
@@ -23,20 +23,20 @@
  *
  * - Use instance-level transforms (`rotation`, `scale`, `opacity` in sdfEntity)
  *   for animation. These are GPU-efficient and don't cause shader recompilation.
- * - Avoid animating fill parameters or SDF-level transforms (`rotate()`, `scale()`)
+ * - Avoid animating fill parameters or SDF-level transforms (`sdfRotate()`, `sdfScale()`)
  *   as these bake values into the shader and trigger recompilation each frame.
  * - Call `clearSdfEntities()` at the start of each frame for animated scenes,
  *   or use `createSdfFrame()` which handles clear+flush automatically.
  *
  * @example
  * ```ts
- * import { circle, box, union, offset, smoothUnion, compileToWgsl, sdfEntity } from "@arcane/runtime/rendering";
+ * import { sdfCircle, sdfBox, sdfUnion, sdfOffset, sdfSmoothUnion, compileToWgsl, sdfEntity } from "@arcane/runtime/rendering";
  *
  * // Build a snowman shape
- * const snowman = union(
- *   circle(20),
- *   offset(circle(14), 0, -30),
- *   offset(circle(10), 0, -54),
+ * const snowman = sdfUnion(
+ *   sdfCircle(20),
+ *   sdfOffset(sdfCircle(14), 0, -30),
+ *   sdfOffset(sdfCircle(10), 0, -54),
  * );
  *
  * // Compile to WGSL
@@ -151,7 +151,7 @@ export type SdfNode =
  *
  * @example
  * sdfEntity({
- *   shape: circle(20),
+ *   shape: sdfCircle(20),
  *   fill: solid("#ff0000"),
  *   layer: LAYERS.FOREGROUND,
  * });
@@ -244,7 +244,7 @@ export type SdfFill =
  * @returns SolidFill object.
  *
  * @example
- * sdfEntity({ shape: circle(20), fill: solid("#ff0000") });
+ * sdfEntity({ shape: sdfCircle(20), fill: solid("#ff0000") });
  */
 export function solid(color: string): SolidFill {
   return { type: "solid", color };
@@ -259,7 +259,7 @@ export function solid(color: string): SolidFill {
  *
  * @example
  * // Soft, wide glow
- * sdfEntity({ shape: heart(30), fill: glow("#ff3366", 0.25), bounds: 90 });
+ * sdfEntity({ shape: sdfHeart(30), fill: glow("#ff3366", 0.25), bounds: 90 });
  */
 export function glow(color: string, intensity: number = 0.5): GlowFill {
   return { type: "glow", color, intensity };
@@ -279,7 +279,7 @@ export function glow(color: string, intensity: number = 0.5): GlowFill {
  * @example
  * // Bottom-to-top gradient (green to white)
  * sdfEntity({
- *   shape: triangle([0, 30], [-50, -30], [50, -30]),
+ *   shape: sdfTriangle([0, 30], [-50, -30], [50, -30]),
  *   fill: gradient("#2d4a1c", "#f0f8ff", 90),
  *   bounds: 35, // Tight bounds for visible gradient
  * });
@@ -288,7 +288,7 @@ export function glow(color: string, intensity: number = 0.5): GlowFill {
  * // Equilateral triangle with properly scaled gradient
  * // bounds=43 (for width), but triangle Y extent is ±37
  * sdfEntity({
- *   shape: triangle([0, 37], [-43, -37], [43, -37]),
+ *   shape: sdfTriangle([0, 37], [-43, -37], [43, -37]),
  *   fill: gradient("#000066", "#ff0000", 90, 43/37),
  *   bounds: 43,
  * });
@@ -309,7 +309,7 @@ export function gradient(
  * @returns OutlineFill object.
  *
  * @example
- * sdfEntity({ shape: circle(30), fill: outlineFill("#ffffff", 2) });
+ * sdfEntity({ shape: sdfCircle(30), fill: outlineFill("#ffffff", 2) });
  */
 export function outlineFill(color: string, thickness: number): OutlineFill {
   return { type: "outline", color, thickness };
@@ -324,7 +324,7 @@ export function outlineFill(color: string, thickness: number): OutlineFill {
  *
  * @example
  * sdfEntity({
- *   shape: star(30, 5, 0.4),
+ *   shape: sdfStar(30, 5, 0.4),
  *   fill: solidOutline("#ffd700", "#000000", 2),
  * });
  */
@@ -349,7 +349,7 @@ export function solidOutline(
  * @example
  * // Classic rainbow palette
  * sdfEntity({
- *   shape: circle(40),
+ *   shape: sdfCircle(40),
  *   fill: cosinePalette(
  *     [0.5, 0.5, 0.5],
  *     [0.5, 0.5, 0.5],
@@ -442,7 +442,7 @@ export function parseColor(color: string): [number, number, number, number] {
  * @param radius - Circle radius in world units.
  * @returns SDF node representing a circle.
  */
-export function circle(radius: number): SdfNode {
+export function sdfCircle(radius: number): SdfNode {
   return { type: "primitive", kind: "circle", params: [radius] };
 }
 
@@ -452,7 +452,7 @@ export function circle(radius: number): SdfNode {
  * @param height - Half-height of the box.
  * @returns SDF node representing a box.
  */
-export function box(width: number, height: number): SdfNode {
+export function sdfBox(width: number, height: number): SdfNode {
   return { type: "primitive", kind: "box", params: [width, height] };
 }
 
@@ -463,7 +463,7 @@ export function box(width: number, height: number): SdfNode {
  * @param radius - Corner radius (uniform number or per-corner [tl, tr, br, bl]).
  * @returns SDF node representing a rounded box.
  */
-export function roundedBox(
+export function sdfRoundedBox(
   width: number,
   height: number,
   radius: number | [number, number, number, number],
@@ -488,7 +488,7 @@ export function roundedBox(
  * @param height - Semi-minor axis height.
  * @returns SDF node representing an ellipse.
  */
-export function ellipse(width: number, height: number): SdfNode {
+export function sdfEllipse(width: number, height: number): SdfNode {
   return { type: "primitive", kind: "ellipse", params: [width, height] };
 }
 
@@ -499,7 +499,7 @@ export function ellipse(width: number, height: number): SdfNode {
  * @param p2 - Third vertex.
  * @returns SDF node representing a triangle.
  */
-export function triangle(p0: Vec2, p1: Vec2, p2: Vec2): SdfNode {
+export function sdfTriangle(p0: Vec2, p1: Vec2, p2: Vec2): SdfNode {
   return {
     type: "primitive",
     kind: "triangle",
@@ -514,7 +514,7 @@ export function triangle(p0: Vec2, p1: Vec2, p2: Vec2): SdfNode {
  * @param rb - Bulge factor.
  * @returns SDF node representing an egg shape.
  */
-export function egg(ra: number, rb: number): SdfNode {
+export function sdfEgg(ra: number, rb: number): SdfNode {
   return { type: "primitive", kind: "egg", params: [ra, rb] };
 }
 
@@ -523,7 +523,7 @@ export function egg(ra: number, rb: number): SdfNode {
  * @param size - Overall heart size.
  * @returns SDF node representing a heart shape.
  */
-export function heart(size: number): SdfNode {
+export function sdfHeart(size: number): SdfNode {
   return { type: "primitive", kind: "heart", params: [size] };
 }
 
@@ -534,7 +534,7 @@ export function heart(size: number): SdfNode {
  * @param innerRadius - Inner radius between points.
  * @returns SDF node representing a star shape.
  */
-export function star(
+export function sdfStar(
   radius: number,
   points: number,
   innerRadius: number,
@@ -551,7 +551,7 @@ export function star(
  * @param radius - Hexagon circumradius.
  * @returns SDF node representing a hexagon.
  */
-export function hexagon(radius: number): SdfNode {
+export function sdfHexagon(radius: number): SdfNode {
   return { type: "primitive", kind: "hexagon", params: [radius] };
 }
 
@@ -560,7 +560,7 @@ export function hexagon(radius: number): SdfNode {
  * @param radius - Pentagon circumradius.
  * @returns SDF node representing a pentagon.
  */
-export function pentagon(radius: number): SdfNode {
+export function sdfPentagon(radius: number): SdfNode {
   return { type: "primitive", kind: "pentagon", params: [radius] };
 }
 
@@ -570,7 +570,7 @@ export function pentagon(radius: number): SdfNode {
  * @param to - End point.
  * @returns SDF node representing a line segment.
  */
-export function segment(from: Vec2, to: Vec2): SdfNode {
+export function sdfSegment(from: Vec2, to: Vec2): SdfNode {
   return {
     type: "primitive",
     kind: "segment",
@@ -586,7 +586,7 @@ export function segment(from: Vec2, to: Vec2): SdfNode {
  * @param rb - Radius of the inner circle (subtracted).
  * @returns SDF node representing a moon shape.
  */
-export function moon(d: number, ra: number, rb: number): SdfNode {
+export function sdfMoon(d: number, ra: number, rb: number): SdfNode {
   return { type: "primitive", kind: "moon", params: [d, ra, rb] };
 }
 
@@ -597,7 +597,7 @@ export function moon(d: number, ra: number, rb: number): SdfNode {
  * @param radius - Corner rounding radius.
  * @returns SDF node representing a cross shape.
  */
-export function cross(width: number, height: number, radius: number): SdfNode {
+export function sdfCross(width: number, height: number, radius: number): SdfNode {
   return { type: "primitive", kind: "cross", params: [width, height, radius] };
 }
 
@@ -607,7 +607,7 @@ export function cross(width: number, height: number, radius: number): SdfNode {
  * @param width - Ring thickness.
  * @returns SDF node representing a ring.
  */
-export function ring(radius: number, width: number): SdfNode {
+export function sdfRing(radius: number, width: number): SdfNode {
   return { type: "primitive", kind: "ring", params: [radius, width] };
 }
 
@@ -620,9 +620,9 @@ export function ring(radius: number, width: number): SdfNode {
  * @param shapes - Two or more SDF nodes to combine.
  * @returns SDF node representing the union.
  */
-export function union(...shapes: SdfNode[]): SdfNode {
+export function sdfUnion(...shapes: SdfNode[]): SdfNode {
   if (shapes.length < 2) {
-    throw new Error("union() requires at least 2 shapes");
+    throw new Error("sdfUnion() requires at least 2 shapes");
   }
   return { type: "bool_op", op: "union", children: shapes };
 }
@@ -633,9 +633,9 @@ export function union(...shapes: SdfNode[]): SdfNode {
  * @param cutouts - One or more shapes to subtract.
  * @returns SDF node representing the subtraction.
  */
-export function subtract(base: SdfNode, ...cutouts: SdfNode[]): SdfNode {
+export function sdfSubtract(base: SdfNode, ...cutouts: SdfNode[]): SdfNode {
   if (cutouts.length < 1) {
-    throw new Error("subtract() requires at least 1 cutout shape");
+    throw new Error("sdfSubtract() requires at least 1 cutout shape");
   }
   return { type: "bool_op", op: "subtract", children: [base, ...cutouts] };
 }
@@ -645,9 +645,9 @@ export function subtract(base: SdfNode, ...cutouts: SdfNode[]): SdfNode {
  * @param shapes - Two or more SDF nodes to intersect.
  * @returns SDF node representing the intersection.
  */
-export function intersect(...shapes: SdfNode[]): SdfNode {
+export function sdfIntersect(...shapes: SdfNode[]): SdfNode {
   if (shapes.length < 2) {
-    throw new Error("intersect() requires at least 2 shapes");
+    throw new Error("sdfIntersect() requires at least 2 shapes");
   }
   return { type: "bool_op", op: "intersect", children: shapes };
 }
@@ -658,9 +658,9 @@ export function intersect(...shapes: SdfNode[]): SdfNode {
  * @param shapes - Two or more SDF nodes to combine.
  * @returns SDF node representing the smooth union.
  */
-export function smoothUnion(k: number, ...shapes: SdfNode[]): SdfNode {
+export function sdfSmoothUnion(k: number, ...shapes: SdfNode[]): SdfNode {
   if (shapes.length < 2) {
-    throw new Error("smoothUnion() requires at least 2 shapes");
+    throw new Error("sdfSmoothUnion() requires at least 2 shapes");
   }
   return {
     type: "bool_op",
@@ -677,13 +677,13 @@ export function smoothUnion(k: number, ...shapes: SdfNode[]): SdfNode {
  * @param cutouts - One or more shapes to subtract.
  * @returns SDF node representing the smooth subtraction.
  */
-export function smoothSubtract(
+export function sdfSmoothSubtract(
   k: number,
   base: SdfNode,
   ...cutouts: SdfNode[]
 ): SdfNode {
   if (cutouts.length < 1) {
-    throw new Error("smoothSubtract() requires at least 1 cutout shape");
+    throw new Error("sdfSmoothSubtract() requires at least 1 cutout shape");
   }
   return {
     type: "bool_op",
@@ -704,7 +704,7 @@ export function smoothSubtract(
  * @param y - Vertical offset.
  * @returns SDF node with the translation applied.
  */
-export function offset(shape: SdfNode, x: number, y: number): SdfNode {
+export function sdfOffset(shape: SdfNode, x: number, y: number): SdfNode {
   return { type: "transform", child: shape, offset: [x, y] };
 }
 
@@ -714,7 +714,7 @@ export function offset(shape: SdfNode, x: number, y: number): SdfNode {
  * @param degrees - Rotation angle in degrees.
  * @returns SDF node with the rotation applied.
  */
-export function rotate(shape: SdfNode, degrees: number): SdfNode {
+export function sdfRotate(shape: SdfNode, degrees: number): SdfNode {
   const radians = (degrees * Math.PI) / 180;
   return { type: "transform", child: shape, rotation: radians };
 }
@@ -725,7 +725,7 @@ export function rotate(shape: SdfNode, degrees: number): SdfNode {
  * @param factor - Scale factor (>1 = larger, <1 = smaller).
  * @returns SDF node with the scale applied.
  */
-export function scale(shape: SdfNode, factor: number): SdfNode {
+export function sdfScale(shape: SdfNode, factor: number): SdfNode {
   return { type: "transform", child: shape, scale: factor };
 }
 
@@ -734,7 +734,7 @@ export function scale(shape: SdfNode, factor: number): SdfNode {
  * @param shape - The shape to mirror.
  * @returns SDF node with X-axis symmetry applied.
  */
-export function mirrorX(shape: SdfNode): SdfNode {
+export function sdfMirrorX(shape: SdfNode): SdfNode {
   return { type: "transform", child: shape, symmetry: "x" };
 }
 
@@ -745,7 +745,7 @@ export function mirrorX(shape: SdfNode): SdfNode {
  * @param spacingY - Vertical spacing between repetitions.
  * @returns SDF node with the repeat pattern applied.
  */
-export function repeat(
+export function sdfRepeat(
   shape: SdfNode,
   spacingX: number,
   spacingY: number,
@@ -763,7 +763,7 @@ export function repeat(
  * @param radius - Rounding radius.
  * @returns SDF node with rounding applied.
  */
-export function round(shape: SdfNode, radius: number): SdfNode {
+export function sdfRound(shape: SdfNode, radius: number): SdfNode {
   return { type: "modifier", child: shape, modifier: "round", amount: radius };
 }
 
@@ -773,7 +773,7 @@ export function round(shape: SdfNode, radius: number): SdfNode {
  * @param thickness - Outline thickness.
  * @returns SDF node with onion modifier applied.
  */
-export function outline(shape: SdfNode, thickness: number): SdfNode {
+export function sdfOutline(shape: SdfNode, thickness: number): SdfNode {
   return {
     type: "modifier",
     child: shape,
@@ -792,18 +792,18 @@ export function outline(shape: SdfNode, thickness: number): SdfNode {
  * @example
  * // Create 3 concentric rings
  * sdfEntity({
- *   shape: outlineN(circle(45), 8, 3),
+ *   shape: sdfOutlineN(sdfCircle(45), 8, 3),
  *   fill: solid("#e67e22"),
  * });
  */
-export function outlineN(
+export function sdfOutlineN(
   shape: SdfNode,
   thickness: number,
   count: number,
 ): SdfNode {
   let result = shape;
   for (let i = 0; i < count; i++) {
-    result = outline(result, thickness);
+    result = sdfOutline(result, thickness);
   }
   return result;
 }
@@ -822,11 +822,11 @@ export function outlineN(
  * @example
  * // 4x3 grid of circles
  * sdfEntity({
- *   shape: repeatBounded(circle(8), 30, 30, 4, 3),
+ *   shape: sdfRepeatBounded(sdfCircle(8), 30, 30, 4, 3),
  *   fill: solid("#2ecc71"),
  * });
  */
-export function repeatBounded(
+export function sdfRepeatBounded(
   shape: SdfNode,
   spacingX: number,
   spacingY: number,
@@ -834,10 +834,10 @@ export function repeatBounded(
   countY: number,
 ): SdfNode {
   // Use infinite repeat but clip with a box intersection
-  const repeatedShape = repeat(shape, spacingX, spacingY);
+  const repeatedShape = sdfRepeat(shape, spacingX, spacingY);
   const halfWidth = (spacingX * countX) / 2;
   const halfHeight = (spacingY * countY) / 2;
-  return intersect(repeatedShape, box(halfWidth, halfHeight));
+  return sdfIntersect(repeatedShape, sdfBox(halfWidth, halfHeight));
 }
 
 // -------------------------------------------------------------------------
@@ -854,7 +854,7 @@ export function repeatBounded(
  *
  * @example
  * sdfEntity({
- *   shape: star(30, 5, 0.4),
+ *   shape: sdfStar(30, 5, 0.4),
  *   fill: glow("#FFD700", 0.8),
  *   scale: pulse(time, 4),
  * });
@@ -877,7 +877,7 @@ export function pulse(
  *
  * @example
  * sdfEntity({
- *   shape: star(35, 6, 0.5),
+ *   shape: sdfStar(35, 6, 0.5),
  *   fill: solid("#e74c3c"),
  *   rotation: spin(time, 60),
  * });
@@ -895,7 +895,7 @@ export function spin(time: number, degreesPerSecond: number = 90): number {
  *
  * @example
  * sdfEntity({
- *   shape: circle(20),
+ *   shape: sdfCircle(20),
  *   fill: solid("#3498db"),
  *   position: [100, 200 + bob(time, 2, 15)],
  * });
@@ -918,7 +918,7 @@ export function bob(
  *
  * @example
  * sdfEntity({
- *   shape: heart(30),
+ *   shape: sdfHeart(30),
  *   fill: glow("#ff3366", 0.25),
  *   opacity: breathe(time, 3),
  *   bounds: 90,
@@ -955,7 +955,7 @@ export function breathe(
  * const grid = createGrid(3, 3, 200, 200, 100, 100);
  * for (const [x, y, col, row] of grid) {
  *   sdfEntity({
- *     shape: circle(20),
+ *     shape: sdfCircle(20),
  *     fill: solid("#ff0000"),
  *     position: [x, y],
  *   });
@@ -1003,7 +1003,7 @@ export function createGrid(
  *
  *   createSdfFrame(() => {
  *     sdfEntity({
- *       shape: star(30, 5, 0.4),
+ *       shape: sdfStar(30, 5, 0.4),
  *       fill: glow("#FFD700", 0.8),
  *       scale: pulse(time, 4),
  *     });
@@ -1241,11 +1241,11 @@ function compileModifier(node: SdfModifierNode, coord: string): string {
  * @returns WGSL expression string computing the signed distance.
  *
  * @example
- * const wgsl = compileToWgsl(circle(10));
+ * const wgsl = compileToWgsl(sdfCircle(10));
  * // Returns: "sd_circle(p, 10.0)"
  *
  * @example
- * const wgsl = compileToWgsl(offset(circle(10), 20, 30));
+ * const wgsl = compileToWgsl(sdfOffset(sdfCircle(10), 20, 30));
  * // Returns: "sd_circle((p - vec2<f32>(20.0, 30.0)), 10.0)"
  */
 export function compileToWgsl(node: SdfNode): string {
@@ -1520,7 +1520,7 @@ const sdfEntities = new Map<
  *
  * @example
  * const id = sdfEntity({
- *   shape: circle(20),
+ *   shape: sdfCircle(20),
  *   fill: { type: "solid", color: "#ff0000" },
  *   position: [100, 200],
  *   rotation: 45,

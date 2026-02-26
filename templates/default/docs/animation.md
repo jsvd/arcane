@@ -54,6 +54,7 @@ drawFSMSprite(state, x, y, 32, 32, { layer: 1, flipX: facingLeft });
 
 - `threshold` -- compare a numeric param: `{ type: "threshold", param: "speed", value: 0.1, compare: "greaterThan" }`
 - `trigger` -- one-shot boolean: `{ type: "trigger", param: "jump" }`
+- `boolean` -- continuous boolean: `{ type: "boolean", param: "onGround", value: true }` (stays in state while true)
 - `animationFinished` -- when the current non-looping animation ends
 
 ### Blending

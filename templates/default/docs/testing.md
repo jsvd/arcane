@@ -22,30 +22,24 @@ arcane test           # discovers and runs all *.test.ts files headlessly
 
 ## Property-Based Testing
 
-Verify invariants across randomly generated inputs with automatic shrinking:
+Verify game logic invariants across randomly generated input sequences. The engine generates random `InputFrame`s (key presses, mouse clicks), feeds them through your update function, and checks invariants hold at every frame. Failing cases are automatically shrunk.
 
 ```typescript
-import { describe, it, assert } from "@arcane/runtime/testing";
-import { checkProperty, assertProperty, integer, float, array, oneOf, record } from "@arcane/runtime/testing";
+import { describe, it } from "@arcane/runtime/testing";
+import { assertProperty, randomKeys } from "@arcane/runtime/testing";
 
 describe("combat math", () => {
-  it("damage is never negative", () => {
-    assertProperty(
-      [integer(1, 100), integer(0, 50)],
-      ([attack, defense]) => calculateDamage(attack, defense) >= 0,
-    );
-  });
-
-  it("healing does not exceed max HP", () => {
-    const result = checkProperty(
-      [integer(1, 100), integer(1, 100), integer(1, 50)],
-      ([current, max, heal]) => {
-        const result = applyHealing(current, max, heal);
-        return result >= current && result <= max;
-      },
-      { iterations: 500 },
-    );
-    assert.ok(result.passed, result.failureMessage);
+  it("HP never goes negative", () => {
+    assertProperty({
+      name: "hp-non-negative",
+      seed: 42,
+      numRuns: 50,
+      framesPerRun: 100,
+      initialState: { hp: 100, maxHp: 100 },
+      generator: randomKeys(["Space", "a", "d"]),
+      update: (state, input, dt) => gameUpdate(state, input, dt),
+      invariant: (state) => state.hp >= 0,
+    });
   });
 });
 ```

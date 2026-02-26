@@ -147,8 +147,7 @@ Arcane includes an MCP server that works with Claude Code, Cursor, and VS Code. 
 
 Scaffolded projects include:
 - `AGENTS.md` — Full development guide with working code patterns
-- `types/*.d.ts` — Per-module API declarations
-- `types/cheatsheet.txt` — Compact reference for 500+ functions
+- `types/*.d.ts` — Per-module API declarations with JSDoc
 
 ## Status
 

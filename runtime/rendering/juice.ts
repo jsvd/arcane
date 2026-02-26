@@ -19,6 +19,7 @@
 import { shakeCamera } from "../tweening/helpers.ts";
 import { flashScreen } from "../tweening/helpers.ts";
 import { createEmitter } from "../particles/emitter.ts";
+import { playSound } from "./audio.ts";
 import type { EmitterConfig } from "../particles/types.ts";
 
 // ---------------------------------------------------------------------------
@@ -231,14 +232,7 @@ export function impact(x: number, y: number, config: ImpactConfig): void {
 
   // Sound playback
   if (config.sound) {
-    // In headless mode, playSound is a no-op. We use dynamic import-style
-    // call to avoid circular deps, but since playSound is a simple op wrapper,
-    // we call it via the global Deno ops if available.
-    const ops = (globalThis as any).Deno?.core?.ops;
-    if (ops?.op_play_sound_ex) {
-      const vol = config.sound.volume ?? 1;
-      ops.op_play_sound_ex(config.sound.soundId, vol, 0, 0, 0, "sfx");
-    }
+    playSound(config.sound.soundId, { volume: config.sound.volume ?? 1, bus: "sfx" });
   }
 }
 

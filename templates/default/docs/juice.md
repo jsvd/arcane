@@ -77,6 +77,7 @@ Progressive character-by-character text reveal. Use for NPC dialogue, story text
 import {
   createTypewriter, updateTypewriter, drawTypewriter,
   skipTypewriter, resetTypewriter, isTypewriterComplete,
+  isKeyPressed,
 } from "@arcane/runtime/rendering";
 
 const dialogues = ["The dragon approaches...", "Take this sword."];
@@ -102,7 +103,7 @@ Use SDF shapes with glow fills and animation helpers for juicy collectibles and 
 
 ```typescript
 import {
-  star, heart, circle,
+  sdfStar, sdfHeart,
   sdfEntity, clearSdfEntities, flushSdfEntities,
   glow, pulse, spin, breathe, bob,
   LAYERS,
@@ -110,7 +111,7 @@ import {
 
 // Glowing collectible gem
 sdfEntity({
-  shape: star(14, 4, 0.5),
+  shape: sdfStar(14, 4, 0.5),
   fill: glow("#00ffaa", 0.2),  // lower intensity = bigger glow
   position: [gemX, gemY + bob(time, 2, 3)],  // gentle bobbing
   rotation: spin(time, 45),                   // slow spin
@@ -121,7 +122,7 @@ sdfEntity({
 
 // Pulsing heart pickup
 sdfEntity({
-  shape: heart(18),
+  shape: sdfHeart(18),
   fill: glow("#ff3366", 0.15),
   position: [heartX, heartY],
   scale: pulse(time, 2.5, 0.95, 1.15),

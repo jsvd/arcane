@@ -197,7 +197,6 @@ export function playSound(id: SoundId, options?: PlayOptions): InstanceId {
 /**
  * Load and play a sound file as looping background music.
  * Convenience function combining loadSound() + playSound() with loop: true and bus: "music".
- * Returns 0 in headless mode.
  *
  * @param path - File path to an audio file.
  * @param volume - Playback volume, 0.0-1.0. Default: 1.0.
@@ -214,7 +213,7 @@ export function playMusic(path: string, volume: number = 1.0): InstanceId {
  * Stop a specific playing sound.
  * No-op in headless mode.
  *
- * @param id - Sound handle from loadSound() or playMusic().
+ * @param id - Sound handle from loadSound().
  */
 export function stopSound(id: SoundId): void {
   if (!hasRenderOps) return;

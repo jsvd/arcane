@@ -83,15 +83,9 @@ const target = hex(3, -1);   // { q: 3, r: -1, s: -2 }
 
 ### Neighbors & Distance
 
-```typescript
-const neighbors = hexNeighbors(0, 0);         // 6 adjacent HexCoord
-const dist = hexDistance(origin, target);      // 3 (minimum hex steps)
-const ring = hexRing(hex(0, 0), 2);           // all cells at distance 2
-const area = hexRange(origin, 3);             // all hexes within 3 steps
-const line = hexLineDraw(origin, target);     // hexes along a line
-```
+See `types/rendering.d.ts` for full hex utility functions: `hexNeighbors`, `hexDistance`, `hexRing`, `hexRange`, `hexLineDraw`.
 
-### Hex to World / World to Hex
+### Hex Tilemap
 
 ```typescript
 const worldPos = hexToWorld(target, HEX);
@@ -100,11 +94,7 @@ const worldPos = hexToWorld(target, HEX);
 const cam = getCamera();
 const { width: VPW, height: VPH } = getViewportSize();
 const clicked = screenToHex(mouseX, mouseY, cam, HEX, VPW, VPH);
-```
 
-### Hex Tilemap
-
-```typescript
 const map = createHexTilemap({
   width: 15, height: 15, config: HEX,
   textureId: hexAtlas, atlasColumns: 4, atlasRows: 4, tileSize: 48,

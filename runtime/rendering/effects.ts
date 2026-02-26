@@ -6,8 +6,8 @@
  * auto-injected by the engine — no per-frame boilerplate needed for time-based effects.
  *
  * @example
- * import { outline, dissolve } from "@arcane/runtime/rendering";
- * const fx = outline({ color: [1, 0, 0, 1], width: 2 });
+ * import { outlineEffect, dissolveEffect } from "@arcane/runtime/rendering";
+ * const fx = outlineEffect({ color: [1, 0, 0, 1], width: 2 });
  * drawSprite({ textureId: tex, x, y, w: 64, h: 64, shaderId: fx.shaderId });
  * fx.set("outlineWidth", 3.0); // update at runtime
  */
@@ -52,7 +52,7 @@ export interface OutlineOptions {
 }
 
 /** Sprite outline via 4-neighbor alpha sampling. */
-export function outline(opts: OutlineOptions = {}): ShaderEffect {
+export function outlineEffect(opts: OutlineOptions = {}): ShaderEffect {
   const color = opts.color ?? [1, 1, 1, 1];
   const width = opts.width ?? 1.0;
   return makeEffect(
@@ -90,7 +90,7 @@ export interface FlashOptions {
 }
 
 /** Mix sprite with a flat color. Useful for hit feedback. */
-export function flash(opts: FlashOptions = {}): ShaderEffect {
+export function flashEffect(opts: FlashOptions = {}): ShaderEffect {
   const color = opts.color ?? [1, 1, 1];
   const intensity = opts.intensity ?? 0.0;
   return makeEffect(
@@ -120,7 +120,7 @@ export interface DissolveOptions {
 }
 
 /** Hash-noise dissolve with glowing edges. Animate `threshold` from 0→1. */
-export function dissolve(opts: DissolveOptions = {}): ShaderEffect {
+export function dissolveEffect(opts: DissolveOptions = {}): ShaderEffect {
   const edgeColor = opts.edgeColor ?? [1, 0.5, 0];
   const edgeWidth = opts.edgeWidth ?? 0.05;
   return makeEffect(
@@ -160,7 +160,7 @@ export interface PixelateOptions {
 }
 
 /** UV grid-snapping pixelation. */
-export function pixelate(opts: PixelateOptions = {}): ShaderEffect {
+export function pixelateEffect(opts: PixelateOptions = {}): ShaderEffect {
   const pixelSize = opts.pixelSize ?? 8.0;
   return makeEffect(
     "pixelate",
@@ -191,7 +191,7 @@ export interface HologramOptions {
 }
 
 /** Scanlines + chromatic aberration + time flicker. Uses `shader_params.time`. */
-export function hologram(opts: HologramOptions = {}): ShaderEffect {
+export function hologramEffect(opts: HologramOptions = {}): ShaderEffect {
   const speed = opts.speed ?? 2.0;
   const lineSpacing = opts.lineSpacing ?? 100.0;
   const aberration = opts.aberration ?? 0.005;
@@ -231,7 +231,7 @@ export interface WaterOptions {
 }
 
 /** Sine-wave UV distortion. Uses `shader_params.time`. */
-export function water(opts: WaterOptions = {}): ShaderEffect {
+export function waterEffect(opts: WaterOptions = {}): ShaderEffect {
   const amplitude = opts.amplitude ?? 0.02;
   const frequency = opts.frequency ?? 10.0;
   const speed = opts.speed ?? 2.0;
@@ -269,7 +269,7 @@ export interface GlowOptions {
 }
 
 /** Multi-sample outer glow around sprite edges. */
-export function glow(opts: GlowOptions = {}): ShaderEffect {
+export function glowEffect(opts: GlowOptions = {}): ShaderEffect {
   const color = opts.color ?? [1, 1, 1];
   const radius = opts.radius ?? 3.0;
   const intensity = opts.intensity ?? 1.0;
@@ -310,7 +310,7 @@ export interface GrayscaleOptions {
 }
 
 /** Luminance-weighted desaturation. */
-export function grayscale(opts: GrayscaleOptions = {}): ShaderEffect {
+export function grayscaleEffect(opts: GrayscaleOptions = {}): ShaderEffect {
   const amount = opts.amount ?? 1.0;
   return makeEffect(
     "grayscale",
