@@ -2,6 +2,24 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.17.0] - 2026-02-25
+
+### Added
+- **Shader authoring experience** — three-tier shader system for custom visual effects
+  - Auto-injected built-in uniforms: `time`, `delta`, `resolution`, `mouse` — no per-frame boilerplate for time-based effects
+  - Named uniform API: `createShader()`, `setShaderUniform()`, `getShaderUniformNames()` — define and update shader parameters by name
+  - 8 effect preset factories: `outline()`, `flash()`, `dissolve()`, `pixelate()`, `hologram()`, `water()`, `glow()`, `grayscale()` — one-liner shader effects with sensible defaults
+  - Shader showcase demo (`demos/shader-showcase/`)
+  - Shader documentation (`templates/default/docs/shaders.md`)
+
+### Fixed
+- **Rust particle rendering** — double-alpha application, premature emitter cleanup, lost trail color
+- **Screen-space/parallax jitter** when camera bounds are active — clamped position not synced to HUD layer
+- **Parallax demo HUD text flickering** — text drawn with wrong coordinate space
+- **Explosion particles infinite spawn** in demo + breakout ball not bouncing
+- **Platformer demo zoom** — was 0.1x instead of 1.0x
+- **Screen-space HUD jitter** from camera interpolation leaking into screenSpace sprites
+
 ## [0.16.1] - 2026-02-24
 
 ### Added

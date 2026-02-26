@@ -131,7 +131,7 @@ Pre-built, composable game systems:
 arcane add turn-based-combat
 ```
 
-## 27 Demo Projects
+## 32 Demo Projects
 
 Platformer, Roguelike, Breakout, Tower Defense, Card Battler, Sokoban, BFRPG Dungeon Crawler, Asteroids, Physics Playground, Isometric Dungeon, Hex Strategy, and more.
 
@@ -152,9 +152,9 @@ Scaffolded projects include:
 
 ## Status
 
-**v0.16.1** — 2420 TS (Node) + 2544 (V8) + 351 Rust tests passing.
+**v0.17.0** — 2453 TS (Node) + 2577 (V8) + 351 Rust tests passing.
 
-**Next:** Phase 26 (Atmosphere). See [roadmap](docs/roadmap.md).
+**Next:** See [roadmap](docs/roadmap.md) backlog.
 
 ## Development
 
