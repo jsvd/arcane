@@ -2,6 +2,24 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.18.0] - 2026-02-26
+
+### Changed
+- **SDF function names** — all 28 SDF shape/composition/transform/modifier functions now use `sdf` prefix at the definition site (`circle` → `sdfCircle`, `union` → `sdfUnion`, `offset` → `sdfOffset`, etc.). This fixes the generated `.d.ts` declarations which previously exported wrong names due to barrel export alias mismatch.
+- **Effect preset names** — all 8 shader effect factories now use `Effect` suffix (`outline` → `outlineEffect`, `flash` → `flashEffect`, `glow` → `glowEffect`, etc.)
+- **Barrel export cleanup** — `runtime/rendering/index.ts` no longer uses `as` aliases; source names match public API names directly
+- **Template docs trimmed** — topic guides in `templates/default/docs/` reduced in size, AGENTS.md slimmed from 567 to 281 lines
+
+### Fixed
+- **`juice.ts` runtime bug** — `impact()` sound playback called `op_play_sound_ex()` with wrong argument signature; replaced with public `playSound()` API
+- **`audio.ts` JSDoc** — removed wrong "Returns 0 in headless mode" from `playMusic()`; fixed `stopSound()` param description
+- **`text.ts` JSDoc** — replaced `rgb()` calls in examples with inline `Color` objects (no extra import needed)
+- **Generated `.d.ts` accuracy** — declarations now export correct function names matching the public API
+- **`docs/sdf-shapes.md`** — updated ~150 function references to use new names
+
+### Removed
+- **`types/cheatsheet.txt`** — removed from generation script and template; per-module `.d.ts` files with JSDoc are the primary API reference
+
 ## [0.17.1] - 2026-02-26
 
 ### Fixed
