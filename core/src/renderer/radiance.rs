@@ -1054,7 +1054,6 @@ mod tests {
 
     // Regression: off-screen occluders/emissives caused index-out-of-bounds panic
     // because negative pixel coordinates wrapped to huge usize values.
-    // https://github.com/anthropics/arcane/issues/XXX
 
     fn empty_lighting() -> LightingState {
         LightingState::default()

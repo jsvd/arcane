@@ -2,6 +2,14 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.17.1] - 2026-02-26
+
+### Fixed
+- **Repository URLs** — corrected all GitHub links from wrong org to `jsvd/arcane` across Cargo.toml, package.json, READMEs, issue templates, skills, and asset references
+- **Cargo.toml cleanup** — deduplicated `repository` and `homepage` into `[workspace.package]`
+- **Removed placeholder issue link** in radiance.rs (`issues/XXX` comment)
+- **Issue template** — fixed dead link to `examples/` (now correctly points to `demos/`)
+
 ## [0.17.0] - 2026-02-25
 
 ### Added

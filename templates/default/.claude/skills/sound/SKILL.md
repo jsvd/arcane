@@ -16,7 +16,7 @@ You are helping a game developer find and use sound effects and music in their A
 
 ## Asset Palace Location
 
-Asset Palace repository: https://github.com/anthropics/asset_palace
+Asset Palace repository: https://github.com/jsvd/asset_palace
 
 ```
 sounds/
@@ -48,10 +48,10 @@ Fetch and search Asset Palace for matching sound packs:
 
 ```bash
 # Get pack index
-curl -s "https://raw.githubusercontent.com/anthropics/asset_palace/main/sounds/kenney/_index.json"
+curl -s "https://raw.githubusercontent.com/jsvd/asset_palace/main/sounds/kenney/_index.json"
 
 # Or fetch a specific pack definition
-curl -s "https://raw.githubusercontent.com/anthropics/asset_palace/main/sounds/kenney/impact-sounds.json"
+curl -s "https://raw.githubusercontent.com/jsvd/asset_palace/main/sounds/kenney/impact-sounds.json"
 ```
 
 Look at:
@@ -67,7 +67,7 @@ mkdir -p assets
 
 # Get the pack definition
 curl -o assets/impact-sounds.json \
-  "https://raw.githubusercontent.com/anthropics/asset_palace/main/sounds/kenney/impact-sounds.json"
+  "https://raw.githubusercontent.com/jsvd/asset_palace/main/sounds/kenney/impact-sounds.json"
 
 # Read downloadUrl from JSON and fetch the pack
 DOWNLOAD_URL=$(cat assets/impact-sounds.json | grep -o '"downloadUrl"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"\([^"]*\)"$/\1/')
@@ -147,7 +147,7 @@ Found **impact-sounds** (Kenney) with matching sounds:
 ```bash
 # Download (run once)
 mkdir -p assets
-curl -o assets/impact-sounds.json "https://raw.githubusercontent.com/anthropics/asset_palace/main/sounds/kenney/impact-sounds.json"
+curl -o assets/impact-sounds.json "https://raw.githubusercontent.com/jsvd/asset_palace/main/sounds/kenney/impact-sounds.json"
 curl -L -o /tmp/impacts.zip "https://kenney.nl/media/pages/assets/impact-sounds/..."
 unzip -o /tmp/impacts.zip -d assets/impact-sounds/
 ```

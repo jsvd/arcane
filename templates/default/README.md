@@ -1,6 +1,6 @@
 # {{PROJECT_NAME}}
 
-A 2D game built with [Arcane](https://github.com/anthropics/arcane) — an agent-native game engine.
+A 2D game built with [Arcane](https://github.com/jsvd/arcane) — an agent-native game engine.
 
 ## Getting Started
 
@@ -57,7 +57,7 @@ Use the `/sprite` and `/sound` agentic skills to find and setup game assets:
 - `/sprite knight sword attack` — finds sprite packs, downloads, generates atlas code
 - `/sound explosion impact` — finds sound packs, downloads, generates audio code
 
-Assets come from [Asset Palace](https://github.com/anthropics/asset_palace) (CC0, no attribution required).
+Assets come from [Asset Palace](https://github.com/jsvd/asset_palace) (CC0, no attribution required).
 
 ## For LLMs
 

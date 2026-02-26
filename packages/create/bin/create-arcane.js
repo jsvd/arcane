@@ -34,7 +34,7 @@ arcane.on('error', (err) => {
   console.error('\nPlease install the Arcane CLI first:');
   console.error('  cargo install arcane-cli');
   console.error('\nOr build from source:');
-  console.error('  git clone https://github.com/anthropics/arcane.git');
+  console.error('  git clone https://github.com/jsvd/arcane.git');
   console.error('  cd arcane');
   console.error('  cargo build --release');
   console.error('  export PATH="$PATH:$(pwd)/target/release"');

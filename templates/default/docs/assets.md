@@ -20,7 +20,7 @@ The skills will:
 
 ## Asset Palace
 
-[Asset Palace](https://github.com/anthropics/asset_palace) is a metadata catalog of CC0 game assets. It contains JSON definitions mapping sprite names to pixel coordinates and sound names to file paths.
+[Asset Palace](https://github.com/jsvd/asset_palace) is a metadata catalog of CC0 game assets. It contains JSON definitions mapping sprite names to pixel coordinates and sound names to file paths.
 
 Supported sources:
 - **Kenney.nl** — High-quality 2D assets (most common)

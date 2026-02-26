@@ -11,7 +11,7 @@
  * import { findPath } from "@arcane/runtime/pathfinding";
  * ```
  *
- * @see https://github.com/anthropics/arcane
+ * @see https://github.com/jsvd/arcane
  */
 
 // Re-export commonly used types

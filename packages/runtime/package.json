@@ -49,13 +49,13 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/anthropics/arcane.git",
+    "url": "git+https://github.com/jsvd/arcane.git",
     "directory": "packages/runtime"
   },
   "bugs": {
-    "url": "https://github.com/anthropics/arcane/issues"
+    "url": "https://github.com/jsvd/arcane/issues"
   },
-  "homepage": "https://github.com/anthropics/arcane#readme",
+  "homepage": "https://github.com/jsvd/arcane#readme",
   "engines": {
     "node": ">=18.0.0"
   },

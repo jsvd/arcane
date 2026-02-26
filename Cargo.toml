@@ -5,3 +5,5 @@ resolver = "3"
 [workspace.package]
 edition = "2024"
 license = "Apache-2.0"
+repository = "https://github.com/jsvd/arcane"
+homepage = "https://github.com/jsvd/arcane"

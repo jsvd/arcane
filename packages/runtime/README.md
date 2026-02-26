@@ -36,8 +36,8 @@ onFrame(() => {
 
 ## Documentation
 
-- [Architecture](https://github.com/anthropics/arcane/blob/main/docs/architecture.md)
-- [Demos](https://github.com/anthropics/arcane/tree/main/demos)
+- [Architecture](https://github.com/jsvd/arcane/blob/main/docs/architecture.md)
+- [Demos](https://github.com/jsvd/arcane/tree/main/demos)
 
 ## License
 

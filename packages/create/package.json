@@ -19,16 +19,16 @@
     "scaffolding",
     "create"
   ],
-  "author": "Anthropic",
+  "author": "jsvd",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/anthropics/arcane",
+  "homepage": "https://github.com/jsvd/arcane",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/anthropics/arcane.git",
+    "url": "git+https://github.com/jsvd/arcane.git",
     "directory": "packages/create"
   },
   "bugs": {
-    "url": "https://github.com/anthropics/arcane/issues"
+    "url": "https://github.com/jsvd/arcane/issues"
   },
   "engines": {
     "node": ">=18.0.0"

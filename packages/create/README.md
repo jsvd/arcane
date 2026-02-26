@@ -32,7 +32,7 @@ cargo install arcane-engine
 Or build from source:
 
 ```bash
-git clone https://github.com/anthropics/arcane.git
+git clone https://github.com/jsvd/arcane.git
 cd arcane
 cargo build --release
 export PATH="$PATH:$(pwd)/target/release"
@@ -73,9 +73,9 @@ arcane new my-game
 
 ## Next Steps
 
-- [Architecture](https://github.com/anthropics/arcane/blob/main/docs/architecture.md)
-- [Documentation](https://github.com/anthropics/arcane/blob/main/docs/)
-- [Demos](https://github.com/anthropics/arcane/tree/main/demos/)
+- [Architecture](https://github.com/jsvd/arcane/blob/main/docs/architecture.md)
+- [Documentation](https://github.com/jsvd/arcane/blob/main/docs/)
+- [Demos](https://github.com/jsvd/arcane/tree/main/demos/)
 
 ## License
 

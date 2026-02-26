@@ -24,7 +24,7 @@ test -f ../../asset_palace/package.json && echo "Found at ../../asset_palace"
 ```
 
 If not found, tell user:
-> Asset Palace not found. Clone it from https://github.com/anthropics/asset_palace and set ASSET_PALETTE_PATH or place it as a sibling directory.
+> Asset Palace not found. Clone it from https://github.com/jsvd/asset_palace and set ASSET_PALETTE_PATH or place it as a sibling directory.
 
 ### Step 2: Launch Sprite Selector
 
