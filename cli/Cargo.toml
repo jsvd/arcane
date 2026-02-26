@@ -1,6 +1,6 @@
 [package]
 name = "arcane-engine"
-version = "0.17.0"
+version = "0.17.1"
 edition.workspace = true
 license.workspace = true
 description = "Arcane game engine — agent-native 2D engine with embedded TypeScript runtime"
