@@ -147,7 +147,7 @@ If the second publish fails with "arcane-core X.Y.Z not found", wait longer and 
 ### 10. Create GitHub Release
 
 ```bash
-gh release create vX.Y.Z --title "Arcane vX.Y.Z" --body "$(cat <<'RELEASE_EOF'
+gh release create vX.Y.Z --title "Arcane vX.Y.Z" --notes "$(cat <<'RELEASE_EOF'
 <paste the CHANGELOG entry here>
 
 ---
