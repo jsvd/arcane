@@ -2,6 +2,16 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.20.0] - 2026-02-27
+
+### Added
+- **`arcane catalog` command** — visual browser UI for browsing, previewing, and selecting CC0 game assets from Kenney.nl packs; persistent shopping cart via localStorage lets you pick sprites from multiple packs in one session; sheet file selector dropdown defaults to tilemap files instead of Preview.png; outputs JSON selection for `/sprite` skill code generation
+- **`capture_frame` MCP tool** — captures the current rendered frame as a PNG for visual debugging
+- **`/release` auto-version** — release skill auto-determines minor vs patch bump when no version argument is given
+
+### Changed
+- **`/sprite` skill** — updated for multi-pack cart output; supports both single-object and array JSON formats; documents gallery vs sheet sprite types
+
 ## [0.19.2] - 2026-02-27
 
 ### Added
