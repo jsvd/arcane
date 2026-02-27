@@ -46,7 +46,7 @@
  * const id = sdfEntity({
  *   shape: snowman,
  *   fill: { type: "solid", color: "#ffffff" },
- *   position: [100, 200],
+ *   position: { x: 100, y: 200 },
  * });
  * ```
  */
@@ -55,8 +55,8 @@
 // Vec2 shorthand
 // -------------------------------------------------------------------------
 
-/** A 2D vector as a two-element tuple: [x, y]. */
-export type Vec2 = [number, number];
+/** A 2D vector as an object with x and y components. */
+export type Vec2 = { x: number; y: number };
 
 // -------------------------------------------------------------------------
 // SDF node types
@@ -201,7 +201,8 @@ export interface GradientFill {
 export interface GlowFill {
   type: "glow";
   color: string;
-  intensity: number;
+  /** Glow spread radius in pixels. Higher values = bigger glow. */
+  spread: number;
 }
 
 /** Combined solid fill with outline stroke. */
@@ -252,17 +253,16 @@ export function solid(color: string): SolidFill {
 
 /**
  * Create a glow fill effect.
- * Note: Lower intensity = larger glow (counterintuitive but mathematically correct).
  * @param color - Hex color string.
- * @param intensity - Glow intensity (0.1-1.0 typical, lower = bigger glow).
+ * @param spread - Glow spread radius in pixels. Higher values = bigger glow. Default: 20.
  * @returns GlowFill object.
  *
  * @example
- * // Soft, wide glow
- * sdfEntity({ shape: sdfHeart(30), fill: glow("#ff3366", 0.25), bounds: 90 });
+ * // Soft, wide glow (40px radius)
+ * sdfEntity({ shape: sdfHeart(30), fill: glow("#ff3366", 40), bounds: 90 });
  */
-export function glow(color: string, intensity: number = 0.5): GlowFill {
-  return { type: "glow", color, intensity };
+export function glow(color: string, spread: number = 20): GlowFill {
+  return { type: "glow", color, spread };
 }
 
 /**
@@ -279,7 +279,7 @@ export function glow(color: string, intensity: number = 0.5): GlowFill {
  * @example
  * // Bottom-to-top gradient (green to white)
  * sdfEntity({
- *   shape: sdfTriangle([0, 30], [-50, -30], [50, -30]),
+ *   shape: sdfTriangle({ x: 0, y: 30 }, { x: -50, y: -30 }, { x: 50, y: -30 }),
  *   fill: gradient("#2d4a1c", "#f0f8ff", 90),
  *   bounds: 35, // Tight bounds for visible gradient
  * });
@@ -288,7 +288,7 @@ export function glow(color: string, intensity: number = 0.5): GlowFill {
  * // Equilateral triangle with properly scaled gradient
  * // bounds=43 (for width), but triangle Y extent is ±37
  * sdfEntity({
- *   shape: sdfTriangle([0, 37], [-43, -37], [43, -37]),
+ *   shape: sdfTriangle({ x: 0, y: 37 }, { x: -43, y: -37 }, { x: 43, y: -37 }),
  *   fill: gradient("#000066", "#ff0000", 90, 43/37),
  *   bounds: 43,
  * });
@@ -705,7 +705,7 @@ export function sdfSmoothSubtract(
  * @returns SDF node with the translation applied.
  */
 export function sdfOffset(shape: SdfNode, x: number, y: number): SdfNode {
-  return { type: "transform", child: shape, offset: [x, y] };
+  return { type: "transform", child: shape, offset: { x, y } };
 }
 
 /**
@@ -750,7 +750,7 @@ export function sdfRepeat(
   spacingX: number,
   spacingY: number,
 ): SdfNode {
-  return { type: "transform", child: shape, repeatSpacing: [spacingX, spacingY] };
+  return { type: "transform", child: shape, repeatSpacing: { x: spacingX, y: spacingY } };
 }
 
 // -------------------------------------------------------------------------
@@ -1032,7 +1032,7 @@ function buildCoordExpr(node: SdfTransformNode, baseCoord: string): string {
   }
 
   if (node.repeatSpacing !== undefined) {
-    const [sx, sy] = node.repeatSpacing;
+    const { x: sx, y: sy } = node.repeatSpacing;
     coord = `op_repeat(${coord}, vec2<f32>(${f(sx)}, ${f(sy)}))`;
   }
 
@@ -1045,7 +1045,7 @@ function buildCoordExpr(node: SdfTransformNode, baseCoord: string): string {
   }
 
   if (node.offset !== undefined) {
-    const [ox, oy] = node.offset;
+    const { x: ox, y: oy } = node.offset;
     coord = `(${coord} - vec2<f32>(${f(ox)}, ${f(oy)}))`;
   }
 
@@ -1094,12 +1094,12 @@ function compilePrimitive(node: SdfPrimitiveNode, coord: string): string {
 
     case "triangle": {
       const pts = node.points!;
-      return `sd_triangle(${coord}, vec2<f32>(${f(pts[0][0])}, ${f(pts[0][1])}), vec2<f32>(${f(pts[1][0])}, ${f(pts[1][1])}), vec2<f32>(${f(pts[2][0])}, ${f(pts[2][1])}))`;
+      return `sd_triangle(${coord}, vec2<f32>(${f(pts[0].x)}, ${f(pts[0].y)}), vec2<f32>(${f(pts[1].x)}, ${f(pts[1].y)}), vec2<f32>(${f(pts[2].x)}, ${f(pts[2].y)}))`;
     }
 
     case "segment": {
       const pts = node.points!;
-      return `sd_segment(${coord}, vec2<f32>(${f(pts[0][0])}, ${f(pts[0][1])}), vec2<f32>(${f(pts[1][0])}, ${f(pts[1][1])}))`;
+      return `sd_segment(${coord}, vec2<f32>(${f(pts[0].x)}, ${f(pts[0].y)}), vec2<f32>(${f(pts[1].x)}, ${f(pts[1].y)}))`;
     }
 
     case "egg":
@@ -1299,7 +1299,7 @@ function primitiveBounds(node: SdfPrimitiveNode): number {
       const pts = node.points!;
       let maxDist = 0;
       for (const pt of pts) {
-        const d = Math.sqrt(pt[0] * pt[0] + pt[1] * pt[1]);
+        const d = Math.sqrt(pt.x * pt.x + pt.y * pt.y);
         if (d > maxDist) maxDist = d;
       }
       return maxDist * MARGIN;
@@ -1309,7 +1309,7 @@ function primitiveBounds(node: SdfPrimitiveNode): number {
       const pts = node.points!;
       let maxDist = 0;
       for (const pt of pts) {
-        const d = Math.sqrt(pt[0] * pt[0] + pt[1] * pt[1]);
+        const d = Math.sqrt(pt.x * pt.x + pt.y * pt.y);
         if (d > maxDist) maxDist = d;
       }
       return maxDist * MARGIN;
@@ -1388,7 +1388,7 @@ function transformBounds(node: SdfTransformNode): number {
   let bounds = calculateBounds(node.child);
 
   if (node.offset !== undefined) {
-    const [ox, oy] = node.offset;
+    const { x: ox, y: oy } = node.offset;
     bounds += Math.sqrt(ox * ox + oy * oy);
   }
 
@@ -1455,8 +1455,9 @@ function generateFillWgsl(fill: SdfFill): string {
 
     case "glow": {
       const [r, g, b, a] = parseColor(fill.color);
-      const intensity = fill.intensity;
-      return `vec4<f32>(${f(r)}, ${f(g)}, ${f(b)}, ${f(a)} * clamp(${f(intensity)} / (abs(d) + 1.0), 0.0, 1.0))`;
+      const spread = fill.spread;
+      // Glow fades with distance: at d=0, alpha=1; at d=spread, alpha=0.5; at d→∞, alpha→0
+      return `vec4<f32>(${f(r)}, ${f(g)}, ${f(b)}, ${f(a)} * clamp(${f(spread)} / (abs(d) + ${f(spread)}), 0.0, 1.0))`;
     }
 
     case "solid_outline": {
@@ -1510,7 +1511,7 @@ const sdfEntities = new Map<
  * @param config - Entity configuration.
  * @param config.shape - The SDF node tree defining the shape.
  * @param config.fill - How the shape should be colored/rendered.
- * @param config.position - World position [x, y]. Default: [0, 0].
+ * @param config.position - World position { x, y }. Default: { x: 0, y: 0 }.
  * @param config.layer - Draw order layer. Default: 0.
  * @param config.bounds - Override bounding half-size. Auto-calculated if omitted.
  * @param config.rotation - Rotation in degrees. Default: 0. (GPU-efficient, no shader recompile)
@@ -1522,7 +1523,7 @@ const sdfEntities = new Map<
  * const id = sdfEntity({
  *   shape: sdfCircle(20),
  *   fill: { type: "solid", color: "#ff0000" },
- *   position: [100, 200],
+ *   position: { x: 100, y: 200 },
  *   rotation: 45,
  *   scale: 1.5,
  *   layer: 5,
@@ -1542,7 +1543,7 @@ export function sdfEntity(config: {
   validateFillColors(config.fill);
 
   const id = `sdf_${nextSdfEntityId++}`;
-  const position = config.position ?? [0, 0];
+  const position = config.position ?? { x: 0, y: 0 };
   const layer = config.layer ?? 0;
 
   // Smart bounds calculation based on fill type
@@ -1553,8 +1554,8 @@ export function sdfEntity(config: {
     const baseBounds = calculateBounds(config.shape);
     // Glow fills need extra padding to prevent clipping
     if (config.fill.type === "glow") {
-      // Lower intensity = bigger glow, so we invert the multiplier
-      const glowPadding = 2.5 / (config.fill.intensity + 0.1);
+      // Add spread radius to ensure glow isn't clipped
+      const glowPadding = config.fill.spread * 2; // 2x spread for safety
       bounds = baseBounds + glowPadding;
     } else {
       bounds = baseBounds;
@@ -1700,8 +1701,8 @@ export function flushSdfEntities(): void {
       color2[2],
       color2[3],
       fillParam,
-      position[0],
-      position[1],
+      position.x,
+      position.y,
       bounds,
       layer,
       entity.rotation,
