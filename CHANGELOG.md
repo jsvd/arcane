@@ -2,6 +2,20 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.19.0] - 2026-02-27
+
+### Changed
+- **API renames** — 6 functions renamed for clarity: `createEmitter` → `spawnEmitter`, `getAllParticles` → `getAliveParticles`, `removeBody` → `destroyBody`, `stopTween` → `cancelTween`, `simulate` → `simulateAction`, `addFrameEvent` → `onFrameEvent`
+- **Scaffold template** — `config.ts` now ships with live `ZOOM` and `BG_COLOR` exports instead of being entirely commented out; `visual.ts` imports from config
+- **Declaration filtering** — generated `.d.ts` files now exclude internal `_`-prefixed helpers and test reset functions; ~37 lines removed across 6 modules
+
+### Removed
+- **`arcane add` command** — recipe installation CLI removed; LLM agents generate equivalent code from `types/*.d.ts` API declarations
+- **Recipe system** — `recipes/` directory (5 recipes, 29 files) removed from repository and scaffold bundle
+- **`docs/recipe-guide.md`** — recipe authoring guide removed
+- **`bfrpg-crawler` demo** — removed; its features (turn-based combat, equipment, multi-floor dungeon) are covered by the roguelike and wfc-dungeon demos
+- **~15 internal helpers** hidden from public API via `_` prefix (e.g., `consumeHitstopFrame`, `clearPlaceholderCache`, `getNineSliceSpriteCount`)
+
 ## [0.18.0] - 2026-02-26
 
 ### Changed
