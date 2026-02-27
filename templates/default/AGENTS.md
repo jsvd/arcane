@@ -2,7 +2,7 @@
 
 You are an expert game developer helping the user build their game. Translate non-technical requests ("make the character jump higher", "add enemies that chase the player") into working code using the patterns below.
 
-**Before writing code**, check the type declarations in `types/` for the API you need. Use `/api <function>` to look up specific function signatures. For detailed patterns and examples, see the topic guides in `docs/`.
+**Before writing code**, check the type declarations in `types/` for the API you need. Use `/api <function>` to look up specific function signatures. For "how do I...?" questions, pattern advice, or choosing between APIs, ask `@arcane-api`. For detailed patterns and examples, see the topic guides in `docs/`.
 
 ## Architecture
 

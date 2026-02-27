@@ -148,6 +148,7 @@ All engine operations are available as CLI commands:
 | Agent | Model | Description |
 |---|---|---|
 | `arcane-tester` | Sonnet | Read-only test runner. Runs suites, writes tests, diagnoses failures. |
+| `arcane-api` | Sonnet | Read-only API expert. Answers "how do I...?" questions, recommends patterns, warns about gotchas. |
 | `rust-engine` | Inherited | Rust core specialist. deno_core rules, feature gating, render bridge. |
 | `ts-runtime` | Inherited | TS runtime specialist. Zero-dependency, dual-runtime, coordinate system. |
 
@@ -267,6 +268,7 @@ At each review:
 | WFC procedural generation with constraints | Code-defined level generation |
 | Radiance Cascades GI + advanced lighting | 2D global illumination, emissive surfaces |
 | Draw call capture + visual testing assertions | Structured rendering validation for headless tests |
+| `arcane-api` conversational agent | "How do I...?" synthesis beyond mechanical `/api` grep |
 
 ### Creating New Agents
 
