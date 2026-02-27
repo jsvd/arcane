@@ -763,3 +763,268 @@ export function drawAllParticles(options?: {
   }
 }
 
+// --- Convenience API for common use cases ---
+
+/** Managed continuous emitters for drawContinuous(). */
+const _managedContinuous: Map<string, Emitter> = new Map();
+
+/**
+ * Convenience API: draw a burst of particles at a position.
+ *
+ * Creates a one-shot burst emitter, updates it, draws it, and cleans up automatically.
+ * Perfect for one-off effects like explosions, impacts, or coin pickups.
+ *
+ * @param x - World X position.
+ * @param y - World Y position.
+ * @param options - Burst options (count, colors, velocities, etc.).
+ * @param options.count - Number of particles to spawn. Default: 10.
+ * @param options.lifetime - Particle lifetime range [min, max] in seconds. Default: [0.5, 1].
+ * @param options.velocityX - Horizontal velocity range [min, max]. Default: [-50, 50].
+ * @param options.velocityY - Vertical velocity range [min, max]. Default: [-50, 50].
+ * @param options.startColor - Starting color. Default: white.
+ * @param options.endColor - Ending color. Default: transparent.
+ * @param options.textureId - Texture ID for sprite rendering. If omitted, renders as circles.
+ * @param options.size - Particle size (sprite mode). Default: 8.
+ * @param options.radius - Particle radius (circle mode). Default: 3.
+ * @param options.layer - Draw layer. Default: 5.
+ * @param options.scale - Scale range [min, max]. Default: [1, 1].
+ * @param options.rotation - Rotation range [min, max] in radians. Default: [0, 0].
+ * @param options.rotationSpeed - Rotation speed range [min, max]. Default: [0, 0].
+ * @param options.accelerationY - Vertical acceleration (gravity). Default: [0, 0].
+ *
+ * @example
+ * ```ts
+ * // Explosion effect
+ * drawBurst(player.x, player.y, {
+ *   count: 30,
+ *   velocityX: [-100, 100],
+ *   velocityY: [-100, -20],
+ *   startColor: { r: 1, g: 0.5, b: 0, a: 1 },
+ *   endColor: { r: 0.5, g: 0, b: 0, a: 0 },
+ * });
+ * ```
+ */
+export function drawBurst(
+  x: number,
+  y: number,
+  options?: {
+    count?: number;
+    lifetime?: [number, number];
+    velocityX?: [number, number];
+    velocityY?: [number, number];
+    startColor?: { r: number; g: number; b: number; a: number };
+    endColor?: { r: number; g: number; b: number; a: number };
+    textureId?: number;
+    size?: number;
+    radius?: number;
+    layer?: number;
+    scale?: [number, number];
+    rotation?: [number, number];
+    rotationSpeed?: [number, number];
+    accelerationY?: [number, number];
+  },
+): void {
+  const config: EmitterConfig = {
+    shape: "point",
+    x,
+    y,
+    mode: "burst",
+    burstCount: options?.count ?? 10,
+    lifetime: options?.lifetime ?? [0.5, 1],
+    velocityX: options?.velocityX ?? [-50, 50],
+    velocityY: options?.velocityY ?? [-50, 50],
+    startColor: options?.startColor ?? { r: 1, g: 1, b: 1, a: 1 },
+    endColor: options?.endColor ?? { r: 1, g: 1, b: 1, a: 0 },
+    textureId: options?.textureId,
+    scale: options?.scale,
+    rotation: options?.rotation,
+    rotationSpeed: options?.rotationSpeed,
+    accelerationY: options?.accelerationY,
+  };
+
+  const emitter = spawnEmitter(config);
+  const dt = 1 / 60; // Assume 60fps for burst spawn
+  emitParticles(emitter, dt);
+
+  // Draw immediately
+  const drawOpts = {
+    radius: options?.radius,
+    size: options?.size,
+    layer: options?.layer,
+    textureId: options?.textureId,
+  };
+
+  for (const p of emitter.particles) {
+    if (!p.alive) continue;
+
+    if (options?.textureId !== undefined) {
+      const sz = (options.size ?? 8) * p.scale;
+      _drawSprite({
+        textureId: options.textureId,
+        x: p.x - sz / 2,
+        y: p.y - sz / 2,
+        w: sz,
+        h: sz,
+        layer: options.layer ?? 5,
+        rotation: p.rotation,
+        tint: p.color,
+        opacity: p.color.a,
+      });
+    } else {
+      drawCircle(p.x, p.y, (options?.radius ?? 3) * p.scale, {
+        color: p.color,
+        layer: options?.layer ?? 5,
+      });
+    }
+  }
+
+  // Remove emitter (particles are already drawn for this frame)
+  removeEmitter(emitter);
+}
+
+/**
+ * Convenience API: draw a continuous particle stream at a position.
+ *
+ * Manages a persistent emitter under the hood, keyed by `id`.
+ * On the first call, creates the emitter. On subsequent calls, updates and draws it.
+ * The emitter persists across frames until you stop calling this function or call `stopContinuous(id)`.
+ *
+ * @param id - Unique identifier for this continuous effect (e.g., "jetpack", "torch-flame").
+ * @param x - Current world X position.
+ * @param y - Current world Y position.
+ * @param dt - Delta time in seconds.
+ * @param options - Emitter options (rate, colors, velocities, etc.).
+ * @param options.rate - Particles per second. Default: 10.
+ * @param options.lifetime - Particle lifetime range [min, max] in seconds. Default: [0.5, 1].
+ * @param options.velocityX - Horizontal velocity range [min, max]. Default: [-20, 20].
+ * @param options.velocityY - Vertical velocity range [min, max]. Default: [-50, -20].
+ * @param options.startColor - Starting color. Default: white.
+ * @param options.endColor - Ending color. Default: transparent.
+ * @param options.textureId - Texture ID for sprite rendering. If omitted, renders as circles.
+ * @param options.size - Particle size (sprite mode). Default: 8.
+ * @param options.radius - Particle radius (circle mode). Default: 3.
+ * @param options.layer - Draw layer. Default: 5.
+ * @param options.maxParticles - Maximum alive particles for this emitter. Default: unlimited.
+ *
+ * @example
+ * ```ts
+ * // Rocket jetpack flame
+ * onFrame((dt) => {
+ *   drawContinuous("jetpack", player.x, player.y + 16, dt, {
+ *     rate: 30,
+ *     velocityY: [20, 40],
+ *     startColor: { r: 1, g: 0.5, b: 0, a: 1 },
+ *     endColor: { r: 0.3, g: 0, b: 0, a: 0 },
+ *   });
+ * });
+ * ```
+ */
+export function drawContinuous(
+  id: string,
+  x: number,
+  y: number,
+  dt: number,
+  options?: {
+    rate?: number;
+    lifetime?: [number, number];
+    velocityX?: [number, number];
+    velocityY?: [number, number];
+    startColor?: { r: number; g: number; b: number; a: number };
+    endColor?: { r: number; g: number; b: number; a: number };
+    textureId?: number;
+    size?: number;
+    radius?: number;
+    layer?: number;
+    maxParticles?: number;
+  },
+): void {
+  let emitter = _managedContinuous.get(id);
+
+  if (!emitter) {
+    const config: EmitterConfig = {
+      shape: "point",
+      x,
+      y,
+      mode: "continuous",
+      rate: options?.rate ?? 10,
+      lifetime: options?.lifetime ?? [0.5, 1],
+      velocityX: options?.velocityX ?? [-20, 20],
+      velocityY: options?.velocityY ?? [-50, -20],
+      startColor: options?.startColor ?? { r: 1, g: 1, b: 1, a: 1 },
+      endColor: options?.endColor ?? { r: 1, g: 1, b: 1, a: 0 },
+      textureId: options?.textureId,
+      maxParticles: options?.maxParticles,
+    };
+
+    emitter = spawnEmitter(config);
+    _managedContinuous.set(id, emitter);
+  }
+
+  // Update position
+  emitter.config.x = x;
+  emitter.config.y = y;
+
+  // Emit new particles
+  emitParticles(emitter, dt);
+
+  // Update existing particles
+  for (const particle of emitter.particles) {
+    if (particle.alive) {
+      updateParticle(particle, dt, emitter.affectors);
+    }
+  }
+
+  // Draw particles
+  const drawOpts = {
+    radius: options?.radius,
+    size: options?.size,
+    layer: options?.layer,
+    textureId: options?.textureId,
+  };
+
+  for (const p of emitter.particles) {
+    if (!p.alive) continue;
+
+    if (options?.textureId !== undefined) {
+      const sz = (options.size ?? 8) * p.scale;
+      _drawSprite({
+        textureId: options.textureId,
+        x: p.x - sz / 2,
+        y: p.y - sz / 2,
+        w: sz,
+        h: sz,
+        layer: options?.layer ?? 5,
+        rotation: p.rotation,
+        tint: p.color,
+        opacity: p.color.a,
+      });
+    } else {
+      drawCircle(p.x, p.y, (options?.radius ?? 3) * p.scale, {
+        color: p.color,
+        layer: options?.layer ?? 5,
+      });
+    }
+  }
+}
+
+/**
+ * Stop a continuous particle effect and remove its managed emitter.
+ *
+ * @param id - The unique identifier passed to drawContinuous().
+ *
+ * @example
+ * ```ts
+ * // Stop the jetpack effect when player lands
+ * if (player.onGround) {
+ *   stopContinuous("jetpack");
+ * }
+ * ```
+ */
+export function stopContinuous(id: string): void {
+  const emitter = _managedContinuous.get(id);
+  if (emitter) {
+    removeEmitter(emitter);
+    _managedContinuous.delete(id);
+  }
+}
+

@@ -3078,12 +3078,15 @@ declare module "@arcane/runtime/rendering" {
    * const id = sdfEntity({
    *   shape: snowman,
    *   fill: { type: "solid", color: "#ffffff" },
-   *   position: [100, 200],
+   *   position: { x: 100, y: 200 },
    * });
    * ```
    */
-  /** A 2D vector as a two-element tuple: [x, y]. */
-  export type Vec2 = [number, number];
+  /** A 2D vector as an object with x and y components. */
+  export type Vec2 = {
+      x: number;
+      y: number;
+  };
   /** Discriminant for SDF node categories. */
   export type SdfNodeType = "primitive" | "bool_op" | "transform" | "modifier";
   /** Supported SDF primitive kinds. */
@@ -3232,7 +3235,7 @@ declare module "@arcane/runtime/rendering" {
    * @example
    * // Bottom-to-top gradient (green to white)
    * sdfEntity({
-   *   shape: sdfTriangle([0, 30], [-50, -30], [50, -30]),
+   *   shape: sdfTriangle({ x: 0, y: 30 }, { x: -50, y: -30 }, { x: 50, y: -30 }),
    *   fill: gradient("#2d4a1c", "#f0f8ff", 90),
    *   bounds: 35, // Tight bounds for visible gradient
    * });
@@ -3241,7 +3244,7 @@ declare module "@arcane/runtime/rendering" {
    * // Equilateral triangle with properly scaled gradient
    * // bounds=43 (for width), but triangle Y extent is ±37
    * sdfEntity({
-   *   shape: sdfTriangle([0, 37], [-43, -37], [43, -37]),
+   *   shape: sdfTriangle({ x: 0, y: 37 }, { x: -43, y: -37 }, { x: 43, y: -37 }),
    *   fill: gradient("#000066", "#ff0000", 90, 43/37),
    *   bounds: 43,
    * });
@@ -3644,7 +3647,7 @@ declare module "@arcane/runtime/rendering" {
    * @param config - Entity configuration.
    * @param config.shape - The SDF node tree defining the shape.
    * @param config.fill - How the shape should be colored/rendered.
-   * @param config.position - World position [x, y]. Default: [0, 0].
+   * @param config.position - World position { x, y }. Default: { x: 0, y: 0 }.
    * @param config.layer - Draw order layer. Default: 0.
    * @param config.bounds - Override bounding half-size. Auto-calculated if omitted.
    * @param config.rotation - Rotation in degrees. Default: 0. (GPU-efficient, no shader recompile)
@@ -3656,7 +3659,7 @@ declare module "@arcane/runtime/rendering" {
    * const id = sdfEntity({
    *   shape: sdfCircle(20),
    *   fill: { type: "solid", color: "#ff0000" },
-   *   position: [100, 200],
+   *   position: { x: 100, y: 200 },
    *   rotation: 45,
    *   scale: 1.5,
    *   layer: 5,

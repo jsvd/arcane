@@ -26,6 +26,10 @@ export {
   getMaxTotalParticles,
   getTotalParticleCount,
   drawAllParticles,
+  // Convenience API
+  drawBurst,
+  drawContinuous,
+  stopContinuous,
 } from "./emitter.ts";
 
 // Presets
