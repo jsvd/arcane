@@ -29,3 +29,4 @@ include_dir = "0.7"
 serde = { version = "1", features = ["derive"] }
 tiny_http = "0.12"
 base64 = "0.22"
+reqwest = { version = "0.12", features = ["blocking", "json"] }

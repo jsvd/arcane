@@ -76,6 +76,11 @@ enum Commands {
         #[arg(long)]
         browser: Option<String>,
     },
+    /// Capture a screenshot from the running game window
+    Screenshot {
+        /// Output file path (e.g. "screenshot.png")
+        output: String,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -98,5 +103,6 @@ fn main() -> anyhow::Result<()> {
         Commands::Init => commands::init::run(),
         Commands::Check { path } => commands::check::run(path),
         Commands::Catalog { pack_id, sounds, browser } => commands::catalog::run(pack_id, sounds, browser),
+        Commands::Screenshot { output } => commands::screenshot::run(output),
     }
 }
