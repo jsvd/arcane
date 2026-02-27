@@ -2,6 +2,18 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.19.1] - 2026-02-27
+
+### Added
+- **`@arcane-api` agent** — conversational API expert agent in scaffolded projects (`.claude/agents/arcane-api.md`); answers "how do I...?" questions, recommends patterns, warns about gotchas
+
+### Changed
+- **Scaffold AGENTS.md** — trimmed redundant Quick Start section, coordinates table, and file table for a leaner agent guide
+
+### Fixed
+- **`generate-declarations.sh`** — portable `sed -i` usage (works on both macOS and Linux)
+- **Release skill** — corrected `--body` → `--notes` flag for `gh release create`
+
 ## [0.19.0] - 2026-02-27
 
 ### Changed
