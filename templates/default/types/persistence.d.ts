@@ -104,7 +104,6 @@ declare module "@arcane/runtime/persistence" {
   /**
    * Reset auto-save state for testing.
    */
-  export declare function _resetAutoSave(): void;
 
   /**
    * Core save/load implementation.
@@ -158,7 +157,6 @@ declare module "@arcane/runtime/persistence" {
   /**
    * Reset all module-level state to defaults. For testing only.
    */
-  export declare function _resetSaveSystem(): void;
 
   /**
    * Storage backend implementations.

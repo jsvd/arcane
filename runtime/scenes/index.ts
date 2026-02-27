@@ -24,5 +24,4 @@ export {
   getSceneStackDepth,
   isTransitioning,
   stopSceneManager,
-  _resetSceneManager,
 } from "./scene.ts";

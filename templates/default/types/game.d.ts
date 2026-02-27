@@ -347,7 +347,6 @@ declare module "@arcane/runtime/game" {
    */
   export declare function drawColorSprite(opts: ColorSpriteOptions): void;
   /** @internal Reset color texture cache (for tests). */
-  export declare function _resetColorTexCache(): void;
 
   /**
    * Lightweight entity handles binding position + sprite + physics body.
@@ -979,7 +978,6 @@ declare module "@arcane/runtime/game" {
    * Reset the transform system (for testing).
    * Clears all nodes and resets the ID counter.
    */
-  export declare function _resetTransformSystem(): void;
 
   /**
    * Widget auto-wiring: capture input once per frame, pass to all widgets.

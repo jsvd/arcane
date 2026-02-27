@@ -74,5 +74,4 @@ export {
   getNode,
   getChildren,
   applyToSprite,
-  _resetTransformSystem,
 } from "./transform.ts";

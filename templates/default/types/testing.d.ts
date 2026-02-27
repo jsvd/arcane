@@ -1037,7 +1037,6 @@ declare module "@arcane/runtime/testing" {
    */
   export declare function clearDrawCalls(): void;
   /** @internal Push a draw call to the capture log. No-op when capture is disabled. */
-  export declare function _logDrawCall(call: DrawCall): void;
   /**
    * Find all captured draw calls matching the given filter.
    * Returns an empty array if none match or capture is not enabled.

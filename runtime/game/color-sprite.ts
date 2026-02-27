@@ -10,7 +10,7 @@ import type { Color } from "../ui/types.ts";
 import type { ColorSpriteOptions } from "./types.ts";
 import { drawSprite } from "../rendering/sprites.ts";
 import { createSolidTexture } from "../rendering/texture.ts";
-import { warnColor } from "../ui/colors.ts";
+import { _warnColor } from "../ui/colors.ts";
 
 /** @internal Color texture cache. Keyed by "r_g_b_a" string. */
 const _colorTexCache = new Map<string, number>();
@@ -39,7 +39,7 @@ function getColorTex(color: Color): number {
  * });
  */
 export function drawColorSprite(opts: ColorSpriteOptions): void {
-  warnColor(opts.color, "drawColorSprite");
+  _warnColor(opts.color, "drawColorSprite");
   const textureId = opts.textureId ?? getColorTex(opts.color);
 
   const spriteOpts: SpriteOptions = {

@@ -155,6 +155,5 @@ declare module "@arcane/runtime/scenes" {
   /**
    * Reset all scene manager state. For testing only.
    */
-  export declare function _resetSceneManager(): void;
 
 }

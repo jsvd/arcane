@@ -388,7 +388,7 @@ function f(n: number): string {
  * @returns Normalized RGBA tuple.
  * @throws Error if the color string is not a valid hex color.
  */
-export function parseColor(color: string): [number, number, number, number] {
+function parseColor(color: string): [number, number, number, number] {
   if (typeof color !== "string" || color[0] !== "#") {
     throw new Error(
       `Invalid color "${color}": must be a hex string starting with #`,
@@ -1263,7 +1263,7 @@ export function compileToWgsl(node: SdfNode): string {
  * @param node - The SDF node to measure.
  * @returns The bounding half-size in world units.
  */
-export function calculateBounds(node: SdfNode): number {
+function calculateBounds(node: SdfNode): number {
   switch (node.type) {
     case "primitive":
       return primitiveBounds(node);
@@ -1433,7 +1433,7 @@ function modifierBounds(node: SdfModifierNode): number {
  * @param fill - The fill configuration.
  * @returns WGSL expression string producing a color.
  */
-export function generateFillWgsl(fill: SdfFill): string {
+function generateFillWgsl(fill: SdfFill): string {
   switch (fill.type) {
     case "solid": {
       const [r, g, b, a] = parseColor(fill.color);
@@ -1735,3 +1735,8 @@ export function flushSdfEntities(): void {
     }
   }
 }
+
+// Test-only exports (stripped from .d.ts by generate-declarations.sh safety net)
+/** @internal */ export function _parseColor(color: string) { return parseColor(color); }
+/** @internal */ export function _calculateBounds(node: SdfNode) { return calculateBounds(node); }
+/** @internal */ export function _generateFillWgsl(fill: SdfFill) { return generateFillWgsl(fill); }

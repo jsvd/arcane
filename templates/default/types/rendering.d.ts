@@ -1347,7 +1347,6 @@ declare module "@arcane/runtime/rendering" {
   /**
    * Reset all state. For testing only.
    */
-  export declare function _resetFloatingTexts(): void;
 
   /**
    * Hexagonal tilemap renderer.
@@ -2401,7 +2400,6 @@ declare module "@arcane/runtime/rendering" {
   /**
    * Reset juice state. For testing only.
    */
-  export declare function _resetJuice(): void;
 
   /**
    * Set the ambient light color applied to all sprites.
@@ -3301,15 +3299,6 @@ declare module "@arcane/runtime/rendering" {
    */
   export declare function cosinePalette(a: [number, number, number], b: [number, number, number], c: [number, number, number], d: [number, number, number]): CosinePaletteFill;
   /**
-   * Parse a hex color string into normalized [r, g, b, a] (each 0.0-1.0).
-   * Accepts #RGB, #RRGGBB, #RRGGBBAA formats.
-   *
-   * @param color - Hex color string (e.g., "#ff0000", "#f00", "#ff000080").
-   * @returns Normalized RGBA tuple.
-   * @throws Error if the color string is not a valid hex color.
-   */
-  export declare function parseColor(color: string): [number, number, number, number];
-  /**
    * Create an SDF circle primitive.
    * @param radius - Circle radius in world units.
    * @returns SDF node representing a circle.
@@ -3652,23 +3641,6 @@ declare module "@arcane/runtime/rendering" {
    */
   export declare function compileToWgsl(node: SdfNode): string;
   /**
-   * Calculate the bounding box half-size for an SDF node tree.
-   * Returns a conservative estimate of the maximum extent from the origin.
-   *
-   * @param node - The SDF node to measure.
-   * @returns The bounding half-size in world units.
-   */
-  export declare function calculateBounds(node: SdfNode): number;
-  /**
-   * Generate WGSL code for a fill type.
-   * Returns a WGSL expression that produces a `vec4<f32>` color given a
-   * distance value `d` and coordinate `p`.
-   *
-   * @param fill - The fill configuration.
-   * @returns WGSL expression string producing a color.
-   */
-  export declare function generateFillWgsl(fill: SdfFill): string;
-  /**
    * Create a renderable SDF entity.
    * Returns a unique entity ID string. The entity is stored in an internal
    * registry and can be queried later. Headless-safe (no GPU calls).
@@ -3878,7 +3850,6 @@ declare module "@arcane/runtime/rendering" {
    * Called automatically by clearSprites() at the frame boundary.
    * Can also be called manually if needed (e.g., mid-frame flush).
    */
-  export declare function _flushSpriteBatch(): void;
   /**
    * Clear all queued sprites for this frame.
    * Normally not needed -- the renderer clears automatically at frame start.
@@ -4676,7 +4647,6 @@ declare module "@arcane/runtime/rendering" {
   /**
    * Reset transition state. For testing only.
    */
-  export declare function _resetScreenTransition(): void;
 
   /**
    * Typewriter text: progressive character-by-character text reveal.

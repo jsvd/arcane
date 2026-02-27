@@ -8,7 +8,7 @@ export type {
 } from "./types.ts";
 
 // Sprites
-export { drawSprite, clearSprites, _flushSpriteBatch } from "./sprites.ts";
+export { drawSprite, clearSprites } from "./sprites.ts";
 
 // Camera
 export type { CameraBounds, CameraDeadzone } from "./camera.ts";
@@ -376,7 +376,6 @@ export {
   drawScreenTransition,
   isScreenTransitionActive,
   getScreenTransitionProgress,
-  _resetScreenTransition,
 } from "./transition.ts";
 
 // Nine-Slice Sprites
@@ -411,7 +410,6 @@ export {
   isHitstopActive,
   getHitstopFrames,
   consumeHitstopFrame,
-  _resetJuice,
 } from "./juice.ts";
 
 // Floating Text (damage numbers)
@@ -422,7 +420,6 @@ export {
   drawFloatingTexts,
   getFloatingTextCount,
   clearFloatingTexts,
-  _resetFloatingTexts,
 } from "./floatingtext.ts";
 
 // Typewriter Text
@@ -522,9 +519,6 @@ export {
   createSdfFrame,
   // Code generation
   compileToWgsl,
-  calculateBounds,
-  generateFillWgsl,
-  parseColor,
   // Entity creation
   sdfEntity,
   // Entity management

@@ -5,7 +5,7 @@ import { drawText, measureText } from "../rendering/text.ts";
 import { getCamera } from "../rendering/camera.ts";
 import { getViewportSize } from "../rendering/input.ts";
 import { _logDrawCall } from "../testing/visual.ts";
-import { warnColor } from "./colors.ts";
+import { _warnColor } from "./colors.ts";
 
 const hasRenderOps =
   typeof (globalThis as any).Deno !== "undefined" &&
@@ -81,7 +81,7 @@ export function drawRect(
     layer: options?.layer ?? 90,
     screenSpace: options?.screenSpace ?? false,
   });
-  warnColor(options?.color, "drawRect");
+  _warnColor(options?.color, "drawRect");
   if (!hasRenderOps) return;
   const color = options?.color ?? WHITE;
   const layer = options?.layer ?? 90;
@@ -128,8 +128,8 @@ export function drawPanel(
     screenSpace: options?.screenSpace ?? false,
     borderWidth: options?.borderWidth ?? 2,
   });
-  warnColor(options?.fillColor, "drawPanel");
-  warnColor(options?.borderColor, "drawPanel");
+  _warnColor(options?.fillColor, "drawPanel");
+  _warnColor(options?.borderColor, "drawPanel");
   if (!hasRenderOps) return;
   const fillColor = options?.fillColor ?? DARK;
   const borderColor = options?.borderColor ?? GRAY;
@@ -207,8 +207,8 @@ export function drawBar(
     layer: options?.layer ?? 90,
     screenSpace: options?.screenSpace ?? false,
   });
-  warnColor(options?.fillColor, "drawBar");
-  warnColor(options?.bgColor, "drawBar");
+  _warnColor(options?.fillColor, "drawBar");
+  _warnColor(options?.bgColor, "drawBar");
   if (!hasRenderOps) return;
   const ratio = Math.max(0, Math.min(1, fillRatio));
   const bgColor = options?.bgColor ?? RED;

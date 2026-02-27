@@ -35,15 +35,16 @@ import {
   sdfOutline,
   // Code generation
   compileToWgsl,
-  calculateBounds,
-  generateFillWgsl,
+  _calculateBounds as calculateBounds,
+  _generateFillWgsl as generateFillWgsl,
+
   // Entities
   sdfEntity,
   getSdfEntity,
   getSdfEntityCount,
   clearSdfEntities,
   // Helpers
-  parseColor,
+  _parseColor as parseColor,
   // Types
   type SdfNode,
   type SdfFill,

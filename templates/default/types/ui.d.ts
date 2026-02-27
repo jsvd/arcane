@@ -250,7 +250,6 @@ declare module "@arcane/runtime/ui" {
    * @param color - The color to validate.
    * @param caller - Name of the calling function (for the warning message).
    */
-  export declare function warnColor(color: {
       r: number;
       g: number;
       b: number;

@@ -29,7 +29,6 @@ export {
   hasSave,
   listSaves,
   applyMigrations,
-  _resetSaveSystem,
 } from "./save.ts";
 
 export {
@@ -38,5 +37,4 @@ export {
   updateAutoSave,
   triggerAutoSave,
   isAutoSaveEnabled,
-  _resetAutoSave,
 } from "./autosave.ts";

@@ -18,7 +18,7 @@ const _colorWarnings = new Set<string>();
  * @param color - The color to validate.
  * @param caller - Name of the calling function (for the warning message).
  */
-export function warnColor(color: { r: number; g: number; b: number; a?: number } | undefined, caller: string): void {
+export function _warnColor(color: { r: number; g: number; b: number; a?: number } | undefined, caller: string): void {
   if (!color) return;
   if (color.r <= 1.0 && color.g <= 1.0 && color.b <= 1.0 && (color.a === undefined || color.a <= 1.0)) return;
   if (_colorWarnings.has(caller)) return;

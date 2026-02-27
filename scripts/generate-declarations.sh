@@ -120,6 +120,9 @@ for entry in "${MODULES[@]}"; do
     echo "}"
   } > "$out_file"
 
+  # Strip any _-prefixed exports that slipped through barrel re-exports
+  sed -i '' '/export.*function _/d' "$out_file"
+
   lines=$(wc -l < "$out_file")
   echo "  $dir.d.ts ($lines lines)"
 done

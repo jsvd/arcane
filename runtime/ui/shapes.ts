@@ -21,7 +21,7 @@ import type { Color, ShapeOptions, LineOptions, ArcOptions, SectorOptions, Ellip
 import { _logDrawCall } from "../testing/visual.ts";
 import { getCamera } from "../rendering/camera.ts";
 import { getViewportSize } from "../rendering/input.ts";
-import { warnColor } from "./colors.ts";
+import { _warnColor } from "./colors.ts";
 
 // --- Detect geometry ops availability ---
 
@@ -82,7 +82,7 @@ export function drawCircle(
     screenSpace: ss,
   } as any);
 
-  warnColor(options?.color, "drawCircle");
+  _warnColor(options?.color, "drawCircle");
   if (!hasGeoOps) return;
 
   const color = options?.color ?? WHITE;
@@ -270,7 +270,7 @@ export function drawLine(
     screenSpace: ss,
   } as any);
 
-  warnColor(options?.color, "drawLine");
+  _warnColor(options?.color, "drawLine");
   if (!hasGeoOps) return;
 
   const color = options?.color ?? WHITE;
@@ -323,7 +323,7 @@ export function drawTriangle(
     screenSpace: ss,
   } as any);
 
-  warnColor(options?.color, "drawTriangle");
+  _warnColor(options?.color, "drawTriangle");
   if (!hasGeoOps) return;
 
   const color = options?.color ?? WHITE;
@@ -629,7 +629,7 @@ export function drawRectangle(
     screenSpace: ss,
   } as any);
 
-  warnColor(options?.color, "drawRectangle");
+  _warnColor(options?.color, "drawRectangle");
   if (!hasGeoOps) return;
 
   const color = options?.color ?? WHITE;
@@ -675,7 +675,7 @@ export function drawPolygon(
     screenSpace: ss,
   } as any);
 
-  warnColor(options?.color, "drawPolygon");
+  _warnColor(options?.color, "drawPolygon");
   if (!hasGeoOps || vertices.length < 3) return;
 
   const color = options?.color ?? WHITE;
