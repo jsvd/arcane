@@ -6,7 +6,7 @@ import { describe, it, assert } from "../testing/harness.ts";
 import {
   tween,
   updateTweens,
-  stopTween,
+  cancelTween,
   pauseTween,
   resumeTween,
   stopAllTweens,
@@ -204,7 +204,7 @@ describe("Core Tweening", () => {
     updateTweens(0.5);
     assert.equal(target.x, 50);
 
-    stopTween(t);
+    cancelTween(t);
     assert.equal(t.state, TweenState.STOPPED);
     assert.equal(getActiveTweenCount(), 0);
 

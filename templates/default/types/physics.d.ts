@@ -200,17 +200,16 @@ declare module "@arcane/runtime/physics" {
    *   mass: 2.0,
    * });
    */
-  export declare function boxPolygonVertices(halfW: number, halfH: number): [number, number][];
   /**
    * Create a rigid body in the physics world.
    * Returns a BodyId for future reference. Returns 0 in headless mode.
    */
   export declare function createBody(def: BodyDef): BodyId;
   /**
-   * Remove a body from the physics world.
+   * Destroy a body, removing it from the physics world.
    * No-op in headless mode.
    */
-  export declare function removeBody(id: BodyId): void;
+  export declare function destroyBody(id: BodyId): void;
   /**
    * Get the current state of a body (position, angle, velocity).
    * Returns a default state (all zeros) if the body doesn't exist or ops unavailable.

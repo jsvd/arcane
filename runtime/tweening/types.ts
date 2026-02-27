@@ -60,7 +60,7 @@ export type TweenProps = Record<string, number>;
  *
  * Transitions: pending -> active -> completed (normal flow),
  * active <-> paused (via pauseTween/resumeTween),
- * any -> stopped (via stopTween).
+ * any -> stopped (via cancelTween).
  */
 export type TweenState = "pending" | "active" | "paused" | "completed" | "stopped";
 
@@ -81,14 +81,14 @@ export const TweenState = {
   PAUSED: "paused" as const,
   /** All iterations complete. The tween has been removed from the update list. */
   COMPLETED: "completed" as const,
-  /** Manually stopped via stopTween(). The tween has been removed from the update list. */
+  /** Manually stopped via cancelTween(). The tween has been removed from the update list. */
   STOPPED: "stopped" as const,
 };
 
 /**
  * A tween instance returned by {@link tween}.
  *
- * Inspect `state` to check lifecycle. Use `stopTween()`, `pauseTween()`,
+ * Inspect `state` to check lifecycle. Use `cancelTween()`, `pauseTween()`,
  * `resumeTween()`, or `reverseTween()` to control playback.
  */
 export interface Tween {

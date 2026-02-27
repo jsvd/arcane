@@ -81,7 +81,7 @@ export type EmitterShape = "point" | "line" | "area" | "ring";
 export type EmissionMode = "continuous" | "burst" | "one-shot";
 
 /**
- * Configuration for creating a particle emitter via {@link createEmitter}.
+ * Configuration for creating a particle emitter via {@link spawnEmitter}.
  *
  * Range fields like `lifetime`, `velocityX`, etc. are `[min, max]` tuples.
  * Each spawned particle picks a random value within the range.
@@ -204,7 +204,7 @@ export interface Affector {
 }
 
 /**
- * A particle emitter instance returned by {@link createEmitter}.
+ * A particle emitter instance returned by {@link spawnEmitter}.
  *
  * Manages a pool of particles and spawns them according to its config.
  * Updated each frame by {@link updateParticles}.

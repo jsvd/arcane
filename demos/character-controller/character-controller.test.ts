@@ -4,7 +4,7 @@ import "./character-controller.ts";
 import { describe, it, assert } from "../../runtime/testing/harness.ts";
 import {
   createAnimation,
-  addFrameEvent,
+  onFrameEvent,
   playAnimation,
   updateAnimationWithEvents,
   createAnimationFSM,

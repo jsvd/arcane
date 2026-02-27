@@ -1,7 +1,7 @@
 import { describe, it, assert } from "../testing/harness.ts";
 import {
   drawNineSlice,
-  getNineSliceSpriteCount,
+  _getNineSliceSpriteCount,
 } from "./nineslice.ts";
 import type { NineSliceBorder } from "./nineslice.ts";
 import {
@@ -12,21 +12,21 @@ import {
 } from "../testing/visual.ts";
 
 describe("Nine-Slice Sprites", () => {
-  describe("getNineSliceSpriteCount", () => {
+  describe("_getNineSliceSpriteCount", () => {
     it("returns 9 for standard panel with uniform border", () => {
-      const count = getNineSliceSpriteCount(200, 100, 16);
+      const count = _getNineSliceSpriteCount(200, 100, 16);
       assert.equal(count, 9);
     });
 
     it("returns 9 for per-edge border", () => {
       const border: NineSliceBorder = { top: 8, bottom: 12, left: 10, right: 14 };
-      const count = getNineSliceSpriteCount(200, 100, border);
+      const count = _getNineSliceSpriteCount(200, 100, border);
       assert.equal(count, 9);
     });
 
     it("returns fewer when border equals or exceeds panel size", () => {
       // Width = 32, border = 16 each side => centerW = 0
-      const count = getNineSliceSpriteCount(32, 100, 16);
+      const count = _getNineSliceSpriteCount(32, 100, 16);
       // No top edge, no center, no bottom edge (centerW=0)
       // Corners (4) + left edge (1) + right edge (1) = 6
       assert.equal(count, 6);
@@ -34,14 +34,14 @@ describe("Nine-Slice Sprites", () => {
 
     it("returns fewer when height is too small for center", () => {
       // Height = 20, border = 10 each => centerH = 0
-      const count = getNineSliceSpriteCount(200, 20, 10);
+      const count = _getNineSliceSpriteCount(200, 20, 10);
       // No left edge, no center, no right edge (centerH=0)
       // Corners (4) + top edge (1) + bottom edge (1) = 6
       assert.equal(count, 6);
     });
 
     it("returns 1 when both center and edges exist but no corners (zero border)", () => {
-      const count = getNineSliceSpriteCount(200, 100, 0);
+      const count = _getNineSliceSpriteCount(200, 100, 0);
       // centerW = 200, centerH = 100, but all border sides are 0
       // Only center slice exists
       assert.equal(count, 1);
@@ -50,7 +50,7 @@ describe("Nine-Slice Sprites", () => {
     it("returns corner count when panel has zero size", () => {
       // When w=0, h=0 but border > 0, the corners still technically have
       // nonzero border dimensions (just zero center/edge), so 4 corners remain
-      const count = getNineSliceSpriteCount(0, 0, 16);
+      const count = _getNineSliceSpriteCount(0, 0, 16);
       assert.equal(count, 4);
     });
   });

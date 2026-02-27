@@ -1,6 +1,6 @@
 import { describe, it, assert } from "../testing/harness.ts";
 import { burstParticles, streamParticles, ParticlePresets } from "./presets.ts";
-import { updateParticles, getAllParticles, clearEmitters, getEmitterCount } from "./emitter.ts";
+import { updateParticles, getAliveParticles, clearEmitters, getEmitterCount } from "./emitter.ts";
 
 describe("Particle Presets", () => {
   it("ParticlePresets has all expected keys", () => {
@@ -24,7 +24,7 @@ describe("Particle Presets", () => {
     clearEmitters();
     burstParticles(0, 0);
     updateParticles(0);
-    const particles = getAllParticles();
+    const particles = getAliveParticles();
     assert.ok(particles.length > 0, "should have spawned particles");
   });
 
@@ -91,7 +91,7 @@ describe("Particle Presets", () => {
     // Use a small dt so particles survive the update (fire lifetime is 0.3-0.8s).
     // With rate=15 and dt=0.1, accumulator reaches 1.5 -> spawns 1 particle.
     updateParticles(0.1);
-    const particles = getAllParticles();
+    const particles = getAliveParticles();
     assert.ok(particles.length > 0, "should have spawned particles after 0.1 second");
   });
 

@@ -45,7 +45,7 @@ import {
   getContacts,
   getManifolds,
   raycast,
-  boxPolygonVertices,
+  _boxPolygonVertices,
 } from "../../runtime/physics/index.ts";
 import type { RayHit } from "../../runtime/physics/index.ts";
 import type { BodyId, Contact, ContactManifold } from "../../runtime/physics/index.ts";
@@ -148,7 +148,7 @@ function setupWorld(): void {
 function spawnBox(x: number, y: number): void {
   const halfW = 15 + rng.float() * 15;
   const halfH = 15 + rng.float() * 15;
-  const vertices = boxPolygonVertices(halfW, halfH);
+  const vertices = _boxPolygonVertices(halfW, halfH);
 
   const id = createBody({
     type: "dynamic",
@@ -188,7 +188,7 @@ function spawnSeesaw(x: number, y: number): void {
   // Use polygon shape so the plank can rotate properly!
   const plankHW = 80;
   const plankHH = 6;
-  const vertices = boxPolygonVertices(plankHW, plankHH);
+  const vertices = _boxPolygonVertices(plankHW, plankHH);
 
   const plankId = createBody({
     type: "dynamic",
@@ -253,7 +253,7 @@ function spawnRope(x: number, y: number): void {
 function spawnPlatform(x: number, y: number): void {
   const platHW = 50;
   const platHH = 8;
-  const vertices = boxPolygonVertices(platHW, platHH);
+  const vertices = _boxPolygonVertices(platHW, platHH);
 
   const id = createBody({
     type: "kinematic",

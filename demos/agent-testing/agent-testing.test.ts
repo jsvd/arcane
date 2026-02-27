@@ -358,7 +358,7 @@ describe("Agent protocol: register and interact", () => {
     assert.equal(result.state.player.x, 110);
 
     // Simulate action (doesn't commit)
-    const sim = agent.simulate("heal");
+    const sim = agent.simulateAction("heal");
     assert.ok(sim.ok);
     assert.equal(sim.state.player.hp, 100); // Already at max
     assert.equal(state.player.x, 110); // State not reverted by sim

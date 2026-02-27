@@ -7,7 +7,7 @@ High-level APIs that orchestrate multiple subsystems (camera shake, screen flash
 One call triggers shake + hitstop + flash + particles:
 
 ```typescript
-import { impact, impactLight, impactHeavy, consumeHitstopFrame } from "@arcane/runtime/rendering";
+import { impact, impactLight, impactHeavy, isHitstopActive, getHitstopFrames } from "@arcane/runtime/rendering";
 import { updateTweens } from "@arcane/runtime/tweening";
 import { updateParticles } from "@arcane/runtime/particles";
 
@@ -30,7 +30,7 @@ Hitstop freezes gameplay (but not visuals) for N frames. Wire it into your frame
 
 ```typescript
 game.onFrame((ctx) => {
-  if (!consumeHitstopFrame()) {
+  if (!isHitstopActive()) {
     // Normal gameplay — skipped during hitstop
     state = updateGameplay(state, ctx.dt);
   }

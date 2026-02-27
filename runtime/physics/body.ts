@@ -28,7 +28,7 @@ const defaultBodyState: BodyState = { x: 0, y: 0, angle: 0, vx: 0, vy: 0, angula
  *   mass: 2.0,
  * });
  */
-export function boxPolygonVertices(halfW: number, halfH: number): [number, number][] {
+export function _boxPolygonVertices(halfW: number, halfH: number): [number, number][] {
   return [
     [-halfW, -halfH],
     [halfW, -halfH],
@@ -92,10 +92,10 @@ export function createBody(def: BodyDef): BodyId {
 }
 
 /**
- * Remove a body from the physics world.
+ * Destroy a body, removing it from the physics world.
  * No-op in headless mode.
  */
-export function removeBody(id: BodyId): void {
+export function destroyBody(id: BodyId): void {
   if (!hasPhysicsOps) return;
   (globalThis as any).Deno.core.ops.op_remove_body(id);
 }

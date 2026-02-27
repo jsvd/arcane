@@ -108,7 +108,7 @@ export function createAnimation(
  * @param frame - Frame index (0-based) that triggers the event.
  * @param callback - Function called when the frame is reached.
  */
-export function addFrameEvent(
+export function onFrameEvent(
   defId: AnimationId,
   frame: number,
   callback: FrameEventCallback,

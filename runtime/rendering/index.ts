@@ -70,7 +70,7 @@ export { loadAtlasFromDef, createAtlasBuilder } from "./atlas.ts";
 
 // Placeholder sprites (prototyping)
 export type { PlaceholderShape, PlaceholderOptions } from "./placeholder.ts";
-export { placeholder, quickPlaceholder, PLACEHOLDER_COLORS, clearPlaceholderCache, getPlaceholderCacheSize } from "./placeholder.ts";
+export { placeholder, quickPlaceholder, PLACEHOLDER_COLORS } from "./placeholder.ts";
 
 // Game loop
 export { onFrame, getDeltaTime } from "./loop.ts";
@@ -183,7 +183,7 @@ export {
   drawAnimatedSprite,
   resetAnimation,
   stopAnimation,
-  addFrameEvent,
+  onFrameEvent,
 } from "./animation.ts";
 
 // Animation State Machine
@@ -380,7 +380,7 @@ export {
 
 // Nine-Slice Sprites
 export type { NineSliceBorder, NineSliceOptions } from "./nineslice.ts";
-export { drawNineSlice, getNineSliceSpriteCount } from "./nineslice.ts";
+export { drawNineSlice } from "./nineslice.ts";
 
 // Trail / Ribbon
 export type { TrailPoint, TrailConfig, Trail } from "./trail.ts";
@@ -409,7 +409,6 @@ export {
   hitstop,
   isHitstopActive,
   getHitstopFrames,
-  consumeHitstopFrame,
 } from "./juice.ts";
 
 // Floating Text (damage numbers)
@@ -523,7 +522,6 @@ export {
   sdfEntity,
   // Entity management
   getSdfEntity,
-  getSdfEntityCount,
   clearSdfEntities,
   flushSdfEntities,
 } from "./sdf.ts";

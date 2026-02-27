@@ -200,7 +200,7 @@ export function drawNineSlice(
  * @param border - Border insets.
  * @returns Number of sprite draw calls that would be emitted.
  */
-export function getNineSliceSpriteCount(
+export function _getNineSliceSpriteCount(
   w: number,
   h: number,
   border: number | NineSliceBorder,

@@ -15,29 +15,18 @@ export type {
 } from "./types.ts";
 
 export {
-  createEmitter,
+  spawnEmitter,
   removeEmitter,
   updateParticles,
-  getAllParticles,
+  getAliveParticles,
   addAffector,
   clearEmitters,
   getEmitterCount,
   setMaxTotalParticles,
   getMaxTotalParticles,
   getTotalParticleCount,
-  // Rust-native emitters (high-performance backend)
-  createRustEmitter,
-  updateRustEmitter,
-  getRustEmitterParticleCount,
-  getRustEmitterSpriteData,
-  drawRustEmitter,
-  destroyRustEmitter,
-  updateAllRustEmitters,
-  setRustEmitterPosition,
-  setRustEmitterSpawnRate,
   drawAllParticles,
 } from "./emitter.ts";
-export type { RustEmitterConfig } from "./emitter.ts";
 
 // Presets
 export type { ParticleOptions } from "./presets.ts";

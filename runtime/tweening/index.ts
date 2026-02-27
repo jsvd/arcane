@@ -17,7 +17,7 @@ export { TweenState } from "./types.ts";
 export {
   tween,
   updateTweens,
-  stopTween,
+  cancelTween,
   pauseTween,
   resumeTween,
   reverseTween,

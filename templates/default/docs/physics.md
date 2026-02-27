@@ -18,7 +18,7 @@ For games that need real physics (platformers, breakout, stacking puzzles):
 ```typescript
 import {
   createPhysicsWorld, stepPhysics, destroyPhysicsWorld,
-  createBody, removeBody, getBodyState,
+  createBody, destroyBody, getBodyState,
   setBodyVelocity, applyForce, applyImpulse,
   createDistanceJoint, createRevoluteJoint,
   getContacts, queryAABB, raycast,

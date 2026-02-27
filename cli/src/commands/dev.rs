@@ -732,7 +732,7 @@ fn process_inspector_request(
             eval_json(
                 runtime,
                 &format!(
-                    "JSON.stringify(globalThis.__arcaneAgent?.simulate('{}'))",
+                    "JSON.stringify(globalThis.__arcaneAgent?.simulateAction('{}'))",
                     escaped
                 ),
             )

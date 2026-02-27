@@ -18,7 +18,7 @@
 
 import type { EmitterConfig, Emitter } from "./types.ts";
 import type { Color } from "../ui/types.ts";
-import { createEmitter, addAffector } from "./emitter.ts";
+import { spawnEmitter, addAffector } from "./emitter.ts";
 
 /**
  * Options for quick particle functions. Unset fields use preset defaults.
@@ -26,7 +26,7 @@ import { createEmitter, addAffector } from "./emitter.ts";
  * This is a simplified interface — not the same as {@link EmitterConfig}.
  * Use the `speed` multiplier (not `velocityX`/`velocityY` ranges directly).
  * For full control over emitter shape, affectors, and all config fields,
- * use {@link createEmitter} directly.
+ * use {@link spawnEmitter} directly.
  */
 export type ParticleOptions = {
   /** Number of particles (burst) or rate (stream). */
@@ -143,7 +143,7 @@ export function burstParticles(x: number, y: number, options?: ParticleOptions):
     scale: options?.scale ? [...options.scale] : [...preset.scale],
   };
 
-  const emitter = createEmitter(config);
+  const emitter = spawnEmitter(config);
 
   if (options?.gravity) {
     addAffector(emitter, { type: "gravity", forceX: 0, forceY: options.gravity });
@@ -195,7 +195,7 @@ export function streamParticles(x: number, y: number, options?: ParticleOptions)
     scale: options?.scale ? [...options.scale] : [...preset.scale],
   };
 
-  const emitter = createEmitter(config);
+  const emitter = spawnEmitter(config);
 
   if (options?.gravity) {
     addAffector(emitter, { type: "gravity", forceX: 0, forceY: options.gravity });

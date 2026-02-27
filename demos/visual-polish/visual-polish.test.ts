@@ -26,7 +26,7 @@ import {
 // Phase 22: Nine-Slice
 import {
   drawNineSlice,
-  getNineSliceSpriteCount,
+  _getNineSliceSpriteCount,
 } from "../../runtime/rendering/nineslice.ts";
 
 // Phase 22: Trail
@@ -43,7 +43,7 @@ import {
   impact,
   hitstop,
   isHitstopActive,
-  consumeHitstopFrame,
+  _consumeHitstopFrame,
   _resetJuice,
 } from "../../runtime/rendering/juice.ts";
 import { stopCameraShake, isCameraShaking } from "../../runtime/tweening/helpers.ts";
@@ -153,9 +153,9 @@ describe("Visual Polish Demo Integration", () => {
       assert.equal(isScreenFlashing(), true);
 
       // Consume hitstop frames
-      assert.equal(consumeHitstopFrame(), true);
-      assert.equal(consumeHitstopFrame(), true);
-      assert.equal(consumeHitstopFrame(), true);
+      assert.equal(_consumeHitstopFrame(), true);
+      assert.equal(_consumeHitstopFrame(), true);
+      assert.equal(_consumeHitstopFrame(), true);
       assert.equal(isHitstopActive(), false);
     });
   });

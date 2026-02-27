@@ -425,7 +425,7 @@ declare module "@arcane/runtime/rendering" {
    * @param frame - Frame index (0-based) that triggers the event.
    * @param callback - Function called when the frame is reached.
    */
-  export declare function addFrameEvent(defId: AnimationId, frame: number, callback: FrameEventCallback): void;
+  export declare function onFrameEvent(defId: AnimationId, frame: number, callback: FrameEventCallback): void;
   /**
    * Advance an animation and fire any frame events that were crossed.
    * Events fire for every frame crossed between the old and new frame index,
@@ -2342,7 +2342,7 @@ declare module "@arcane/runtime/rendering" {
    * @example
    * ```ts
    * onFrame(() => {
-   *   if (!consumeHitstopFrame()) {
+   *   if (!_consumeHitstopFrame()) {
    *     // Normal gameplay update
    *     updateGameplay(dt);
    *   }
@@ -2353,7 +2353,6 @@ declare module "@arcane/runtime/rendering" {
    * });
    * ```
    */
-  export declare function consumeHitstopFrame(): boolean;
   /**
    * Start a hitstop (frame freeze) for the specified number of frames.
    * If a hitstop is already active, the larger value wins.
@@ -2747,7 +2746,6 @@ declare module "@arcane/runtime/rendering" {
    * @param border - Border insets.
    * @returns Number of sprite draw calls that would be emitted.
    */
-  export declare function getNineSliceSpriteCount(w: number, h: number, border: number | NineSliceBorder): number;
 
   /**
    * Parallax scrolling support.
@@ -2878,12 +2876,10 @@ declare module "@arcane/runtime/rendering" {
    * Clear the placeholder texture cache.
    * Useful for memory management or when regenerating placeholders.
    */
-  export declare function clearPlaceholderCache(): void;
   /**
    * Get the number of cached placeholder textures.
    * Useful for debugging or monitoring memory usage.
    */
-  export declare function getPlaceholderCacheSize(): number;
 
   /**
    * Post-processing pipeline: fullscreen effects applied after sprite rendering.
@@ -3698,7 +3694,6 @@ declare module "@arcane/runtime/rendering" {
    * Get the number of registered SDF entities.
    * Useful for testing and debugging.
    */
-  export declare function getSdfEntityCount(): number;
   /**
    * Clear all registered SDF entities and reset the ID counter.
    * Useful for testing.

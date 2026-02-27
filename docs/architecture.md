@@ -246,7 +246,7 @@ arcane/
 │   │   ├── chain.ts         # sequence(), parallel(), stagger()
 │   │   └── helpers.ts       # Tween utility functions
 │   ├── particles/           # Particle emitter with pooling
-│   │   ├── emitter.ts       # createEmitter(), updateParticles()
+│   │   ├── emitter.ts       # spawnEmitter(), updateParticles()
 │   │   └── presets.ts       # Particle presets (fire, smoke, sparks)
 │   ├── pathfinding/         # A* pathfinding
 │   │   ├── astar.ts         # findPath() A* with binary min-heap

@@ -24,7 +24,7 @@ export { createPhysicsWorld, stepPhysics, destroyPhysicsWorld } from "./world.ts
 // Body management
 export {
   createBody,
-  removeBody,
+  destroyBody,
   getBodyState,
   getAllBodyStates,
   setBodyVelocity,
@@ -34,7 +34,7 @@ export {
   setBodyPosition,
   setCollisionLayers,
   setKinematicVelocity,
-  boxPolygonVertices,
+  _boxPolygonVertices,
 } from "./body.ts";
 
 // Constraints / joints

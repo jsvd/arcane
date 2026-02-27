@@ -209,12 +209,12 @@ function handleTweenComplete(t: Tween, index: number): void {
 }
 
 /**
- * Stop a tween immediately and remove it from the update list.
+ * Cancel a tween immediately and remove it from the update list.
  * Sets state to {@link TweenState.STOPPED}. The `onComplete` callback is NOT called.
  *
- * @param t - The tween to stop.
+ * @param t - The tween to cancel.
  */
-export function stopTween(t: Tween): void {
+export function cancelTween(t: Tween): void {
   t.state = TweenState.STOPPED;
   const index = activeTweens.indexOf(t);
   if (index !== -1) {

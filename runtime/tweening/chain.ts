@@ -6,7 +6,7 @@
  * - {@link stagger} — run tweens with a staggered delay between each.
  */
 
-import { tween, stopTween } from "./tween.ts";
+import { tween, cancelTween } from "./tween.ts";
 import type { Tween, TweenOptions, TweenProps } from "./types.ts";
 
 /**

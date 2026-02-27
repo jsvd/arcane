@@ -6,7 +6,7 @@ import {
   hitstop,
   isHitstopActive,
   getHitstopFrames,
-  consumeHitstopFrame,
+  _consumeHitstopFrame,
   _resetJuice,
 } from "./juice.ts";
 import { isCameraShaking, stopCameraShake } from "../tweening/helpers.ts";
@@ -33,21 +33,21 @@ describe("Juice & Game Feel", () => {
       assert.equal(getHitstopFrames(), 5);
     });
 
-    it("consumeHitstopFrame decrements", () => {
+    it("_consumeHitstopFrame decrements", () => {
       setup();
       hitstop(3);
-      assert.equal(consumeHitstopFrame(), true);
+      assert.equal(_consumeHitstopFrame(), true);
       assert.equal(getHitstopFrames(), 2);
-      assert.equal(consumeHitstopFrame(), true);
+      assert.equal(_consumeHitstopFrame(), true);
       assert.equal(getHitstopFrames(), 1);
-      assert.equal(consumeHitstopFrame(), true);
+      assert.equal(_consumeHitstopFrame(), true);
       assert.equal(getHitstopFrames(), 0);
       assert.equal(isHitstopActive(), false);
     });
 
-    it("consumeHitstopFrame returns false when not active", () => {
+    it("_consumeHitstopFrame returns false when not active", () => {
       setup();
-      assert.equal(consumeHitstopFrame(), false);
+      assert.equal(_consumeHitstopFrame(), false);
     });
 
     it("takes maximum of current and new hitstop", () => {
@@ -109,7 +109,7 @@ describe("Juice & Game Feel", () => {
 
     it("triggers particles without error", () => {
       setup();
-      // In headless mode, createEmitter will run but particles won't render
+      // In headless mode, spawnEmitter will run but particles won't render
       impact(100, 100, {
         particles: { count: 20, color: { r: 1, g: 0, b: 0, a: 1 } },
       });

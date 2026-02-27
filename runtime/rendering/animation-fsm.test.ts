@@ -4,7 +4,7 @@ import {
   playAnimation,
   updateAnimation,
   updateAnimationWithEvents,
-  addFrameEvent,
+  onFrameEvent,
   getAnimationDef,
 } from "./animation.ts";
 import {
@@ -52,9 +52,9 @@ function makeTestConfig(options?: {
 // Animation Events tests
 // ---------------------------------------------------------------------------
 describe("animation events", () => {
-  it("addFrameEvent adds an event to an animation def", () => {
+  it("onFrameEvent adds an event to an animation def", () => {
     const anim = createAnimation(1, 32, 32, 4, 10);
-    addFrameEvent(anim, 2, () => {});
+    onFrameEvent(anim, 2, () => {});
     const def = getAnimationDef(anim);
     assert.ok(def);
     assert.ok(def!.events);
@@ -159,9 +159,9 @@ describe("animation events", () => {
     assert.equal(def!.loop, false);
   });
 
-  it("addFrameEvent is no-op for unknown animation", () => {
+  it("onFrameEvent is no-op for unknown animation", () => {
     // Should not throw
-    addFrameEvent(99999, 0, () => {});
+    onFrameEvent(99999, 0, () => {});
   });
 });
 

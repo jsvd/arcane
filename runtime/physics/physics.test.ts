@@ -1,13 +1,13 @@
 import { describe, it, assert } from "../testing/harness.ts";
 import {
   createPhysicsWorld, stepPhysics, destroyPhysicsWorld,
-  createBody, removeBody, getBodyState,
+  createBody, destroyBody, getBodyState,
   setBodyVelocity, setBodyAngularVelocity,
   applyForce, applyImpulse, setBodyPosition,
   setCollisionLayers, setKinematicVelocity,
   createDistanceJoint, createRevoluteJoint, removeConstraint,
   queryAABB, raycast, getContacts,
-  boxPolygonVertices,
+  _boxPolygonVertices,
 } from "./index.ts";
 import type {
   BodyDef, BodyState, Contact, RayHit, ShapeDef, MaterialDef,
@@ -92,10 +92,10 @@ describe("Physics API", () => {
       assert.equal(id, 0);
     });
 
-    it("removeBody does not throw", () => {
-      removeBody(0);
-      removeBody(1);
-      removeBody(999);
+    it("destroyBody does not throw", () => {
+      destroyBody(0);
+      destroyBody(1);
+      destroyBody(999);
     });
 
     it("getBodyState returns default in headless", () => {
@@ -325,30 +325,30 @@ describe("Physics API", () => {
     });
   });
 
-  // ---- boxPolygonVertices helper ----
-  describe("boxPolygonVertices helper", () => {
+  // ---- _boxPolygonVertices helper ----
+  describe("_boxPolygonVertices helper", () => {
     it("returns 4 vertices for a box", () => {
-      const verts = boxPolygonVertices(10, 5);
+      const verts = _boxPolygonVertices(10, 5);
       assert.equal(verts.length, 4);
     });
 
     it("returns correct vertices for a square", () => {
-      const verts = boxPolygonVertices(5, 5);
+      const verts = _boxPolygonVertices(5, 5);
       assert.deepEqual(verts, [[-5, -5], [5, -5], [5, 5], [-5, 5]]);
     });
 
     it("returns correct vertices for a wide box", () => {
-      const verts = boxPolygonVertices(20, 5);
+      const verts = _boxPolygonVertices(20, 5);
       assert.deepEqual(verts, [[-20, -5], [20, -5], [20, 5], [-20, 5]]);
     });
 
     it("returns correct vertices for a tall box", () => {
-      const verts = boxPolygonVertices(5, 20);
+      const verts = _boxPolygonVertices(5, 20);
       assert.deepEqual(verts, [[-5, -20], [5, -20], [5, 20], [-5, 20]]);
     });
 
     it("returns CCW ordered vertices", () => {
-      const verts = boxPolygonVertices(10, 10);
+      const verts = _boxPolygonVertices(10, 10);
       // CCW order: top-left, top-right, bottom-right, bottom-left
       assert.deepEqual(verts[0], [-10, -10]); // top-left
       assert.deepEqual(verts[1], [10, -10]);  // top-right

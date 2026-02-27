@@ -29,7 +29,7 @@ import {
 import { createGame, hud } from "../../runtime/game/index.ts";
 import { rgb } from "../../runtime/ui/index.ts";
 import { updateTweens } from "../../runtime/tweening/tween.ts";
-import { updateParticles, getAllParticles } from "../../runtime/particles/emitter.ts";
+import { updateParticles, getAliveParticles } from "../../runtime/particles/emitter.ts";
 import { getCameraShakeOffset } from "../../runtime/tweening/helpers.ts";
 
 // Phase 22 imports
@@ -49,7 +49,7 @@ import {
 // Phase 23 imports
 import {
   impact,
-  consumeHitstopFrame,
+  _consumeHitstopFrame,
   isHitstopActive,
 } from "../../runtime/rendering/juice.ts";
 import {
@@ -204,7 +204,7 @@ game.onFrame((ctx) => {
   }
 
   // -- Update --
-  const hitstopFrozen = consumeHitstopFrame();
+  const hitstopFrozen = _consumeHitstopFrame();
 
   if (!hitstopFrozen) {
     // Normal gameplay updates (frozen during hitstop)
@@ -292,7 +292,7 @@ game.onFrame((ctx) => {
   drawFloatingTexts();
 
   // Particles
-  for (const p of getAllParticles()) {
+  for (const p of getAliveParticles()) {
     const size = 4 * p.scale;
     drawSprite({
       textureId: p.textureId,

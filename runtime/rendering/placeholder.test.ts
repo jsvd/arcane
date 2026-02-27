@@ -7,19 +7,19 @@ import {
   placeholder,
   quickPlaceholder,
   PLACEHOLDER_COLORS,
-  clearPlaceholderCache,
-  getPlaceholderCacheSize,
+  _clearPlaceholderCache,
+  _getPlaceholderCacheSize,
 } from "./placeholder.ts";
 
 describe("placeholder", () => {
   it("returns a texture id (0 in headless)", () => {
-    clearPlaceholderCache();
+    _clearPlaceholderCache();
     const tex = placeholder("test-sprite");
     assert.equal(typeof tex, "number");
   });
 
   it("caches textures by name and options", () => {
-    clearPlaceholderCache();
+    _clearPlaceholderCache();
 
     const tex1 = placeholder("player", { shape: "circle", color: [1, 0, 0] });
     const tex2 = placeholder("player", { shape: "circle", color: [1, 0, 0] });
@@ -29,11 +29,11 @@ describe("placeholder", () => {
     assert.equal(tex1, tex2);
     // Different shape should be different cache entry
     // In headless mode both are 0, but cache size differs
-    assert.equal(getPlaceholderCacheSize(), 2);
+    assert.equal(_getPlaceholderCacheSize(), 2);
   });
 
   it("supports all shape types", () => {
-    clearPlaceholderCache();
+    _clearPlaceholderCache();
 
     const shapes = [
       "circle",
@@ -49,28 +49,28 @@ describe("placeholder", () => {
       assert.equal(typeof tex, "number");
     }
 
-    assert.equal(getPlaceholderCacheSize(), 6);
+    assert.equal(_getPlaceholderCacheSize(), 6);
   });
 
   it("defaults to square shape and gray color", () => {
-    clearPlaceholderCache();
+    _clearPlaceholderCache();
     const tex = placeholder("default-test");
     assert.equal(typeof tex, "number");
   });
 
   it("supports custom sizes", () => {
-    clearPlaceholderCache();
+    _clearPlaceholderCache();
 
     const small = placeholder("small", { size: 8 });
     const large = placeholder("large", { size: 64 });
 
     assert.equal(typeof small, "number");
     assert.equal(typeof large, "number");
-    assert.equal(getPlaceholderCacheSize(), 2);
+    assert.equal(_getPlaceholderCacheSize(), 2);
   });
 
   it("supports outline option", () => {
-    clearPlaceholderCache();
+    _clearPlaceholderCache();
 
     const noOutline = placeholder("no-outline", { outline: false });
     const withOutline = placeholder("with-outline", { outline: true });
@@ -80,7 +80,7 @@ describe("placeholder", () => {
   });
 
   it("supports custom outline color", () => {
-    clearPlaceholderCache();
+    _clearPlaceholderCache();
 
     const tex = placeholder("custom-outline", {
       color: [1, 1, 1],
@@ -94,7 +94,7 @@ describe("placeholder", () => {
 
 describe("quickPlaceholder", () => {
   it("uses predefined colors", () => {
-    clearPlaceholderCache();
+    _clearPlaceholderCache();
 
     const player = quickPlaceholder("player");
     const enemy = quickPlaceholder("enemy");
@@ -106,7 +106,7 @@ describe("quickPlaceholder", () => {
   });
 
   it("assigns default shapes based on type", () => {
-    clearPlaceholderCache();
+    _clearPlaceholderCache();
 
     // These should use different default shapes
     const player = quickPlaceholder("player"); // circle
@@ -122,21 +122,21 @@ describe("quickPlaceholder", () => {
   });
 
   it("allows shape override", () => {
-    clearPlaceholderCache();
+    _clearPlaceholderCache();
 
     quickPlaceholder("enemy"); // default diamond
     quickPlaceholder("enemy", { shape: "hexagon" }); // override to hexagon
 
-    assert.equal(getPlaceholderCacheSize(), 2);
+    assert.equal(_getPlaceholderCacheSize(), 2);
   });
 
   it("allows size override", () => {
-    clearPlaceholderCache();
+    _clearPlaceholderCache();
 
     quickPlaceholder("coin", { size: 16 });
     quickPlaceholder("coin", { size: 48 });
 
-    assert.equal(getPlaceholderCacheSize(), 2);
+    assert.equal(_getPlaceholderCacheSize(), 2);
   });
 });
 
@@ -185,33 +185,33 @@ describe("PLACEHOLDER_COLORS", () => {
   });
 });
 
-describe("clearPlaceholderCache", () => {
+describe("_clearPlaceholderCache", () => {
   it("clears all cached textures", () => {
     placeholder("cache-test-1");
     placeholder("cache-test-2");
     placeholder("cache-test-3");
 
-    assert.ok(getPlaceholderCacheSize() > 0);
+    assert.ok(_getPlaceholderCacheSize() > 0);
 
-    clearPlaceholderCache();
+    _clearPlaceholderCache();
 
-    assert.equal(getPlaceholderCacheSize(), 0);
+    assert.equal(_getPlaceholderCacheSize(), 0);
   });
 });
 
-describe("getPlaceholderCacheSize", () => {
+describe("_getPlaceholderCacheSize", () => {
   it("returns accurate count", () => {
-    clearPlaceholderCache();
-    assert.equal(getPlaceholderCacheSize(), 0);
+    _clearPlaceholderCache();
+    assert.equal(_getPlaceholderCacheSize(), 0);
 
     placeholder("count-1");
-    assert.equal(getPlaceholderCacheSize(), 1);
+    assert.equal(_getPlaceholderCacheSize(), 1);
 
     placeholder("count-2");
-    assert.equal(getPlaceholderCacheSize(), 2);
+    assert.equal(_getPlaceholderCacheSize(), 2);
 
     // Same call should not increase count
     placeholder("count-1");
-    assert.equal(getPlaceholderCacheSize(), 2);
+    assert.equal(_getPlaceholderCacheSize(), 2);
   });
 });

@@ -121,7 +121,7 @@ arcane/
 │   │   ├── aabb.ts                — AABB type, aabbOverlap(), circleAABBOverlap/Resolve()
 │   │   ├── types.ts               — BodyId, BodyDef, ShapeDef, MaterialDef, BodyState, Contact, RayHit
 │   │   ├── world.ts               — createPhysicsWorld(), stepPhysics(), destroyPhysicsWorld()
-│   │   ├── body.ts                — createBody(), removeBody(), getBodyState(), setBodyVelocity(), applyForce/Impulse()
+│   │   ├── body.ts                — createBody(), destroyBody(), getBodyState(), setBodyVelocity(), applyForce/Impulse()
 │   │   ├── constraints.ts         — createDistanceJoint(), createRevoluteJoint(), removeConstraint()
 │   │   ├── query.ts               — queryAABB(), raycast(), getContacts()
 │   │   └── index.ts               — Barrel export (aabb helpers + physics engine API)

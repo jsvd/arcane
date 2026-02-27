@@ -61,7 +61,7 @@ declare module "@arcane/runtime/tweening" {
    *
    * Transitions: pending -> active -> completed (normal flow),
    * active <-> paused (via pauseTween/resumeTween),
-   * any -> stopped (via stopTween).
+   * any -> stopped (via cancelTween).
    */
   export type TweenState = "pending" | "active" | "paused" | "completed" | "stopped";
   /**
@@ -81,13 +81,13 @@ declare module "@arcane/runtime/tweening" {
       PAUSED: "paused";
       /** All iterations complete. The tween has been removed from the update list. */
       COMPLETED: "completed";
-      /** Manually stopped via stopTween(). The tween has been removed from the update list. */
+      /** Manually stopped via cancelTween(). The tween has been removed from the update list. */
       STOPPED: "stopped";
   };
   /**
    * A tween instance returned by {@link tween}.
    *
-   * Inspect `state` to check lifecycle. Use `stopTween()`, `pauseTween()`,
+   * Inspect `state` to check lifecycle. Use `cancelTween()`, `pauseTween()`,
    * `resumeTween()`, or `reverseTween()` to control playback.
    */
   export interface Tween {
@@ -448,12 +448,12 @@ declare module "@arcane/runtime/tweening" {
    */
   export declare function updateTweens(dt: number): void;
   /**
-   * Stop a tween immediately and remove it from the update list.
+   * Cancel a tween immediately and remove it from the update list.
    * Sets state to {@link TweenState.STOPPED}. The `onComplete` callback is NOT called.
    *
-   * @param t - The tween to stop.
+   * @param t - The tween to cancel.
    */
-  export declare function stopTween(t: Tween): void;
+  export declare function cancelTween(t: Tween): void;
   /**
    * Pause a tween, freezing it at its current progress.
    * Only affects tweens in "active" or "pending" state. Use {@link resumeTween} to continue.

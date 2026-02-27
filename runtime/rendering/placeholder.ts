@@ -304,7 +304,7 @@ function getDefaultShapeForType(type: string): PlaceholderShape {
  * Clear the placeholder texture cache.
  * Useful for memory management or when regenerating placeholders.
  */
-export function clearPlaceholderCache(): void {
+export function _clearPlaceholderCache(): void {
   placeholderCache.clear();
 }
 
@@ -312,6 +312,6 @@ export function clearPlaceholderCache(): void {
  * Get the number of cached placeholder textures.
  * Useful for debugging or monitoring memory usage.
  */
-export function getPlaceholderCacheSize(): number {
+export function _getPlaceholderCacheSize(): number {
   return placeholderCache.size;
 }

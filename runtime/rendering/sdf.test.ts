@@ -41,7 +41,7 @@ import {
   // Entities
   sdfEntity,
   getSdfEntity,
-  getSdfEntityCount,
+  _getSdfEntityCount,
   clearSdfEntities,
   // Helpers
   _parseColor as parseColor,
@@ -752,20 +752,20 @@ describe("SDF Entity Creation", () => {
     assert.equal(entity!.wgsl, "sd_circle(p, 10.0)");
   });
 
-  it("getSdfEntityCount returns correct count", () => {
+  it("_getSdfEntityCount returns correct count", () => {
     clearSdfEntities();
-    assert.equal(getSdfEntityCount(), 0);
+    assert.equal(_getSdfEntityCount(), 0);
     sdfEntity({ shape: sdfCircle(1), fill: { type: "solid", color: "#fff" } });
-    assert.equal(getSdfEntityCount(), 1);
+    assert.equal(_getSdfEntityCount(), 1);
     sdfEntity({ shape: sdfCircle(2), fill: { type: "solid", color: "#fff" } });
-    assert.equal(getSdfEntityCount(), 2);
+    assert.equal(_getSdfEntityCount(), 2);
   });
 
   it("clearSdfEntities resets everything", () => {
     sdfEntity({ shape: sdfCircle(1), fill: { type: "solid", color: "#fff" } });
-    assert.ok(getSdfEntityCount() > 0);
+    assert.ok(_getSdfEntityCount() > 0);
     clearSdfEntities();
-    assert.equal(getSdfEntityCount(), 0);
+    assert.equal(_getSdfEntityCount(), 0);
     // ID counter also resets
     const id = sdfEntity({ shape: sdfCircle(1), fill: { type: "solid", color: "#fff" } });
     assert.equal(id, "sdf_1");

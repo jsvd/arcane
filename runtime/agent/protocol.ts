@@ -117,7 +117,7 @@ export function registerAgent<S>(config: AgentConfig<S>): AgentProtocol<S> {
       }
     },
 
-    simulate(name: string, argsJson?: string): SimulateResult<S> {
+    simulateAction(name: string, argsJson?: string): SimulateResult<S> {
       const action = actions[name];
       if (!action) {
         return { ok: false, state: getState(), error: `Unknown action: ${name}` };

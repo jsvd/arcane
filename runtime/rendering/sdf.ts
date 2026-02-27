@@ -1622,7 +1622,7 @@ export function getSdfEntity(id: string) {
  * Get the number of registered SDF entities.
  * Useful for testing and debugging.
  */
-export function getSdfEntityCount(): number {
+export function _getSdfEntityCount(): number {
   return sdfEntities.size;
 }
 

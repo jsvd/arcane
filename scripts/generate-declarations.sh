@@ -120,8 +120,9 @@ for entry in "${MODULES[@]}"; do
     echo "}"
   } > "$out_file"
 
-  # Strip any _-prefixed exports that slipped through barrel re-exports
-  sed -i '' '/export.*function _/d' "$out_file"
+  # Strip internal exports: _-prefixed functions and Rust backend emitter APIs.
+  # Uses sed for single-line removals (safe and predictable).
+  sed -i '' '/export.*function _/d; /export.*function.*RustEmitter/d; /export.*function updateAllRustEmitters/d; /export.*type RustEmitterConfig/d; /export.*interface RustEmitter/d; /export.*const _/d' "$out_file"
 
   lines=$(wc -l < "$out_file")
   echo "  $dir.d.ts ($lines lines)"

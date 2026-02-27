@@ -250,11 +250,6 @@ declare module "@arcane/runtime/ui" {
    * @param color - The color to validate.
    * @param caller - Name of the calling function (for the warning message).
    */
-      r: number;
-      g: number;
-      b: number;
-      a?: number;
-  } | undefined, caller: string): void;
   /**
    * Arcane UI Color Palette.
    * Pre-defined colors (0.0-1.0 RGBA) for consistent visual style across all demos.

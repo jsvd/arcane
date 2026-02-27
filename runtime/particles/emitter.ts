@@ -3,7 +3,7 @@
  *
  * Manages a global list of emitters. Call {@link updateParticles} once per frame
  * to spawn new particles and advance existing ones. Then read particles via
- * {@link getAllParticles} for rendering.
+ * {@link getAliveParticles} for rendering.
  */
 
 import type {
@@ -77,7 +77,7 @@ export function getTotalParticleCount(): number {
  *
  * @example
  * ```ts
- * const sparks = createEmitter({
+ * const sparks = spawnEmitter({
  *   shape: "point",
  *   x: 100, y: 100,
  *   mode: "burst",
@@ -91,7 +91,7 @@ export function getTotalParticleCount(): number {
  * });
  * ```
  */
-export function createEmitter(config: EmitterConfig): Emitter {
+export function spawnEmitter(config: EmitterConfig): Emitter {
   const emitter: Emitter = {
     id: `emitter_${emitterIdCounter++}`,
     config,
@@ -109,7 +109,7 @@ export function createEmitter(config: EmitterConfig): Emitter {
 
 /**
  * Remove an emitter from the global update list.
- * Its particles will no longer be updated or included in {@link getAllParticles}.
+ * Its particles will no longer be updated or included in {@link getAliveParticles}.
  *
  * @param emitter - The emitter to remove.
  */
@@ -424,7 +424,7 @@ export function updateParticles(dt: number): void {
  *
  * @returns A new array of all alive {@link Particle} instances across all emitters.
  */
-export function getAllParticles(): Particle[] {
+export function getAliveParticles(): Particle[] {
   const result: Particle[] = [];
   for (const emitter of emitters) {
     for (const particle of emitter.particles) {
@@ -484,7 +484,7 @@ const _rustEmitterPositions: Map<number, { x: number; y: number }> = new Map();
  * Rust emitter configuration for op_create_emitter.
  * Matches the JSON fields expected by the Rust parser.
  */
-export interface RustEmitterConfig {
+interface RustEmitterConfig {
   /** Spawn rate in particles per second. Default: 10. */
   spawnRate?: number;
   /** Minimum particle lifetime in seconds. Default: 0.5. */
@@ -529,7 +529,7 @@ export interface RustEmitterConfig {
  * @param config - Emitter configuration.
  * @returns Numeric emitter ID, or 0 if Rust ops are not available.
  */
-export function createRustEmitter(config: RustEmitterConfig): number {
+function createRustEmitter(config: RustEmitterConfig): number {
   if (!hasParticleOps) return 0;
 
   const json = JSON.stringify({
@@ -563,7 +563,7 @@ export function createRustEmitter(config: RustEmitterConfig): number {
  * @param x - Current emitter world X position (for spawning).
  * @param y - Current emitter world Y position (for spawning).
  */
-export function updateRustEmitter(id: number, dt: number, x?: number, y?: number): void {
+function updateRustEmitter(id: number, dt: number, x?: number, y?: number): void {
   if (!hasParticleOps || id === 0) return;
 
   const pos = _rustEmitterPositions.get(id);
@@ -583,7 +583,7 @@ export function updateRustEmitter(id: number, dt: number, x?: number, y?: number
  * @param id - Emitter ID from createRustEmitter().
  * @returns Number of alive particles, or 0 if unavailable.
  */
-export function getRustEmitterParticleCount(id: number): number {
+function getRustEmitterParticleCount(id: number): number {
   if (!hasParticleOps || id === 0) return 0;
   return (globalThis as any).Deno.core.ops.op_get_emitter_particle_count(id) as number;
 }
@@ -596,7 +596,7 @@ export function getRustEmitterParticleCount(id: number): number {
  * @param id - Emitter ID from createRustEmitter().
  * @returns Float32Array of particle sprite data, or null if unavailable.
  */
-export function getRustEmitterSpriteData(id: number): Float32Array | null {
+function getRustEmitterSpriteData(id: number): Float32Array | null {
   if (!hasParticleOps || id === 0) return null;
 
   const bytes: Uint8Array = (globalThis as any).Deno.core.ops.op_get_emitter_sprite_data(id);
@@ -612,7 +612,7 @@ export function getRustEmitterSpriteData(id: number): Float32Array | null {
  * @param id - Emitter ID from createRustEmitter().
  * @param opts - Optional overrides for particle size and layer.
  */
-export function drawRustEmitter(
+function drawRustEmitter(
   id: number,
   opts?: { w?: number; h?: number; layer?: number },
 ): void {
@@ -654,7 +654,7 @@ export function drawRustEmitter(
  *
  * @param id - Emitter ID from createRustEmitter().
  */
-export function destroyRustEmitter(id: number): void {
+function destroyRustEmitter(id: number): void {
   if (!hasParticleOps || id === 0) return;
   (globalThis as any).Deno.core.ops.op_destroy_emitter(id);
 
@@ -671,7 +671,7 @@ export function destroyRustEmitter(id: number): void {
  * @param id - Emitter ID from createRustEmitter().
  * @param spawnRate - New spawn rate in particles per second. Use 0 to stop spawning.
  */
-export function setRustEmitterSpawnRate(id: number, spawnRate: number): void {
+function setRustEmitterSpawnRate(id: number, spawnRate: number): void {
   if (!hasParticleOps || id === 0) return;
   (globalThis as any).Deno.core.ops.op_set_emitter_spawn_rate(id, spawnRate);
 }
@@ -682,7 +682,7 @@ export function setRustEmitterSpawnRate(id: number, spawnRate: number): void {
  *
  * @param dt - Delta time in seconds.
  */
-export function updateAllRustEmitters(dt: number): void {
+function updateAllRustEmitters(dt: number): void {
   for (const id of _rustEmitterIds) {
     const pos = _rustEmitterPositions.get(id);
     updateRustEmitter(id, dt, pos?.x ?? 0, pos?.y ?? 0);
@@ -696,7 +696,7 @@ export function updateAllRustEmitters(dt: number): void {
  * @param x - World X position.
  * @param y - World Y position.
  */
-export function setRustEmitterPosition(id: number, x: number, y: number): void {
+function setRustEmitterPosition(id: number, x: number, y: number): void {
   const pos = _rustEmitterPositions.get(id);
   if (pos) {
     pos.x = x;

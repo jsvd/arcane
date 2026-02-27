@@ -4,10 +4,10 @@
 
 import { describe, it, assert } from "../testing/harness.ts";
 import {
-  createEmitter,
+  spawnEmitter,
   removeEmitter,
   updateParticles,
-  getAllParticles,
+  getAliveParticles,
   addAffector,
   clearEmitters,
   getEmitterCount,
@@ -36,7 +36,7 @@ describe("Particle System", () => {
       textureId: 1,
     };
 
-    const emitter = createEmitter(config);
+    const emitter = spawnEmitter(config);
     assert.ok(emitter.id);
     assert.equal(getEmitterCount(), 1);
   });
@@ -58,10 +58,10 @@ describe("Particle System", () => {
       textureId: 1,
     };
 
-    createEmitter(config);
+    spawnEmitter(config);
     updateParticles(0.1);
 
-    const particles = getAllParticles();
+    const particles = getAliveParticles();
     assert.equal(particles.length, 10);
   });
 
@@ -82,11 +82,11 @@ describe("Particle System", () => {
       textureId: 1,
     };
 
-    createEmitter(config);
+    spawnEmitter(config);
 
     // After 1 second, should have ~10 particles
     updateParticles(1.0);
-    const particles = getAllParticles();
+    const particles = getAliveParticles();
     assert.ok(particles.length >= 9 && particles.length <= 11, `Expected ~10 particles, got ${particles.length}`);
   });
 
@@ -106,17 +106,17 @@ describe("Particle System", () => {
       textureId: 1,
     };
 
-    createEmitter(config);
+    spawnEmitter(config);
     updateParticles(0); // Spawn particle
 
-    const particles1 = getAllParticles();
+    const particles1 = getAliveParticles();
     assert.equal(particles1.length, 1);
     const initialX = particles1[0].x;
 
     // Update for 1 second
     updateParticles(1.0);
 
-    const particles2 = getAllParticles();
+    const particles2 = getAliveParticles();
     assert.equal(particles2.length, 1);
 
     // Should have moved 100 pixels to the right
@@ -141,14 +141,14 @@ describe("Particle System", () => {
       textureId: 1,
     };
 
-    createEmitter(config);
+    spawnEmitter(config);
     updateParticles(0);
 
-    assert.equal(getAllParticles().length, 5);
+    assert.equal(getAliveParticles().length, 5);
 
     // After 0.6 seconds, all should be dead
     updateParticles(0.6);
-    assert.equal(getAllParticles().length, 0);
+    assert.equal(getAliveParticles().length, 0);
   });
 
   it("should interpolate colors over lifetime", () => {
@@ -167,10 +167,10 @@ describe("Particle System", () => {
       textureId: 1,
     };
 
-    createEmitter(config);
+    spawnEmitter(config);
     updateParticles(0);
 
-    const particles = getAllParticles();
+    const particles = getAliveParticles();
     assert.equal(particles.length, 1);
 
     // At start, color should be red
@@ -199,7 +199,7 @@ describe("Particle System", () => {
       textureId: 1,
     };
 
-    const emitter = createEmitter(config);
+    const emitter = spawnEmitter(config);
     addAffector(emitter, {
       type: "gravity",
       forceX: 0,
@@ -208,7 +208,7 @@ describe("Particle System", () => {
 
     updateParticles(0);
 
-    const particles = getAllParticles();
+    const particles = getAliveParticles();
     const initialY = particles[0].y;
 
     // After 1 second with gravity, should have fallen
@@ -233,7 +233,7 @@ describe("Particle System", () => {
       textureId: 1,
     };
 
-    const emitter = createEmitter(config);
+    const emitter = spawnEmitter(config);
     assert.equal(getEmitterCount(), 1);
 
     removeEmitter(emitter);
@@ -258,10 +258,10 @@ describe("Particle System", () => {
       maxParticles: 10,
     };
 
-    createEmitter(config);
+    spawnEmitter(config);
     updateParticles(1.0); // Try to spawn 100 particles
 
-    const particles = getAllParticles();
+    const particles = getAliveParticles();
     assert.ok(particles.length <= 10, `Should not exceed maxParticles, got ${particles.length}`);
   });
 
@@ -283,10 +283,10 @@ describe("Particle System", () => {
       textureId: 1,
     };
 
-    createEmitter(config);
+    spawnEmitter(config);
     updateParticles(0);
 
-    const particles = getAllParticles();
+    const particles = getAliveParticles();
 
     // All particles should be within the area
     for (const p of particles) {
@@ -312,10 +312,10 @@ describe("Particle System", () => {
       // textureId omitted — should use default
     };
 
-    createEmitter(config);
+    spawnEmitter(config);
     updateParticles(0);
 
-    const particles = getAllParticles();
+    const particles = getAliveParticles();
     assert.equal(particles.length, 3);
     // In headless mode, default texture returns 0 (no-op createSolidTexture)
     // Just verify particles were created without error
@@ -342,10 +342,10 @@ describe("Particle System", () => {
       textureId: 1,
     };
 
-    createEmitter(config);
+    spawnEmitter(config);
     updateParticles(0);
 
-    const particles = getAllParticles();
+    const particles = getAliveParticles();
 
     // All particles should be within the ring
     for (const p of particles) {
@@ -389,7 +389,7 @@ describe("Global Particle Cap", () => {
       textureId: 1,
     };
 
-    createEmitter(config);
+    spawnEmitter(config);
     updateParticles(0);
 
     assert.equal(getTotalParticleCount(), 5);
@@ -413,7 +413,7 @@ describe("Global Particle Cap", () => {
       textureId: 1,
     };
 
-    createEmitter(config);
+    spawnEmitter(config);
     updateParticles(0);
     assert.equal(getTotalParticleCount(), 5);
 
@@ -441,15 +441,15 @@ describe("Global Particle Cap", () => {
     });
 
     // First emitter: 10 particles (all fit)
-    createEmitter(makeConfig());
+    spawnEmitter(makeConfig());
     updateParticles(0);
     assert.equal(getTotalParticleCount(), 10);
 
     // Second emitter: wants 10 but only 5 fit
-    createEmitter(makeConfig());
+    spawnEmitter(makeConfig());
     updateParticles(0);
     assert.equal(getTotalParticleCount(), 15);
-    assert.equal(getAllParticles().length, 15);
+    assert.equal(getAliveParticles().length, 15);
 
     // Reset for other tests
     setMaxTotalParticles(10000);
@@ -473,7 +473,7 @@ describe("Global Particle Cap", () => {
       textureId: 1,
     };
 
-    createEmitter(config);
+    spawnEmitter(config);
     updateParticles(0);
     assert.equal(getTotalParticleCount(), 20);
 
@@ -499,10 +499,10 @@ describe("Global Particle Cap", () => {
       textureId: 1,
     };
 
-    createEmitter(config);
+    spawnEmitter(config);
     updateParticles(0);
     assert.equal(getTotalParticleCount(), 0);
-    assert.equal(getAllParticles().length, 0);
+    assert.equal(getAliveParticles().length, 0);
 
     // Reset
     setMaxTotalParticles(10000);
@@ -532,7 +532,7 @@ describe("drawAllParticles", () => {
       textureId: 1,
     };
 
-    createEmitter(config);
+    spawnEmitter(config);
     updateParticles(0);
 
     // Should draw 5 circles (no-op in headless but should not throw)

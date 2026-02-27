@@ -16,7 +16,7 @@ import {
   getViewportSize,
   createSolidTexture,
   createAnimation,
-  addFrameEvent,
+  onFrameEvent,
   createAnimationFSM,
   getCurrentState,
   isBlending,
@@ -72,7 +72,7 @@ const attackAnim = createAnimation(TEX_PLAYER_ATTACK, 48, 64, 4, 12, { loop: fal
 // --- Frame events: attack hitbox on frame 2 ---
 let activeHitbox: { x: number; y: number; w: number; h: number; timer: number } | null = null;
 
-addFrameEvent(attackAnim, 1, () => {
+onFrameEvent(attackAnim, 1, () => {
   // Spawn hitbox in front of the character
   const hbX = pState.facingRight
     ? pState.x + PLAYER_W

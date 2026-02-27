@@ -18,7 +18,7 @@
 
 import { shakeCamera } from "../tweening/helpers.ts";
 import { flashScreen } from "../tweening/helpers.ts";
-import { createEmitter } from "../particles/emitter.ts";
+import { spawnEmitter } from "../particles/emitter.ts";
 import { playSound } from "./audio.ts";
 import type { EmitterConfig } from "../particles/types.ts";
 
@@ -123,7 +123,7 @@ export function getHitstopFrames(): number {
  * @example
  * ```ts
  * onFrame(() => {
- *   if (!consumeHitstopFrame()) {
+ *   if (!_consumeHitstopFrame()) {
  *     // Normal gameplay update
  *     updateGameplay(dt);
  *   }
@@ -134,7 +134,7 @@ export function getHitstopFrames(): number {
  * });
  * ```
  */
-export function consumeHitstopFrame(): boolean {
+export function _consumeHitstopFrame(): boolean {
   if (hitstopFramesRemaining <= 0) return false;
   hitstopFramesRemaining--;
   return true;
@@ -227,7 +227,7 @@ export function impact(x: number, y: number, config: ImpactConfig): void {
       scale: [size[0] / 4, size[1] / 4],
       textureId: p.textureId ?? 0,
     };
-    createEmitter(emitterConfig);
+    spawnEmitter(emitterConfig);
   }
 
   // Sound playback

@@ -6,7 +6,7 @@ import type { Entity, EntityOptions, EntitySprite } from "./types.ts";
 import type { BodyId } from "../physics/types.ts";
 import type { Color } from "../ui/types.ts";
 import type { SpriteOptions } from "../rendering/types.ts";
-import { createBody, getBodyState, removeBody } from "../physics/body.ts";
+import { createBody, getBodyState, destroyBody } from "../physics/body.ts";
 import { drawSprite } from "../rendering/sprites.ts";
 import { createSolidTexture } from "../rendering/texture.ts";
 
@@ -134,7 +134,7 @@ export function drawEntities(entities: Entity[]): void {
  */
 export function destroyEntity(entity: Entity): void {
   if (entity.bodyId !== null) {
-    removeBody(entity.bodyId);
+    destroyBody(entity.bodyId);
     entity.bodyId = null;
   }
   entity.active = false;

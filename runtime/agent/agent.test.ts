@@ -240,12 +240,12 @@ describe("executeAction", () => {
   });
 });
 
-// --- simulate ---
+// --- simulateAction ---
 
-describe("simulate", () => {
+describe("simulateAction", () => {
   it("simulates an action without committing state", () => {
     const agent = makeAgent();
-    const result = agent.simulate("move", JSON.stringify({ dx: 1, dy: 0 }));
+    const result = agent.simulateAction("move", JSON.stringify({ dx: 1, dy: 0 }));
     assert.equal(result.ok, true);
     assert.equal(result.state.player.pos.x, 2);
     // Original state unchanged
@@ -254,21 +254,21 @@ describe("simulate", () => {
 
   it("returns error for unknown action", () => {
     const agent = makeAgent();
-    const result = agent.simulate("nonexistent");
+    const result = agent.simulateAction("nonexistent");
     assert.equal(result.ok, false);
     assert.ok(result.error!.includes("Unknown action"));
   });
 
   it("returns error for invalid JSON args", () => {
     const agent = makeAgent();
-    const result = agent.simulate("move", "{bad}");
+    const result = agent.simulateAction("move", "{bad}");
     assert.equal(result.ok, false);
     assert.ok(result.error!.includes("Invalid JSON"));
   });
 
   it("returns error when simulation throws", () => {
     const agent = makeAgent();
-    const result = agent.simulate("failAction");
+    const result = agent.simulateAction("failAction");
     assert.equal(result.ok, false);
     assert.ok(result.error!.includes("intentional failure"));
   });

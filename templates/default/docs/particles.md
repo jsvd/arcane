@@ -7,10 +7,10 @@ The engine provides a complete particle system with pooling, color interpolation
 ## Particle Emitters
 
 ```typescript
-import { createEmitter, updateParticles, getAllParticles } from "@arcane/runtime/particles";
+import { spawnEmitter, updateParticles, getAliveParticles } from "@arcane/runtime/particles";
 
 // Continuous emitter (fire, portal glow, ambient dust)
-createEmitter({
+spawnEmitter({
   shape: "point", x: 100, y: 100, mode: "continuous", rate: 20,
   lifetime: [0.5, 1.0], velocityX: [-50, 50], velocityY: [-100, -50],
   startColor: { r: 1, g: 0.8, b: 0.2, a: 1 }, endColor: { r: 1, g: 0.2, b: 0, a: 0 },
@@ -18,7 +18,7 @@ createEmitter({
 });
 
 // Burst emitter (explosion, death, pickup)
-createEmitter({
+spawnEmitter({
   shape: "point", x: enemy.x, y: enemy.y, mode: "burst", burstCount: 20,
   lifetime: [0.3, 0.8], velocityX: [-100, 100], velocityY: [-150, -20],
   startColor: { r: 1, g: 0, b: 0, a: 1 }, endColor: { r: 1, g: 0.5, b: 0, a: 0 },
@@ -26,7 +26,7 @@ createEmitter({
 
 // In onFrame:
 updateParticles(dt);
-for (const p of getAllParticles()) {
+for (const p of getAliveParticles()) {
   drawSprite({
     textureId: p.textureId, x: p.x - 2, y: p.y - 2,
     w: 4 * p.scale, h: 4 * p.scale,
@@ -53,7 +53,7 @@ import { createRng } from "@arcane/runtime/state";
 
 const rng = createRng(42);
 for (let i = 0; i < 50; i++) {
-  createEmitter({
+  spawnEmitter({
     shape: "point", x: rng.int(0, 800), y: rng.int(0, 600),
     mode: "continuous", rate: rng.int(1, 4),
     lifetime: [0.3, 0.8], velocityY: [-20, -5],
@@ -67,7 +67,7 @@ for (let i = 0; i < 50; i++) {
 
 **Death explosion:**
 ```typescript
-createEmitter({
+spawnEmitter({
   shape: "point", x: player.x, y: player.y,
   mode: "burst", burstCount: 15,
   lifetime: [0.4, 0.8],
@@ -80,7 +80,7 @@ createEmitter({
 
 **Landing dust:**
 ```typescript
-createEmitter({
+spawnEmitter({
   shape: "area", x: player.x - 8, y: player.y + player.h,
   shapeParams: { width: 16, height: 2 },
   mode: "burst", burstCount: 6,
@@ -93,7 +93,7 @@ createEmitter({
 
 **Fire / torch:**
 ```typescript
-createEmitter({
+spawnEmitter({
   shape: "area", x: torch.x, y: torch.y,
   shapeParams: { width: 8, height: 2 },
   mode: "continuous", rate: 15,
@@ -106,7 +106,7 @@ createEmitter({
 
 ## `burstParticles` / `streamParticles`
 
-For most effects, use these instead of `createEmitter()` directly. See `types/particles.d.ts` for full signatures.
+For most effects, use these instead of `spawnEmitter()` directly. See `types/particles.d.ts` for full signatures.
 
 ```typescript
 import { burstParticles, streamParticles, drawAllParticles } from "@arcane/runtime/particles";
@@ -153,7 +153,7 @@ burstParticles(x, y, { velocityX: [-15, 15], velocityY: [-20, -5] });
 
 ### Rendering
 
-`drawAllParticles()` is required in your frame loop -- `autoSubsystems` updates particle physics but does not draw them. For custom rendering (sprites, additive blending), use `getAllParticles()` instead.
+`drawAllParticles()` is required in your frame loop -- `autoSubsystems` updates particle physics but does not draw them. For custom rendering (sprites, additive blending), use `getAliveParticles()` instead.
 
 ```typescript
 game.onFrame((ctx) => {

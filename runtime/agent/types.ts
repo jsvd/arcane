@@ -150,7 +150,7 @@ export type AgentProtocol<S> = Readonly<{
   /** Execute a named action with optional JSON arguments. Commits state changes. */
   executeAction: (name: string, argsJson?: string) => ActionResult<S>;
   /** Simulate a named action without committing. Returns hypothetical state. */
-  simulate: (name: string, argsJson?: string) => SimulateResult<S>;
+  simulateAction: (name: string, argsJson?: string) => SimulateResult<S>;
   /** Reset state to the initial snapshot captured at registerAgent() time. */
   rewind: () => S;
   /** Capture a deep clone of the current state as a snapshot. */
