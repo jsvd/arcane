@@ -136,7 +136,7 @@ Scaffolded projects include:
 
 ## Status
 
-**v0.19.1** — 2152 TS (Node) + 2155 (V8) + 351 Rust tests passing.
+**v0.19.2** — 2152 TS (Node) + 2155 (V8) + 351 Rust tests passing.
 
 **Next:** See [roadmap](docs/roadmap.md) backlog.
 

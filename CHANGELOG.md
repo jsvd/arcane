@@ -2,6 +2,15 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.19.2] - 2026-02-27
+
+### Added
+- **`/start` skill** — scaffolded projects include a `/start` skill that detects a running `arcane dev` instance via MCP port file or launches one automatically
+
+### Changed
+- **Scaffold Input pattern** — template `game.ts` now ships with an `Input` type and `tick()` accepts `input: Input = {}` by default, so adding input fields doesn't break existing call sites
+- **Scaffold iteration cycle** — AGENTS.md step 3 now references `/start` instead of manual `arcane dev` instructions
+
 ## [0.19.1] - 2026-02-27
 
 ### Added
