@@ -16,7 +16,6 @@ describe("{{PROJECT_NAME}}", () => {
 
   it("tick returns state", () => {
     const state = initGame(42);
-    // Adapt this call as you change tick's signature
     const next = tick(state, 1 / 60);
     assert.ok(next, "tick should return state");
   });
@@ -24,7 +23,7 @@ describe("{{PROJECT_NAME}}", () => {
   // Add your game-specific tests here:
   // it("player moves right", () => {
   //   let state = initGame(42);
-  //   state = tick(state, 1/60, { left: false, right: true, ... });
+  //   state = tick(state, 1/60, { direction: 1 });
   //   assert.ok(state.player.x > 0, "player should move right");
   // });
 });

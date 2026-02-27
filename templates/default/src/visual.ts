@@ -46,7 +46,7 @@ game.onFrame((ctx) => {
   //    isActionPressed("action", input) — just pressed this frame
 
   // 2. Update game logic (pure functions from game.ts)
-  //    Adapt this call as you change tick's signature
+  //    Add fields to Input type in game.ts as you build
   state = tick(state, ctx.dt);
 
   // 3. Camera — smooth follow with shake

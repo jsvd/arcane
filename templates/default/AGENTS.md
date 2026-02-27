@@ -41,8 +41,8 @@ Imports use `@arcane/runtime/{module}`:
 
 1. **Write a change**
 2. **Run `/check`** — catches type errors immediately (hot-reload fails silently on TS errors)
-3. **Run `arcane dev`** — verify visually, iterate on look and feel
-4. **Write a test** — cover the logic in `*.test.ts`, run `/check` again
+3. **Verify visually** — run `/start` to ensure the game window is open; hot-reload picks up saved files automatically
+4. **Write a test** — Arcane games are code-first; test more than a typical game. Each `foo.ts` should have a `foo.test.ts`
 5. **Commit** — small, working increments
 
 ## Coordinate System
@@ -87,7 +87,7 @@ Imports use `@arcane/runtime/{module}`:
 
 **22. Let narrowing from unions** — Inside `if (state.phase === "playing")`, `let phase = state.phase` narrows to `"playing"`. Fix: `let phase: GamePhase = state.phase;`
 
-**29. Changing signatures without updating callers** — If you change `tick(state, dt)` to `tick(state, dt, input)`, update `visual.ts` and `game.test.ts` too. Run `/check` after each edit.
+**29. Adding input fields** — Add fields to the `Input` type in `game.ts`, not as new positional parameters to `tick()`. The `input: Input = {}` default means existing call sites (tests, visual.ts) keep compiling.
 
 ### Patterns
 

@@ -12,6 +12,12 @@ import type { Rng } from "@arcane/runtime/state";
 
 // --- Types ---
 
+/** Add fields as you build (e.g., direction, jump, run). */
+export type Input = {
+  // direction?: -1 | 0 | 1;
+  // jump?: boolean;
+};
+
 export type GameState = {
   rng: Rng;
   // Add your game state fields here
@@ -27,8 +33,8 @@ export function initGame(seedValue: number): GameState {
 }
 
 /** Advance game logic by one tick. Pure function: returns new state.
- *  Adapt signature as needed (e.g., add input parameter). */
-export function tick(state: GameState, _dt: number): GameState {
+ *  Add fields to Input as needed — existing call sites won't break. */
+export function tick(state: GameState, _dt: number, _input: Input = {}): GameState {
   // Update your game logic here
   return state;
 }
