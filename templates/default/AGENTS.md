@@ -8,16 +8,7 @@ You are an expert game developer helping the user build their game. Translate no
 
 ### File Organization
 
-Four starter files, each with a clear job:
-
-| File | Responsibility | Imports rendering? |
-|------|---------------|-------------------|
-| `src/config.ts` | Constants, tuning values, shared types | No |
-| `src/game.ts` | Pure game logic — state in, state out | No |
-| `src/render.ts` | All draw calls — sprites, shapes, HUD | Yes |
-| `src/visual.ts` | Bootstrap + frame loop orchestrator | Yes |
-
-**One concept = one file.** As your game grows, split by domain (what the code *does*), not by entity type:
+**One concept = one file.** Split by domain (what the code *does*), not by entity type:
 
 ```
 src/
@@ -54,90 +45,9 @@ Imports use `@arcane/runtime/{module}`:
 4. **Write a test** — cover the logic in `*.test.ts`, run `/check` again
 5. **Commit** — small, working increments
 
-## Quick Start
-
-```typescript
-import { createGame, drawColorSprite, hud } from "@arcane/runtime/game";
-import { followTargetWithShake, getViewportSize, setBackgroundColor } from "@arcane/runtime/rendering";
-import { shakeCamera } from "@arcane/runtime/tweening";
-import { burstParticles, drawAllParticles } from "@arcane/runtime/particles";
-import { createInputMap, isActionDown, isActionPressed, WASD_ARROWS } from "@arcane/runtime/input";
-import { rgb, drawCircle, withAlpha } from "@arcane/runtime/ui";
-
-// --- Colors (pre-compute at module scope, never inside onFrame) ---
-const BG_DARK = rgb(15, 10, 30);
-const PLAYER_CORE = rgb(60, 180, 255);
-const PLAYER_GLOW = rgb(100, 200, 255);
-const WHITE = rgb(255, 255, 255);
-
-const SPEED = 200;
-const game = createGame({ name: "my-game", zoom: 1.0 });
-const input = createInputMap(WASD_ARROWS);
-
-let state = { x: 0, y: 0, score: 0 };
-game.state({ get: () => state, set: (s) => { state = s; } });
-
-game.onFrame((ctx) => {
-  // 1. Input
-  let dx = 0, dy = 0;
-  if (isActionDown("left", input)) dx = -1;
-  if (isActionDown("right", input)) dx = 1;
-  if (isActionDown("up", input)) dy = -1;
-  if (isActionDown("down", input)) dy = 1;
-
-  // 2. Update + spawn trail particles when moving
-  const moving = dx !== 0 || dy !== 0;
-  if (moving) {
-    state = { ...state, x: state.x + dx * SPEED * ctx.dt, y: state.y + dy * SPEED * ctx.dt };
-    if (ctx.frame % 3 === 0) {
-      burstParticles(state.x, state.y, {
-        color: PLAYER_GLOW, count: 3,
-        velocityX: [-15, 15], velocityY: [-15, 15],
-        lifetime: [0.2, 0.5], gravity: 20,
-      });
-    }
-  }
-
-  // 3. Camera
-  followTargetWithShake(state.x, state.y, 2.0, 0.08);
-
-  // 4. Background
-  setBackgroundColor(BG_DARK.r, BG_DARK.g, BG_DARK.b);
-
-  // 5. Player — layered glow + core for depth
-  drawCircle(state.x, state.y, 24, { color: withAlpha(PLAYER_GLOW, 0.3), layer: 1 }); // outer glow
-  drawCircle(state.x, state.y, 18, { color: withAlpha(PLAYER_GLOW, 0.5), layer: 1 }); // inner glow
-  drawCircle(state.x, state.y, 12, { color: PLAYER_CORE, layer: 2 });                 // core
-  drawCircle(state.x - 4, state.y - 4, 4, { color: withAlpha(WHITE, 0.6), layer: 2 }); // highlight
-
-  // 6. Particles (trail from movement)
-  drawAllParticles();
-
-  // 7. HUD
-  hud.text(`Score: ${state.score}`, 10, 10);
-});
-```
-
-**Key points:**
-- **Layer visuals for depth** — outer glow -> inner glow -> core -> highlight. Multiple overlapping shapes with transparency create rich visuals.
-- **Pre-generate static data** — color constants, lookup tables at module scope. Never allocate in onFrame.
-- **Particles for feedback** — `burstParticles()` for one-shot effects, `streamParticles()` once for continuous sources. Always call `drawAllParticles()` to render.
-- `createGame()` handles `clearSprites()`, camera, agent registration. Provides `ctx.dt`/`ctx.elapsed`/`ctx.frame`.
-- `autoSubsystems: true` (default) auto-calls `updateTweens(dt)`, `updateParticles(dt)`, `updateScreenTransition(dt)`, etc.
-- Use `createInputMap(WASD_ARROWS)` for standard WASD+arrows+gamepad, or spread to extend: `{ ...WASD_ARROWS, shoot: ["x"] }`.
-- Use `followTargetWithShake()` for camera with built-in shake offset.
-
 ## Coordinate System
 
-**This is not a web canvas.** Camera-based coordinates, not screen-based. See [docs/coordinates.md](docs/coordinates.md) for full details and ASCII diagrams.
-
-**Gotchas:**
-- Camera defaults to **(0, 0) = screen center**, not top-left. Use `followTargetSmooth(vpW/2, vpH/2, ...)` for web-like coordinates.
-- `drawSprite({x, y, ...})` positions the sprite's **top-left corner** in world space
-- Y increases **downward** (same as web)
-- **Viewport is not fixed** — always use `getViewportSize()`, never hardcode 800/600
-- Use `screenSpace: true` for HUD elements — bypasses camera, (0,0) at top-left
-- Visible area: `camera +/- viewport / (2 * zoom)` in each axis
+**Not a web canvas.** Camera-based coordinates, not screen-based. `drawSprite({x, y})` positions the sprite's **top-left corner** in world space. Y increases downward. See [docs/coordinates.md](docs/coordinates.md) for full details.
 
 ## Common Mistakes
 

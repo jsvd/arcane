@@ -26,6 +26,7 @@ const game = createGame({
 });
 
 // Input actions — keyboard + gamepad + touch in one place
+// Extend via spread: createInputMap({ ...WASD_ARROWS, shoot: ["x", "GamepadX"] })
 const input = createInputMap(WASD_ARROWS);
 
 // --- State ---
