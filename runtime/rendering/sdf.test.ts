@@ -92,10 +92,10 @@ describe("SDF Primitives", () => {
   });
 
   it("triangle stores three vec2 points", () => {
-    const node = sdfTriangle([0, -10], [-10, 10], [10, 10]);
+    const node = sdfTriangle({ x: 0, y: -10 }, { x: -10, y: 10 }, { x: 10, y: 10 });
     assert.equal(node.type, "primitive");
     assert.equal((node as any).kind, "triangle");
-    assert.deepEqual((node as any).points, [[0, -10], [-10, 10], [10, 10]]);
+    assert.deepEqual((node as any).points, [{ x: 0, y: -10 }, { x: -10, y: 10 }, { x: 10, y: 10 }]);
   });
 
   it("egg creates a primitive node", () => {
@@ -127,10 +127,10 @@ describe("SDF Primitives", () => {
   });
 
   it("segment stores two vec2 points", () => {
-    const node = sdfSegment([0, 0], [10, 20]);
+    const node = sdfSegment({ x: 0, y: 0 }, { x: 10, y: 20 });
     assert.equal(node.type, "primitive");
     assert.equal((node as any).kind, "segment");
-    assert.deepEqual((node as any).points, [[0, 0], [10, 20]]);
+    assert.deepEqual((node as any).points, [{ x: 0, y: 0 }, { x: 10, y: 20 }]);
   });
 
   it("moon creates a primitive node", () => {
@@ -236,7 +236,7 @@ describe("SDF Transforms", () => {
   it("offset creates a transform node with offset", () => {
     const node = sdfOffset(sdfCircle(10), 5, 3);
     assert.equal(node.type, "transform");
-    assert.deepEqual((node as any).offset, [5, 3]);
+    assert.deepEqual((node as any).offset, { x: 5, y: 3 });
   });
 
   it("rotate creates a transform node with rotation in radians", () => {
@@ -262,7 +262,7 @@ describe("SDF Transforms", () => {
   it("repeat creates a transform node with repeatSpacing", () => {
     const node = sdfRepeat(sdfCircle(5), 20, 20);
     assert.equal(node.type, "transform");
-    assert.deepEqual((node as any).repeatSpacing, [20, 20]);
+    assert.deepEqual((node as any).repeatSpacing, { x: 20, y: 20 });
   });
 
   it("transforms can be nested", () => {
@@ -310,7 +310,7 @@ describe("SDF WGSL Code Generation", () => {
   });
 
   it("compiles triangle", () => {
-    const wgsl = compileToWgsl(sdfTriangle([0, -10], [-10, 10], [10, 10]));
+    const wgsl = compileToWgsl(sdfTriangle({ x: 0, y: -10 }, { x: -10, y: 10 }, { x: 10, y: 10 }));
     assert.equal(
       wgsl,
       "sd_triangle(p, vec2<f32>(0.0, -10.0), vec2<f32>(-10.0, 10.0), vec2<f32>(10.0, 10.0))",
@@ -318,7 +318,7 @@ describe("SDF WGSL Code Generation", () => {
   });
 
   it("compiles segment", () => {
-    const wgsl = compileToWgsl(sdfSegment([0, 0], [10, 20]));
+    const wgsl = compileToWgsl(sdfSegment({ x: 0, y: 0 }, { x: 10, y: 20 }));
     assert.equal(
       wgsl,
       "sd_segment(p, vec2<f32>(0.0, 0.0), vec2<f32>(10.0, 20.0))",
@@ -521,7 +521,7 @@ describe("SDF Bounds Calculation", () => {
   });
 
   it("triangle bounds based on vertex distance from origin", () => {
-    const bounds = calculateBounds(sdfTriangle([0, -10], [-10, 10], [10, 10]));
+    const bounds = calculateBounds(sdfTriangle({ x: 0, y: -10 }, { x: -10, y: 10 }, { x: 10, y: 10 }));
     // max vertex distance = sqrt(100+100) = ~14.14, * 1.1 = ~15.56
     assert.ok(bounds > 14);
     assert.ok(bounds < 17);
@@ -614,8 +614,8 @@ describe("SDF Fill Validation", () => {
   });
 
   it("glow fill WGSL generation", () => {
-    const wgsl = generateFillWgsl({ type: "glow", color: "#00ff00", intensity: 3 });
-    assert.ok(wgsl.includes("3.0"));
+    const wgsl = generateFillWgsl({ type: "glow", color: "#00ff00", spread: 30 });
+    assert.ok(wgsl.includes("30.0"));
     assert.ok(wgsl.includes("abs(d)"));
   });
 
@@ -693,20 +693,20 @@ describe("SDF Entity Creation", () => {
     const id = sdfEntity({
       shape: sdfCircle(10),
       fill: { type: "solid", color: "#ffffff" },
-      position: [100, 200],
+      position: { x: 100, y: 200 },
     });
     const entity = getSdfEntity(id);
-    assert.deepEqual(entity!.position, [100, 200]);
+    assert.deepEqual(entity!.position, { x: 100, y: 200 });
   });
 
-  it("sdfEntity defaults position to [0, 0]", () => {
+  it("sdfEntity defaults position to { x: 0, y: 0 }", () => {
     clearSdfEntities();
     const id = sdfEntity({
       shape: sdfCircle(10),
       fill: { type: "solid", color: "#ffffff" },
     });
     const entity = getSdfEntity(id);
-    assert.deepEqual(entity!.position, [0, 0]);
+    assert.deepEqual(entity!.position, { x: 0, y: 0 });
   });
 
   it("sdfEntity stores layer", () => {
@@ -904,7 +904,7 @@ describe("SDF Recipes", () => {
 
   it("mountain: triangle base with snow circle on top", () => {
     const mountain = sdfUnion(
-      sdfTriangle([0, -30], [-25, 20], [25, 20]),
+      sdfTriangle({ x: 0, y: -30 }, { x: -25, y: 20 }, { x: 25, y: 20 }),
       sdfOffset(sdfCircle(8), 0, -25),
     );
     const wgsl = compileToWgsl(mountain);
@@ -919,7 +919,7 @@ describe("SDF Recipes", () => {
   it("house: box body + triangle roof", () => {
     const house = sdfUnion(
       sdfBox(15, 12),
-      sdfOffset(sdfTriangle([-18, 0], [18, 0], [0, -16]), 0, -12),
+      sdfOffset(sdfTriangle({ x: -18, y: 0 }, { x: 18, y: 0 }, { x: 0, y: -16 }), 0, -12),
     );
     const wgsl = compileToWgsl(house);
     assert.ok(wgsl.length > 0);

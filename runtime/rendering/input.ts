@@ -10,29 +10,85 @@ const hasViewportOp =
   typeof (globalThis as any).Deno?.core?.ops?.op_get_viewport_size === "function";
 
 /**
+ * Normalize key name to canonical format.
+ * Accepts:
+ * - Lowercase letters: "a" → "a" ✓
+ * - Uppercase letters: "A" → "a"
+ * - DOM codes: "KeyA" → "a", "KeyR" → "r"
+ * - Mixed case: "SPACE" / "space" → "Space"
+ */
+function normalizeKeyName(key: string): KeyName {
+  // Handle DOM-style codes like "KeyA", "KeyR"
+  if (key.startsWith("Key") && key.length === 4) {
+    return key[3].toLowerCase() as KeyName;
+  }
+
+  // Handle digit codes like "Digit1"
+  if (key.startsWith("Digit") && key.length === 6) {
+    return key[5] as KeyName;
+  }
+
+  // Normalize case for special keys
+  const lower = key.toLowerCase();
+
+  // Arrow keys: arrowup → ArrowUp
+  if (lower.startsWith("arrow")) {
+    return ("Arrow" + lower.slice(5).charAt(0).toUpperCase() + lower.slice(6)) as KeyName;
+  }
+
+  // F-keys are case-insensitive
+  if (lower.match(/^f\d+$/)) {
+    return lower.toUpperCase() as KeyName;
+  }
+
+  // Special keys - normalize to title case
+  const specialKeys: Record<string, KeyName> = {
+    "space": "Space",
+    "enter": "Enter",
+    "tab": "Tab",
+    "escape": "Escape",
+    "shift": "Shift",
+    "control": "Control",
+    "alt": "Alt",
+    "backspace": "Backspace",
+    "delete": "Delete",
+    "home": "Home",
+    "end": "End",
+    "pageup": "PageUp",
+    "pagedown": "PageDown",
+  };
+
+  if (lower in specialKeys) {
+    return specialKeys[lower];
+  }
+
+  // Default: lowercase single characters (a-z, 0-9)
+  return lower as KeyName;
+}
+
+/**
  * Check if a key is currently held down (returns true every frame while held).
  * Returns false in headless mode.
  *
- * Key names use winit's logical key representation (NOT DOM KeyboardEvent.code):
- * - Letters: `"a"` - `"z"` (lowercase single characters, NOT `"KeyA"`)
- * - Digits: `"0"` - `"9"` (single characters, NOT `"Digit1"`)
- * - Arrow keys: `"ArrowUp"`, `"ArrowDown"`, `"ArrowLeft"`, `"ArrowRight"`
- * - Function keys: `"F1"` - `"F12"`
- * - Whitespace: `"Space"`, `"Tab"`, `"Enter"`
- * - Modifiers: `"Shift"`, `"Control"`, `"Alt"`
- * - Navigation: `"Escape"`, `"Backspace"`, `"Delete"`, `"Home"`, `"End"`, `"PageUp"`, `"PageDown"`
+ * Key names are normalized automatically, so you can use any of these formats:
+ * - Letters: `"a"`, `"A"`, `"KeyA"` → all normalize to `"a"`
+ * - Digits: `"1"`, `"Digit1"` → both normalize to `"1"`
+ * - Arrow keys: `"arrowup"`, `"ArrowUp"`, `"ARROWUP"` → all normalize to `"ArrowUp"`
+ * - Function keys: `"f1"`, `"F1"` → both normalize to `"F1"`
+ * - Special keys: `"space"`, `"Space"`, `"SPACE"` → all normalize to `"Space"`
  *
- * @param key - Key name (see {@link KeyName} for valid values).
+ * @param key - Key name (automatically normalized to canonical format).
  * @returns true if the key is currently held down, false otherwise.
  *
  * @example
- * if (isKeyDown("ArrowRight") || isKeyDown("d")) {
+ * // All of these work:
+ * if (isKeyDown("d") || isKeyDown("D") || isKeyDown("KeyD")) {
  *   player.x += speed * dt;
  * }
  */
-export function isKeyDown(key: KeyName): boolean {
+export function isKeyDown(key: string): boolean {
   if (!hasRenderOps) return false;
-  return (globalThis as any).Deno.core.ops.op_is_key_down(key);
+  return (globalThis as any).Deno.core.ops.op_is_key_down(normalizeKeyName(key));
 }
 
 /**
@@ -40,17 +96,20 @@ export function isKeyDown(key: KeyName): boolean {
  * Unlike {@link isKeyDown}, this returns true only on the first frame the key is pressed.
  * Returns false in headless mode.
  *
- * Valid key names are the same as {@link isKeyDown}:
- * `"ArrowUp"`, `"ArrowDown"`, `"ArrowLeft"`, `"ArrowRight"`, `"Space"`, `"Enter"`,
- * `"Escape"`, `"Tab"`, `"Shift"`, `"Control"`, `"Alt"`, `"a"`-`"z"`, `"0"`-`"9"`, `"F1"`-`"F12"`,
- * `"Backspace"`, `"Delete"`, `"Home"`, `"End"`, `"PageUp"`, `"PageDown"`.
+ * Valid key names are automatically normalized (see {@link isKeyDown} for details).
  *
- * @param key - Key name string (case-sensitive, web standard).
+ * @param key - Key name (automatically normalized to canonical format).
  * @returns true if the key was just pressed this frame, false otherwise.
+ *
+ * @example
+ * // All of these work:
+ * if (isKeyPressed("r") || isKeyPressed("R") || isKeyPressed("KeyR")) {
+ *   restartGame();
+ * }
  */
-export function isKeyPressed(key: KeyName): boolean {
+export function isKeyPressed(key: string): boolean {
   if (!hasRenderOps) return false;
-  return (globalThis as any).Deno.core.ops.op_is_key_pressed(key);
+  return (globalThis as any).Deno.core.ops.op_is_key_pressed(normalizeKeyName(key));
 }
 
 /**
