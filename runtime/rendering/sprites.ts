@@ -240,3 +240,82 @@ export function clearSprites(): void {
 
   (globalThis as any).Deno.core.ops.op_clear_sprites();
 }
+
+/**
+ * Draw a tiled/repeated texture across a rectangular area.
+ *
+ * The texture is repeated to fill the specified width and height.
+ * Useful for backgrounds, floors, walls, and seamless patterns.
+ *
+ * @param opts - Tiling options.
+ * @param opts.textureId - The texture to tile.
+ * @param opts.x - Top-left X position.
+ * @param opts.y - Top-left Y position.
+ * @param opts.w - Total width of the tiled area.
+ * @param opts.h - Total height of the tiled area.
+ * @param opts.tileW - Width of one tile in pixels. If omitted, uses the full texture width.
+ * @param opts.tileH - Height of one tile in pixels. If omitted, uses the full texture height.
+ * @param opts.layer - Draw layer. Default: 0.
+ * @param opts.tint - Tint color. Default: white.
+ * @param opts.opacity - Opacity. Default: 1.
+ * @param opts.blendMode - Blend mode. Default: "alpha".
+ * @param opts.screenSpace - If true, coordinates are in screen space. Default: false.
+ *
+ * @example
+ * ```ts
+ * // Tile a 16x16 grass texture across a 320x240 area
+ * drawTiledSprite({
+ *   textureId: grassTex,
+ *   x: 0, y: 0,
+ *   w: 320, h: 240,
+ *   tileW: 16, tileH: 16,
+ * });
+ * ```
+ *
+ * @example
+ * ```ts
+ * // Tile a full texture (repeating it 4x3 times)
+ * drawTiledSprite({
+ *   textureId: patternTex,
+ *   x: 100, y: 100,
+ *   w: 256, h: 192,
+ *   tileW: 64, tileH: 64,
+ * });
+ * ```
+ */
+export function drawTiledSprite(opts: {
+  textureId: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  tileW?: number;
+  tileH?: number;
+  layer?: number;
+  tint?: { r: number; g: number; b: number; a: number };
+  opacity?: number;
+  blendMode?: "alpha" | "additive" | "multiply" | "screen";
+  screenSpace?: boolean;
+}): void {
+  const tileW = opts.tileW ?? opts.w;
+  const tileH = opts.tileH ?? opts.h;
+
+  // Calculate how many times to repeat the texture
+  const repeatX = opts.w / tileW;
+  const repeatY = opts.h / tileH;
+
+  // Draw a single sprite with UV coordinates extended to cover the repeated area
+  drawSprite({
+    textureId: opts.textureId,
+    x: opts.x,
+    y: opts.y,
+    w: opts.w,
+    h: opts.h,
+    uv: { x: 0, y: 0, w: repeatX, h: repeatY },
+    layer: opts.layer,
+    tint: opts.tint,
+    opacity: opts.opacity,
+    blendMode: opts.blendMode,
+    screenSpace: opts.screenSpace,
+  });
+}

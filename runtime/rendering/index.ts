@@ -8,7 +8,7 @@ export type {
 } from "./types.ts";
 
 // Sprites
-export { drawSprite, clearSprites } from "./sprites.ts";
+export { drawSprite, clearSprites, drawTiledSprite } from "./sprites.ts";
 
 // Camera
 export type { CameraBounds, CameraDeadzone } from "./camera.ts";
