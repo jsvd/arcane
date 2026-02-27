@@ -2,6 +2,27 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.21.0] - 2026-02-27
+
+### Added
+- **`drawBurst(x, y, options)`** — one-shot particle burst convenience function; creates emitter, spawns particles, draws, and cleans up automatically
+- **`drawContinuous(id, x, y, dt, options)`** — persistent particle stream with automatic emitter management; useful for jetpacks, torches, trails
+- **`stopContinuous(id)`** — cleanup for continuous particle effects
+- **`drawTiledSprite(opts)`** — repeating texture primitive for backgrounds, floors, walls; extends UV coordinates to tile seamlessly
+- **`arcane screenshot <output.png>` command** — capture current frame via MCP `capture_frame` tool; requires active `arcane dev` session
+- **Unified "arcane" import namespace** — `import { drawSprite, createStore } from "arcane"` works instead of individual `@arcane/runtime/*` paths
+- **KeyName normalization** — `isKeyDown()` and `isKeyPressed()` accept multiple formats: `"a"`, `"KeyA"`, `"Digit1"`, `"ArrowUp"`, `"F1"`
+
+### Changed
+- **Vec2 API unified** — all SDF functions now use `{x, y}` objects instead of `[x, y]` tuples for consistency and discoverability
+- **SDF glow semantics** — `glow(color, spread)` replaces `intensity` parameter; higher spread = bigger glow (intuitive)
+- **Asset path resolution** — always relative to current working directory instead of entry file parent; eliminates `../assets` confusion
+- **Import map** — `"arcane"` alias added alongside `@arcane/runtime` and `@arcane-engine/runtime`
+
+### Fixed
+- **SDF glow compilation** — missed `intensity` → `spread` property access in WGSL generation
+- **Test suite** — `arcane-simple.test.ts` now skips in Node (V8-only); all 2160 Node tests pass
+
 ## [0.20.0] - 2026-02-27
 
 ### Added
