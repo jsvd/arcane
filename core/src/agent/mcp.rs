@@ -72,6 +72,11 @@ static MCP_TOOLS: &[McpTool] = &[
         description: "Get frame timing statistics (frame time, draw calls, FPS)",
         input_schema: r#"{"type":"object","properties":{}}"#,
     },
+    McpTool {
+        name: "capture_frame",
+        description: "Capture the current rendered frame as a PNG image",
+        input_schema: r#"{"type":"object","properties":{}}"#,
+    },
 ];
 
 /// Start the MCP server on a background thread.
@@ -175,8 +180,16 @@ fn handle_jsonrpc(body: &str, request_tx: &RequestSender, reload_flag: &Arc<Atom
                 extract_json_value(&params, "arguments").unwrap_or_else(|| "{}".to_string());
 
             let result = call_tool(&tool_name, &arguments, request_tx, reload_flag);
+            let content = match result {
+                ToolResult::Text(text) => {
+                    format!(r#"{{"type":"text","text":{text}}}"#)
+                }
+                ToolResult::Image { base64, mime_type } => {
+                    format!(r#"{{"type":"image","data":"{base64}","mimeType":"{mime_type}"}}"#)
+                }
+            };
             format!(
-                r#"{{"jsonrpc":"2.0","result":{{"content":[{{"type":"text","text":{result}}}]}},"id":{rpc_id}}}"#,
+                r#"{{"jsonrpc":"2.0","result":{{"content":[{content}]}},"id":{rpc_id}}}"#,
             )
         }
         "ping" => {
@@ -190,8 +203,14 @@ fn handle_jsonrpc(body: &str, request_tx: &RequestSender, reload_flag: &Arc<Atom
     }
 }
 
+/// Result of an MCP tool call — either text or an image.
+enum ToolResult {
+    Text(String),
+    Image { base64: String, mime_type: String },
+}
+
 /// Call an MCP tool by dispatching to the game loop via the inspector channel.
-fn call_tool(name: &str, arguments: &str, request_tx: &RequestSender, reload_flag: &Arc<AtomicBool>) -> String {
+fn call_tool(name: &str, arguments: &str, request_tx: &RequestSender, reload_flag: &Arc<AtomicBool>) -> ToolResult {
     let inspector_req = match name {
         "get_state" => {
             let path = extract_json_string(arguments, "path");
@@ -221,16 +240,16 @@ fn call_tool(name: &str, arguments: &str, request_tx: &RequestSender, reload_fla
             // send() returns Err immediately — no blocking wait.
             let (probe_tx, _probe_rx) = mpsc::channel();
             if request_tx.send((InspectorRequest::Health, probe_tx)).is_err() {
-                return json_encode(
+                return ToolResult::Text(json_encode(
                     "{\"ok\":false,\"error\":\"Game window is not running. Start it with: arcane dev src/visual.ts\"}",
-                );
+                ));
             }
             // Game loop alive — set the reload flag directly.
             // This works even if the main thread is hung (frame watchdog also detects hangs).
             // The probe_rx is dropped here; the frame callback's send() for Health will fail
             // silently (error is ignored with let _ = resp_tx.send(...)).
             reload_flag.store(true, Ordering::SeqCst);
-            return json_encode("{\"ok\":true,\"reloading\":true}");
+            return ToolResult::Text(json_encode("{\"ok\":true,\"reloading\":true}"));
         }
         "run_tests" => {
             // Spawn `arcane test` as a subprocess instead of going through the agent protocol.
@@ -254,10 +273,10 @@ fn call_tool(name: &str, arguments: &str, request_tx: &RequestSender, reload_fla
                     } else {
                         format!("Tests failed.\n\n{combined}")
                     };
-                    return json_encode(&summary);
+                    return ToolResult::Text(json_encode(&summary));
                 }
                 Err(e) => {
-                    return json_encode(&format!("Failed to run arcane test: {e}"));
+                    return ToolResult::Text(json_encode(&format!("Failed to run arcane test: {e}")));
                 }
             }
         }
@@ -270,8 +289,9 @@ fn call_tool(name: &str, arguments: &str, request_tx: &RequestSender, reload_fla
             }
         }
         "get_frame_stats" => InspectorRequest::GetFrameStats,
+        "capture_frame" => InspectorRequest::CaptureFrame,
         _ => {
-            return json_encode(&format!("Unknown tool: {name}"));
+            return ToolResult::Text(json_encode(&format!("Unknown tool: {name}")));
         }
     };
 
@@ -279,12 +299,22 @@ fn call_tool(name: &str, arguments: &str, request_tx: &RequestSender, reload_fla
     let (resp_tx, resp_rx) = mpsc::channel();
 
     if request_tx.send((inspector_req, resp_tx)).is_err() {
-        return json_encode("Game loop disconnected");
+        return ToolResult::Text(json_encode("Game loop disconnected"));
     }
 
     match resp_rx.recv_timeout(Duration::from_secs(10)) {
-        Ok(resp) => json_encode(&resp.body),
-        Err(_) => json_encode("Game loop timeout"),
+        Ok(resp) => {
+            // Image responses use content_type "image/png" and body is base64-encoded PNG
+            if resp.content_type == "image/png" {
+                ToolResult::Image {
+                    base64: resp.body,
+                    mime_type: "image/png".into(),
+                }
+            } else {
+                ToolResult::Text(json_encode(&resp.body))
+            }
+        }
+        Err(_) => ToolResult::Text(json_encode("Game loop timeout")),
     }
 }
 
@@ -311,6 +341,34 @@ fn json_encode(s: &str) -> String {
         .replace('\r', "\\r")
         .replace('\t', "\\t");
     format!("\"{escaped}\"")
+}
+
+/// Encode bytes as base64 (standard alphabet, with padding).
+pub fn base64_encode(data: &[u8]) -> String {
+    const ALPHABET: &[u8; 64] =
+        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    let mut out = String::with_capacity((data.len() + 2) / 3 * 4);
+    for chunk in data.chunks(3) {
+        let b0 = chunk[0] as u32;
+        let b1 = if chunk.len() > 1 { chunk[1] as u32 } else { 0 };
+        let b2 = if chunk.len() > 2 { chunk[2] as u32 } else { 0 };
+        let triple = (b0 << 16) | (b1 << 8) | b2;
+
+        out.push(ALPHABET[((triple >> 18) & 0x3F) as usize] as char);
+        out.push(ALPHABET[((triple >> 12) & 0x3F) as usize] as char);
+        if chunk.len() > 1 {
+            out.push(ALPHABET[((triple >> 6) & 0x3F) as usize] as char);
+        } else {
+            out.push('=');
+        }
+        if chunk.len() > 2 {
+            out.push(ALPHABET[(triple & 0x3F) as usize] as char);
+        } else {
+            out.push('=');
+        }
+    }
+    out
 }
 
 /// Build an HTTP response with JSON-RPC content type.
@@ -534,6 +592,15 @@ mod tests {
 
     #[test]
     fn tool_count() {
-        assert_eq!(MCP_TOOLS.len(), 11);
+        assert_eq!(MCP_TOOLS.len(), 12);
+    }
+
+    #[test]
+    fn base64_encode_basic() {
+        assert_eq!(base64_encode(b"Hello"), "SGVsbG8=");
+        assert_eq!(base64_encode(b""), "");
+        assert_eq!(base64_encode(b"f"), "Zg==");
+        assert_eq!(base64_encode(b"fo"), "Zm8=");
+        assert_eq!(base64_encode(b"foo"), "Zm9v");
     }
 }

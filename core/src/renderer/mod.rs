@@ -134,6 +134,10 @@ pub struct Renderer {
     pub delta_time: f32,
     /// Mouse position in screen pixels (for shader built-ins).
     pub mouse_pos: [f32; 2],
+    /// When true, the next render_frame() will capture the surface to a PNG.
+    pub capture_pending: bool,
+    /// PNG bytes from the last capture (taken by the frame callback).
+    pub capture_result: Option<Vec<u8>>,
 }
 
 impl Renderer {
@@ -176,6 +180,8 @@ impl Renderer {
             elapsed_time: 0.0,
             delta_time: 0.0,
             mouse_pos: [0.0, 0.0],
+            capture_pending: false,
+            capture_result: None,
         })
     }
 
@@ -368,6 +374,13 @@ impl Renderer {
         }
 
         self.gpu.queue.submit(std::iter::once(encoder.finish()));
+
+        // Capture the rendered frame if requested (before present consumes the surface)
+        if self.capture_pending {
+            self.capture_pending = false;
+            self.capture_result = self.capture_surface(&output.texture);
+        }
+
         output.present();
 
         self.frame_commands.clear();
@@ -390,6 +403,92 @@ impl Renderer {
                 physical_height as f32 / scale_factor,
             ];
         }
+    }
+
+    // ── Frame capture ─────────────────────────────────────────────────────
+
+    /// Copy the surface texture to a CPU-side PNG. Returns None on failure.
+    fn capture_surface(&self, texture: &wgpu::Texture) -> Option<Vec<u8>> {
+        let width = self.gpu.config.width;
+        let height = self.gpu.config.height;
+        let bytes_per_pixel: u32 = 4;
+        let unpadded_bytes_per_row = width * bytes_per_pixel;
+        let padded_bytes_per_row = ((unpadded_bytes_per_row + 255) / 256) * 256;
+
+        let buffer = self.gpu.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("capture_readback"),
+            size: (padded_bytes_per_row * height) as u64,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+
+        let mut encoder = self.gpu.device.create_command_encoder(
+            &wgpu::CommandEncoderDescriptor { label: Some("capture_encoder") },
+        );
+
+        encoder.copy_texture_to_buffer(
+            wgpu::TexelCopyTextureInfo {
+                texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            wgpu::TexelCopyBufferInfo {
+                buffer: &buffer,
+                layout: wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(padded_bytes_per_row),
+                    rows_per_image: Some(height),
+                },
+            },
+            wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+        );
+
+        self.gpu.queue.submit(std::iter::once(encoder.finish()));
+
+        // Map the buffer synchronously
+        let buffer_slice = buffer.slice(..);
+        let (tx, rx) = std::sync::mpsc::channel();
+        buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
+            let _ = tx.send(result);
+        });
+        self.gpu.device.poll(wgpu::Maintain::Wait);
+
+        if rx.recv().ok()?.ok().is_none() {
+            return None;
+        }
+
+        let data = buffer_slice.get_mapped_range();
+
+        // Strip row padding and handle BGRA→RGBA if needed
+        let is_bgra = format!("{:?}", self.gpu.config.format).contains("Bgra");
+        let mut pixels = Vec::with_capacity((width * height * 4) as usize);
+        for y in 0..height {
+            let start = (y * padded_bytes_per_row) as usize;
+            let end = start + (width * 4) as usize;
+            let row = &data[start..end];
+            if is_bgra {
+                // Swap B↔R for each pixel
+                for chunk in row.chunks_exact(4) {
+                    pixels.extend_from_slice(&[chunk[2], chunk[1], chunk[0], chunk[3]]);
+                }
+            } else {
+                pixels.extend_from_slice(row);
+            }
+        }
+
+        drop(data);
+        buffer.unmap();
+
+        // Encode to PNG using the `image` crate
+        use image::ImageEncoder;
+        let mut png_bytes = Vec::new();
+        let encoder = image::codecs::png::PngEncoder::new(&mut png_bytes);
+        if encoder.write_image(&pixels, width, height, image::ExtendedColorType::Rgba8).is_err() {
+            return None;
+        }
+
+        Some(png_bytes)
     }
 
     // ── Render target helpers ──────────────────────────────────────────────

@@ -15,6 +15,7 @@ pub enum InspectorRequest {
     Simulate { action: String },
     GetHistory,
     GetFrameStats,
+    CaptureFrame,
 }
 
 /// Response from the game loop back to the inspector HTTP server.
@@ -132,7 +133,8 @@ mod tests {
             },
             InspectorRequest::GetHistory,
             InspectorRequest::GetFrameStats,
+            InspectorRequest::CaptureFrame,
         ];
-        assert_eq!(requests.len(), 10);
+        assert_eq!(requests.len(), 11);
     }
 }

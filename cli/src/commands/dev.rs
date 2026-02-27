@@ -644,16 +644,40 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
         // Poll inspector requests (if inspector is active)
         if let Some(ref rx) = inspector_rx {
             while let Ok((req, resp_tx)) = rx.try_recv() {
-                let response = process_inspector_request(rt, req, &reload_flag, &bridge_for_loop);
-                let _ = resp_tx.send(response);
+                if matches!(req, arcane_core::agent::InspectorRequest::CaptureFrame) {
+                    // Defer: set capture flag, store sender for window.rs to complete
+                    if let Some(ref mut renderer) = state.renderer {
+                        renderer.capture_pending = true;
+                        state.pending_capture_tx = Some(resp_tx);
+                    } else {
+                        let _ = resp_tx.send(arcane_core::agent::InspectorResponse::error(
+                            503, "Renderer not available".into(),
+                        ));
+                    }
+                } else {
+                    let response = process_inspector_request(rt, req, &reload_flag, &bridge_for_loop);
+                    let _ = resp_tx.send(response);
+                }
             }
         }
 
         // Poll MCP requests (if MCP server is active)
         if let Some(ref rx) = mcp_rx {
             while let Ok((req, resp_tx)) = rx.try_recv() {
-                let response = process_inspector_request(rt, req, &reload_flag, &bridge_for_loop);
-                let _ = resp_tx.send(response);
+                if matches!(req, arcane_core::agent::InspectorRequest::CaptureFrame) {
+                    // Defer: set capture flag, store sender for window.rs to complete
+                    if let Some(ref mut renderer) = state.renderer {
+                        renderer.capture_pending = true;
+                        state.pending_capture_tx = Some(resp_tx);
+                    } else {
+                        let _ = resp_tx.send(arcane_core::agent::InspectorResponse::error(
+                            503, "Renderer not available".into(),
+                        ));
+                    }
+                } else {
+                    let response = process_inspector_request(rt, req, &reload_flag, &bridge_for_loop);
+                    let _ = resp_tx.send(response);
+                }
             }
         }
 
@@ -757,6 +781,11 @@ fn process_inspector_request(
             InspectorResponse::json(format!(
                 "{{\"frame_time_ms\":{frame_time_ms:.2},\"draw_calls\":{draw_calls},\"fps\":{fps:.1}}}"
             ))
+        }
+        InspectorRequest::CaptureFrame => {
+            // Should be handled as a deferred capture in the polling loop.
+            // If we get here, it means capture was routed incorrectly.
+            InspectorResponse::error(500, "Frame capture must be deferred to render loop".into())
         }
     }
 }

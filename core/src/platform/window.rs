@@ -28,6 +28,8 @@ pub struct RenderState {
     pub camera_zoom: f32,
     pub camera_bounds: Option<CameraBounds>,
     pub delta_time: f64,
+    /// Response sender waiting for a frame capture result.
+    pub pending_capture_tx: Option<crate::agent::ResponseSender>,
 }
 
 impl RenderState {
@@ -42,6 +44,7 @@ impl RenderState {
             camera_zoom: 1.0,
             camera_bounds: None,
             delta_time: 0.0,
+            pending_capture_tx: None,
         }
     }
 }
@@ -245,6 +248,19 @@ impl ApplicationHandler for AppState {
 
                         if let Err(e) = renderer.render_frame() {
                             eprintln!("Render error: {e}");
+                        }
+
+                        // Send capture result if a capture was completed
+                        if let Some(png_bytes) = renderer.capture_result.take() {
+                            if let Some(tx) = state.pending_capture_tx.take() {
+                                let b64 = crate::agent::mcp::base64_encode(&png_bytes);
+                                let resp = crate::agent::InspectorResponse {
+                                    status: 200,
+                                    content_type: "image/png".into(),
+                                    body: b64,
+                                };
+                                let _ = tx.send(resp);
+                            }
                         }
                     }
                 }
