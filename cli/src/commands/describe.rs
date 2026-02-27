@@ -16,8 +16,8 @@ pub fn run(entry: String, verbosity: Option<String>) -> Result<()> {
         type_check::check_types(&entry_path)?;
     }
 
-    let base_dir = entry_path.parent().unwrap_or_else(|| Path::new("."));
-    let import_map = create_import_map(base_dir);
+    let base_dir = std::env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf());
+    let import_map = create_import_map(&base_dir);
     let mut runtime = ArcaneRuntime::new_with_import_map(import_map);
 
     let rt = tokio::runtime::Builder::new_current_thread()

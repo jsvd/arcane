@@ -22,10 +22,10 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
         type_check::check_types(&entry_path)?;
     }
 
-    let base_dir = entry_path
-        .parent()
-        .unwrap_or_else(|| Path::new("."))
-        .to_path_buf();
+    // Use current working directory as base for asset resolution
+    // This allows assets/... paths instead of ../assets/... regardless of entry file location
+    let base_dir = std::env::current_dir()
+        .unwrap_or_else(|_| Path::new(".").to_path_buf());
 
     let title = format!(
         "Arcane — {}",
