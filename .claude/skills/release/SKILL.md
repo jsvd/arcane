@@ -1,18 +1,36 @@
 ---
 name: release
-description: Full release workflow — changelog, version bump, test, commit, tag, push, publish, GitHub release. Pass version as argument (e.g., /release 0.12.0).
+description: Full release workflow — changelog, version bump, test, commit, tag, push, publish, GitHub release. Pass version as argument (e.g., /release 0.12.0) or omit to auto-determine.
 allowed-tools: Bash, Read, Edit, Grep
 ---
 
-Execute the full Arcane release workflow. The argument is a semver version string like `0.12.0`.
+Execute the full Arcane release workflow. The argument is an optional semver version string like `0.12.0`. If no version is provided, auto-determine the next version (see step 1).
 
 ## Steps
 
 ### 1. Determine current and new versions
 
-Read `core/Cargo.toml` to find the current version. The new version is the argument passed by the user.
+Read `core/Cargo.toml` to find the current version (MAJOR.MINOR.PATCH).
 
-Run `git log --oneline PREV_TAG..HEAD` (where PREV_TAG is the current version's tag, e.g., `v0.11.0`) to see all changes since the last release.
+Run `git log --oneline PREV_TAG..HEAD` (where PREV_TAG is the current version's tag, e.g., `v0.19.1`) to see all changes since the last release.
+
+**If a version argument was provided**, use it as the new version.
+
+**If no version argument was provided**, auto-determine the bump level by analyzing the commits since the last tag:
+
+- **Minor bump** (0.X.0 → 0.X+1.0) if ANY commit introduces:
+  - A new user-facing feature (new command, new skill, new API function, new demo)
+  - A new runtime module or significant new capability
+  - Breaking changes to existing APIs
+  - Keywords in commit messages: "Add", "new", "feature", "implement", "introduce"
+
+- **Patch bump** (0.X.Y → 0.X.Y+1) for everything else:
+  - Bug fixes, doc updates, scaffold tweaks, refactors
+  - Test improvements, CI changes, dependency updates
+  - Template/skill improvements that don't add new capabilities
+  - Keywords: "Fix", "update", "tweak", "improve", "bump", "clean", "refactor"
+
+Print the determined version and the reasoning (which commits triggered minor vs patch) before proceeding.
 
 ### 2. Update CHANGELOG.md
 
