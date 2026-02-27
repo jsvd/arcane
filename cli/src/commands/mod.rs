@@ -57,8 +57,8 @@ pub fn create_import_map(base_dir: &Path) -> ImportMap {
             "game",
         ];
 
-        // Register mappings for both @arcane/runtime and @arcane-engine/runtime
-        for prefix in ["@arcane/runtime", "@arcane-engine/runtime"] {
+        // Register mappings for arcane, @arcane/runtime, and @arcane-engine/runtime
+        for prefix in ["arcane", "@arcane/runtime", "@arcane-engine/runtime"] {
             import_map.add(format!("{}/", prefix), runtime_url.clone());
             import_map.add(
                 prefix.to_string(),

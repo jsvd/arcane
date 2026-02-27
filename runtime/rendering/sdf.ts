@@ -1683,7 +1683,7 @@ export function flushSdfEntities(): void {
     } else if (fill.type === "glow") {
       fillType = 4;
       color = parseColor((fill as GlowFill).color);
-      fillParam = (fill as GlowFill).intensity;
+      fillParam = (fill as GlowFill).spread;
     } else if (fill.type === "cosine_palette") {
       fillType = 5;
     }
