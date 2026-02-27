@@ -194,7 +194,6 @@ arcane/
 │   ├── agent-testing/             — Phase 17 demo: MCP tools, snapshot replay, property testing
 │   ├── asteroids/                 — Phase 8 demo: rotation, flip, opacity, blend modes, CRT post-processing
 │   ├── audio-showcase/            — Phase 20 demo: spatial audio, crossfade, mixer panel
-│   ├── bfrpg-crawler/             — Phase 6 demo: BFRPG dungeon crawler with character creation, combat, AI
 │   ├── breakout/                  — Phase 2b demo: real-time arcade (paddle, ball, bricks)
 │   ├── card-battler/              — Phase 1 demo: card game
 │   ├── character-controller/      — Phase 15 demo: animation state machine + blending
@@ -240,7 +239,7 @@ arcane/
 
 ### Code Examples
 - All TypeScript examples should be valid, readable, and illustrate the actual intended API.
-- Use realistic game scenarios (BFRPG RPG examples preferred).
+- Use realistic game scenarios (RPG, roguelike, platformer examples preferred).
 - Show both the "what" (API usage) and the "why" (what problem it solves).
 
 ## Engineering Philosophy

@@ -275,7 +275,7 @@ An engine built with care and enthusiasm produces different work than one built 
 
 **Celebrate milestones.** When a phase is complete, when the first sprite renders, when combat actually works — pause and appreciate it. These are real achievements.
 
-**Make the demo game fun.** The BFRPG showcase isn't a test harness. It's a game. It should have personality, surprises, and moments that make you want to keep playing. If the showcase is boring, the engine has failed its purpose.
+**Make the demos fun.** Demos aren't test harnesses. They're games. They should have personality, surprises, and moments that make you want to keep playing. If the demos are boring, the engine has failed its purpose.
 
 **Keep the feedback loop tight.** The most fun part of game development is the cycle: change something → see the result → change it again. Hot reload, instant tests, text descriptions — all of these serve fun by keeping the loop fast. If the loop slows down, fix it before anything else.
 

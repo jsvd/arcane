@@ -1,6 +1,0 @@
-{
-  "name": "actor-patrol",
-  "description": "Actor patrol, chase, and sine movement behaviors with damage and stun",
-  "version": "0.1.0",
-  "files": ["types.ts", "system.ts", "index.ts"]
-}

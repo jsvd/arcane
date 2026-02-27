@@ -117,14 +117,13 @@ arcane test              # Run all *.test.ts files
 arcane check             # Type-check project
 ```
 
-## 32 Demo Projects
+## 31 Demo Projects
 
-Platformer, Roguelike, Breakout, Tower Defense, Card Battler, Sokoban, BFRPG Dungeon Crawler, Asteroids, Physics Playground, Isometric Dungeon, Hex Strategy, and more.
+Platformer, Roguelike, Breakout, Tower Defense, Card Battler, Sokoban, Asteroids, Physics Playground, Isometric Dungeon, Hex Strategy, and more.
 
 ```bash
 arcane dev demos/platformer/platformer-visual.ts
 arcane dev demos/roguelike/roguelike-visual.ts
-arcane dev demos/bfrpg-crawler/bfrpg-visual.ts
 ```
 
 ## For AI Agents

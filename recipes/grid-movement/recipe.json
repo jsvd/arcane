@@ -1,6 +1,0 @@
-{
-  "name": "grid-movement",
-  "description": "Grid-based entity movement with pathfinding integration and spatial queries",
-  "version": "0.1.0",
-  "files": ["types.ts", "grid.ts", "index.ts"]
-}

@@ -1,6 +1,0 @@
-{
-  "name": "fog-of-war",
-  "description": "Fog of war with recursive shadowcasting field-of-view",
-  "version": "0.1.0",
-  "files": ["types.ts", "fov.ts", "fog.ts", "index.ts"]
-}
