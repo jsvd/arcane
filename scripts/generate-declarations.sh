@@ -122,7 +122,8 @@ for entry in "${MODULES[@]}"; do
 
   # Strip internal exports: _-prefixed functions and Rust backend emitter APIs.
   # Uses sed for single-line removals (safe and predictable).
-  sed -i '' '/export.*function _/d; /export.*function.*RustEmitter/d; /export.*function updateAllRustEmitters/d; /export.*type RustEmitterConfig/d; /export.*interface RustEmitter/d; /export.*const _/d' "$out_file"
+  # Compatible with both macOS (BSD sed) and Linux (GNU sed).
+  sed '/export.*function _/d; /export.*function.*RustEmitter/d; /export.*function updateAllRustEmitters/d; /export.*type RustEmitterConfig/d; /export.*interface RustEmitter/d; /export.*const _/d' "$out_file" > "$out_file.tmp" && mv "$out_file.tmp" "$out_file"
 
   lines=$(wc -l < "$out_file")
   echo "  $dir.d.ts ($lines lines)"

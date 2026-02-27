@@ -264,7 +264,7 @@ Read `docs/engineering-philosophy.md` first. It governs everything else.
 5. **Explicit over implicit** — No hidden state, no singletons, no magic strings.
 6. **Functional core** — State in, state out. Pure functions for game logic.
 
-## Current Constraints (Phase 6)
+## Current Constraints
 
 - TypeScript code lives under `runtime/`. Rust code under `core/` and `cli/`.
 - TS runtime has zero external dependencies. Rust crates use deno_core, deno_ast, clap, tokio, anyhow, wgpu, winit, image, bytemuck, notify, tiny_http, rodio.
