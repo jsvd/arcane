@@ -206,6 +206,7 @@ version = "0.19.2"
 dependencies = [
  "anyhow",
  "arcane-core",
+ "base64",
  "clap",
  "image",
  "include_dir",
@@ -213,6 +214,7 @@ dependencies = [
  "notify-debouncer-mini",
  "serde",
  "serde_json",
+ "tiny_http",
  "tokio",
 ]
 

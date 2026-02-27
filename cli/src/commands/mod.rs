@@ -7,6 +7,7 @@ pub mod check;
 pub mod new;
 pub mod init;
 pub mod mcp_bridge;
+pub mod catalog;
 use std::path::Path;
 use arcane_core::scripting::ImportMap;
 

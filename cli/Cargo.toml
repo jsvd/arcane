@@ -27,3 +27,5 @@ notify-debouncer-mini = "0.5"
 image = { version = "0.25", default-features = false, features = ["png"] }
 include_dir = "0.7"
 serde = { version = "1", features = ["derive"] }
+tiny_http = "0.12"
+base64 = "0.22"

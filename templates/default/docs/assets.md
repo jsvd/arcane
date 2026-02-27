@@ -14,9 +14,10 @@ Use the built-in skills to find and setup game assets:
 ```
 
 The skills will:
-1. Search Asset Palace for matching packs
-2. Download the pack if not already present
-3. Generate ready-to-use TypeScript code
+1. Open a visual browser UI to search and preview asset packs
+2. Download packs on click if not already present
+3. Let you select sprites/sounds from multiple packs in one session (persistent cart)
+4. Generate ready-to-use TypeScript code from your selections
 
 ## Asset Palace
 

@@ -1,0 +1,390 @@
+{
+  "$schema": "./catalog.schema.json",
+  "version": "1.0.0",
+  "description": "Asset Palette - CC0 game asset catalog for sprite selection",
+  "packs": [
+    {
+      "id": "tiny-dungeon",
+      "name": "Tiny Dungeon",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/tiny-dungeon/b56d7a13e3-1674742415/kenney_tiny-dungeon.zip",
+      "tileSize": 32,
+      "spacing": 2,
+      "gridOffset": {
+        "x": 19,
+        "y": 18
+      },
+      "tags": [
+        "dungeon",
+        "roguelike",
+        "rpg",
+        "pixel-art",
+        "32x32",
+        "characters",
+        "items"
+      ]
+    },
+    {
+      "id": "tiny-town",
+      "name": "Tiny Town",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/tiny-town/5e46f9e551-1735736916/kenney_tiny-town.zip",
+      "tileSize": 32,
+      "spacing": 2,
+      "gridOffset": {
+        "x": 19,
+        "y": 18
+      },
+      "tags": [
+        "town",
+        "buildings",
+        "pixel-art",
+        "32x32",
+        "vehicles",
+        "nature"
+      ]
+    },
+    {
+      "id": "tiny-battle",
+      "name": "Tiny Battle",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/tiny-battle/c290ec1e4b-1691487575/kenney_tiny-battle.zip",
+      "tileSize": 32,
+      "spacing": 2,
+      "gridOffset": {
+        "x": 19,
+        "y": 18
+      },
+      "tags": [
+        "medieval",
+        "battle",
+        "units",
+        "pixel-art",
+        "32x32",
+        "rts"
+      ]
+    },
+    {
+      "id": "1-bit-pack",
+      "name": "1-Bit Pack",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/1-bit-pack/f41b6925f0-1677578516/kenney_1-bit-pack.zip",
+      "tileSize": 16,
+      "tags": [
+        "1-bit",
+        "monochrome",
+        "minimalist",
+        "retro",
+        "16x16"
+      ]
+    },
+    {
+      "id": "pixel-platformer",
+      "name": "Pixel Platformer",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/pixel-platformer/bef991136c-1696667883/kenney_pixel-platformer.zip",
+      "tileSize": 18,
+      "tags": [
+        "platformer",
+        "pixel-art",
+        "characters",
+        "tiles",
+        "items"
+      ]
+    },
+    {
+      "id": "platformer-pack-redux",
+      "name": "Platformer Pack Redux",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/platformer-pack-redux/baf4110f33-1677696200/kenney_platformer-pack-redux.zip",
+      "tags": [
+        "platformer",
+        "characters",
+        "tiles",
+        "enemies",
+        "items",
+        "hd"
+      ]
+    },
+    {
+      "id": "space-shooter-redux",
+      "name": "Space Shooter Redux",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/space-shooter-redux/b31285e83d-1677669442/kenney_space-shooter-redux.zip",
+      "tags": [
+        "space",
+        "shooter",
+        "ships",
+        "asteroids",
+        "lasers",
+        "hd"
+      ]
+    },
+    {
+      "id": "roguelike-rpg-pack",
+      "name": "Roguelike RPG Pack",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/roguelike-rpg-pack/1cb71b28fb-1677697420/kenney_roguelike-rpg-pack.zip",
+      "tileSize": 16,
+      "tags": [
+        "roguelike",
+        "rpg",
+        "dungeon",
+        "pixel-art",
+        "16x16",
+        "characters",
+        "items"
+      ]
+    },
+    {
+      "id": "animal-pack-redux",
+      "name": "Animal Pack Redux",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/animal-pack-redux/c217650a92-1677666936/kenney_animal-pack-redux.zip",
+      "tags": [
+        "animals",
+        "nature",
+        "characters",
+        "hd"
+      ]
+    },
+    {
+      "id": "fish-pack",
+      "name": "Fish Pack",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/fish-pack/6a96d27fb2-1747237960/kenney_fish-pack_2.zip",
+      "tags": [
+        "fish",
+        "underwater",
+        "animals",
+        "pixel-art"
+      ]
+    },
+    {
+      "id": "foliage-sprites",
+      "name": "Foliage Sprites",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/foliage-sprites/ff923287d0-1677495980/kenney_foliage-sprites.zip",
+      "tags": [
+        "nature",
+        "trees",
+        "bushes",
+        "leaves",
+        "2d",
+        "foliage"
+      ]
+    },
+    {
+      "id": "nature-kit",
+      "name": "Nature Kit",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/nature-kit/8334871c74-1677698939/kenney_nature-kit.zip",
+      "tags": [
+        "nature",
+        "trees",
+        "rocks",
+        "isometric",
+        "3d",
+        "environment"
+      ]
+    },
+    {
+      "id": "particle-pack",
+      "name": "Particle Pack",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/particle-pack/1dd3d4cbe2-1677578741/kenney_particle-pack.zip",
+      "tags": [
+        "particles",
+        "effects",
+        "vfx",
+        "explosions",
+        "smoke",
+        "fire"
+      ]
+    },
+    {
+      "id": "ui-pack",
+      "name": "UI Pack",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/ui-pack/af874291da-1718203990/kenney_ui-pack.zip",
+      "tags": [
+        "ui",
+        "buttons",
+        "panels",
+        "icons",
+        "interface"
+      ]
+    },
+    {
+      "id": "ui-pack-rpg-expansion",
+      "name": "UI Pack RPG Expansion",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/ui-pack-rpg-expansion/b1e1f298c6-1677661824/kenney_ui-pack-rpg-expansion.zip",
+      "tags": [
+        "ui",
+        "rpg",
+        "fantasy",
+        "buttons",
+        "panels",
+        "interface"
+      ]
+    },
+    {
+      "id": "puzzle-pack-2",
+      "name": "Puzzle Pack 2",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/puzzle-pack-2/848ff5c698-1677667476/kenney_puzzle-pack-2.zip",
+      "tags": [
+        "puzzle",
+        "match-3",
+        "gems",
+        "blocks",
+        "casual"
+      ]
+    },
+    {
+      "id": "racing-pack",
+      "name": "Racing Pack",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/racing-pack/b27a2ace7a-1677662443/kenney_racing-pack.zip",
+      "tags": [
+        "racing",
+        "cars",
+        "tracks",
+        "topdown",
+        "vehicles"
+      ]
+    },
+    {
+      "id": "pirate-pack",
+      "name": "Pirate Pack",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/pirate-pack/74634a27df-1677579020/kenney_pirate-pack.zip",
+      "tags": [
+        "pirate",
+        "ships",
+        "ocean",
+        "treasure",
+        "adventure"
+      ]
+    },
+    {
+      "id": "toon-characters-1",
+      "name": "Toon Characters 1",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/toon-characters-1/cc2395dcb3-1677693120/kenney_toon-characters-1.zip",
+      "tags": [
+        "characters",
+        "toon",
+        "cartoon",
+        "people",
+        "3d"
+      ]
+    },
+    {
+      "id": "medieval-rts",
+      "name": "Medieval RTS",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/medieval-rts/4e1b27c3ec-1677693589/kenney_medieval-rts.zip",
+      "tags": [
+        "medieval",
+        "rts",
+        "strategy",
+        "buildings",
+        "units",
+        "isometric"
+      ]
+    },
+    {
+      "id": "kenney-fonts",
+      "name": "Kenney Fonts",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/kenney-fonts/3492f8d47e-1677661710/kenney_kenney-fonts.zip",
+      "tags": [
+        "fonts",
+        "text",
+        "bitmap",
+        "pixel"
+      ]
+    },
+    {
+      "id": "game-icons",
+      "name": "Game Icons",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/game-icons/94af1f5c0b-1677661579/kenney_game-icons.zip",
+      "tags": [
+        "icons",
+        "ui",
+        "items",
+        "symbols",
+        "interface"
+      ]
+    },
+    {
+      "id": "game-icons-expansion",
+      "name": "Game Icons Expansion",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/game-icons-expansion/9f1915e081-1677661643/kenney_game-icons-expansion.zip",
+      "tags": [
+        "icons",
+        "ui",
+        "items",
+        "symbols",
+        "interface"
+      ]
+    },
+    {
+      "id": "emotes-pack",
+      "name": "Emotes Pack",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/emotes-pack/a3823d6799-1677578798/kenney_emotes-pack.zip",
+      "tags": [
+        "emotes",
+        "emotions",
+        "expressions",
+        "ui",
+        "chat"
+      ]
+    },
+    {
+      "id": "crosshair-pack",
+      "name": "Crosshair Pack",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/crosshair-pack/9bd5d20053-1677697139/kenney_crosshair-pack.zip",
+      "tags": [
+        "crosshairs",
+        "ui",
+        "shooter",
+        "aim",
+        "cursor"
+      ]
+    },
+    {
+      "id": "cursor-pack",
+      "name": "Cursor Pack",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/cursor-pack/2a0f4fedfc-1717599281/kenney_cursor-pack.zip",
+      "tags": [
+        "cursors",
+        "ui",
+        "mouse",
+        "pointer",
+        "interface"
+      ]
+    },
+    {
+      "id": "input-prompts",
+      "name": "Input Prompts",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/input-prompts/67c675026d-1763810066/kenney_input-prompts_1.4.1.zip",
+      "tags": [
+        "input",
+        "keyboard",
+        "controller",
+        "gamepad",
+        "ui",
+        "prompts"
+      ]
+    }
+  ]
+}

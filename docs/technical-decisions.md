@@ -196,3 +196,24 @@ The TS particle system issued one `drawSprite()` op call per particle per frame.
 - One `op_update_emitter(id, dt, cx, cy)` call replaces N `drawSprite()` calls.
 - Readback via `op_get_emitter_sprite_data(id)` returns a packed `Float32Array` that TS renders.
 - Original TS particle system remains as headless-compatible fallback.
+
+---
+
+## ADR-019: Catalog Persistent Cart + Sheet File Selector
+
+### Context
+`arcane catalog` launched a browser UI for browsing CC0 asset packs. Each pack view (sheet, gallery, sounds) had its own local selection that was lost on navigation. Users picking sprites from multiple packs had to complete one pack at a time. Additionally, the sheet view defaulted to `Preview.png` (a non-tilemap composite) instead of the actual tilemap, causing grid misalignment.
+
+### Decision
+**Persistent cross-page cart via localStorage + sheet file selector dropdown.**
+
+### What We Built
+- **ArcaneCart**: Shared JS module (inlined in each template) backed by `localStorage` key `arcane-catalog-cart`. Stores items grouped by pack with full metadata (type, sprites/sounds, paths, grid settings).
+- **Cart UI**: 280px right sidebar on every page (browse, sheet, gallery, sounds). Items grouped by pack with remove buttons. "Copy & Close" assembles the full cart and POSTs to `/done`.
+- **Sheet file selector**: `<select>` dropdown in the sheet header populated via `GET /pack-files/{packId}`. Defaults to tilemap files, skipping `Preview.png`/`Sample.png`. Selected file persists in localStorage.
+- **Output format**: When the cart contains a single pack, output is a single object. When multiple packs, output is an array of pack objects.
+
+### Rationale
+- Multi-pack workflows are the common case — a game needs sprites from one pack and sounds from another.
+- LocalStorage is the simplest persistence that survives page navigation without server-side state.
+- The file selector fixes the grid alignment bug at its root (wrong image) rather than adding compensating offsets.

@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprite Gallery</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a2e;
+    color: #eee;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    background: #16213e;
+    border-bottom: 2px solid #0f3460;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+
+  .back-btn {
+    color: #e94560;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border: 1px solid #e94560;
+    border-radius: 6px;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .back-btn:hover {
+    background: #e94560;
+    color: #fff;
+  }
+
+  .pack-name {
+    font-size: 18px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .search-input {
+    flex: 1;
+    min-width: 120px;
+    padding: 8px 12px;
+    border: 1px solid #0f3460;
+    border-radius: 6px;
+    background: #1a1a2e;
+    color: #eee;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-input::placeholder { color: #666; }
+  .search-input:focus { border-color: #e94560; }
+
+  .sprite-count {
+    font-size: 13px;
+    color: #aaa;
+    white-space: nowrap;
+  }
+
+  /* ── Main layout ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Gallery grid ── */
+  .gallery {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+  }
+
+  .sprite-item {
+    border: 2px solid #0f3460;
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    background: #16213e;
+  }
+  .sprite-item:hover {
+    border-color: #ff6b6b;
+  }
+  .sprite-item.selected {
+    border-color: #4ade80;
+  }
+  .sprite-item.hidden {
+    display: none;
+  }
+
+  .sprite-img-wrap {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-image:
+      linear-gradient(45deg, #2a2a3e 25%, transparent 25%),
+      linear-gradient(-45deg, #2a2a3e 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #2a2a3e 75%),
+      linear-gradient(-45deg, transparent 75%, #2a2a3e 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    border-radius: 4px;
+  }
+
+  .sprite-img-wrap img {
+    max-width: 80px;
+    max-height: 80px;
+    image-rendering: pixelated;
+  }
+
+  .sprite-name {
+    font-size: 11px;
+    color: #ccc;
+    text-align: center;
+    word-break: break-word;
+    line-height: 1.3;
+  }
+
+  /* ── Cart sidebar ── */
+  .cart-sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    border-left: 2px solid #0f3460;
+    background: #16213e;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cart-header {
+    padding: 12px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 1px solid #0f3460;
+    color: #4ade80;
+    flex-shrink: 0;
+  }
+
+  .cart-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 8px;
+  }
+
+  .cart-pack-group { margin-bottom: 6px; }
+
+  .cart-pack-label {
+    font-size: 11px;
+    color: #8899aa;
+    padding: 4px 4px 2px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(15,52,96,0.5);
+  }
+  .cart-pack-label .pack-count { font-size: 10px; color: #556677; }
+
+  .cart-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 4px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+  .cart-item:hover { background: rgba(255,255,255,0.04); }
+
+  .cart-item img {
+    width: 24px;
+    height: 24px;
+    image-rendering: pixelated;
+    flex-shrink: 0;
+  }
+
+  .cart-item .item-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #ccc;
+    font-size: 12px;
+  }
+
+  .cart-item .remove-btn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .cart-item .remove-btn:hover { color: #e94560; background: rgba(233,69,96,0.15); }
+
+  .cart-empty {
+    padding: 20px 12px;
+    text-align: center;
+    color: #556677;
+    font-size: 12px;
+  }
+
+  .cart-actions {
+    padding: 10px 12px;
+    border-top: 1px solid #0f3460;
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .cart-actions button {
+    flex: 1;
+    padding: 7px 10px;
+    font-size: 12px;
+    border: 1px solid #0f3460;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .btn-clear { background: #2a2a3e; color: #eee; }
+  .btn-clear:hover { background: #e94560; border-color: #e94560; }
+
+  .btn-copy {
+    background: #4ade80;
+    color: #1a1a2e;
+    font-weight: 600;
+    border-color: #4ade80;
+  }
+  .btn-copy:hover { background: #6bf09a; border-color: #6bf09a; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    background: #16213e;
+    border: 1px solid #0f3460;
+    color: #eee;
+    transition: bottom 0.25s ease;
+    z-index: 1000;
+    white-space: nowrap;
+  }
+  .toast.show { bottom: 24px; }
+  .toast.error { border-color: #e94560; }
+
+  /* ── Scrollbar styling ── */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: #1a1a2e; }
+  ::-webkit-scrollbar-thumb { background: #0f3460; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #1a4a7a; }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="back-btn">Back</a>
+  <span class="pack-name" id="packName"></span>
+  <input type="text" class="search-input" id="searchInput" placeholder="Filter sprites...">
+  <span class="sprite-count" id="spriteCount"></span>
+</header>
+
+<div class="main">
+  <div class="gallery">
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="cart-sidebar">
+    <div class="cart-header" id="cartHeader">Cart (0)</div>
+    <div class="cart-list" id="cartList">
+      <div class="cart-empty">Click sprites to add them</div>
+    </div>
+    <div class="cart-actions">
+      <button class="btn-clear" id="clearBtn">Clear</button>
+      <button class="btn-copy" id="copyBtn">Copy &amp; Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const packMeta = {{PACK_META_JSON}};
+  const sprites = {{SPRITES_JSON}};
+
+  // ══════════════════════════════════════════════════════════════
+  // ArcaneCart
+  // ══════════════════════════════════════════════════════════════
+  const ArcaneCart = (function() {
+    const KEY = 'arcane-catalog-cart';
+    function load() {
+      try { return JSON.parse(localStorage.getItem(KEY)) || []; }
+      catch (_) { return []; }
+    }
+    function save(cart) {
+      try { localStorage.setItem(KEY, JSON.stringify(cart)); } catch(_) {}
+    }
+    function findPack(cart, packId) {
+      return cart.find(function(p) { return p.packId === packId; });
+    }
+    return {
+      load: load,
+      save: save,
+      setPackSprites: function(packId, packName, source, type, spriteData, extra) {
+        var cart = load();
+        var entry = findPack(cart, packId);
+        if (!entry) {
+          entry = { packId: packId, packName: packName, source: source, type: type, sprites: {}, cachePath: '' };
+          cart.push(entry);
+        }
+        Object.assign(entry, extra || {});
+        entry.sprites = spriteData;
+        if (Object.keys(entry.sprites).length === 0) {
+          cart = cart.filter(function(p) { return p.packId !== packId; });
+        }
+        save(cart);
+      },
+      removeItem: function(packId, itemName) {
+        var cart = load();
+        var entry = findPack(cart, packId);
+        if (!entry) return;
+        if (entry.sprites) delete entry.sprites[itemName];
+        if (entry.sounds) delete entry.sounds[itemName];
+        var items = entry.sprites || entry.sounds || {};
+        if (Object.keys(items).length === 0) {
+          cart = cart.filter(function(p) { return p.packId !== packId; });
+        }
+        save(cart);
+      },
+      clear: function() { save([]); },
+      totalItemCount: function() {
+        var cart = load(), n = 0;
+        cart.forEach(function(p) { n += Object.keys(p.sprites || p.sounds || {}).length; });
+        return n;
+      },
+      getPackSprites: function(packId) {
+        var cart = load();
+        var entry = findPack(cart, packId);
+        return (entry && entry.sprites) ? entry.sprites : {};
+      }
+    };
+  })();
+
+  // ── State ──
+  const selected = new Map(); // name -> { name, relativePath }
+
+  // ── DOM refs ──
+  const grid = document.getElementById('grid');
+  const searchInput = document.getElementById('searchInput');
+  const spriteCount = document.getElementById('spriteCount');
+  const cartHeader = document.getElementById('cartHeader');
+  const cartList = document.getElementById('cartList');
+  const clearBtn = document.getElementById('clearBtn');
+  const copyBtn = document.getElementById('copyBtn');
+  const toast = document.getElementById('toast');
+
+  document.getElementById('packName').textContent = packMeta.name;
+
+  // ── Restore from cart ──
+  function restoreFromCart() {
+    var cartSprites = ArcaneCart.getPackSprites(packMeta.id);
+    for (var name in cartSprites) {
+      var s = cartSprites[name];
+      if (s.path) {
+        selected.set(name, { name: name, relativePath: s.path });
+      }
+    }
+  }
+  restoreFromCart();
+
+  // ── Build gallery grid ──
+  function buildGrid() {
+    grid.innerHTML = '';
+    sprites.forEach(function(sprite) {
+      var item = document.createElement('div');
+      item.className = 'sprite-item';
+      if (selected.has(sprite.name)) item.classList.add('selected');
+      item.dataset.name = sprite.name;
+      item.dataset.relativePath = sprite.relativePath;
+
+      var wrap = document.createElement('div');
+      wrap.className = 'sprite-img-wrap';
+
+      var img = document.createElement('img');
+      img.src = '/sprite/' + packMeta.id + '/' + encodeURIComponent(sprite.relativePath);
+      img.alt = sprite.name;
+      img.loading = 'lazy';
+      wrap.appendChild(img);
+
+      var label = document.createElement('div');
+      label.className = 'sprite-name';
+      label.textContent = sprite.name;
+
+      item.appendChild(wrap);
+      item.appendChild(label);
+
+      item.addEventListener('click', function() {
+        toggleSelection(sprite, item);
+      });
+
+      grid.appendChild(item);
+    });
+    updateSpriteCount();
+  }
+
+  // ── Selection ──
+  function syncCartFromLocal() {
+    var spriteData = {};
+    selected.forEach(function(s) {
+      spriteData[s.name] = { path: s.relativePath };
+    });
+    ArcaneCart.setPackSprites(packMeta.id, packMeta.name, packMeta.source, 'gallery', spriteData, {
+      cachePath: packMeta.cachePath
+    });
+    renderCart();
+  }
+
+  function toggleSelection(sprite, item) {
+    if (selected.has(sprite.name)) {
+      selected.delete(sprite.name);
+      item.classList.remove('selected');
+    } else {
+      selected.set(sprite.name, { name: sprite.name, relativePath: sprite.relativePath });
+      item.classList.add('selected');
+    }
+    syncCartFromLocal();
+  }
+
+  function removeSelection(name) {
+    selected.delete(name);
+    var items = grid.querySelectorAll('.sprite-item');
+    items.forEach(function(item) {
+      if (item.dataset.name === name) {
+        item.classList.remove('selected');
+      }
+    });
+    syncCartFromLocal();
+  }
+
+  // ── Search / filter ──
+  searchInput.addEventListener('input', function() {
+    var query = searchInput.value.toLowerCase();
+    var items = grid.querySelectorAll('.sprite-item');
+    items.forEach(function(item) {
+      var name = item.dataset.name.toLowerCase();
+      if (name.indexOf(query) !== -1) {
+        item.classList.remove('hidden');
+      } else {
+        item.classList.add('hidden');
+      }
+    });
+    updateSpriteCount();
+  });
+
+  function updateSpriteCount() {
+    var total = sprites.length;
+    var visible = grid.querySelectorAll('.sprite-item:not(.hidden)').length;
+    if (visible === total) {
+      spriteCount.textContent = total + ' sprites';
+    } else {
+      spriteCount.textContent = visible + ' / ' + total + ' sprites';
+    }
+  }
+
+  // ── Clear ──
+  clearBtn.addEventListener('click', function() {
+    ArcaneCart.clear();
+    selected.clear();
+    grid.querySelectorAll('.sprite-item.selected').forEach(function(item) {
+      item.classList.remove('selected');
+    });
+    renderCart();
+  });
+
+  // ── Copy & Close ──
+  copyBtn.addEventListener('click', async function() {
+    var cart = ArcaneCart.load();
+    if (cart.length === 0) {
+      showToast('Cart is empty', true);
+      return;
+    }
+
+    var result = cart.length === 1 ? cart[0] : cart;
+    var json = JSON.stringify(result, null, 2);
+
+    try {
+      await navigator.clipboard.writeText(json);
+    } catch (_) {
+      var ta = document.createElement('textarea');
+      ta.value = json;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+
+    fetch('/done', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: json
+    }).catch(function() {});
+
+    showToast('Copied ' + ArcaneCart.totalItemCount() + ' item(s) to clipboard');
+  });
+
+  // ══════════════════════════════════════════════════════════════
+  // Cart UI
+  // ══════════════════════════════════════════════════════════════
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function renderCart() {
+    var cart = ArcaneCart.load();
+    var totalItems = 0;
+    cart.forEach(function(p) {
+      totalItems += Object.keys(p.sprites || p.sounds || {}).length;
+    });
+    cartHeader.textContent = 'Cart (' + totalItems + ')';
+
+    if (totalItems === 0) {
+      cartList.innerHTML = '<div class="cart-empty">Click sprites to add them</div>';
+      return;
+    }
+
+    cartList.innerHTML = '';
+    cart.forEach(function(pack) {
+      var items = pack.sprites || pack.sounds || {};
+      var names = Object.keys(items);
+      if (names.length === 0) return;
+
+      var group = document.createElement('div');
+      group.className = 'cart-pack-group';
+
+      var label = document.createElement('div');
+      label.className = 'cart-pack-label';
+      label.innerHTML = '<span>' + escapeHtml(pack.packName) + '</span><span class="pack-count">' + names.length + '</span>';
+      group.appendChild(label);
+
+      names.forEach(function(name) {
+        var row = document.createElement('div');
+        row.className = 'cart-item';
+
+        // Show thumbnail for gallery sprites from this pack
+        if (pack.type === 'gallery' && pack.packId === packMeta.id) {
+          var sp = items[name];
+          if (sp && sp.path) {
+            var img = document.createElement('img');
+            img.src = '/sprite/' + packMeta.id + '/' + encodeURIComponent(sp.path);
+            img.alt = name;
+            row.appendChild(img);
+          }
+        }
+
+        var nameSpan = document.createElement('span');
+        nameSpan.className = 'item-name';
+        nameSpan.textContent = name;
+        row.appendChild(nameSpan);
+
+        var rmBtn = document.createElement('button');
+        rmBtn.className = 'remove-btn';
+        rmBtn.textContent = '\u00d7';
+        rmBtn.dataset.packId = pack.packId;
+        rmBtn.dataset.itemName = name;
+        rmBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var pid = this.dataset.packId;
+          var iname = this.dataset.itemName;
+          ArcaneCart.removeItem(pid, iname);
+          if (pid === packMeta.id) {
+            removeSelection(iname);
+          } else {
+            renderCart();
+          }
+        });
+        row.appendChild(rmBtn);
+
+        group.appendChild(row);
+      });
+
+      cartList.appendChild(group);
+    });
+  }
+
+  // ── Toast ──
+  var toastTimer = null;
+  function showToast(message, isError) {
+    toast.textContent = message;
+    toast.className = 'toast show' + (isError ? ' error' : '');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() {
+      toast.classList.remove('show');
+    }, 2000);
+  }
+
+  // ── Init ──
+  buildGrid();
+  renderCart();
+</script>
+
+</body>
+</html>

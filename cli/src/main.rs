@@ -65,6 +65,17 @@ enum Commands {
         /// Optional directory or entry file
         path: Option<String>,
     },
+    /// Browse and select CC0 game assets (sprites & sounds)
+    Catalog {
+        /// Open a specific pack directly (e.g. "tiny-dungeon" or "digital-audio")
+        pack_id: Option<String>,
+        /// Browse sound packs instead of sprites
+        #[arg(long)]
+        sounds: bool,
+        /// Browser application to use (e.g. "safari", "firefox")
+        #[arg(long)]
+        browser: Option<String>,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -86,5 +97,6 @@ fn main() -> anyhow::Result<()> {
         Commands::New { name } => commands::new::run(&name),
         Commands::Init => commands::init::run(),
         Commands::Check { path } => commands::check::run(path),
+        Commands::Catalog { pack_id, sounds, browser } => commands::catalog::run(pack_id, sounds, browser),
     }
 }

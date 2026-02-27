@@ -263,13 +263,6 @@ Items discovered during development that don't block current work but should be 
 
 These modules are exercised indirectly by demo tests and integration tests.
 
-### Type-Check-Only CLI Mode
-
-**Status:** Open
-**Severity:** Medium — affects developer iteration speed
-
-A fast `arcane typecheck` command that only transpiles and type-checks without discovering/executing tests would speed up the edit-check loop significantly.
-
 ### MCP Screenshot / Frame Capture Tool
 
 **Status:** Open

@@ -103,6 +103,14 @@ fn auto_sync_data_dir(manifest_dir: &Path) {
     // Use a separate dummy hasher just for the filter function
     let mut filter_hasher = DefaultHasher::new();
     copy_dir_filtered(&runtime_src, &runtime_dst, &mut filter_hasher);
+
+    // Sync catalog data
+    let catalog_src = repo_root.join("catalog");
+    if catalog_src.exists() {
+        let catalog_dst = data_dir.join("catalog");
+        let mut catalog_hasher = DefaultHasher::new();
+        copy_dir_recursive(&catalog_src, &catalog_dst, &mut catalog_hasher);
+    }
 }
 
 fn main() {
@@ -126,6 +134,12 @@ fn main() {
     clean_dir(&runtime_dst);
     let runtime_src = find_dir("runtime");
     copy_dir_filtered(&runtime_src, &runtime_dst, &mut hasher);
+
+    // Embed catalog data
+    let catalog_dst = out_dir.join("catalog");
+    clean_dir(&catalog_dst);
+    let catalog_src = find_dir("catalog");
+    copy_dir_recursive(&catalog_src, &catalog_dst, &mut hasher);
 
     // Write a stamp file that new.rs includes via include_str!().
     // When template contents change, this hash changes, forcing cargo

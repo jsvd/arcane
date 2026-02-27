@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arcane Catalog - Sounds</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Header */
+  header {
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+
+  .back-btn {
+    color: #e94560;
+    text-decoration: none;
+    font-size: 14px;
+    padding: 6px 12px;
+    border: 1px solid #e94560;
+    border-radius: 4px;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .back-btn:hover { background: #e94560; color: #fff; }
+
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #eee;
+    flex-shrink: 0;
+  }
+
+  .search-input {
+    margin-left: auto;
+    padding: 6px 12px;
+    border: 1px solid #0f3460;
+    border-radius: 4px;
+    background: #1a1a2e;
+    color: #eee;
+    font-size: 14px;
+    width: 260px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: #e94560; }
+  .search-input::placeholder { color: #666; }
+
+  /* Tab bar */
+  .tab-bar {
+    display: flex;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    overflow-x: auto;
+    flex-shrink: 0;
+  }
+
+  .tab {
+    padding: 10px 20px;
+    font-size: 13px;
+    color: #999;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+    position: relative;
+    user-select: none;
+  }
+  .tab:hover { color: #eee; }
+  .tab.active { color: #e94560; border-bottom-color: #e94560; }
+  .tab .download-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #f59e0b;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* Main layout */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* Sound list */
+  .sound-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+  }
+
+  .tag-group {
+    margin-bottom: 12px;
+  }
+
+  .tag-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    cursor: pointer;
+    user-select: none;
+    color: #999;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #0f3460;
+    margin-bottom: 4px;
+  }
+  .tag-header:hover { color: #eee; }
+  .tag-header .arrow {
+    display: inline-block;
+    transition: transform 0.15s;
+    font-size: 10px;
+  }
+  .tag-header.collapsed .arrow { transform: rotate(-90deg); }
+  .tag-header .tag-count {
+    color: #666;
+    font-size: 11px;
+  }
+
+  .tag-sounds {
+    display: flex;
+    flex-direction: column;
+  }
+  .tag-sounds.hidden { display: none; }
+
+  .sound-row {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 4px;
+    gap: 10px;
+    transition: background 0.1s;
+    font-size: 13px;
+  }
+  .sound-row:hover { background: rgba(255,255,255,0.04); }
+  .sound-row.playing { background: rgba(233,69,96,0.1); }
+
+  .sound-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #4ade80;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .sound-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .category-badge {
+    font-size: 10px;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #0f3460;
+    color: #7dd3fc;
+    flex-shrink: 0;
+  }
+  .category-badge.music { background: #3b1f5e; color: #c084fc; }
+
+  .sound-duration {
+    font-size: 12px;
+    color: #666;
+    width: 48px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .play-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background: #0f3460;
+    color: #e94560;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, transform 0.1s;
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+  .play-btn:hover { background: #e94560; color: #fff; transform: scale(1.1); }
+  .play-btn.active { background: #e94560; color: #fff; }
+
+  .no-results {
+    text-align: center;
+    color: #666;
+    padding: 40px;
+    font-size: 14px;
+  }
+
+  /* Cart sidebar */
+  .cart-sidebar {
+    width: 280px;
+    background: #16213e;
+    border-left: 1px solid #0f3460;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+
+  .cart-header {
+    padding: 12px 14px;
+    border-bottom: 1px solid #0f3460;
+    font-size: 14px;
+    font-weight: 600;
+    color: #4ade80;
+    flex-shrink: 0;
+  }
+
+  .cart-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 8px;
+  }
+
+  .cart-pack-group { margin-bottom: 6px; }
+
+  .cart-pack-label {
+    font-size: 11px;
+    color: #8899aa;
+    padding: 4px 4px 2px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(15,52,96,0.5);
+  }
+  .cart-pack-label .pack-count { font-size: 10px; color: #556677; }
+
+  .cart-item {
+    display: flex;
+    align-items: center;
+    padding: 3px 4px;
+    border-radius: 3px;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .cart-item:hover { background: rgba(255,255,255,0.04); }
+
+  .cart-item .item-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #ccc;
+  }
+
+  .cart-item .item-pack {
+    font-size: 10px;
+    color: #666;
+    flex-shrink: 0;
+  }
+
+  .remove-btn {
+    border: none;
+    background: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    transition: color 0.15s, background 0.15s;
+    line-height: 1;
+  }
+  .remove-btn:hover { color: #e94560; background: rgba(233,69,96,0.15); }
+
+  .cart-actions {
+    padding: 10px 12px;
+    border-top: 1px solid #0f3460;
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .cart-actions button {
+    flex: 1;
+    padding: 7px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: background 0.15s, opacity 0.15s;
+  }
+
+  .btn-clear {
+    background: #0f3460;
+    color: #eee;
+  }
+  .btn-clear:hover { background: #1a4a8a; }
+
+  .btn-copy {
+    background: #4ade80;
+    color: #1a1a2e;
+  }
+  .btn-copy:hover { background: #6ee7a0; }
+
+  .cart-empty {
+    padding: 20px 12px;
+    text-align: center;
+    color: #556677;
+    font-size: 12px;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #4ade80;
+    color: #1a1a2e;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    transition: bottom 0.3s ease;
+    z-index: 1000;
+    white-space: nowrap;
+  }
+  .toast.show { bottom: 24px; }
+
+  /* Download overlay on tab content */
+  .download-overlay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    gap: 16px;
+  }
+  .download-overlay p { color: #999; font-size: 14px; }
+  .download-btn {
+    padding: 10px 28px;
+    border: none;
+    border-radius: 4px;
+    background: #e94560;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .download-btn:hover { background: #ff6b6b; }
+  .download-btn:disabled { opacity: 0.5; cursor: wait; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #0f3460; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #1a4a8a; }
+
+  /* Ungrouped heading */
+  .ungrouped-header {
+    padding: 8px 0;
+    color: #999;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #0f3460;
+    margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="back-btn">Back</a>
+  <h1>Arcane Catalog - Sounds</h1>
+  <input type="text" class="search-input" placeholder="Search sounds..." id="searchInput">
+</header>
+
+<div class="tab-bar" id="tabBar"></div>
+
+<div class="main">
+  <div class="sound-list" id="soundList"></div>
+  <div class="cart-sidebar">
+    <div class="cart-header" id="cartHeader">Cart (0)</div>
+    <div class="cart-list" id="cartList">
+      <div class="cart-empty">Check sounds to add them</div>
+    </div>
+    <div class="cart-actions">
+      <button class="btn-clear" id="btnClear">Clear</button>
+      <button class="btn-copy" id="btnCopy">Copy &amp; Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const soundPacks = {{SOUND_PACKS_JSON}};
+
+// ══════════════════════════════════════════════════════════════════
+// ArcaneCart
+// ══════════════════════════════════════════════════════════════════
+const ArcaneCart = (function() {
+  const KEY = 'arcane-catalog-cart';
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || []; }
+    catch (_) { return []; }
+  }
+  function save(cart) {
+    try { localStorage.setItem(KEY, JSON.stringify(cart)); } catch(_) {}
+  }
+  function findPack(cart, packId) {
+    return cart.find(function(p) { return p.packId === packId; });
+  }
+  return {
+    load: load,
+    save: save,
+    setPackSounds: function(packId, packName, source, soundData) {
+      var cart = load();
+      var entry = findPack(cart, packId);
+      if (!entry) {
+        entry = { packId: packId, packName: packName, source: source, type: 'sound', sounds: {}, cachePath: '' };
+        cart.push(entry);
+      }
+      entry.sounds = soundData;
+      if (Object.keys(entry.sounds).length === 0) {
+        cart = cart.filter(function(p) { return p.packId !== packId; });
+      }
+      save(cart);
+    },
+    removeItem: function(packId, itemName) {
+      var cart = load();
+      var entry = findPack(cart, packId);
+      if (!entry) return;
+      if (entry.sprites) delete entry.sprites[itemName];
+      if (entry.sounds) delete entry.sounds[itemName];
+      var items = entry.sprites || entry.sounds || {};
+      if (Object.keys(items).length === 0) {
+        cart = cart.filter(function(p) { return p.packId !== packId; });
+      }
+      save(cart);
+    },
+    clear: function() { save([]); },
+    totalItemCount: function() {
+      var cart = load(), n = 0;
+      cart.forEach(function(p) { n += Object.keys(p.sprites || p.sounds || {}).length; });
+      return n;
+    },
+    getPackSounds: function(packId) {
+      var cart = load();
+      var entry = findPack(cart, packId);
+      return (entry && entry.sounds) ? entry.sounds : {};
+    }
+  };
+})();
+
+// State
+let activePackId = null;
+let selected = new Map(); // key: "packId::soundId" => { packId, soundId, soundData, packName, source }
+let currentAudio = null;
+let currentPlayBtn = null;
+let searchText = '';
+
+// Elements
+const tabBar = document.getElementById('tabBar');
+const soundList = document.getElementById('soundList');
+const cartHeader = document.getElementById('cartHeader');
+const cartList = document.getElementById('cartList');
+const searchInput = document.getElementById('searchInput');
+const btnClear = document.getElementById('btnClear');
+const btnCopy = document.getElementById('btnCopy');
+const toast = document.getElementById('toast');
+
+// ── Restore from cart ──
+function restoreFromCart() {
+  var cart = ArcaneCart.load();
+  cart.forEach(function(entry) {
+    if (entry.type !== 'sound' || !entry.sounds) return;
+    var pack = soundPacks.find(function(p) { return p.id === entry.packId; });
+    if (!pack) return;
+    for (var soundId in entry.sounds) {
+      var key = entry.packId + '::' + soundId;
+      selected.set(key, {
+        packId: entry.packId,
+        soundId: soundId,
+        soundData: entry.sounds[soundId],
+        packName: entry.packName,
+        source: entry.source
+      });
+    }
+  });
+}
+restoreFromCart();
+
+// Init
+function init() {
+  renderTabs();
+  if (soundPacks.length > 0) {
+    const first = soundPacks.find(p => p.downloaded) || soundPacks[0];
+    switchTab(first.id);
+  }
+  searchInput.addEventListener('input', e => {
+    searchText = e.target.value.toLowerCase().trim();
+    renderSoundList();
+  });
+  btnClear.addEventListener('click', clearAll);
+  btnCopy.addEventListener('click', copyAndClose);
+}
+
+// Tabs
+function renderTabs() {
+  tabBar.innerHTML = '';
+  for (const pack of soundPacks) {
+    const tab = document.createElement('div');
+    tab.className = 'tab' + (pack.id === activePackId ? ' active' : '');
+    tab.dataset.packId = pack.id;
+    tab.textContent = pack.name;
+    if (!pack.downloaded) {
+      const dot = document.createElement('span');
+      dot.className = 'download-dot';
+      dot.title = 'Not downloaded';
+      tab.appendChild(dot);
+    }
+    tab.addEventListener('click', () => onTabClick(pack));
+    tabBar.appendChild(tab);
+  }
+}
+
+function onTabClick(pack) {
+  if (!pack.downloaded) {
+    triggerDownload(pack);
+    return;
+  }
+  switchTab(pack.id);
+}
+
+function switchTab(packId) {
+  activePackId = packId;
+  tabBar.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.packId === packId);
+  });
+  renderSoundList();
+}
+
+async function triggerDownload(pack) {
+  const tab = tabBar.querySelector(`.tab[data-pack-id="${pack.id}"]`);
+  if (!tab) return;
+  const origText = tab.textContent;
+  tab.textContent = 'Downloading...';
+  tab.style.pointerEvents = 'none';
+  tab.style.opacity = '0.6';
+
+  try {
+    const resp = await fetch(`/download/${pack.id}`, { method: 'POST' });
+    if (resp.ok) {
+      pack.downloaded = true;
+      const dataResp = await fetch(`/pack-data/${pack.id}`);
+      if (dataResp.ok) {
+        const data = await dataResp.json();
+        pack.sounds = data.sounds || {};
+        pack.tags = data.tags || {};
+      }
+      renderTabs();
+      switchTab(pack.id);
+    } else {
+      showToast('Download failed');
+      tab.textContent = origText;
+      tab.style.pointerEvents = '';
+      tab.style.opacity = '';
+    }
+  } catch (err) {
+    showToast('Download failed: ' + err.message);
+    tab.textContent = origText;
+    tab.style.pointerEvents = '';
+    tab.style.opacity = '';
+  }
+}
+
+// Sound list rendering
+function renderSoundList() {
+  const pack = soundPacks.find(p => p.id === activePackId);
+  if (!pack) {
+    soundList.innerHTML = '<div class="no-results">No sound pack selected.</div>';
+    return;
+  }
+
+  if (!pack.downloaded) {
+    soundList.innerHTML = `
+      <div class="download-overlay">
+        <p>This sound pack has not been downloaded yet.</p>
+        <button class="download-btn" onclick="triggerDownload(soundPacks.find(p=>p.id==='${pack.id}'))">Download ${pack.name}</button>
+      </div>`;
+    return;
+  }
+
+  const sounds = pack.sounds || {};
+  const tags = pack.tags || {};
+  const soundIds = Object.keys(sounds);
+
+  if (soundIds.length === 0) {
+    soundList.innerHTML = '<div class="no-results">No sounds in this pack.</div>';
+    return;
+  }
+
+  const matchingSoundIds = searchText
+    ? soundIds.filter(id => id.toLowerCase().includes(searchText))
+    : soundIds;
+
+  if (matchingSoundIds.length === 0) {
+    soundList.innerHTML = '<div class="no-results">No sounds matching "' + escapeHtml(searchText) + '"</div>';
+    return;
+  }
+
+  const matchingSet = new Set(matchingSoundIds);
+
+  let html = '';
+  const rendered = new Set();
+  const tagNames = Object.keys(tags).sort();
+
+  for (const tagName of tagNames) {
+    const tagSounds = tags[tagName].filter(id => matchingSet.has(id));
+    if (tagSounds.length === 0) continue;
+
+    html += `<div class="tag-group">`;
+    html += `<div class="tag-header" onclick="toggleTagGroup(this)">`;
+    html += `<span class="arrow">&#9660;</span> ${escapeHtml(tagName)} `;
+    html += `<span class="tag-count">(${tagSounds.length})</span>`;
+    html += `</div>`;
+    html += `<div class="tag-sounds">`;
+
+    for (const soundId of tagSounds) {
+      html += renderSoundRow(pack, soundId, sounds[soundId]);
+      rendered.add(soundId);
+    }
+
+    html += `</div></div>`;
+  }
+
+  const ungrouped = matchingSoundIds.filter(id => !rendered.has(id));
+  if (ungrouped.length > 0) {
+    if (tagNames.length > 0) {
+      html += `<div class="ungrouped-header">Other</div>`;
+    }
+    for (const soundId of ungrouped) {
+      html += renderSoundRow(pack, soundId, sounds[soundId]);
+    }
+  }
+
+  soundList.innerHTML = html;
+  syncCheckboxes();
+}
+
+function renderSoundRow(pack, soundId, sound) {
+  const key = pack.id + '::' + soundId;
+  const checked = selected.has(key) ? 'checked' : '';
+  const dur = sound.duration != null ? sound.duration.toFixed(2) + 's' : '';
+  const catClass = sound.category === 'music' ? ' music' : '';
+  return `<div class="sound-row" data-key="${escapeHtml(key)}">
+    <input type="checkbox" ${checked} onchange="toggleSound('${escapeHtml(pack.id)}','${escapeHtml(soundId)}',this.checked)">
+    <span class="sound-name">${escapeHtml(soundId)}</span>
+    <span class="category-badge${catClass}">${escapeHtml(sound.category || 'sfx')}</span>
+    <span class="sound-duration">${dur}</span>
+    <button class="play-btn" onclick="playSound('${escapeHtml(pack.id)}','${escapeHtml(sound.file)}',this)" title="Play">&#9654;</button>
+  </div>`;
+}
+
+function syncCheckboxes() {
+  soundList.querySelectorAll('.sound-row').forEach(row => {
+    const key = row.dataset.key;
+    const cb = row.querySelector('input[type="checkbox"]');
+    if (cb) cb.checked = selected.has(key);
+  });
+}
+
+// Tag group toggle
+function toggleTagGroup(headerEl) {
+  headerEl.classList.toggle('collapsed');
+  const soundsDiv = headerEl.nextElementSibling;
+  soundsDiv.classList.toggle('hidden');
+}
+
+// Sound playback
+function playSound(packId, file, btn) {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+    if (currentPlayBtn) {
+      currentPlayBtn.classList.remove('active');
+      currentPlayBtn.closest('.sound-row')?.classList.remove('playing');
+    }
+  }
+
+  if (currentPlayBtn === btn) {
+    currentAudio = null;
+    currentPlayBtn = null;
+    return;
+  }
+
+  const url = '/audio/' + encodeURIComponent(packId) + '/' + encodeURIComponent(file);
+  currentAudio = new Audio(url);
+  currentPlayBtn = btn;
+  btn.classList.add('active');
+  btn.closest('.sound-row')?.classList.add('playing');
+
+  currentAudio.addEventListener('ended', () => {
+    btn.classList.remove('active');
+    btn.closest('.sound-row')?.classList.remove('playing');
+    currentAudio = null;
+    currentPlayBtn = null;
+  });
+
+  currentAudio.addEventListener('error', () => {
+    btn.classList.remove('active');
+    btn.closest('.sound-row')?.classList.remove('playing');
+    currentAudio = null;
+    currentPlayBtn = null;
+  });
+
+  currentAudio.play().catch(() => {
+    btn.classList.remove('active');
+    btn.closest('.sound-row')?.classList.remove('playing');
+    currentAudio = null;
+    currentPlayBtn = null;
+  });
+}
+
+// Selection
+function toggleSound(packId, soundId, isChecked) {
+  const key = packId + '::' + soundId;
+  const pack = soundPacks.find(p => p.id === packId);
+  if (!pack) return;
+
+  if (isChecked) {
+    selected.set(key, {
+      packId: packId,
+      soundId: soundId,
+      soundData: pack.sounds[soundId],
+      packName: pack.name,
+      source: pack.source,
+    });
+  } else {
+    selected.delete(key);
+  }
+  syncCartFromLocal();
+}
+
+function syncCartFromLocal() {
+  // Group selected by pack and push to cart
+  var byPack = {};
+  for (var [, info] of selected) {
+    if (!byPack[info.packId]) {
+      byPack[info.packId] = { packName: info.packName, source: info.source, sounds: {} };
+    }
+    byPack[info.packId].sounds[info.soundId] = info.soundData;
+  }
+  // Update cart for each sound pack that has items
+  var touchedPacks = new Set(Object.keys(byPack));
+  // Also clear packs that used to have sounds but now don't
+  var cart = ArcaneCart.load();
+  cart.forEach(function(entry) {
+    if (entry.type === 'sound' && !touchedPacks.has(entry.packId)) {
+      // Check if any items from this pack are still in selected
+      var hasItems = false;
+      for (var [, info] of selected) {
+        if (info.packId === entry.packId) { hasItems = true; break; }
+      }
+      if (!hasItems) {
+        ArcaneCart.setPackSounds(entry.packId, entry.packName, entry.source, {});
+      }
+    }
+  });
+  for (var pid in byPack) {
+    var b = byPack[pid];
+    ArcaneCart.setPackSounds(pid, b.packName, b.source, b.sounds);
+  }
+  renderCart();
+}
+
+function removeFromSelected(key) {
+  selected.delete(key);
+  syncCartFromLocal();
+  syncCheckboxes();
+}
+
+function clearAll() {
+  ArcaneCart.clear();
+  selected.clear();
+  renderCart();
+  syncCheckboxes();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Cart UI
+// ══════════════════════════════════════════════════════════════════
+function renderCart() {
+  var cart = ArcaneCart.load();
+  var totalItems = 0;
+  cart.forEach(function(p) {
+    totalItems += Object.keys(p.sprites || p.sounds || {}).length;
+  });
+  cartHeader.textContent = 'Cart (' + totalItems + ')';
+
+  if (totalItems === 0) {
+    cartList.innerHTML = '<div class="cart-empty">Check sounds to add them</div>';
+    return;
+  }
+
+  cartList.innerHTML = '';
+  cart.forEach(function(pack) {
+    var items = pack.sprites || pack.sounds || {};
+    var names = Object.keys(items);
+    if (names.length === 0) return;
+
+    var group = document.createElement('div');
+    group.className = 'cart-pack-group';
+
+    var label = document.createElement('div');
+    label.className = 'cart-pack-label';
+    label.innerHTML = '<span>' + escapeHtml(pack.packName) + '</span><span class="pack-count">' + names.length + '</span>';
+    group.appendChild(label);
+
+    names.forEach(function(name) {
+      var row = document.createElement('div');
+      row.className = 'cart-item';
+
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'item-name';
+      nameSpan.textContent = name;
+      row.appendChild(nameSpan);
+
+      var rmBtn = document.createElement('button');
+      rmBtn.className = 'remove-btn';
+      rmBtn.textContent = '\u00d7';
+      rmBtn.dataset.packId = pack.packId;
+      rmBtn.dataset.itemName = name;
+      rmBtn.addEventListener('click', function() {
+        var key = this.dataset.packId + '::' + this.dataset.itemName;
+        removeFromSelected(key);
+      });
+      row.appendChild(rmBtn);
+
+      group.appendChild(row);
+    });
+
+    cartList.appendChild(group);
+  });
+}
+
+// Copy & Close
+async function copyAndClose() {
+  var cart = ArcaneCart.load();
+  if (cart.length === 0) {
+    showToast('Cart is empty');
+    return;
+  }
+
+  var result = cart.length === 1 ? cart[0] : cart;
+  var json = JSON.stringify(result, null, 2);
+
+  try {
+    await navigator.clipboard.writeText(json);
+  } catch (e) {
+    var ta = document.createElement('textarea');
+    ta.value = json;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+
+  try {
+    await fetch('/done', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: json,
+    });
+  } catch (e) {}
+
+  showToast('Copied ' + ArcaneCart.totalItemCount() + ' item(s) to clipboard');
+}
+
+// Toast
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+// Util
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Start
+init();
+renderCart();
+</script>
+
+</body>
+</html>

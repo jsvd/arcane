@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arcane Catalog — Sprite Sheet</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #1a1a2e;
+    color: #eee;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+    font-size: 14px;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    background: #16213e;
+    border-bottom: 2px solid #0f3460;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    min-height: 48px;
+  }
+
+  header a.back {
+    color: #e94560;
+    text-decoration: none;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.15s;
+  }
+  header a.back:hover { background: rgba(233,69,96,0.15); }
+
+  header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+    margin-right: 16px;
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .control-group label {
+    font-size: 12px;
+    color: #aaa;
+    white-space: nowrap;
+  }
+
+  .control-group input[type="number"] {
+    width: 56px;
+    background: #1a1a2e;
+    border: 1px solid #0f3460;
+    color: #eee;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  .control-group input[type="number"]:focus {
+    outline: none;
+    border-color: #e94560;
+  }
+
+  .control-group select {
+    background: #1a1a2e;
+    border: 1px solid #0f3460;
+    color: #eee;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: inherit;
+    max-width: 200px;
+  }
+  .control-group select:focus {
+    outline: none;
+    border-color: #e94560;
+  }
+
+  .zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+  }
+
+  button {
+    background: #0f3460;
+    color: #eee;
+    border: 1px solid #0f3460;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  button:hover { background: #e94560; border-color: #e94560; }
+  button:active { background: #c73a52; }
+
+  .zoom-level {
+    font-size: 13px;
+    color: #aaa;
+    min-width: 32px;
+    text-align: center;
+  }
+
+  /* ── Main ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Canvas Area ── */
+  .canvas-area {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+    cursor: grab;
+  }
+  .canvas-area.dragging { cursor: grabbing; }
+  .canvas-area.shift-mode { cursor: crosshair; }
+
+  .canvas-wrap {
+    display: inline-block;
+    padding: 16px;
+  }
+
+  canvas#sheet {
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: #16213e;
+    border-left: 2px solid #0f3460;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+
+  .preview-section {
+    padding: 10px;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    flex-shrink: 0;
+  }
+
+  canvas#preview {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    border: 1px solid #0f3460;
+    background: repeating-conic-gradient(#2a2a3e 0% 25%, #1a1a2e 0% 50%) 0 0 / 8px 8px;
+    flex-shrink: 0;
+  }
+
+  .preview-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 11px;
+    color: #aaa;
+    min-width: 0;
+  }
+
+  /* ── Cart ── */
+  .cart-header {
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    border-bottom: 1px solid #0f3460;
+    color: #4ade80;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .cart-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 8px;
+  }
+
+  .cart-pack-group {
+    margin-bottom: 6px;
+  }
+
+  .cart-pack-label {
+    font-size: 11px;
+    color: #8899aa;
+    padding: 4px 4px 2px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid rgba(15,52,96,0.5);
+  }
+  .cart-pack-label:hover { color: #eee; }
+
+  .cart-pack-label .pack-count {
+    font-size: 10px;
+    color: #556677;
+  }
+
+  .cart-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 4px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+  .cart-item:hover { background: rgba(255,255,255,0.04); }
+
+  .cart-item canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    border: 1px solid #0f3460;
+    flex-shrink: 0;
+    background: repeating-conic-gradient(#2a2a3e 0% 25%, #1a1a2e 0% 50%) 0 0 / 6px 6px;
+  }
+
+  .cart-item input {
+    flex: 1;
+    background: #1a1a2e;
+    border: 1px solid #0f3460;
+    color: #eee;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-family: inherit;
+    min-width: 0;
+  }
+  .cart-item input:focus {
+    outline: none;
+    border-color: #e94560;
+  }
+
+  .cart-item .item-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #ccc;
+    font-size: 12px;
+  }
+
+  .cart-item .remove-btn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .cart-item .remove-btn:hover { color: #e94560; background: rgba(233,69,96,0.15); }
+
+  .cart-empty {
+    padding: 20px 12px;
+    text-align: center;
+    color: #556677;
+    font-size: 12px;
+  }
+
+  .cart-actions {
+    padding: 10px 12px;
+    border-top: 1px solid #0f3460;
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .cart-actions button { flex: 1; padding: 7px 10px; font-size: 12px; }
+
+  .btn-clear { background: #2a2a3e; }
+  .btn-clear:hover { background: #e94560; }
+
+  .btn-copy {
+    background: #4ade80;
+    color: #1a1a2e;
+    font-weight: 600;
+    border-color: #4ade80;
+  }
+  .btn-copy:hover { background: #6bf09a; border-color: #6bf09a; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #4ade80;
+    color: #1a1a2e;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 1000;
+  }
+  .toast.visible {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #1a1a2e; }
+  ::-webkit-scrollbar-thumb { background: #0f3460; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #e94560; }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="back">&larr;</a>
+  <h1 id="packTitle"></h1>
+  <div class="controls">
+    <div class="control-group">
+      <label for="sheetFile">File</label>
+      <select id="sheetFile"><option value="">Loading...</option></select>
+    </div>
+    <div class="control-group">
+      <label for="tileSize">Tile</label>
+      <input type="number" id="tileSize" min="1" max="512" value="32">
+    </div>
+    <div class="control-group">
+      <label for="spacing">Spacing</label>
+      <input type="number" id="spacing" min="0" max="64" value="0">
+    </div>
+    <div class="control-group">
+      <label for="offsetX">Off X</label>
+      <input type="number" id="offsetX" min="0" max="512" value="0">
+    </div>
+    <div class="control-group">
+      <label for="offsetY">Off Y</label>
+      <input type="number" id="offsetY" min="0" max="512" value="0">
+    </div>
+  </div>
+  <div class="zoom-controls">
+    <button id="zoomOut">-</button>
+    <span class="zoom-level" id="zoomLabel">1x</span>
+    <button id="zoomIn">+</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="canvas-area" id="canvasArea">
+    <div class="canvas-wrap">
+      <canvas id="sheet"></canvas>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div class="preview-section">
+      <canvas id="preview" width="96" height="96"></canvas>
+      <div class="preview-detail">
+        <div id="previewInfo">Hover a tile</div>
+      </div>
+    </div>
+
+    <div class="cart-header">
+      <span id="cartHeader">Cart (0)</span>
+    </div>
+
+    <div class="cart-list" id="cartList">
+      <div class="cart-empty">Select sprites from any pack</div>
+    </div>
+
+    <div class="cart-actions">
+      <button class="btn-clear" id="btnClear">Clear</button>
+      <button class="btn-copy" id="btnCopy">Copy &amp; Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Copied to clipboard!</div>
+
+<script>
+// ── Data from server ──
+const packMeta = {{PACK_META_JSON}};
+const initialImageData = '{{IMAGE_DATA}}';
+
+// ══════════════════════════════════════════════════════════════════
+// ArcaneCart — persistent cart in localStorage
+// ══════════════════════════════════════════════════════════════════
+const ArcaneCart = (function() {
+  const KEY = 'arcane-catalog-cart';
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || []; }
+    catch (_) { return []; }
+  }
+  function save(cart) {
+    try { localStorage.setItem(KEY, JSON.stringify(cart)); } catch(_) {}
+  }
+  function findPack(cart, packId) {
+    return cart.find(function(p) { return p.packId === packId; });
+  }
+
+  return {
+    load: load,
+    save: save,
+
+    setPackSprites: function(packId, packName, source, type, spriteData, extra) {
+      var cart = load();
+      var entry = findPack(cart, packId);
+      if (!entry) {
+        entry = { packId: packId, packName: packName, source: source, type: type, sprites: {}, cachePath: '' };
+        cart.push(entry);
+      }
+      Object.assign(entry, extra || {});
+      entry.sprites = spriteData;
+      // Remove pack if empty
+      if (Object.keys(entry.sprites).length === 0) {
+        cart = cart.filter(function(p) { return p.packId !== packId; });
+      }
+      save(cart);
+    },
+
+    setPackSounds: function(packId, packName, source, soundData) {
+      var cart = load();
+      var entry = findPack(cart, packId);
+      if (!entry) {
+        entry = { packId: packId, packName: packName, source: source, type: 'sound', sounds: {}, cachePath: '' };
+        cart.push(entry);
+      }
+      entry.sounds = soundData;
+      if (Object.keys(entry.sounds).length === 0) {
+        cart = cart.filter(function(p) { return p.packId !== packId; });
+      }
+      save(cart);
+    },
+
+    removeItem: function(packId, itemName) {
+      var cart = load();
+      var entry = findPack(cart, packId);
+      if (!entry) return;
+      if (entry.sprites) delete entry.sprites[itemName];
+      if (entry.sounds) delete entry.sounds[itemName];
+      var items = entry.sprites || entry.sounds || {};
+      if (Object.keys(items).length === 0) {
+        cart = cart.filter(function(p) { return p.packId !== packId; });
+      }
+      save(cart);
+    },
+
+    removePack: function(packId) {
+      var cart = load().filter(function(p) { return p.packId !== packId; });
+      save(cart);
+    },
+
+    clear: function() { save([]); },
+
+    totalItemCount: function() {
+      var cart = load();
+      var n = 0;
+      cart.forEach(function(p) {
+        n += Object.keys(p.sprites || p.sounds || {}).length;
+      });
+      return n;
+    },
+
+    getPackSprites: function(packId) {
+      var cart = load();
+      var entry = findPack(cart, packId);
+      return (entry && entry.sprites) ? entry.sprites : {};
+    },
+
+    getPackSounds: function(packId) {
+      var cart = load();
+      var entry = findPack(cart, packId);
+      return (entry && entry.sounds) ? entry.sounds : {};
+    }
+  };
+})();
+
+// ══════════════════════════════════════════════════════════════════
+// Sheet viewer state
+// ══════════════════════════════════════════════════════════════════
+let tileSize = packMeta.tileSize || 32;
+let spacingVal = packMeta.spacing || 0;
+let offsetX = (packMeta.gridOffset && packMeta.gridOffset.x) || 0;
+let offsetY = (packMeta.gridOffset && packMeta.gridOffset.y) || 0;
+let zoom = 1;
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 8;
+let currentSheetPath = packMeta.sheetPath || '';
+
+// Map key: "col,row" -> { col, row, name }
+const selected = new Map();
+let hoverCell = null;
+
+// Image
+const img = new Image();
+let imgLoaded = false;
+
+// Canvas refs
+const canvas = document.getElementById('sheet');
+const ctx = canvas.getContext('2d');
+const previewCanvas = document.getElementById('preview');
+const previewCtx = previewCanvas.getContext('2d');
+
+// DOM refs
+const canvasArea = document.getElementById('canvasArea');
+const tileSizeInput = document.getElementById('tileSize');
+const spacingInput = document.getElementById('spacing');
+const offsetXInput = document.getElementById('offsetX');
+const offsetYInput = document.getElementById('offsetY');
+const zoomLabel = document.getElementById('zoomLabel');
+const previewInfo = document.getElementById('previewInfo');
+const toast = document.getElementById('toast');
+const sheetFileSelect = document.getElementById('sheetFile');
+const cartHeader = document.getElementById('cartHeader');
+const cartList = document.getElementById('cartList');
+
+// ── localStorage persistence for grid settings ──
+const storageKey = 'arcane-catalog-' + packMeta.id;
+
+function loadSettings() {
+  try {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      const s = JSON.parse(saved);
+      if (s.tileSize > 0) tileSize = s.tileSize;
+      if (s.spacing >= 0) spacingVal = s.spacing;
+      if (s.offsetX >= 0) offsetX = s.offsetX;
+      if (s.offsetY >= 0) offsetY = s.offsetY;
+      if (s.sheetFile) currentSheetPath = s.sheetFile;
+    }
+  } catch (_) {}
+}
+
+function saveSettings() {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify({
+      tileSize: tileSize,
+      spacing: spacingVal,
+      offsetX: offsetX,
+      offsetY: offsetY,
+      sheetFile: currentSheetPath
+    }));
+  } catch (_) {}
+}
+
+loadSettings();
+
+// ── Init ──
+document.getElementById('packTitle').textContent = packMeta.name || packMeta.id;
+tileSizeInput.value = tileSize;
+spacingInput.value = spacingVal;
+offsetXInput.value = offsetX;
+offsetYInput.value = offsetY;
+
+// ── File selector ──
+const SKIP_DEFAULTS = ['preview.png', 'sample.png'];
+const PREFER_PATHS = [
+  'Tilemap/tilemap_packed.png', 'Tilemap/tilemap.png',
+  'Spritesheet/sheet.png', 'Tilesheet/tilesheet.png',
+  'Tilesheet/monochrome_packed.png'
+];
+
+function pickDefaultFile(files) {
+  // If user had a saved preference, use it if still available
+  if (currentSheetPath && files.indexOf(currentSheetPath) !== -1) return currentSheetPath;
+  // Prefer known tilemap paths
+  for (var i = 0; i < PREFER_PATHS.length; i++) {
+    if (files.indexOf(PREFER_PATHS[i]) !== -1) return PREFER_PATHS[i];
+  }
+  // First file that isn't a preview/sample
+  for (var j = 0; j < files.length; j++) {
+    var lower = files[j].toLowerCase();
+    var base = lower.split('/').pop();
+    if (SKIP_DEFAULTS.indexOf(base) === -1) return files[j];
+  }
+  return files[0] || '';
+}
+
+function loadSheetImage(filePath) {
+  currentSheetPath = filePath;
+  imgLoaded = false;
+  img.onload = function() {
+    imgLoaded = true;
+    render();
+  };
+  img.onerror = function() {
+    imgLoaded = false;
+  };
+  img.src = '/sprite/' + encodeURIComponent(packMeta.id) + '/' + encodeURIComponent(filePath);
+  saveSettings();
+}
+
+fetch('/pack-files/' + encodeURIComponent(packMeta.id))
+  .then(function(r) { return r.json(); })
+  .then(function(files) {
+    sheetFileSelect.innerHTML = '';
+    var pngFiles = files.filter(function(f) { return f.endsWith('.png'); });
+    pngFiles.forEach(function(f) {
+      var opt = document.createElement('option');
+      opt.value = f;
+      opt.textContent = f;
+      sheetFileSelect.appendChild(opt);
+    });
+    var best = pickDefaultFile(pngFiles);
+    sheetFileSelect.value = best;
+    if (best && best !== packMeta.sheetPath) {
+      loadSheetImage(best);
+    }
+  })
+  .catch(function() {
+    // Fallback: keep the server-provided image
+    sheetFileSelect.innerHTML = '<option>' + (packMeta.sheetPath || 'default') + '</option>';
+  });
+
+sheetFileSelect.addEventListener('change', function() {
+  selected.clear();
+  syncCartFromLocal();
+  loadSheetImage(this.value);
+});
+
+// Load initial image (server-provided base64)
+img.onload = function() {
+  imgLoaded = true;
+  render();
+};
+img.src = initialImageData;
+
+// ── Restore selections from cart ──
+function restoreFromCart() {
+  var cartSprites = ArcaneCart.getPackSprites(packMeta.id);
+  for (var name in cartSprites) {
+    var s = cartSprites[name];
+    if (s.x !== undefined && s.y !== undefined) {
+      // Reverse cellToPixel to get col,row
+      var cell = tileSize + spacingVal;
+      if (cell <= 0) continue;
+      var col = Math.round((s.x - offsetX) / cell);
+      var row = Math.round((s.y - offsetY) / cell);
+      var key = cellKey(col, row);
+      selected.set(key, { col: col, row: row, name: name });
+    }
+  }
+}
+restoreFromCart();
+
+// ── Grid Math ──
+function gridCols() {
+  if (!imgLoaded) return 0;
+  const usable = img.naturalWidth - offsetX;
+  if (usable <= 0) return 0;
+  const cell = tileSize + spacingVal;
+  return Math.floor((usable + spacingVal) / cell);
+}
+
+function gridRows() {
+  if (!imgLoaded) return 0;
+  const usable = img.naturalHeight - offsetY;
+  if (usable <= 0) return 0;
+  const cell = tileSize + spacingVal;
+  return Math.floor((usable + spacingVal) / cell);
+}
+
+function cellToPixel(col, row) {
+  const cell = tileSize + spacingVal;
+  return {
+    x: offsetX + col * cell,
+    y: offsetY + row * cell
+  };
+}
+
+function pixelToCell(imgX, imgY) {
+  const cell = tileSize + spacingVal;
+  const lx = imgX - offsetX;
+  const ly = imgY - offsetY;
+  if (lx < 0 || ly < 0) return null;
+  const col = Math.floor(lx / cell);
+  const row = Math.floor(ly / cell);
+  const withinX = lx - col * cell;
+  const withinY = ly - row * cell;
+  if (withinX >= tileSize || withinY >= tileSize) return null;
+  if (col >= gridCols() || row >= gridRows()) return null;
+  return { col, row };
+}
+
+function cellKey(col, row) { return col + ',' + row; }
+
+// ── Rendering ──
+function render() {
+  if (!imgLoaded) return;
+
+  const w = img.naturalWidth * zoom;
+  const h = img.naturalHeight * zoom;
+  canvas.width = w;
+  canvas.height = h;
+  ctx.imageSmoothingEnabled = false;
+
+  ctx.drawImage(img, 0, 0, w, h);
+
+  const cols = gridCols();
+  const rows = gridRows();
+  const cell = tileSize + spacingVal;
+
+  if (spacingVal > 0) {
+    ctx.fillStyle = 'rgba(15, 52, 96, 0.6)';
+    for (let c = 1; c <= cols; c++) {
+      const x = (offsetX + c * cell - spacingVal) * zoom;
+      const yStart = offsetY * zoom;
+      const yEnd = (offsetY + rows * cell - spacingVal) * zoom;
+      ctx.fillRect(x, yStart, spacingVal * zoom, yEnd - yStart);
+    }
+    for (let r = 1; r <= rows; r++) {
+      const y = (offsetY + r * cell - spacingVal) * zoom;
+      const xStart = offsetX * zoom;
+      const xEnd = (offsetX + cols * cell - spacingVal) * zoom;
+      ctx.fillRect(xStart, y, xEnd - xStart, spacingVal * zoom);
+    }
+  }
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 1;
+  for (let c = 0; c <= cols; c++) {
+    const x = Math.round((offsetX + c * cell) * zoom);
+    ctx.beginPath();
+    ctx.moveTo(x + 0.5, offsetY * zoom);
+    ctx.lineTo(x + 0.5, (offsetY + rows * cell - spacingVal) * zoom);
+    ctx.stroke();
+    if (spacingVal > 0 && c > 0) {
+      const x2 = Math.round((offsetX + c * cell - spacingVal) * zoom);
+      ctx.beginPath();
+      ctx.moveTo(x2 + 0.5, offsetY * zoom);
+      ctx.lineTo(x2 + 0.5, (offsetY + rows * cell - spacingVal) * zoom);
+      ctx.stroke();
+    }
+  }
+  for (let r = 0; r <= rows; r++) {
+    const y = Math.round((offsetY + r * cell) * zoom);
+    ctx.beginPath();
+    ctx.moveTo(offsetX * zoom, y + 0.5);
+    ctx.lineTo((offsetX + cols * cell - spacingVal) * zoom, y + 0.5);
+    ctx.stroke();
+    if (spacingVal > 0 && r > 0) {
+      const y2 = Math.round((offsetY + r * cell - spacingVal) * zoom);
+      ctx.beginPath();
+      ctx.moveTo(offsetX * zoom, y2 + 0.5);
+      ctx.lineTo((offsetX + cols * cell - spacingVal) * zoom, y2 + 0.5);
+      ctx.stroke();
+    }
+  }
+
+  for (const [, sel] of selected) {
+    const p = cellToPixel(sel.col, sel.row);
+    ctx.fillStyle = 'rgba(74,222,128,0.3)';
+    ctx.fillRect(p.x * zoom, p.y * zoom, tileSize * zoom, tileSize * zoom);
+    ctx.strokeStyle = '#4ade80';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(p.x * zoom, p.y * zoom, tileSize * zoom, tileSize * zoom);
+  }
+
+  if (hoverCell) {
+    const p = cellToPixel(hoverCell.col, hoverCell.row);
+    ctx.fillStyle = 'rgba(233,69,96,0.25)';
+    ctx.fillRect(p.x * zoom, p.y * zoom, tileSize * zoom, tileSize * zoom);
+    ctx.strokeStyle = '#e94560';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(p.x * zoom + 1, p.y * zoom + 1, tileSize * zoom - 2, tileSize * zoom - 2);
+  }
+}
+
+function renderPreview(col, row) {
+  if (!imgLoaded) return;
+  const p = cellToPixel(col, row);
+  const maxDim = 96;
+  const previewZoom = Math.max(1, Math.floor(maxDim / tileSize));
+  const size = tileSize * previewZoom;
+  previewCanvas.width = size;
+  previewCanvas.height = size;
+  previewCtx.imageSmoothingEnabled = false;
+  previewCtx.clearRect(0, 0, size, size);
+  previewCtx.drawImage(img, p.x, p.y, tileSize, tileSize, 0, 0, size, size);
+  previewInfo.textContent = tileSize + 'x' + tileSize + ' @ (' + p.x + ',' + p.y + ') [' + col + ',' + row + ']';
+}
+
+function clearPreview() {
+  previewCanvas.width = 96;
+  previewCanvas.height = 96;
+  previewCtx.clearRect(0, 0, 96, 96);
+  previewInfo.textContent = 'Hover a tile';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Cart UI
+// ══════════════════════════════════════════════════════════════════
+function syncCartFromLocal() {
+  // Push current local selected state to cart
+  var sprites = {};
+  for (const [, sel] of selected) {
+    var p = cellToPixel(sel.col, sel.row);
+    sprites[sel.name] = { x: p.x, y: p.y, w: tileSize, h: tileSize };
+  }
+  ArcaneCart.setPackSprites(packMeta.id, packMeta.name, packMeta.source, 'sheet', sprites, {
+    sheetPath: currentSheetPath,
+    sheetWidth: imgLoaded ? img.naturalWidth : 0,
+    sheetHeight: imgLoaded ? img.naturalHeight : 0,
+    tileSize: tileSize,
+    spacing: spacingVal,
+    gridOffset: { x: offsetX, y: offsetY },
+    cachePath: packMeta.cachePath
+  });
+  renderCart();
+}
+
+function renderCart() {
+  var cart = ArcaneCart.load();
+  var totalItems = 0;
+  cart.forEach(function(p) {
+    totalItems += Object.keys(p.sprites || p.sounds || {}).length;
+  });
+  cartHeader.textContent = 'Cart (' + totalItems + ')';
+
+  if (totalItems === 0) {
+    cartList.innerHTML = '<div class="cart-empty">Select sprites from any pack</div>';
+    return;
+  }
+
+  cartList.innerHTML = '';
+  cart.forEach(function(pack) {
+    var items = pack.sprites || pack.sounds || {};
+    var names = Object.keys(items);
+    if (names.length === 0) return;
+
+    var group = document.createElement('div');
+    group.className = 'cart-pack-group';
+
+    var label = document.createElement('div');
+    label.className = 'cart-pack-label';
+    label.innerHTML = '<span>' + escapeHtml(pack.packName) + '</span><span class="pack-count">' + names.length + '</span>';
+    group.appendChild(label);
+
+    names.forEach(function(name) {
+      var row = document.createElement('div');
+      row.className = 'cart-item';
+
+      // For sheet sprites from current pack, show mini canvas
+      if (pack.type === 'sheet' && pack.packId === packMeta.id && imgLoaded) {
+        var sp = items[name];
+        if (sp && sp.x !== undefined) {
+          var mc = document.createElement('canvas');
+          mc.width = 24; mc.height = 24;
+          var mctx = mc.getContext('2d');
+          mctx.imageSmoothingEnabled = false;
+          mctx.drawImage(img, sp.x, sp.y, sp.w || tileSize, sp.h || tileSize, 0, 0, 24, 24);
+          row.appendChild(mc);
+        }
+      }
+
+      // Name — editable only for current sheet pack
+      if (pack.type === 'sheet' && pack.packId === packMeta.id) {
+        var inp = document.createElement('input');
+        inp.type = 'text';
+        inp.value = name;
+        inp.dataset.packId = pack.packId;
+        inp.dataset.oldName = name;
+        inp.addEventListener('change', function() {
+          var newName = this.value.trim();
+          if (!newName || newName === this.dataset.oldName) return;
+          // Rename in local selected
+          for (const [key, sel] of selected) {
+            if (sel.name === this.dataset.oldName) {
+              sel.name = newName;
+              break;
+            }
+          }
+          syncCartFromLocal();
+          this.dataset.oldName = newName;
+        });
+        row.appendChild(inp);
+      } else {
+        var nameSpan = document.createElement('span');
+        nameSpan.className = 'item-name';
+        nameSpan.textContent = name;
+        row.appendChild(nameSpan);
+      }
+
+      var rmBtn = document.createElement('button');
+      rmBtn.className = 'remove-btn';
+      rmBtn.textContent = '\u00d7';
+      rmBtn.dataset.packId = pack.packId;
+      rmBtn.dataset.itemName = name;
+      rmBtn.addEventListener('click', function() {
+        ArcaneCart.removeItem(this.dataset.packId, this.dataset.itemName);
+        // If this pack, also remove from local selected
+        if (this.dataset.packId === packMeta.id) {
+          for (const [key, sel] of selected) {
+            if (sel.name === this.dataset.itemName) {
+              selected.delete(key);
+              break;
+            }
+          }
+          render();
+        }
+        renderCart();
+      });
+      row.appendChild(rmBtn);
+
+      group.appendChild(row);
+    });
+
+    cartList.appendChild(group);
+  });
+}
+
+// ── Event: Canvas mouse ──
+let isPanning = false;
+let panStartX = 0;
+let panStartY = 0;
+let scrollStartX = 0;
+let scrollStartY = 0;
+
+let isShiftDragging = false;
+let shiftDragStartX = 0;
+let shiftDragStartY = 0;
+let offsetStartX = 0;
+let offsetStartY = 0;
+
+function canvasMouseCoords(e) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    imgX: (e.clientX - rect.left) / zoom,
+    imgY: (e.clientY - rect.top) / zoom
+  };
+}
+
+canvas.addEventListener('mousemove', function(e) {
+  if (isPanning || isShiftDragging) return;
+  const { imgX, imgY } = canvasMouseCoords(e);
+  const cell = pixelToCell(imgX, imgY);
+  if (cell) {
+    hoverCell = cell;
+    renderPreview(cell.col, cell.row);
+  } else {
+    hoverCell = null;
+    clearPreview();
+  }
+  render();
+});
+
+canvas.addEventListener('mouseleave', function() {
+  if (!isPanning && !isShiftDragging) {
+    hoverCell = null;
+    clearPreview();
+    render();
+  }
+});
+
+canvas.addEventListener('mousedown', function(e) {
+  if (e.button !== 0) return;
+
+  if (e.shiftKey) {
+    const { imgX, imgY } = canvasMouseCoords(e);
+    isShiftDragging = true;
+    shiftDragStartX = e.clientX;
+    shiftDragStartY = e.clientY;
+    offsetStartX = offsetX;
+    offsetStartY = offsetY;
+
+    offsetX = Math.round(imgX);
+    offsetY = Math.round(imgY);
+    offsetXInput.value = offsetX;
+    offsetYInput.value = offsetY;
+    render();
+    saveSettings();
+    e.preventDefault();
+    return;
+  }
+
+  const { imgX, imgY } = canvasMouseCoords(e);
+  const cell = pixelToCell(imgX, imgY);
+  if (cell) {
+    const key = cellKey(cell.col, cell.row);
+    if (selected.has(key)) {
+      selected.delete(key);
+    } else {
+      selected.set(key, {
+        col: cell.col,
+        row: cell.row,
+        name: 'sprite-' + cell.col + '-' + cell.row
+      });
+    }
+    syncCartFromLocal();
+    render();
+  } else {
+    isPanning = true;
+    panStartX = e.clientX;
+    panStartY = e.clientY;
+    scrollStartX = canvasArea.scrollLeft;
+    scrollStartY = canvasArea.scrollTop;
+    canvasArea.classList.add('dragging');
+  }
+
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', function(e) {
+  if (isPanning) {
+    const dx = e.clientX - panStartX;
+    const dy = e.clientY - panStartY;
+    canvasArea.scrollLeft = scrollStartX - dx;
+    canvasArea.scrollTop = scrollStartY - dy;
+  } else if (isShiftDragging) {
+    const dx = (e.clientX - shiftDragStartX) / zoom;
+    const dy = (e.clientY - shiftDragStartY) / zoom;
+    offsetX = Math.max(0, Math.round(offsetStartX + dx));
+    offsetY = Math.max(0, Math.round(offsetStartY + dy));
+    offsetXInput.value = offsetX;
+    offsetYInput.value = offsetY;
+    render();
+    saveSettings();
+  }
+});
+
+document.addEventListener('mouseup', function() {
+  if (isPanning) {
+    isPanning = false;
+    canvasArea.classList.remove('dragging');
+  }
+  if (isShiftDragging) {
+    isShiftDragging = false;
+  }
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Shift') canvasArea.classList.add('shift-mode');
+});
+document.addEventListener('keyup', function(e) {
+  if (e.key === 'Shift') canvasArea.classList.remove('shift-mode');
+});
+
+// ── Event: Zoom ──
+function setZoom(newZoom) {
+  zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(newZoom)));
+  zoomLabel.textContent = zoom + 'x';
+  render();
+}
+
+document.getElementById('zoomIn').addEventListener('click', function() { setZoom(zoom + 1); });
+document.getElementById('zoomOut').addEventListener('click', function() { setZoom(zoom - 1); });
+
+canvasArea.addEventListener('wheel', function(e) {
+  e.preventDefault();
+  if (e.deltaY < 0) {
+    setZoom(zoom + 1);
+  } else {
+    setZoom(zoom - 1);
+  }
+}, { passive: false });
+
+// ── Event: Grid controls ──
+tileSizeInput.addEventListener('input', function() {
+  const v = parseInt(this.value, 10);
+  if (v > 0) { tileSize = v; selected.clear(); syncCartFromLocal(); render(); saveSettings(); }
+});
+
+spacingInput.addEventListener('input', function() {
+  const v = parseInt(this.value, 10);
+  if (v >= 0) { spacingVal = v; selected.clear(); syncCartFromLocal(); render(); saveSettings(); }
+});
+
+offsetXInput.addEventListener('input', function() {
+  const v = parseInt(this.value, 10);
+  if (v >= 0) { offsetX = v; selected.clear(); syncCartFromLocal(); render(); saveSettings(); }
+});
+
+offsetYInput.addEventListener('input', function() {
+  const v = parseInt(this.value, 10);
+  if (v >= 0) { offsetY = v; selected.clear(); syncCartFromLocal(); render(); saveSettings(); }
+});
+
+// ── Event: Clear ──
+document.getElementById('btnClear').addEventListener('click', function() {
+  ArcaneCart.clear();
+  selected.clear();
+  renderCart();
+  render();
+});
+
+// ── Event: Copy & Close ──
+document.getElementById('btnCopy').addEventListener('click', async function() {
+  var cart = ArcaneCart.load();
+  if (cart.length === 0) {
+    showToast('Cart is empty');
+    return;
+  }
+
+  var result = cart.length === 1 ? cart[0] : cart;
+  var json = JSON.stringify(result, null, 2);
+
+  try {
+    await navigator.clipboard.writeText(json);
+  } catch (_) {
+    var ta = document.createElement('textarea');
+    ta.value = json;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+
+  try {
+    await fetch('/done', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: json
+    });
+  } catch (_) {}
+
+  showToast('Copied to clipboard!');
+});
+
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('visible');
+  setTimeout(function() {
+    toast.classList.remove('visible');
+  }, 2000);
+}
+
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Initial cart render
+renderCart();
+</script>
+</body>
+</html>

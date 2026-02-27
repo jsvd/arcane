@@ -84,6 +84,10 @@ arcane/
 │   │   └── audio/                 — [feature = "renderer"]
 │   │       └── mod.rs             — AudioCommand, audio_channel(), start_audio_thread() (rodio)
 │   └── tests/                     — Rust integration tests
+├── catalog/                       — Asset catalog data + browser UI
+│   ├── catalog.json               — Pack metadata (id, tileSize, spacing, tags, downloadUrl)
+│   ├── html/                      — Browser templates (browse, sheet, gallery, sounds)
+│   └── sounds/kenney/             — Sound pack JSON definitions
 ├── cli/                           — arcane-engine bin crate
 │   ├── Cargo.toml
 │   └── src/
@@ -94,7 +98,8 @@ arcane/
 │           ├── dev.rs             — `arcane dev` — window + game loop + hot-reload + inspector + audio
 │           ├── describe.rs        — `arcane describe` — text description of game state
 │           ├── inspect.rs         — `arcane inspect` — query specific state paths
-│           └── check.rs           — `arcane check` — fast type-check
+│           ├── check.rs           — `arcane check` — fast type-check
+│           └── catalog.rs         — `arcane catalog` — visual asset browser with persistent cart
 ├── runtime/
 │   ├── testing/
 │   │   ├── harness.ts             — Universal test harness (Node + V8)

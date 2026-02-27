@@ -1,0 +1,32 @@
+{
+  "source": "kenney",
+  "homepage": "https://kenney.nl",
+  "description": "Kenney.nl CC0 audio assets for games",
+
+  "packs": [
+    {
+      "id": "digital-audio",
+      "name": "Digital Audio",
+      "status": "complete",
+      "tags": ["sfx", "retro", "8-bit", "laser", "explosion", "powerup", "jump"]
+    },
+    {
+      "id": "impact-sounds",
+      "name": "Impact Sounds",
+      "status": "complete",
+      "tags": ["sfx", "impact", "footstep", "metal", "wood", "glass", "combat"]
+    },
+    {
+      "id": "interface-sounds",
+      "name": "Interface Sounds",
+      "status": "complete",
+      "tags": ["sfx", "ui", "click", "notification", "menu", "button"]
+    },
+    {
+      "id": "music-jingles",
+      "name": "Music Jingles",
+      "status": "complete",
+      "tags": ["music", "jingle", "victory", "fanfare", "8-bit", "orchestral"]
+    }
+  ]
+}

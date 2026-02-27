@@ -39,18 +39,20 @@ npm --prefix ../asset_palette run catalog tiny-dungeon
 ```
 
 **Tell the user:**
-> Opening sprite selector in your browser. Browse packs, click to download, select the sprites you need, name them, then click "Copy & Close" to return.
+> Opening sprite selector in your browser. Browse packs, click to download, select the sprites you need, name them, then click "Copy & Close" to return. You can select from multiple packs — the cart persists across pages. Use the file dropdown in sheet view to switch between PNG files in the pack.
 
 ### Step 3: Capture Selection
 
-The server outputs JSON to stdout when user clicks "Copy & Close":
+The catalog uses a persistent cart — users can select sprites from multiple packs before clicking "Copy & Close". The server outputs JSON to stdout:
 
+**Single pack selected:**
 ```json
 {
   "packId": "tiny-dungeon",
   "packName": "Tiny Dungeon",
   "source": "kenney",
-  "sheetPath": "Tilemap/tilemap.png",
+  "type": "sheet",
+  "sheetPath": "Tilemap/tilemap_packed.png",
   "sheetWidth": 192,
   "sheetHeight": 176,
   "tileSize": 16,
@@ -60,9 +62,34 @@ The server outputs JSON to stdout when user clicks "Copy & Close":
     "hero-knight": { "x": 16, "y": 96, "w": 16, "h": 16 },
     "skeleton": { "x": 32, "y": 96, "w": 16, "h": 16 }
   },
-  "cachePath": "/Users/you/asset_palace/.cache/tiny-dungeon"
+  "cachePath": "/Users/you/.cache/arcane/packs/tiny-dungeon"
 }
 ```
+
+**Multiple packs selected (array):**
+```json
+[
+  {
+    "packId": "tiny-dungeon",
+    "packName": "Tiny Dungeon",
+    "source": "kenney",
+    "type": "sheet",
+    "sheetPath": "Tilemap/tilemap_packed.png",
+    "sprites": { "hero": { "x": 0, "y": 96, "w": 16, "h": 16 } },
+    "cachePath": "..."
+  },
+  {
+    "packId": "rpg-urban",
+    "packName": "RPG Urban Kit",
+    "source": "kenney",
+    "type": "gallery",
+    "sprites": { "barrel": { "path": "Sprites/barrel.png" } },
+    "cachePath": "..."
+  }
+]
+```
+
+When the output is an array, generate code for each pack entry separately. The `type` field indicates whether sprites use sheet coordinates (`x`/`y`/`w`/`h`) or individual file paths (`path`).
 
 ### Step 4: Copy Assets to Project
 
@@ -97,7 +124,7 @@ const dungeonAtlas = loadAtlasFromDef({
 // dungeonAtlas.draw("skeleton", { x: 200, y: 100, scale: 2 });
 ```
 
-## Field Mapping
+## Field Mapping (type: "sheet")
 
 | Selection JSON | loadAtlasFromDef field |
 |----------------|------------------------|
@@ -105,9 +132,11 @@ const dungeonAtlas = loadAtlasFromDef({
 | `sheetPath` | `primarySheet` |
 | `sheetWidth` | `sheetWidth` |
 | `sheetHeight` | `sheetHeight` |
-| `sprites` | `sprites` (copy verbatim) |
+| `sprites` | `sprites` (copy verbatim — `{x, y, w, h}`) |
 | `cachePath` | source for `cp -r` |
 | `packId` | `basePath: "assets/{packId}/"` |
+
+For `type: "gallery"` entries, sprites have `{ path }` instead of `{x, y, w, h}`. Use `loadTexture()` for each individual sprite file.
 
 ## Atlas API Quick Reference
 

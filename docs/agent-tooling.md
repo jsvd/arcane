@@ -132,6 +132,7 @@ All engine operations are available as CLI commands:
 | `arcane mcp [entry.ts]` | Stdio MCP bridge (JSON-RPC over stdin/stdout). Auto-launches `arcane dev` if needed |
 | `arcane describe <entry.ts>` | Print text description of game state |
 | `arcane inspect <entry.ts> <path>` | Query specific state path |
+| `arcane catalog [pack-id]` | Browse and select CC0 sprites/sounds in a visual browser UI. Persistent cross-pack cart. `--sounds` for sound packs, `--browser <app>` to choose browser |
 
 ### Claude Code Skills
 
@@ -269,6 +270,7 @@ At each review:
 | Radiance Cascades GI + advanced lighting | 2D global illumination, emissive surfaces |
 | Draw call capture + visual testing assertions | Structured rendering validation for headless tests |
 | `arcane-api` conversational agent | "How do I...?" synthesis beyond mechanical `/api` grep |
+| `arcane catalog` persistent cart + file selector | Multi-pack selection workflow, sheet file chooser, grid alignment fix |
 
 ### Creating New Agents
 

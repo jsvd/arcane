@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arcane Catalog</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Sticky Header ── */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #16213e;
+    border-bottom: 2px solid #0f3460;
+    padding: 16px 24px 12px;
+    flex-shrink: 0;
+  }
+
+  .header-top {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .header-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #e94560;
+    letter-spacing: -0.5px;
+  }
+
+  .header-subtitle {
+    font-size: 13px;
+    color: #8899aa;
+  }
+
+  .header-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .search-box {
+    flex: 1 1 240px;
+    max-width: 360px;
+    padding: 8px 12px;
+    border: 1px solid #0f3460;
+    border-radius: 6px;
+    background: #1a1a2e;
+    color: #eee;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-box::placeholder { color: #556677; }
+  .search-box:focus { border-color: #e94560; }
+
+  .tag-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tag-filter-btn {
+    padding: 4px 10px;
+    border: 1px solid #0f3460;
+    border-radius: 12px;
+    background: transparent;
+    color: #8899aa;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+
+  .tag-filter-btn:hover {
+    border-color: #e94560;
+    color: #eee;
+  }
+
+  .tag-filter-btn.active {
+    background: #e94560;
+    border-color: #e94560;
+    color: #fff;
+  }
+
+  .pack-count {
+    font-size: 12px;
+    color: #556677;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  /* ── Main layout ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .content {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  /* ── Grid ── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+    padding: 20px 24px 40px;
+  }
+
+  /* ── Pack Card ── */
+  .card {
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    position: relative;
+  }
+
+  .card:hover {
+    transform: translateY(-3px);
+    border-color: #e94560;
+    box-shadow: 0 6px 20px rgba(233, 69, 96, 0.15);
+  }
+
+  .card.downloading {
+    pointer-events: none;
+    opacity: 0.7;
+  }
+
+  .card-thumb {
+    width: 100%;
+    aspect-ratio: 1;
+    background: #111827;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    image-rendering: pixelated;
+  }
+
+  .card-thumb .dl-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: #556677;
+  }
+
+  .dl-icon svg {
+    width: 48px;
+    height: 48px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .dl-icon span {
+    font-size: 12px;
+  }
+
+  .dl-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #e94560;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.3px;
+  }
+
+  .downloaded-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #4ecca3;
+    color: #111;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+
+  .spinner-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #0f3460;
+    border-top-color: #e94560;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .card-info {
+    padding: 10px 12px 12px;
+  }
+
+  .card-name {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+
+  .source-badge {
+    background: #0f3460;
+    color: #8899aa;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .tile-size {
+    font-size: 11px;
+    color: #556677;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .tag {
+    font-size: 10px;
+    color: #8899aa;
+    background: rgba(15, 52, 96, 0.5);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  /* ── Empty State ── */
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: #556677;
+  }
+
+  .empty-state h3 {
+    font-size: 18px;
+    margin-bottom: 8px;
+    color: #8899aa;
+  }
+
+  .empty-state p {
+    font-size: 14px;
+  }
+
+  /* ── Cart sidebar ── */
+  .cart-sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: #16213e;
+    border-left: 2px solid #0f3460;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+
+  .cart-header {
+    padding: 12px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 1px solid #0f3460;
+    color: #4ade80;
+    flex-shrink: 0;
+  }
+
+  .cart-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 8px;
+  }
+
+  .cart-pack-group { margin-bottom: 6px; }
+
+  .cart-pack-label {
+    font-size: 11px;
+    color: #8899aa;
+    padding: 4px 4px 2px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(15,52,96,0.5);
+  }
+  .cart-pack-label .pack-count { font-size: 10px; color: #556677; }
+
+  .cart-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 4px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+  .cart-item:hover { background: rgba(255,255,255,0.04); }
+
+  .cart-item .item-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #ccc;
+    font-size: 12px;
+  }
+
+  .cart-item .remove-btn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .cart-item .remove-btn:hover { color: #e94560; background: rgba(233,69,96,0.15); }
+
+  .cart-empty {
+    padding: 20px 12px;
+    text-align: center;
+    color: #556677;
+    font-size: 12px;
+  }
+
+  .cart-actions {
+    padding: 10px 12px;
+    border-top: 1px solid #0f3460;
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .cart-actions button {
+    flex: 1;
+    padding: 7px 10px;
+    font-size: 12px;
+    border: 1px solid #0f3460;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .btn-clear { background: #2a2a3e; color: #eee; }
+  .btn-clear:hover { background: #e94560; border-color: #e94560; }
+
+  .btn-copy {
+    background: #4ade80;
+    color: #1a1a2e;
+    font-weight: 600;
+    border-color: #4ade80;
+  }
+  .btn-copy:hover { background: #6bf09a; border-color: #6bf09a; }
+
+  /* ── Toast ── */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .toast {
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+    color: #eee;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    animation: toast-in 0.25s ease-out;
+    max-width: 320px;
+  }
+
+  .toast.success { border-color: #4ecca3; }
+  .toast.error { border-color: #e94560; }
+
+  .toast.fade-out {
+    animation: toast-out 0.3s ease-in forwards;
+  }
+
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes toast-out {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(12px); }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #1a1a2e; }
+  ::-webkit-scrollbar-thumb { background: #0f3460; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #e94560; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="header-title">Arcane Catalog</div>
+    <div class="header-subtitle">CC0 sprite packs for your game</div>
+    <div class="pack-count" id="packCount"></div>
+  </div>
+  <div class="header-controls">
+    <input type="text" class="search-box" id="searchInput" placeholder="Search packs by name or tag...">
+    <div class="tag-filters" id="tagFilters"></div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="content">
+    <div class="grid" id="packGrid"></div>
+  </div>
+
+  <div class="cart-sidebar">
+    <div class="cart-header" id="cartHeader">Cart (0)</div>
+    <div class="cart-list" id="cartList">
+      <div class="cart-empty">Select sprites from any pack</div>
+    </div>
+    <div class="cart-actions">
+      <button class="btn-clear" id="btnClear">Clear</button>
+      <button class="btn-copy" id="btnCopy">Copy &amp; Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const packs = {{PACKS_JSON}};
+
+// ══════════════════════════════════════════════════════════════════
+// ArcaneCart
+// ══════════════════════════════════════════════════════════════════
+const ArcaneCart = (function() {
+  const KEY = 'arcane-catalog-cart';
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || []; }
+    catch (_) { return []; }
+  }
+  function save(cart) {
+    try { localStorage.setItem(KEY, JSON.stringify(cart)); } catch(_) {}
+  }
+  return {
+    load: load,
+    save: save,
+    clear: function() { save([]); },
+    removeItem: function(packId, itemName) {
+      var cart = load();
+      var entry = cart.find(function(p) { return p.packId === packId; });
+      if (!entry) return;
+      if (entry.sprites) delete entry.sprites[itemName];
+      if (entry.sounds) delete entry.sounds[itemName];
+      var items = entry.sprites || entry.sounds || {};
+      if (Object.keys(items).length === 0) {
+        cart = cart.filter(function(p) { return p.packId !== packId; });
+      }
+      save(cart);
+    },
+    totalItemCount: function() {
+      var cart = load(), n = 0;
+      cart.forEach(function(p) { n += Object.keys(p.sprites || p.sounds || {}).length; });
+      return n;
+    }
+  };
+})();
+
+// ── State ──
+let searchQuery = '';
+let activeTag = null;
+const downloadingSet = new Set();
+
+// ── DOM refs ──
+const searchInput = document.getElementById('searchInput');
+const tagFiltersEl = document.getElementById('tagFilters');
+const packGrid = document.getElementById('packGrid');
+const packCountEl = document.getElementById('packCount');
+const toastContainer = document.getElementById('toastContainer');
+const cartHeader = document.getElementById('cartHeader');
+const cartList = document.getElementById('cartList');
+
+// ── Toast ──
+function showToast(message, type) {
+  const el = document.createElement('div');
+  el.className = 'toast ' + (type || '');
+  el.textContent = message;
+  toastContainer.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('fade-out');
+    el.addEventListener('animationend', () => el.remove());
+  }, 3000);
+}
+
+// ── Tag Filters ──
+function buildTagFilters() {
+  const tagCounts = {};
+  packs.forEach(p => {
+    (p.tags || []).forEach(t => {
+      tagCounts[t] = (tagCounts[t] || 0) + 1;
+    });
+  });
+  const sorted = Object.entries(tagCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12);
+
+  tagFiltersEl.innerHTML = '';
+  sorted.forEach(([tag]) => {
+    const btn = document.createElement('button');
+    btn.className = 'tag-filter-btn';
+    btn.textContent = tag;
+    btn.dataset.tag = tag;
+    if (activeTag === tag) btn.classList.add('active');
+    btn.addEventListener('click', () => {
+      activeTag = activeTag === tag ? null : tag;
+      buildTagFilters();
+      renderGrid();
+    });
+    tagFiltersEl.appendChild(btn);
+  });
+}
+
+// ── Filter ──
+function filteredPacks() {
+  return packs.filter(p => {
+    const q = searchQuery.toLowerCase();
+    const nameMatch = !q || p.name.toLowerCase().includes(q);
+    const tagMatch = !q || (p.tags || []).some(t => t.toLowerCase().includes(q));
+    const passesSearch = nameMatch || tagMatch;
+    const passesTag = !activeTag || (p.tags || []).includes(activeTag);
+    return passesSearch && passesTag;
+  });
+}
+
+// ── Download Arrow SVG ──
+function downloadIconSVG() {
+  return '<svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>';
+}
+
+// ── Card Rendering ──
+function renderCard(pack) {
+  const card = document.createElement('div');
+  card.className = 'card' + (downloadingSet.has(pack.id) ? ' downloading' : '');
+  card.dataset.id = pack.id;
+
+  const thumb = document.createElement('div');
+  thumb.className = 'card-thumb';
+
+  if (pack.thumbnailData) {
+    const img = document.createElement('img');
+    img.src = pack.thumbnailData;
+    img.alt = pack.name;
+    img.loading = 'lazy';
+    thumb.appendChild(img);
+  } else if (!pack.downloaded) {
+    const icon = document.createElement('div');
+    icon.className = 'dl-icon';
+    icon.innerHTML = downloadIconSVG() + '<span>Not downloaded</span>';
+    thumb.appendChild(icon);
+  } else {
+    const icon = document.createElement('div');
+    icon.className = 'dl-icon';
+    icon.innerHTML = '<span style="font-size:14px;color:#8899aa">No preview</span>';
+    thumb.appendChild(icon);
+  }
+
+  if (downloadingSet.has(pack.id)) {
+    const overlay = document.createElement('div');
+    overlay.className = 'spinner-overlay';
+    overlay.innerHTML = '<div class="spinner"></div>';
+    thumb.appendChild(overlay);
+  } else if (!pack.downloaded) {
+    const badge = document.createElement('div');
+    badge.className = 'dl-badge';
+    badge.textContent = 'Click to download';
+    thumb.appendChild(badge);
+  } else {
+    const badge = document.createElement('div');
+    badge.className = 'downloaded-badge';
+    badge.textContent = 'Downloaded';
+    thumb.appendChild(badge);
+  }
+
+  card.appendChild(thumb);
+
+  const info = document.createElement('div');
+  info.className = 'card-info';
+
+  const name = document.createElement('div');
+  name.className = 'card-name';
+  name.textContent = pack.name;
+  info.appendChild(name);
+
+  const meta = document.createElement('div');
+  meta.className = 'card-meta';
+  const srcBadge = document.createElement('span');
+  srcBadge.className = 'source-badge';
+  srcBadge.textContent = pack.source;
+  meta.appendChild(srcBadge);
+  const tileSpan = document.createElement('span');
+  tileSpan.className = 'tile-size';
+  tileSpan.textContent = pack.tileSize + 'px';
+  meta.appendChild(tileSpan);
+  info.appendChild(meta);
+
+  const tagsContainer = document.createElement('div');
+  tagsContainer.className = 'card-tags';
+  (pack.tags || []).slice(0, 4).forEach(t => {
+    const tagEl = document.createElement('span');
+    tagEl.className = 'tag';
+    tagEl.textContent = t;
+    tagsContainer.appendChild(tagEl);
+  });
+  info.appendChild(tagsContainer);
+
+  card.appendChild(info);
+
+  card.addEventListener('click', () => handleCardClick(pack));
+
+  return card;
+}
+
+// ── Render Grid ──
+function renderGrid() {
+  const visible = filteredPacks();
+  packGrid.innerHTML = '';
+
+  if (visible.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.innerHTML = '<h3>No packs found</h3><p>Try a different search term or clear the tag filter.</p>';
+    packGrid.appendChild(empty);
+  } else {
+    visible.forEach(p => packGrid.appendChild(renderCard(p)));
+  }
+
+  packCountEl.textContent = visible.length + ' of ' + packs.length + ' packs';
+}
+
+// ── Click Handler ──
+async function handleCardClick(pack) {
+  if (downloadingSet.has(pack.id)) return;
+
+  if (pack.downloaded) {
+    window.location.href = '/pack/' + encodeURIComponent(pack.id);
+    return;
+  }
+
+  downloadingSet.add(pack.id);
+  renderGrid();
+  showToast('Downloading ' + pack.name + '...', '');
+
+  try {
+    const resp = await fetch('/download/' + encodeURIComponent(pack.id), { method: 'POST' });
+    if (!resp.ok) {
+      const text = await resp.text();
+      throw new Error(text || ('HTTP ' + resp.status));
+    }
+    pack.downloaded = true;
+    downloadingSet.delete(pack.id);
+    showToast(pack.name + ' downloaded!', 'success');
+    renderGrid();
+    window.location.href = '/pack/' + encodeURIComponent(pack.id);
+  } catch (err) {
+    downloadingSet.delete(pack.id);
+    showToast('Failed: ' + err.message, 'error');
+    renderGrid();
+  }
+}
+
+// ── Search ──
+searchInput.addEventListener('input', () => {
+  searchQuery = searchInput.value.trim();
+  renderGrid();
+});
+
+// ══════════════════════════════════════════════════════════════════
+// Cart UI
+// ══════════════════════════════════════════════════════════════════
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function renderCart() {
+  var cart = ArcaneCart.load();
+  var totalItems = 0;
+  cart.forEach(function(p) {
+    totalItems += Object.keys(p.sprites || p.sounds || {}).length;
+  });
+  cartHeader.textContent = 'Cart (' + totalItems + ')';
+
+  if (totalItems === 0) {
+    cartList.innerHTML = '<div class="cart-empty">Select sprites from any pack</div>';
+    return;
+  }
+
+  cartList.innerHTML = '';
+  cart.forEach(function(pack) {
+    var items = pack.sprites || pack.sounds || {};
+    var names = Object.keys(items);
+    if (names.length === 0) return;
+
+    var group = document.createElement('div');
+    group.className = 'cart-pack-group';
+
+    var label = document.createElement('div');
+    label.className = 'cart-pack-label';
+    label.innerHTML = '<span>' + escapeHtml(pack.packName) + '</span><span class="pack-count">' + names.length + '</span>';
+    group.appendChild(label);
+
+    names.forEach(function(name) {
+      var row = document.createElement('div');
+      row.className = 'cart-item';
+
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'item-name';
+      nameSpan.textContent = name;
+      row.appendChild(nameSpan);
+
+      var rmBtn = document.createElement('button');
+      rmBtn.className = 'remove-btn';
+      rmBtn.textContent = '\u00d7';
+      rmBtn.dataset.packId = pack.packId;
+      rmBtn.dataset.itemName = name;
+      rmBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        ArcaneCart.removeItem(this.dataset.packId, this.dataset.itemName);
+        renderCart();
+      });
+      row.appendChild(rmBtn);
+
+      group.appendChild(row);
+    });
+
+    cartList.appendChild(group);
+  });
+}
+
+document.getElementById('btnClear').addEventListener('click', function() {
+  ArcaneCart.clear();
+  renderCart();
+});
+
+document.getElementById('btnCopy').addEventListener('click', async function() {
+  var cart = ArcaneCart.load();
+  if (cart.length === 0) {
+    showToast('Cart is empty', 'error');
+    return;
+  }
+
+  var result = cart.length === 1 ? cart[0] : cart;
+  var json = JSON.stringify(result, null, 2);
+
+  try {
+    await navigator.clipboard.writeText(json);
+  } catch (_) {
+    var ta = document.createElement('textarea');
+    ta.value = json;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+
+  try {
+    await fetch('/done', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: json
+    });
+  } catch (_) {}
+
+  showToast('Copied to clipboard!', 'success');
+});
+
+// ── Init ──
+buildTagFilters();
+renderGrid();
+renderCart();
+</script>
+</body>
+</html>
