@@ -8,7 +8,7 @@
 import { createRng } from "@arcane/runtime/state";
 import type { Rng } from "@arcane/runtime/state";
 // Import constants from config.ts as needed:
-// import { SPEED } from "./config.ts";
+// import { SPEED } from "./config.ts";  // uncomment when you add SPEED to config.ts
 
 // --- Types ---
 

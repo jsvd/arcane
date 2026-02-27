@@ -132,7 +132,6 @@ All engine operations are available as CLI commands:
 | `arcane mcp [entry.ts]` | Stdio MCP bridge (JSON-RPC over stdin/stdout). Auto-launches `arcane dev` if needed |
 | `arcane describe <entry.ts>` | Print text description of game state |
 | `arcane inspect <entry.ts> <path>` | Query specific state path |
-| `arcane add <recipe>` | Copy a recipe into the project (`--list` to see available) |
 
 ### Claude Code Skills
 

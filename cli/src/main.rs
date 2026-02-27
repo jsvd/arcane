@@ -53,14 +53,6 @@ enum Commands {
         /// Dot-separated state path (e.g. "player.hp")
         path: String,
     },
-    /// Add a recipe to the current project
-    Add {
-        /// Recipe name (e.g. "turn-based-combat")
-        name: Option<String>,
-        /// List all available recipes
-        #[arg(long)]
-        list: bool,
-    },
     /// Create a new Arcane project from template
     New {
         /// Project name
@@ -91,7 +83,6 @@ fn main() -> anyhow::Result<()> {
         },
         Commands::Describe { entry, verbosity } => commands::describe::run(entry, verbosity),
         Commands::Inspect { entry, path } => commands::inspect::run(entry, path),
-        Commands::Add { name, list } => commands::add::run(name, list),
         Commands::New { name } => commands::new::run(&name),
         Commands::Init => commands::init::run(),
         Commands::Check { path } => commands::check::run(path),

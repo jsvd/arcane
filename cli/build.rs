@@ -50,7 +50,7 @@ fn copy_dir_filtered(src: &Path, dst: &Path, hasher: &mut DefaultHasher) {
 fn find_dir(name: &str) -> PathBuf {
     let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
 
-    // Repo layout: cli/../<name> (e.g. ../templates/default, ../recipes)
+    // Repo layout: cli/../<name> (e.g. ../templates/default)
     let repo_path = manifest_dir.join("..").join(name);
     if repo_path.exists() {
         return repo_path;
@@ -77,16 +77,15 @@ fn clean_dir(dir: &Path) {
 }
 
 /// When building from the repo, auto-sync cli/data/ from canonical sources.
-/// This ensures `cargo publish` always packages fresh templates/recipes/runtime,
+/// This ensures `cargo publish` always packages fresh templates/runtime,
 /// eliminating the manual sync step that caused stale scaffolds to ship.
 fn auto_sync_data_dir(manifest_dir: &Path) {
     let repo_root = manifest_dir.join("..");
 
     // Only sync when canonical sources exist (repo checkout, not published crate)
     let templates_src = repo_root.join("templates").join("default");
-    let recipes_src = repo_root.join("recipes");
 
-    if !templates_src.exists() || !recipes_src.exists() {
+    if !templates_src.exists() {
         return; // Published crate — cli/data/ already populated by cargo package
     }
 
@@ -98,9 +97,6 @@ fn auto_sync_data_dir(manifest_dir: &Path) {
     let mut dummy = DefaultHasher::new();
     let templates_dst = data_dir.join("templates").join("default");
     copy_dir_recursive(&templates_src, &templates_dst, &mut dummy);
-
-    let recipes_dst = data_dir.join("recipes");
-    copy_dir_recursive(&recipes_src, &recipes_dst, &mut dummy);
 
     let runtime_src = repo_root.join("runtime");
     let runtime_dst = data_dir.join("runtime");
@@ -115,7 +111,7 @@ fn main() {
     let mut hasher = DefaultHasher::new();
 
     // Auto-sync cli/data/ from canonical repo sources so `cargo publish`
-    // always packages fresh templates/recipes/assets. This eliminates the
+    // always packages fresh templates/assets. This eliminates the
     // manual sync step that caused stale scaffolds to ship.
     auto_sync_data_dir(&manifest_dir);
 
@@ -130,12 +126,6 @@ fn main() {
     clean_dir(&runtime_dst);
     let runtime_src = find_dir("runtime");
     copy_dir_filtered(&runtime_src, &runtime_dst, &mut hasher);
-
-    // Embed recipes
-    let recipes_dst = out_dir.join("recipes");
-    clean_dir(&recipes_dst);
-    let recipes_src = find_dir("recipes");
-    copy_dir_recursive(&recipes_src, &recipes_dst, &mut hasher);
 
     // Write a stamp file that new.rs includes via include_str!().
     // When template contents change, this hash changes, forcing cargo

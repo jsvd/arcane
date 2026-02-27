@@ -30,8 +30,7 @@
     "types": ["node"]
   },
   "include": [
-    "runtime/**/*.ts",
-    "recipes/**/*.ts"
+    "runtime/**/*.ts"
   ],
   "exclude": [
     "node_modules",

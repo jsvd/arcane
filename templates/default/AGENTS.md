@@ -257,8 +257,6 @@ arcane check                      # Fast type-check — run after every edit
 arcane test                       # Discovers and runs all *.test.ts files headlessly
 arcane describe src/visual.ts     # Text description of current game state (agent protocol)
 arcane inspect src/visual.ts "player"  # Query a specific state path
-arcane add turn-based-combat      # Copy a pre-built recipe into your project
-arcane add --list                 # List available recipes
 ```
 
 ### Asset Skills

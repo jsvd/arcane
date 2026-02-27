@@ -56,19 +56,10 @@ A template for creating entities with a predefined set of components. A "goblin"
 ## Systems
 
 **System**
-A named collection of rules, state, and queries that governs a domain of game behavior (e.g., combat, inventory, fog of war). See [recipe-guide.md](recipe-guide.md).
+A named collection of rules, state, and queries that governs a domain of game behavior (e.g., combat, inventory, fog of war).
 
 **Rule**
 A named, conditional behavior within a system. Has preconditions (`when`) and effects (`then`). Rules are independently testable.
-
-**Recipe**
-A pre-built, composable system distributed as a package. Installed with `arcane add`, customized with `extend`. Recipes are the unit of ecosystem sharing.
-
-**Extend**
-The pattern for customizing a recipe without forking it. Replace rules, add rules, extend state, override queries.
-
-**Wiring**
-Explicit connections between recipes that touch the same state or behavior. When combat needs to check armor from inventory, that's wiring.
 
 ---
 

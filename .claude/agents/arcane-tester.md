@@ -17,7 +17,7 @@ You are the testing specialist for the Arcane game engine.
 
 | Suite | Command | What it tests |
 |-------|---------|---------------|
-| Node TS | `./run-tests.sh` | Runtime modules, demos, recipes, packages |
+| Node TS | `./run-tests.sh` | Runtime modules, demos, packages |
 | V8 TS | `cargo run -- test` | Same tests running inside deno_core V8 |
 | Rust | `cargo test --workspace` | Core engine, physics, renderer, scripting ops |
 | Headless | `cargo check --no-default-features` | Compiles without renderer feature |

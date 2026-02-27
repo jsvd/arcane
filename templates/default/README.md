@@ -25,6 +25,7 @@ arcane test
 │   ├── ui.d.ts           # Buttons, sliders, toggles, text input, layout
 │   ├── input.d.ts        # Action mapping, gamepad, touch
 │   └── ...               # One .d.ts per module (15 total)
+├── assets/               # Game assets (sprites, sounds) — use /sprite and /sound
 ├── src/
 │   ├── game.ts           # Pure game logic (state in, state out)
 │   ├── game.test.ts      # Tests for game logic
@@ -38,7 +39,6 @@ arcane test
 
 - `arcane dev` — Opens a window with your game. Hot-reloads on save.
 - `arcane test` — Discovers and runs `*.test.ts` files headlessly.
-- `arcane add <recipe>` — Adds pre-built game systems (e.g., `turn-based-combat`).
 
 ### Agent Protocol
 

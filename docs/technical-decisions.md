@@ -15,7 +15,7 @@ Architecture Decision Records (ADRs) for Arcane. Each decision documents the con
 | Scope | 2D only | 3D art pipelines incompatible with agent authoring |
 | Renderer | Built-in | Avoids lowest-common-denominator abstraction trap |
 | License | Apache 2.0 | Permissive + patent protection |
-| Why not Phaser/Pixi | Build Arcane | State-as-database, agent protocol, recipe system, deterministic simulation — none exist in other frameworks |
+| Why not Phaser/Pixi | Build Arcane | State-as-database, agent protocol, deterministic simulation — none exist in other frameworks |
 
 ---
 
@@ -158,7 +158,7 @@ Phase 11 adds rigid body physics. The performance target is 500+ bodies at 60 FP
 Arcane published 4 packages per release (2 npm, 2 crates.io), causing user friction, staleness bugs, and release complexity.
 
 ### Decision
-**Single binary distribution.** Embed runtime + recipes in CLI. `cargo install arcane-engine` is the only step.
+**Single binary distribution.** Embed runtime + templates in CLI. `cargo install arcane-engine` is the only step.
 
 ### Rationale
 - Runtime TS source is ~888KB — trivial to embed.

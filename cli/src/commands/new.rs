@@ -7,7 +7,6 @@ pub(crate) static TEMPLATE_DIR: Dir<'static> =
     include_dir!("$OUT_DIR/templates/default");
 
 pub(crate) static RUNTIME_DIR: Dir<'static> = include_dir!("$OUT_DIR/runtime");
-pub(crate) static RECIPES_DIR: Dir<'static> = include_dir!("$OUT_DIR/recipes");
 
 // Force recompilation when template contents change (build.rs writes this stamp)
 const _TEMPLATE_STAMP: &str = include_str!(concat!(env!("OUT_DIR"), "/template_stamp.txt"));
@@ -34,13 +33,6 @@ pub fn run(name: &str) -> Result<()> {
     match find_runtime_dir() {
         Some(runtime_src) => copy_runtime_fs(&runtime_src, &runtime_dst)?,
         None => copy_embedded_raw(&RUNTIME_DIR, &runtime_dst)?,
-    }
-
-    // Copy recipes into project
-    let recipes_dst = project_dir.join("recipes");
-    match find_recipes_dir_fs() {
-        Some(recipes_src) => copy_dir_fs(&recipes_src, &recipes_dst)?,
-        None => copy_embedded_raw(&RECIPES_DIR, &recipes_dst)?,
     }
 
     println!("✓ Created {}/", name);
@@ -183,33 +175,6 @@ pub(crate) fn find_runtime_dir() -> Option<PathBuf> {
     None
 }
 
-/// Try to find the recipes directory on the filesystem (for dev-from-repo).
-pub(crate) fn find_recipes_dir_fs() -> Option<PathBuf> {
-    if let Ok(exe) = std::env::current_exe() {
-        let mut dir = exe.parent().map(|p| p.to_path_buf());
-        while let Some(d) = dir {
-            let candidate = d.join("recipes");
-            if candidate.exists() && candidate.join("turn-based-combat").exists() {
-                return Some(candidate);
-            }
-            dir = d.parent().map(|p| p.to_path_buf());
-        }
-    }
-
-    if let Ok(cwd) = std::env::current_dir() {
-        let mut dir = Some(cwd);
-        while let Some(d) = dir {
-            let candidate = d.join("recipes");
-            if candidate.exists() && candidate.join("turn-based-combat").exists() {
-                return Some(candidate);
-            }
-            dir = d.parent().map(|p| p.to_path_buf());
-        }
-    }
-
-    None
-}
-
 /// Copy runtime from filesystem, skipping test files.
 pub(crate) fn copy_runtime_fs(src: &Path, dst: &Path) -> Result<()> {
     fs::create_dir_all(dst)?;
@@ -228,24 +193,6 @@ pub(crate) fn copy_runtime_fs(src: &Path, dst: &Path) -> Result<()> {
                     continue;
                 }
             }
-            fs::copy(&src_path, &dst_path)?;
-        }
-    }
-    Ok(())
-}
-
-/// Copy a directory recursively from filesystem.
-pub(crate) fn copy_dir_fs(src: &Path, dst: &Path) -> Result<()> {
-    fs::create_dir_all(dst)?;
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        let src_path = entry.path();
-        let file_name = entry.file_name();
-        let dst_path = dst.join(&file_name);
-
-        if src_path.is_dir() {
-            copy_dir_fs(&src_path, &dst_path)?;
-        } else {
             fs::copy(&src_path, &dst_path)?;
         }
     }

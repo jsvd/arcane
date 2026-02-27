@@ -5,8 +5,8 @@
   "description": "Agent-native 2D game engine runtime - TypeScript APIs for state management, rendering, and game logic",
   "type": "module",
   "scripts": {
-    "prepack": "rm -f src recipes && cp -r ../../runtime src && cp -r ../../recipes recipes",
-    "postpack": "rm -rf src recipes && ln -s ../../runtime src && ln -s ../../recipes recipes"
+    "prepack": "rm -f src && cp -r ../../runtime src",
+    "postpack": "rm -rf src && ln -s ../../runtime src"
   },
   "main": "./index.ts",
   "types": "./index.ts",
@@ -30,7 +30,6 @@
   },
   "files": [
     "src",
-    "recipes",
     "index.ts",
     "README.md"
   ],
@@ -42,8 +41,7 @@
     "ai-agent",
     "agent-native",
     "state-management",
-    "ecs",
-    "recipes"
+    "ecs"
   ],
   "author": "Arcane Contributors",
   "license": "Apache-2.0",

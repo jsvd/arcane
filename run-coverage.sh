@@ -12,6 +12,5 @@ else
   exec node --test --experimental-strip-types --experimental-test-coverage \
     'runtime/**/*.test.ts' \
     'packages/**/*.test.ts' \
-    'demos/**/*.test.ts' \
-    'recipes/**/*.test.ts'
+    'demos/**/*.test.ts'
 fi

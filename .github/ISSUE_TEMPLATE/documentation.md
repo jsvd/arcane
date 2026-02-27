@@ -11,7 +11,6 @@ assignees: ''
 **Location:** Which document or section needs improvement?
 - [ ] README.md
 - [ ] Architecture (`docs/architecture.md`)
-- [ ] Recipe Guide (`docs/recipe-guide.md`)
 - [ ] Agent Tooling (`docs/agent-tooling.md`)
 - [ ] Engineering Philosophy (`docs/engineering-philosophy.md`)
 - [ ] Other: ___________

@@ -114,21 +114,7 @@ Edit `src/visual.ts`, save, see changes in ~100ms. No restart needed.
 arcane new <name>        # Create project from template
 arcane dev [entry.ts]    # Run with hot-reload + MCP server
 arcane test              # Run all *.test.ts files
-arcane add <recipe>      # Add a recipe (turn-based-combat, inventory, etc.)
-```
-
-## Recipes
-
-Pre-built, composable game systems:
-
-- **turn-based-combat** — Initiative, attacks, victory detection
-- **inventory-equipment** — Items, stacking, equipment slots, stat bonuses
-- **grid-movement** — Grid-based movement with pathfinding
-- **fog-of-war** — Shadowcasting FOV, visibility states
-- **actor-patrol** — AI patrol patterns and waypoints
-
-```bash
-arcane add turn-based-combat
+arcane check             # Type-check project
 ```
 
 ## 32 Demo Projects
@@ -171,7 +157,6 @@ cargo check --no-default-features  # Verify headless
 
 - [Architecture](docs/architecture.md) — Two-layer design, Rust core, TypeScript runtime
 - [API Design](docs/api-design.md) — Naming conventions, error handling
-- [Recipe Guide](docs/recipe-guide.md) — Building game systems with `rule()` and `system()`
 - [Glossary](docs/glossary.md) — Canonical definitions for all terms
 - [Roadmap](docs/roadmap.md) — Development plan and backlog
 - [Contributing](CONTRIBUTING.md) — How to contribute (humans and agents)

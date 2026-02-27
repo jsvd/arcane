@@ -11,11 +11,8 @@ import { followTargetWithShake } from "@arcane/runtime/rendering";
 import { createInputMap, isActionDown, isActionPressed, WASD_ARROWS } from "@arcane/runtime/input";
 import { initGame, tick } from "./game.ts";
 import { renderWorld, renderHud } from "./render.ts";
+import { ZOOM, BG_COLOR } from "./config.ts";
 import type { GameState } from "./game.ts";
-
-// --- Config (inline for self-contained scaffold; move to config.ts as you grow) ---
-const ZOOM = 1.0;
-const BG_COLOR = { r: 0.08, g: 0.08, b: 0.12 };
 
 // --- Bootstrap ---
 

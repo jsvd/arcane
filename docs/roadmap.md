@@ -188,13 +188,12 @@ Focus on adoption, ecosystem growth, and documentation polish. Can run in parall
   - [ ] Twitter/X thread with feature highlights
   - [ ] Blog post: "Building an AI-Native Game Engine"
 - [ ] **Community Channels**
-  - [ ] Discord server setup (channels: general, showcase, recipes, support)
+  - [ ] Discord server setup (channels: general, showcase, support)
   - [ ] GitHub Discussions enabled
   - [ ] Community guidelines and moderation
 - [ ] **Content Creation**
   - [ ] Video walkthrough: "Build Your First Game with Arcane"
   - [ ] Blog series: deep dives into architecture decisions
-  - [ ] Tutorial videos for each recipe
   - [ ] Showcase community-built games
 - [ ] **Community Engagement**
   - [ ] Respond to GitHub issues within 48h
@@ -210,7 +209,6 @@ Focus on adoption, ecosystem growth, and documentation polish. Can run in parall
 ### Success Criteria
 - [ ] 100+ GitHub stars in first month
 - [ ] 10+ community members in Discord
-- [ ] 3+ community-contributed recipes
 - [ ] 5+ games built by community (not just demos)
 - [ ] Active discussion on GitHub/Discord
 - [ ] Positive sentiment in announcements (upvotes, comments)
@@ -242,7 +240,6 @@ The migration strategy preserves existing TS function signatures — game code n
 | "Good enough" with Phaser + existing tools | Medium | High | Focus on agent DX that no existing tool provides |
 | Godot/Unity add first-class agent support | Low | High | Move fast; the architecture advantage is structural |
 | Vision-capable agents close the gap | Medium | Medium | Text interaction will always be faster than visual |
-| Recipe ecosystem doesn't materialize | Medium | Medium | Build enough first-party recipes to be self-sufficient |
 | Scope creep into 3D | High | Medium | Resist. 2D only. The constraint is the feature. |
 
 ---

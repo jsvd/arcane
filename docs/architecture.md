@@ -112,7 +112,6 @@ The TypeScript runtime is where games are built. It runs in two modes:
 
 ### Systems (`runtime/systems/`)
 - Declarative system/rule definitions
-- Composable recipes
 - The `extend` pattern for customization
 
 ### Rendering Bridge (`runtime/rendering/`)
@@ -255,20 +254,12 @@ arcane/
 │   ├── agent/               # Agent protocol, MCP tools, describe
 │   └── testing/             # Harness, snapshots, replay, property-based testing
 │
-├── recipes/                 # Composable game system modules
-│   ├── turn-based-combat/
-│   ├── inventory-equipment/
-│   ├── grid-movement/
-│   ├── fog-of-war/
-│   └── actor-patrol/
-│
 ├── cli/                     # The arcane CLI
 │   └── commands/
 │       ├── dev.rs           # arcane dev (window + game loop + hot-reload)
 │       ├── test.rs          # arcane test (V8 headless test runner)
 │       ├── describe.rs      # arcane describe (text state description)
 │       ├── inspect.rs       # arcane inspect (query state paths)
-│       ├── add.rs           # arcane add (copy recipe into project)
 │       ├── init.rs          # arcane init (initialize project in current dir)
 │       ├── new.rs           # arcane new (create new project directory)
 │       ├── mcp_bridge.rs    # arcane mcp (stdio MCP bridge)

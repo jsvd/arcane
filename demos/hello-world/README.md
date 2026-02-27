@@ -54,10 +54,8 @@ curl http://localhost:4321/describe
 
 - Read the [Arcane docs](https://github.com/jsvd/arcane/tree/main/docs)
 - Explore [example projects](https://github.com/jsvd/arcane/tree/main/demos)
-- Add [recipes](https://github.com/jsvd/arcane/tree/main/recipes) with `arcane add <recipe-name>`
 
 ## Learn More
 
 - [Architecture](https://github.com/jsvd/arcane/blob/main/docs/architecture.md)
-- [Recipe Guide](https://github.com/jsvd/arcane/blob/main/docs/recipe-guide.md)
 - [Demos](https://github.com/jsvd/arcane/tree/main/demos/)

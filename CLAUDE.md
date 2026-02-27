@@ -28,7 +28,6 @@ arcane/
 │   ├── technical-decisions.md     — ADR-style decision log
 │   ├── documentation-refresh.md   — Checklist for auditing and refreshing all docs
 │   ├── publishing-guide.md        — crates.io release process and checklist
-│   ├── recipe-guide.md            — Building reusable game systems with system()/rule()
 │   ├── testing-hot-reload.md      — Hot-reload implementation details and debugging
 │   └── rendering-philosophy.md    — Rendering UX design principles and layer conventions
 ├── core/                          — arcane-core lib crate
@@ -95,7 +94,7 @@ arcane/
 │           ├── dev.rs             — `arcane dev` — window + game loop + hot-reload + inspector + audio
 │           ├── describe.rs        — `arcane describe` — text description of game state
 │           ├── inspect.rs         — `arcane inspect` — query specific state paths
-│           └── add.rs             — `arcane add` — copy recipe into project
+│           └── check.rs           — `arcane check` — fast type-check
 ├── runtime/
 │   ├── testing/
 │   │   ├── harness.ts             — Universal test harness (Node + V8)
@@ -220,11 +219,6 @@ arcane/
 │   ├── ui-showcase/               — Phase 16 demo: interactive UI widgets
 │   ├── visual-polish/             — Phase 21 demo: transitions, nine-slice, trails, floating text
 │   └── wfc-dungeon/               — Phase 18 demo: WFC procedural dungeon generation
-├── recipes/
-│   ├── turn-based-combat/         — Initiative, attack/defend, victory detection
-│   ├── inventory-equipment/       — Items, stacking, weight, equipment slots, stat bonuses
-│   ├── grid-movement/             — Grid entity movement, pathfinding integration
-│   └── fog-of-war/                — 8-octant shadowcasting FOV, visibility states
 ├── templates/
 │   └── default/                   — Scaffolded project template (AGENTS.md, docs/, types/)
 ├── scripts/

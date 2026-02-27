@@ -17,7 +17,6 @@ This creates a new Arcane project with:
 - `src/game.ts` for pure game logic
 - `src/visual.ts` for rendering (entry point)
 - `AGENTS.md` with LLM development guide
-- `COOKBOOK.md` with advanced pattern recipes
 - `types/arcane.d.ts` with full API declarations
 - `README.md` with usage instructions
 
@@ -64,11 +63,6 @@ arcane new my-game
 3. **Run tests:**
    ```bash
    arcane test
-   ```
-
-4. **Add recipes:**
-   ```bash
-   arcane add turn-based-combat
    ```
 
 ## Next Steps

@@ -9,7 +9,7 @@ Not every task needs the same model. Using the right model for the task saves ti
 | Model | When to Use | Examples |
 |---|---|---|
 | **Opus** | Architecture decisions, complex system design, tricky debugging, cross-cutting changes, anything that requires holding a lot of context at once | Designing the state transaction system, debugging a subtle Rust↔V8 bridge issue, reviewing whether a change is consistent across 5 docs |
-| **Sonnet** | Most implementation work — clear requirements, well-scoped tasks, straightforward coding | Implementing a specific system rule, writing tests for a defined behavior, adding a new recipe, routine refactoring |
+| **Sonnet** | Most implementation work — clear requirements, well-scoped tasks, straightforward coding | Implementing a specific system rule, writing tests for a defined behavior, routine refactoring |
 | **Haiku** | Quick tasks with narrow scope — lookups, simple edits, formatting, running commands | Searching for a function definition, fixing a typo, running the test suite, checking types, generating boilerplate |
 
 **Rule of thumb:** Start with Sonnet. Escalate to Opus when you're stuck, when the problem spans multiple systems, or when a design decision has long-term consequences. Drop to Haiku for the small stuff.
@@ -162,7 +162,7 @@ The architecture naturally splits into independent workstreams. In general:
 
 - **Core patterns first.** The state tree type system, the transaction model, the query API — these set patterns everything else follows. Get these right with Opus before parallelizing the work that depends on them.
 - **Integration after parallel work.** After two branches develop independently, merging and integration testing happens sequentially on the main worktree.
-- **Design decisions that affect multiple systems.** If a choice in the state system affects how recipes work, that decision must be made before both systems are built in parallel.
+- **Design decisions that affect multiple systems.** If a choice in the state system affects how other systems work, that decision must be made before both systems are built in parallel.
 
 ### The Fork-Join Pattern
 
