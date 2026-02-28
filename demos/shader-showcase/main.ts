@@ -40,7 +40,7 @@ import { rgb } from "../../runtime/ui/types.ts";
 
 // --- Setup ---
 const vp = getViewportSize();
-setBackgroundColor(0.08, 0.08, 0.12);
+setBackgroundColor({ r: 0.08, g: 0.08, b: 0.12 });
 
 // Load a sprite to apply effects to
 const spriteTex = createSolidTexture("demo-sprite", rgb(80, 160, 255));
