@@ -136,6 +136,38 @@ The engine must serve the breadth of 2D games, not just RPGs. These initial demo
 
 ## Backlog
 
+### Code Cleanup & Technical Debt
+
+**Status: Backlog**
+
+Remove backward-compatibility shims and legacy code paths that are no longer needed after Phase 20 and Phase 26 completion.
+
+### Deliverables
+- [ ] **Remove audio legacy sink system** (~150 lines, `core/src/audio/mod.rs`)
+  - [ ] Remove `legacy_sinks` HashMap and all legacy sink tracking
+  - [ ] Remove `PlaySound` command handling (lines 146-173)
+  - [ ] Remove `StopSound` legacy command handling (lines 175-179)
+  - [ ] Remove volume updates for legacy sinks (lines 196-199)
+  - [ ] All code now uses Phase 20 instance-based API (`op_play_sound_ex`)
+- [ ] **Remove sprite rendering fallback** (~100 lines total)
+  - [ ] Remove `op_draw_sprite` fallback in `runtime/rendering/sprites.ts` (lines 238-263)
+  - [ ] Remove `op_draw_sprite` op definition in `core/src/scripting/render_ops.rs`
+  - [ ] Remove `hasRenderOps` detection in sprites.ts (only `hasBatchOp` needed)
+  - [ ] All code now uses Phase 26 batch API (`op_submit_sprite_batch`)
+- [ ] **Remove audio playSound fallback** (~3 lines, `runtime/rendering/audio.ts`)
+  - [ ] Remove `op_play_sound` fallback (lines 190-192)
+  - [ ] Remove `hasPlaySoundEx` detection (always true in Phase 20+)
+  - [ ] Remove old `op_play_sound` op from `core/src/scripting/render_ops.rs`
+
+### Success Criteria
+- [ ] All tests still pass (Node, V8, Rust)
+- [ ] No demos or examples break
+- [ ] ~250 lines of legacy code removed
+- [ ] Code is simpler and easier to maintain
+- [ ] No backward-compatibility burden for future changes
+
+---
+
 ### Atmosphere
 
 **Status: Backlog**
@@ -282,20 +314,79 @@ The migration strategy preserves existing TS function signatures — game code n
 
 Items discovered during development that don't block current work but should be addressed.
 
-### Test Coverage Gaps
+### Test Coverage Strategy
 
 **Status:** Open
-**Severity:** Low — all code works, just lacks dedicated test files
+**Last audited:** 2026-02-28 — 4,683 tests (2162 Node + 2165 V8 + 356 Rust), all passing.
 
-18 runtime modules have no dedicated `*.test.ts` file:
-- `runtime/physics/` — world, body, constraints, query (6 files — aabb.test.ts now exists)
-- `runtime/persistence/` — save, storage, autosave (3 files)
-- `runtime/rendering/` — sprites, loop, texture, postprocess, shader (5 files)
-- `runtime/procgen/` — constraints, validate (2 files)
-- `runtime/testing/` — harness (1 file)
-- `runtime/agent/` — protocol (1 file, though agent.test.ts covers it partially)
+**Current coverage:** TS 88.9% lines / 84.4% branches. Rust 40.8% lines (85-100% for testable code; GPU/CLI code untestable headless).
 
-These modules are exercised indirectly by demo tests and integration tests.
+#### Tier 1: Missing test files (critical APIs, ~850 lines uncovered)
+
+These runtime modules have no dedicated `*.test.ts` file. They are exercised indirectly by demo tests but lack focused unit coverage.
+
+| File | Lines | Why it matters |
+|------|------:|---|
+| `runtime/physics/body.ts` | 221 | Core API — createBody, destroyBody, applyForce/Impulse, setVelocity |
+| `runtime/physics/constraints.ts` | 138 | Joint creation/removal — distance, revolute |
+| `runtime/physics/query.ts` | 115 | Raycasts, AABB queries, contact retrieval |
+| `runtime/agent/protocol.ts` | 159 | Agent registration — critical for LLM interaction |
+| `runtime/procgen/constraints.ts` | 217 | WFC constraint system — reachability, counts, border |
+
+**Approach:** Straightforward unit tests. Physics files test round-trips through the Rust ops (createBody → getBodyState → verify). Agent protocol tests verify registerAgent installs on globalThis correctly. Procgen constraint tests verify constraint evaluation against known grids.
+
+#### Tier 2: UI draw function coverage (existing tests, ~575 lines uncovered)
+
+These files have test files but only cover update/interaction logic. The `draw*()` functions are at 73-78% because rendering output isn't asserted.
+
+| File | Coverage | What's missing |
+|------|------:|---|
+| `runtime/ui/shapes.ts` | 74% | draw functions for circle, ellipse, ring, arc, capsule, polygon |
+| `runtime/ui/toggle.ts` | 73% | `drawCheckbox()`, `drawRadioGroup()` |
+| `runtime/ui/slider.ts` | 73% | `drawSlider()` |
+| `runtime/ui/button.ts` | 75% | `drawButton()` |
+| `runtime/ui/text-input.ts` | 77% | `drawTextInput()` |
+| `runtime/ui/primitives.ts` | 78% | `drawPanel()`, `drawBar()` branch coverage |
+
+**Approach:** Use `runtime/testing/mock-renderer.ts` to capture drawSprite/drawText calls and assert correct positions, colors, and layering. These are the highest-ROI tests — easy to write, push TS coverage from 88.9% → ~93%.
+
+#### Tier 3: Secondary gaps (~290 lines uncovered)
+
+Lower-priority files that are thin wrappers or utility code.
+
+| File | Lines | Notes |
+|------|------:|---|
+| `runtime/persistence/autosave.ts` | 86 | Timer-based auto-save state machine |
+| `runtime/persistence/storage.ts` | 36 | Memory/file storage interface (tiny) |
+| `runtime/procgen/validate.ts` | 92 | validateLevel, generateAndTest |
+| `runtime/rendering/postprocess.ts` | 104 | addEffect/removeEffect/setParam (ops are no-ops headless) |
+| `runtime/agent/describe.ts` | 72 | Default text description renderer |
+
+**Approach:** Standard unit tests. Postprocess tests verify the TS-side state tracking (effect list, params) even though GPU ops are no-ops.
+
+#### Tier 4: Rust renderer coverage (structural gap, ~5,500 lines at 0%)
+
+GPU pipeline code (`renderer/mod.rs`, `sprite.rs`, `gpu.rs`, `texture.rs`, `shader.rs`, `postprocess.rs`, `geometry.rs`, `rendertarget.rs`) and CLI commands (`dev.rs`, `test.rs`, `init.rs`) are at 0% because no test path initializes a wgpu device.
+
+| Module | Lines at 0% | What it'd take |
+|--------|------:|---|
+| `renderer/*` (GPU pipelines) | ~2,800 | Headless wgpu adapter (`Backends::VULKAN` + `instance.request_adapter()` with no surface) |
+| `scripting/render_ops.rs` | 926 | V8 integration tests with a real `Renderer` in OpState |
+| `cli/commands/*` | ~2,300 | Integration tests that spawn `arcane` subprocesses |
+| `audio/mod.rs` | 252 | Mock audio backend or `rodio::Sink` with null output |
+
+**Approach:** This is the largest effort. wgpu supports headless rendering (adapter without surface), which would allow testing sprite submission, texture creation, and shader compilation without a window. Requires a `GpuTestHarness` that creates a device+queue in tests. CLI integration tests can use `std::process::Command` to run `arcane check` / `arcane test` on fixture projects.
+
+**Not recommended yet:** The Rust renderer code is stable and validated visually through 30 demos. The ROI of headless GPU tests is lower than Tiers 1-3.
+
+#### Target milestones
+
+| Milestone | Work | Expected result |
+|---|---|---|
+| **Tier 1 done** | 5 new test files | TS coverage ~90%, physics/agent/procgen covered |
+| **Tier 1+2 done** | 5 new + 6 expanded test files | TS coverage ~93%, all UI draw paths covered |
+| **Tier 1+2+3 done** | +5 more test files | TS coverage ~95%, Rust unchanged |
+| **Tier 4 done** | Rust test harness + integration tests | Rust coverage 60-70% (up from 41%) |
 
 ### World Authoring DSL
 
