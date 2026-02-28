@@ -325,3 +325,84 @@ Missing interactive UI components:
 **Severity:** Low — code hot-reload works, assets require restart
 
 Automatically detect and reload changed asset files (textures, sounds) without restarting the game. Currently only `.ts` files trigger hot-reload.
+
+---
+
+### API Ergonomics (Breaking Changes OK)
+
+**Status:** Backlog
+**Severity:** Medium — demos work, but every demo repeats avoidable boilerplate
+
+Cross-engine research (Unity, Godot, Phaser, Bevy, LÖVE, Defold) confirmed that Arcane requires more manual wiring than the industry norm in several areas. Breaking changes are acceptable to fix these. Ordered by industry evidence strength and implementation effort.
+
+#### 1. Auto-clamp delta time (250ms cap)
+
+**Priority:** P0 — Trivial, high impact
+**Industry:** Unity (333ms), Bevy (250ms) auto-clamp. All others leave it to user code — a known footgun.
+**Problem:** 6+ demos manually clamp `dt` (`Math.min(rawDt, 0.05)`). A tab switch or debugger pause causes a massive teleport spike.
+**Change:** Cap `dt` at 250ms in `window.rs` before passing to TS. Add optional `maxDeltaTime` to `createGame()` for tighter game-specific caps.
+**Files:** `core/src/platform/window.rs`, `runtime/rendering/loop.ts`
+
+#### 2. Physics-to-sprite draw helper
+
+**Priority:** P0 — Small effort, biggest line-count reduction
+**Industry:** Every engine except LÖVE auto-syncs physics body → visual sprite. Godot/Unity do it via scene hierarchy, Bevy via ECS writeback, Phaser via `ArcadeSprite`. Only LÖVE and Arcane require manual `getBodyState()` → `drawSprite()` each frame.
+**Problem:** 5+ demos (physics-playground, breakout, platformer, asteroids, tower-defense) manually loop over bodies, extract state, and feed it to draw calls. 20-50 lines per demo.
+**Change:** Add `drawBody(bodyId, opts)` that internally calls `getBodyState()` and `drawSprite()` with correct position/rotation/origin. Promote `runtime/game/entity.ts` as the default pattern for physics-driven sprites.
+**Files:** `runtime/physics/index.ts` or `runtime/game/entity.ts`
+
+#### 3. Self-destructing particle bursts
+
+**Priority:** P1 — Medium effort, eliminates lifecycle boilerplate
+**Industry:** Unreal (`bAutoDestroy=true`), Godot (`one_shot` + `finished` signal), Unity (`OnParticleSystemStopped`), Bevy/enoki (`OneShot` component) all self-destruct. Only LÖVE and Arcane require manual cleanup polling.
+**Problem:** juice-showcase spends ~70 lines managing emitter creation, stop-timers, and `getCount()==0` cleanup. `drawBurst()` works for single-frame sparks but can't do a 0.5s fading explosion.
+**Change:** Add `spawnBurst(x, y, opts)` that persists across frames, updates automatically, and self-removes when all particles die. Uses `getRustEmitterParticleCount()` internally for Rust emitters.
+**Files:** `runtime/particles/emitter.ts`, `runtime/particles/index.ts`
+
+#### 4. Declarative camera tracking
+
+**Priority:** P1 — Small effort, high ergonomic win
+**Industry:** Godot (node properties, set once), Phaser (`startFollow()`, set once) are gold standard. Arcane has all the building blocks (smoothing, deadzone, bounds) but requires calling `followTargetSmooth()` every frame.
+**Problem:** 4+ demos repeat `followTargetSmooth(player.x + W/2, player.y + H/2, zoom, speed)` in every frame callback.
+**Change:** Add `camera.track(targetFn, opts)` — set once, engine calls `followTargetSmooth` automatically each frame. `camera.stopTracking()` to disable.
+**Files:** `runtime/rendering/camera.ts`
+
+#### 5. HUD rendering context
+
+**Priority:** P1 — Small effort, reduces per-call noise
+**Industry:** Godot (`CanvasLayer`), Unity (Canvas `Screen Space - Overlay`), Bevy (dedicated UI render pass), Defold (GUI component) all use structural separation — screen-space is implicit from container. Phaser uses `setScrollFactor(0)` per object.
+**Problem:** Every HUD element in every demo needs `screenSpace: true` manually. Easy to forget, verbose.
+**Change:** Add `beginHUD()` / `endHUD()` context. All draw calls between them imply `screenSpace: true`. Alternatively, `hud.draw(() => { ... })` closure form.
+**Files:** `runtime/rendering/index.ts`, `runtime/ui/primitives.ts`
+
+#### 6. Inject viewport size into frame context
+
+**Priority:** P2 — Trivial, small ergonomic win
+**Industry:** No engine injects viewport into the frame callback (all require separate queries), but Arcane's `onFrame(ctx)` pattern makes it natural to include.
+**Problem:** 15+ demos repeat `const { width: vpW, height: vpH } = getViewportSize()` at the top of every frame callback.
+**Change:** Add `ctx.vpW` and `ctx.vpH` to the frame context object.
+**Files:** `runtime/rendering/loop.ts`
+
+#### 7. Widget auto-update on draw
+
+**Priority:** P2 — Medium effort, API change
+**Industry:** Every engine except LÖVE uses event-driven or auto-dispatched widget input. Godot (`signal.connect()`), Unity (`onClick.AddListener()`), Phaser (`setInteractive()` + pointer events), Bevy (`Interaction` component) — all wire once. Only LÖVE and Arcane require per-frame `updateWidget()` calls.
+**Problem:** ui-showcase manually calls `autoUpdateButton()`, `autoUpdateSlider()`, `autoUpdateCheckbox()` for every widget every frame.
+**Change:** Option A (retained): `registerWidget(w)` once, engine auto-updates. Option B (immediate): `drawButton()` handles input internally so update+draw is one call. Either eliminates per-widget per-frame boilerplate.
+**Files:** `runtime/ui/button.ts`, `runtime/ui/slider.ts`, `runtime/ui/toggle.ts`, `runtime/ui/text-input.ts`, `runtime/game/widgets.ts`
+
+#### 8. ASCII level parser
+
+**Priority:** P2 — Small effort, nice-to-have
+**Industry:** Standard in roguelikes (rot.js, LambdaHack). LÖVE community uses Lua table grid strings. Phaser supports inline JSON tilemap data. Bevy is fully code-first. LDtk and Tiled dominate for visual editing, but ASCII is the prototyping standard for code-first engines.
+**Problem:** platformer, breakout, sokoban hardcode level arrays. Roguelike-style games especially benefit from ASCII grids.
+**Change:** Add `parseLevelASCII(asciiString, charMap)` that returns tile data compatible with `createTilemap()` / `setTile()`. Already partially designed in `docs/world-authoring.md` as `tilemapFromAscii()`.
+**Files:** `runtime/rendering/tilemap.ts` or new `runtime/procgen/ascii.ts`
+
+#### 9. Auto-derive agent registration
+
+**Priority:** P3 — Medium effort, unique to Arcane
+**Industry:** No prior art — Arcane's agent protocol is unique. Bevy's BRP (`bevy_brp_mcp`) is closest but requires explicit plugin registration. Godot/Unity have no AI agent APIs.
+**Problem:** 15+ demos repeat the same `registerAgent({ name, version, getState, actions, describe })` boilerplate, often with `as any` casts.
+**Change:** Auto-derive agent registration from `createGame()` state config. If `createGame({ state: { get, set, describe, actions } })` is provided, auto-call `registerAgent()` internally.
+**Files:** `runtime/game/game.ts`, `runtime/agent/protocol.ts`

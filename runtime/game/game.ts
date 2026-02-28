@@ -59,6 +59,7 @@ export function createGame(config?: GameConfig): Game {
   const autoSubsystems = cfg.autoSubsystems !== false;
   const zoom = cfg.zoom ?? 1;
   const name = cfg.name;
+  const maxDt = cfg.maxDeltaTime;
 
   if (cfg.background) {
     setBackgroundColor(cfg.background);
@@ -71,7 +72,8 @@ export function createGame(config?: GameConfig): Game {
   const game: Game = {
     onFrame(callback: FrameCallback): void {
       onFrame(() => {
-        const dt = getDeltaTime();
+        let dt = getDeltaTime();
+        if (maxDt !== undefined) dt = Math.min(dt, maxDt);
         elapsed += dt;
         frame++;
 

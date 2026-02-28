@@ -13,7 +13,6 @@ export const JUMP_VEL = -450;
 export const MOVE_SPEED = 200;
 export const PLAYER_W = 24;
 export const PLAYER_H = 32;
-export const MAX_DT = 1 / 30;
 
 /** Platformer controller config matching legacy constants. */
 const PLAT_CONFIG = {
@@ -139,9 +138,8 @@ export function jump(state: PlatformerState): PlatformerState {
   return fromController(state, jumped);
 }
 
-export function stepPhysics(state: PlatformerState, rawDt: number): PlatformerState {
+export function stepPhysics(state: PlatformerState, dt: number): PlatformerState {
   if (state.phase !== "playing") return state;
-  const dt = Math.min(rawDt, MAX_DT);
 
   // Use platformer controller for physics + collision
   const ctrl = toController(state);

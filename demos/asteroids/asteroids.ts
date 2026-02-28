@@ -618,10 +618,10 @@ function drawHudLabel(text: string, x: number, y: number, _w: number): void {
 }
 
 // --- Game loop ---
-const game = createGame({ autoClear: true });
+const game = createGame({ autoClear: true, maxDeltaTime: 0.05 });
 
 game.onFrame((ctx) => {
-  update(state, Math.min(ctx.dt, 0.05));
+  update(state, ctx.dt);
   render(state);
 });
 

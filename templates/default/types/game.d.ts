@@ -242,6 +242,45 @@ declare module "@arcane/runtime/game" {
        * Set to false if you need full manual control over subsystem update order.
        */
       autoSubsystems?: boolean;
+      /** Maximum delta time in seconds. Clamps ctx.dt to this value. Default: none (250ms Rust cap still applies). */
+      maxDeltaTime?: number;
+  };
+  /** Options for drawBody(). Draws a sprite centered on a physics body's position. */
+  export type DrawBodyOptions = {
+      /** Sprite width in world units. */
+      w: number;
+      /** Sprite height in world units. */
+      h: number;
+      /** Pre-loaded texture ID. If omitted, color must be set. */
+      textureId?: TextureId;
+      /** Inline color. */
+      color?: Color;
+      /** Draw layer. Default: 0. */
+      layer?: number;
+      /** Opacity (0-1). Default: 1. */
+      opacity?: number;
+      /** Blend mode. Default: "alpha". */
+      blendMode?: "alpha" | "additive" | "multiply" | "screen";
+      /** Tint color. */
+      tint?: {
+          r: number;
+          g: number;
+          b: number;
+          a: number;
+      };
+      /** Flip horizontally. */
+      flipX?: boolean;
+      /** Flip vertically. */
+      flipY?: boolean;
+      /** Custom shader ID. */
+      shaderId?: number;
+      /** UV sub-rectangle for atlas sprites. */
+      uv?: {
+          x: number;
+          y: number;
+          w: number;
+          h: number;
+      };
   };
   /** Context passed to the frame callback. */
   export type GameContext = {
@@ -366,6 +405,19 @@ declare module "@arcane/runtime/game" {
    * drawEntities(entities);
    */
   export declare function drawEntities(entities: Entity[]): void;
+  /**
+   * Draw a sprite centered on a physics body's current position and rotation.
+   *
+   * Reads the body's position and angle via getBodyState(), then draws a sprite
+   * centered on that position with the body's rotation applied.
+   *
+   * @param id - The physics body ID to draw.
+   * @param opts - Sprite dimensions and visual options.
+   *
+   * @example
+   * drawBody(boxId, { color: rgb(180, 120, 60), w: 40, h: 30, layer: 2 });
+   */
+  export declare function drawBody(id: BodyId, opts: DrawBodyOptions): void;
   /**
    * Destroy an entity: removes its physics body and marks it inactive.
    *

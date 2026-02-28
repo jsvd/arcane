@@ -24,6 +24,7 @@ export type {
   EntitySprite,
   Entity,
   EntityOptions,
+  DrawBodyOptions,
   GameConfig,
   GameContext,
   FrameCallback,
@@ -41,7 +42,7 @@ export { captureInput, autoUpdateButton, autoUpdateSlider, autoUpdateCheckbox, a
 export { createCollisionRegistry, onBodyCollision, onCollision, removeBodyCollisions, processCollisions } from "./collision.ts";
 
 // Entity handles
-export { createEntity, syncEntities, drawEntities, destroyEntity, findEntity, findEntities } from "./entity.ts";
+export { createEntity, syncEntities, drawEntities, destroyEntity, findEntity, findEntities, drawBody } from "./entity.ts";
 
 // Sprite groups
 export type { SpriteGroup } from "./sprite-group.ts";

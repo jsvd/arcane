@@ -32,7 +32,7 @@ let state: BreakoutState = null!;
 let initialized = false;
 
 // Game setup
-const game = createGame({ name: "breakout" });
+const game = createGame({ name: "breakout", maxDeltaTime: 1 / 30 });
 
 game.state<BreakoutState>({
   get: () => state,

@@ -29,7 +29,7 @@ import {
   drawSprite,
 } from "../../runtime/rendering/index.ts";
 import { Colors, HUDLayout, rgb, drawCircle, drawRing, drawCapsule, drawLine, drawPolygon } from "../../runtime/ui/index.ts";
-import { createGame, hud } from "../../runtime/game/index.ts";
+import { createGame, hud, drawBody } from "../../runtime/game/index.ts";
 import { createRng } from "../../runtime/state/index.ts";
 import {
   createPhysicsWorld,
@@ -607,16 +607,11 @@ game.onFrame((ctx) => {
       // Polygon: draw rotated vertices
       drawRotatedPolygon(bs.x, bs.y, bs.angle, tracked.vertices, col, 2);
     } else {
-      // Fallback AABB: draw from center with rotation
-      drawSprite({
+      // Fallback AABB: draw centered on body
+      drawBody(tracked.id, {
         color: col,
-        x: bs.x - tracked.halfW,
-        y: bs.y - tracked.halfH,
         w: tracked.halfW * 2,
         h: tracked.halfH * 2,
-        rotation: bs.angle,
-        originX: tracked.halfW,
-        originY: tracked.halfH,
         layer: 2,
       });
     }

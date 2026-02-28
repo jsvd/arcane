@@ -205,7 +205,7 @@ impl ApplicationHandler for AppState {
 
             WindowEvent::RedrawRequested => {
                 let now = Instant::now();
-                let dt = now.duration_since(self.last_frame).as_secs_f64();
+                let dt = now.duration_since(self.last_frame).as_secs_f64().min(0.25);
                 self.last_frame = now;
 
                 {

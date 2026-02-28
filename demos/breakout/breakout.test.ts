@@ -418,7 +418,7 @@ describe("stepPhysics win condition", () => {
 // ---------------------------------------------------------------------------
 
 describe("stepPhysics frame-rate independence", () => {
-  it("clamps large dt to MAX_DT", () => {
+  it("uses dt directly (caller responsible for clamping via maxDeltaTime)", () => {
     const state: BreakoutState = {
       ...createBreakoutGame(),
       phase: "playing",
@@ -428,11 +428,13 @@ describe("stepPhysics frame-rate independence", () => {
       ballVY: -200,
       bricks: [],
     };
-    // A huge dt should produce same result as MAX_DT (1/30)
-    const huge = stepPhysics(state, 1.0);
-    const capped = stepPhysics(state, 1 / 30);
-    assert.equal(huge.ballX, capped.ballX);
-    assert.equal(huge.ballY, capped.ballY);
+    // Small dt should move ball proportionally
+    const small = stepPhysics(state, 1 / 60);
+    const double = stepPhysics(state, 2 / 60);
+    // With double the dt, displacement should be roughly double (before wall clamps)
+    const dxSmall = small.ballX - state.ballX;
+    const dxDouble = double.ballX - state.ballX;
+    assert.ok(Math.abs(dxDouble - 2 * dxSmall) < 0.01, "displacement scales with dt");
   });
 
   it("does not update when not in playing phase", () => {

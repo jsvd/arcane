@@ -2,7 +2,7 @@
  * Lightweight entity handles binding position + sprite + physics body.
  */
 
-import type { Entity, EntityOptions, EntitySprite } from "./types.ts";
+import type { Entity, EntityOptions, EntitySprite, DrawBodyOptions } from "./types.ts";
 import type { BodyId } from "../physics/types.ts";
 import { createBody, getBodyState, destroyBody } from "../physics/body.ts";
 import { drawSprite } from "../rendering/sprites.ts";
@@ -102,6 +102,30 @@ export function drawEntities(entities: Entity[]): void {
       blendMode: s.blendMode,
     });
   }
+}
+
+/**
+ * Draw a sprite centered on a physics body's current position and rotation.
+ *
+ * Reads the body's position and angle via getBodyState(), then draws a sprite
+ * centered on that position with the body's rotation applied.
+ *
+ * @param id - The physics body ID to draw.
+ * @param opts - Sprite dimensions and visual options.
+ *
+ * @example
+ * drawBody(boxId, { color: rgb(180, 120, 60), w: 40, h: 30, layer: 2 });
+ */
+export function drawBody(id: BodyId, opts: DrawBodyOptions): void {
+  const state = getBodyState(id);
+  drawSprite({
+    ...opts,
+    x: state.x - opts.w / 2,
+    y: state.y - opts.h / 2,
+    rotation: state.angle,
+    originX: 0.5,
+    originY: 0.5,
+  });
 }
 
 /**

@@ -13,7 +13,6 @@ export const BRICK_GAP = 4;
 export const BRICK_ROWS = 6;
 export const BRICK_COLS = 11;
 export const BRICK_TOP = 50;
-export const MAX_DT = 1 / 30;
 
 export type Brick = { x: number; y: number; w: number; h: number; hp: number; row: number };
 
@@ -95,10 +94,9 @@ export function movePaddle(state: BreakoutState, dx: number): BreakoutState {
   return result;
 }
 
-export function stepPhysics(state: BreakoutState, rawDt: number): BreakoutState {
+export function stepPhysics(state: BreakoutState, dt: number): BreakoutState {
   if (state.phase !== "playing") return state;
 
-  const dt = Math.min(rawDt, MAX_DT);
   let { ballX, ballY, ballVX, ballVY, bricks, score, lives } = state;
   let phase: "ready" | "playing" | "won" | "lost" = state.phase;
   const paddleX = state.paddleX;
