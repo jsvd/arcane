@@ -4,9 +4,10 @@ import {
 } from "./platformer.ts";
 import type { PlatformerState } from "./platformer.ts";
 import {
-  followTargetSmooth,
+  trackTarget,
   isKeyDown, isKeyPressed,
   drawSprite,
+  getViewportSize,
 } from "../../runtime/rendering/index.ts";
 import { Colors, HUDLayout } from "../../runtime/ui/index.ts";
 import { createGame, hud } from "../../runtime/game/index.ts";
@@ -24,6 +25,18 @@ let state = createPlatformerGame();
 
 // --- Game setup ---
 const game = createGame({ name: "platformer", maxDeltaTime: 1 / 30 });
+
+// Declarative camera tracking — follows player automatically each frame
+trackTarget(
+  () => {
+    const vp = getViewportSize();
+    return {
+      x: Math.max(vp.width / 2, Math.min(state.playerX, vp.width / 2)),
+      y: Math.max(vp.height / 2, Math.min(state.playerY, vp.height / 2)),
+    };
+  },
+  { zoom: 1.0, smoothness: 0.1 },
+);
 
 game.state<PlatformerState>({
   get: () => state,
@@ -75,15 +88,6 @@ game.onFrame((ctx) => {
     }
   }
 
-  // Camera follows player with smooth interpolation
-  const { width: vpW, height: vpH } = ctx.viewport;
-  followTargetSmooth(
-    Math.max(vpW / 2, Math.min(state.playerX, vpW / 2)),
-    Math.max(vpH / 2, Math.min(state.playerY, vpH / 2)),
-    1.0,   // zoom
-    0.1,   // smoothness
-  );
-
   // --- Render ---
 
   // Background
@@ -133,6 +137,7 @@ game.onFrame((ctx) => {
   );
 
   // Phase indicator
+  const { width: vpW, height: vpH } = ctx.viewport;
   if (state.phase === "won") {
     hud.label("YOU WIN! Press R to restart", vpW / 2, vpH / 2 - 20, {
       textColor: Colors.WIN,

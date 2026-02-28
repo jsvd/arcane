@@ -24,6 +24,9 @@ export {
   followTargetWithShake,
   zoomTo,
   zoomToPoint,
+  trackTarget,
+  stopTracking,
+  isTracking,
 } from "./camera.ts";
 
 // Input
@@ -51,6 +54,9 @@ export {
   getTouchPosition,
   getTouchWorldPosition,
 } from "./input.ts";
+
+// Screen-space context
+export { withScreenSpace, isScreenSpaceActive } from "./context.ts";
 
 // Textures
 export { loadTexture, createSolidTexture, uploadRgbaTexture, preloadAssets, isTextureLoaded, getLoadingProgress } from "./texture.ts";

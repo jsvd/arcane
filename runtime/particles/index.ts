@@ -12,6 +12,7 @@ export type {
   AffectorType,
   Affector,
   Emitter,
+  BurstOptions,
 } from "./types.ts";
 
 export {
@@ -30,6 +31,9 @@ export {
   drawBurst,
   drawContinuous,
   stopContinuous,
+  // Self-destructing bursts
+  spawnBurst,
+  getManagedBurstCount,
 } from "./emitter.ts";
 
 // Presets

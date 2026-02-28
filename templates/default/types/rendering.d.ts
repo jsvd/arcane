@@ -1183,6 +1183,44 @@ declare module "@arcane/runtime/rendering" {
    */
   export declare function zoomToPoint(targetZoom: number, worldX: number, worldY: number, duration: number, easing?: (t: number) => number): void;
   /**
+   * Set up declarative camera tracking. The camera will automatically follow
+   * the target returned by `getTarget()` each frame using smooth interpolation.
+   *
+   * Call once during setup — no need to call every frame. The tracking runs
+   * inside the game loop via {@link updateCameraTracking}.
+   *
+   * @param getTarget - Getter returning the target position `{ x, y }`.
+   * @param opts - Optional zoom (number or getter) and smoothness.
+   *
+   * @example
+   * trackTarget(() => ({ x: player.x, y: player.y }), { zoom: 1, smoothness: 0.1 });
+   */
+  export declare function trackTarget(getTarget: () => {
+      x: number;
+      y: number;
+  }, opts?: {
+      zoom?: number | (() => number);
+      smoothness?: number;
+  }): void;
+  /**
+   * Stop declarative camera tracking. The camera will remain at its
+   * current position.
+   */
+  export declare function stopTracking(): void;
+  /**
+   * Check whether declarative camera tracking is active.
+   *
+   * @returns `true` if {@link trackTarget} has been called and not yet stopped.
+   */
+  export declare function isTracking(): boolean;
+  /**
+   * Advance declarative camera tracking by one frame.
+   * Calls {@link followTargetSmooth} with the stored target and options.
+   *
+   * @internal Called automatically by createGame() after the user callback.
+   */
+  export declare function updateCameraTracking(): void;
+  /**
    * Follow a target with smooth interpolation and automatic camera shake offset.
    * Wraps {@link followTargetSmooth} + {@link getCameraShakeOffset} into one call.
    *
@@ -1203,6 +1241,52 @@ declare module "@arcane/runtime/rendering" {
    * });
    */
   export declare function followTargetWithShake(targetX: number, targetY: number, zoom?: number, smoothness?: number): void;
+
+  /**
+   * Screen-space rendering context.
+   *
+   * Provides {@link withScreenSpace} to batch multiple draw calls
+   * as screen-space without repeating `screenSpace: true` on each one.
+   * Explicit `screenSpace` on individual calls always wins.
+   */
+  /**
+   * Execute a callback with screen-space rendering active.
+   * All draw calls inside `fn` that don't explicitly set `screenSpace`
+   * will default to `screenSpace: true`.
+   *
+   * Nesting is safe — the context pops when each `withScreenSpace` returns.
+   * Explicit `screenSpace: true` or `screenSpace: false` on individual
+   * calls always overrides the context.
+   *
+   * @param fn - Callback containing draw calls.
+   *
+   * @example
+   * withScreenSpace(() => {
+   *   drawRect(10, 10, 200, 30, { color: red });   // auto screen-space
+   *   drawText("HP: 100", 15, 15, { scale: 2 });   // auto screen-space
+   *   drawSprite({ ..., screenSpace: false });       // explicit override wins
+   * });
+   */
+  export declare function withScreenSpace(fn: () => void): void;
+  /**
+   * Check whether a `withScreenSpace` context is currently active.
+   *
+   * @returns `true` if inside a `withScreenSpace()` callback.
+   */
+  export declare function isScreenSpaceActive(): boolean;
+  /**
+   * Resolve the effective screen-space flag for a draw call.
+   *
+   * If `explicit` is `true` or `false`, returns that value (caller wins).
+   * If `explicit` is `undefined`, returns `true` when inside a
+   * `withScreenSpace()` context, `false` otherwise.
+   *
+   * @param explicit - The caller-supplied `screenSpace` option (may be undefined).
+   * @returns The resolved screen-space flag.
+   *
+   * @internal Used by drawSprite, drawText, drawRect, shapes, etc.
+   */
+  export declare function resolveScreenSpace(explicit: boolean | undefined): boolean;
 
   /**
    * Effect presets: common 2D shader effects as one-liner factories.

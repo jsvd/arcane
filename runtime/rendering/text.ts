@@ -3,6 +3,7 @@ import { drawSprite } from "./sprites.ts";
 import { getCamera } from "./camera.ts";
 import { getViewportSize } from "./input.ts";
 import { _logDrawCall } from "../testing/visual.ts";
+import { resolveScreenSpace } from "./context.ts";
 
 // --- Types ---
 
@@ -578,7 +579,7 @@ export function drawText(
   const scale = options?.scale ?? 1;
   const layer = options?.layer ?? 100;
   const tint = options?.tint;
-  const screenSpace = options?.screenSpace ?? false;
+  const screenSpace = resolveScreenSpace(options?.screenSpace);
 
   const maxChar = font.columns * font.rows;
 
@@ -647,7 +648,7 @@ function drawMSDFTextInternal(
   const scale = options.scale ?? 1;
   const layer = options.layer ?? 100;
   const tint = options.tint ?? { r: 1, g: 1, b: 1, a: 1 };
-  const screenSpace = options.screenSpace ?? false;
+  const screenSpace = resolveScreenSpace(options.screenSpace);
   const outline = options.outline;
   const shadow = options.shadow;
 

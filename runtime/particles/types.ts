@@ -204,6 +204,48 @@ export interface Affector {
 }
 
 /**
+ * Options for {@link spawnBurst}: a self-destructing particle burst.
+ *
+ * Creates a Rust-native (or TS-native in headless) emitter that emits
+ * `count` particles over `duration` seconds, then automatically cleans up
+ * once all particles have died.
+ */
+export interface BurstOptions {
+  /** Number of particles to emit. Default: 20. */
+  count?: number;
+  /** Emission window in seconds. Default: 0.1. */
+  duration?: number;
+  /** Particle lifetime [min, max] in seconds. Default: [0.5, 1.5]. */
+  lifetime?: [number, number];
+  /** Minimum initial speed in pixels/second. Default: 50. */
+  speedMin?: number;
+  /** Maximum initial speed in pixels/second. Default: 200. */
+  speedMax?: number;
+  /** Emission direction in radians. Default: 0. */
+  direction?: number;
+  /** Spread angle in radians. Default: Math.PI * 2 (full circle). */
+  spread?: number;
+  /** Minimum scale. Default: 0.5. */
+  scaleMin?: number;
+  /** Maximum scale. Default: 1.5. */
+  scaleMax?: number;
+  /** Starting alpha. Default: 1. */
+  alphaStart?: number;
+  /** Ending alpha (at death). Default: 0. */
+  alphaEnd?: number;
+  /** Gravity X acceleration. Default: 0. */
+  gravityX?: number;
+  /** Gravity Y acceleration. Default: 300. */
+  gravityY?: number;
+  /** Texture ID for particle rendering. Default: 0. */
+  textureId?: number;
+  /** Sprite size in pixels. Default: 8. */
+  size?: number;
+  /** Draw layer. Default: 5. */
+  layer?: number;
+}
+
+/**
  * A particle emitter instance returned by {@link spawnEmitter}.
  *
  * Manages a pool of particles and spawns them according to its config.

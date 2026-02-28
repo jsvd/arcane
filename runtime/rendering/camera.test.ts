@@ -9,6 +9,10 @@ import {
   getCameraDeadzone,
   followTargetSmooth,
   followTargetWithShake,
+  trackTarget,
+  stopTracking,
+  isTracking,
+  updateCameraTracking,
 } from "./camera.ts";
 
 describe("camera", () => {
@@ -124,6 +128,50 @@ describe("camera", () => {
       setCameraDeadzone({ width: 200, height: 150 });
       followTargetWithShake(100, 200, 2, 0.05);
       setCameraDeadzone(null);
+    });
+  });
+
+  describe("trackTarget", () => {
+    it("isTracking returns false by default", () => {
+      stopTracking();
+      if (isTracking()) {
+        throw new Error("Expected isTracking() to be false");
+      }
+    });
+
+    it("isTracking returns true after trackTarget", () => {
+      trackTarget(() => ({ x: 100, y: 200 }));
+      if (!isTracking()) {
+        throw new Error("Expected isTracking() to be true");
+      }
+      stopTracking();
+    });
+
+    it("stopTracking disables tracking", () => {
+      trackTarget(() => ({ x: 0, y: 0 }));
+      stopTracking();
+      if (isTracking()) {
+        throw new Error("Expected isTracking() to be false after stopTracking");
+      }
+    });
+
+    it("updateCameraTracking is no-op when not tracking", () => {
+      stopTracking();
+      updateCameraTracking(); // should not throw
+    });
+
+    it("trackTarget accepts zoom as number", () => {
+      trackTarget(() => ({ x: 50, y: 50 }), { zoom: 2, smoothness: 0.05 });
+      updateCameraTracking(); // no-op in headless
+      stopTracking();
+    });
+
+    it("trackTarget accepts zoom as function", () => {
+      let z = 1;
+      trackTarget(() => ({ x: 0, y: 0 }), { zoom: () => z });
+      z = 3;
+      updateCameraTracking(); // should not throw
+      stopTracking();
     });
   });
 });

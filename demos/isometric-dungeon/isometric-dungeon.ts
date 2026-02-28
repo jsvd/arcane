@@ -20,7 +20,7 @@ import {
   getViewportSize,
   drawText,
   setCameraBounds,
-  followTargetSmooth,
+  trackTarget,
   getMouseWorldPosition,
 } from "../../runtime/rendering/index.ts";
 import { findPath } from "../../runtime/pathfinding/index.ts";
@@ -294,9 +294,8 @@ function checkCoins(): void {
   }
 }
 
-function updateCamera(): void {
-  followTargetSmooth(player.x, player.y, currentZoom, 0.05);
-}
+// Declarative camera tracking — zoom is a getter since user can change it
+trackTarget(() => ({ x: player.x, y: player.y }), { zoom: () => currentZoom, smoothness: 0.05 });
 
 // =====================================================================
 // Detailed rendering — each element composed of many small sprites
@@ -671,6 +670,5 @@ game.onFrame((ctx) => {
   handleInput();
   updatePlayer(ctx.dt);
   checkCoins();
-  updateCamera();
   render();
 });

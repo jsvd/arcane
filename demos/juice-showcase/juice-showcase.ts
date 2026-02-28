@@ -39,12 +39,8 @@ import {
   getScreenFlash,
 } from "../../runtime/tweening/index.ts";
 import {
-  createRustEmitter,
-  updateAllRustEmitters,
-  drawRustEmitter,
-  destroyRustEmitter,
-  getRustEmitterParticleCount,
-  setRustEmitterSpawnRate,
+  spawnBurst,
+  getManagedBurstCount,
 } from "../../runtime/particles/index.ts";
 
 // --- Textures ---
@@ -72,10 +68,6 @@ type HitCone = {
   maxLife: number;
 };
 let hitCones: HitCone[] = [];
-
-// --- Rust emitter tracking ---
-let activeRustEmitters: number[] = [];
-const stoppedEmitters: Set<number> = new Set();
 
 // --- State ---
 interface DemoState {
@@ -238,33 +230,23 @@ state.buttons = [
   },
 ];
 
-// --- Particle Effects (Rust-native emitters) ---
-
-// Track emitters that need delayed spawn rate cutoff
-const emitterStopTimers: Map<number, number> = new Map();
+// --- Particle Effects (using spawnBurst) ---
 
 function spawnExplosion(x: number, y: number) {
-  const id = createRustEmitter({
-    spawnRate: 300, // spawn many particles quickly
-    lifetimeMin: 0.5,
-    lifetimeMax: 1.5,
+  spawnBurst(x, y, {
+    count: 45,        // 300 rate * 0.15 duration
+    duration: 0.15,
+    lifetime: [0.5, 1.5],
     speedMin: 50,
     speedMax: 200,
-    direction: 0,
-    spread: Math.PI * 2, // full circle
+    spread: Math.PI * 2,
     scaleMin: 0.5,
     scaleMax: 1.5,
-    alphaStart: 1,
-    alphaEnd: 0,
-    gravityX: 0,
     gravityY: 300,
     textureId: TEX_PARTICLE,
-    x,
-    y,
+    size: 8,
+    layer: 4,
   });
-  activeRustEmitters.push(id);
-  // Schedule spawn rate cutoff after 0.15 seconds (burst duration)
-  emitterStopTimers.set(id, 0.15);
 
   // Also spawn a shockwave ring at the same location
   shockwaves.push({
@@ -278,24 +260,19 @@ function spawnExplosion(x: number, y: number) {
 }
 
 function spawnTrail(x: number, y: number) {
-  const id = createRustEmitter({
-    spawnRate: 30,
-    lifetimeMin: 0.3,
-    lifetimeMax: 0.6,
+  spawnBurst(x, y, {
+    count: 20,
+    duration: 0.6,
+    lifetime: [0.3, 0.6],
     speedMin: 5,
     speedMax: 20,
-    direction: 0,
     spread: Math.PI * 2,
     scaleMin: 0.5,
     scaleMax: 1.0,
-    alphaStart: 1,
-    alphaEnd: 0,
     textureId: TEX_TRAIL,
-    x,
-    y,
+    size: 8,
+    layer: 4,
   });
-  activeRustEmitters.push(id);
-  // No stop timer — continuous fountain, capped by cleanup when all particles die
 }
 
 function spawnShockwave(x: number, y: number) {
@@ -367,7 +344,6 @@ game.onFrame((ctx) => {
 
   // Update systems
   updateTweens(dt);
-  updateAllRustEmitters(dt);
 
   // Update shockwave rings
   for (let i = shockwaves.length - 1; i >= 0; i--) {
@@ -383,29 +359,6 @@ game.onFrame((ctx) => {
     const hc = hitCones[i];
     hc.life -= dt;
     if (hc.life <= 0) hitCones.splice(i, 1);
-  }
-
-  // Update emitter stop timers (for burst effects)
-  for (const [id, remaining] of emitterStopTimers.entries()) {
-    const newTime = remaining - dt;
-    if (newTime <= 0) {
-      setRustEmitterSpawnRate(id, 0);
-      emitterStopTimers.delete(id);
-      // Mark as stopped so cleanup can reclaim it once particles die
-      stoppedEmitters.add(id);
-    } else {
-      emitterStopTimers.set(id, newTime);
-    }
-  }
-
-  // Clean up stopped Rust emitters once all their particles have died
-  for (let i = activeRustEmitters.length - 1; i >= 0; i--) {
-    const id = activeRustEmitters[i];
-    if (stoppedEmitters.has(id) && getRustEmitterParticleCount(id) === 0) {
-      destroyRustEmitter(id);
-      stoppedEmitters.delete(id);
-      activeRustEmitters.splice(i, 1);
-    }
   }
 
   // Check button clicks (screen space coordinates)
@@ -506,12 +459,8 @@ game.onFrame((ctx) => {
     });
   }
 
-  // Rust-native particles
-  let totalParticles = 0;
-  for (const emitterId of activeRustEmitters) {
-    drawRustEmitter(emitterId, { w: 8, h: 8, layer: 4 });
-    totalParticles += getRustEmitterParticleCount(emitterId);
-  }
+  // Managed burst particles are auto-drawn by updateParticles()
+  const activeBursts = getManagedBurstCount();
 
   // Shockwave rings (expanding ring effect)
   for (const sw of shockwaves) {
@@ -554,8 +503,8 @@ game.onFrame((ctx) => {
     layer: 110,
   });
 
-  // Particle count (Rust-native)
-  hud.text(`Particles: ${totalParticles}`, HUDLayout.TOP_RIGHT.x - 100, HUDLayout.TOP_LEFT.y, {
+  // Active bursts count
+  hud.text(`Bursts: ${activeBursts}`, HUDLayout.TOP_RIGHT.x - 100, HUDLayout.TOP_LEFT.y, {
     scale: HUDLayout.SMALL_TEXT_SCALE,
     tint: Colors.INFO,
     layer: 110,

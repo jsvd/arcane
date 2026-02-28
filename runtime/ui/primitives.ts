@@ -5,6 +5,7 @@ import { drawText, measureText } from "../rendering/text.ts";
 import { getCamera } from "../rendering/camera.ts";
 import { _logDrawCall } from "../testing/visual.ts";
 import { _warnColor } from "./colors.ts";
+import { resolveScreenSpace } from "../rendering/context.ts";
 
 const hasRenderOps =
   typeof (globalThis as any).Deno !== "undefined" &&
@@ -83,7 +84,7 @@ export function drawRect(
   if (!hasRenderOps) return;
   const color = options?.color ?? WHITE;
   const layer = options?.layer ?? 90;
-  const ss = options?.screenSpace ?? false;
+  const ss = resolveScreenSpace(options?.screenSpace);
   const tex = getColorTexture(color);
   const pos = toWorld(x, y, w, h, ss);
   const posX = pos.x;
@@ -133,7 +134,7 @@ export function drawPanel(
   const borderColor = options?.borderColor ?? GRAY;
   const bw = options?.borderWidth ?? 2;
   const layer = options?.layer ?? 90;
-  const ss = options?.screenSpace ?? false;
+  const ss = resolveScreenSpace(options?.screenSpace);
 
   const fillTex = getColorTexture(fillColor);
   const borderTex = getColorTexture(borderColor);
@@ -214,7 +215,7 @@ export function drawBar(
   const borderColor = options?.borderColor;
   const bw = options?.borderWidth ?? 0;
   const layer = options?.layer ?? 90;
-  const ss = options?.screenSpace ?? false;
+  const ss = resolveScreenSpace(options?.screenSpace);
 
   // Background
   const bg = toWorld(x, y, w, h, ss);
@@ -296,7 +297,7 @@ export function drawLabel(
   const padding = options?.padding ?? 4;
   const scale = options?.scale ?? 1;
   const layer = options?.layer ?? 90;
-  const ss = options?.screenSpace ?? false;
+  const ss = resolveScreenSpace(options?.screenSpace);
   const align = options?.align ?? "left";
 
   const measurement = measureText(text, { scale });

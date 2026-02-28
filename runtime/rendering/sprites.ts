@@ -3,6 +3,7 @@ import { getCamera } from "./camera.ts";
 import { _logDrawCall } from "../testing/visual.ts";
 import { createSolidTexture } from "./texture.ts";
 import { _warnColor } from "../ui/colors.ts";
+import { resolveScreenSpace } from "./context.ts";
 
 // Detect if we're running inside the Arcane renderer (V8 with render ops).
 const hasRenderOps =
@@ -163,7 +164,8 @@ export function drawSprite(opts: SpriteOptions): void {
   const layer = opts.layer ?? 0;
 
   // --- Parallax: offset position based on camera and factor ---
-  if (opts.parallax !== undefined && opts.parallax !== 1 && !opts.screenSpace) {
+  const ss = resolveScreenSpace(opts.screenSpace);
+  if (opts.parallax !== undefined && opts.parallax !== 1 && !ss) {
     const cam = getCamera();
     const rawOffsetX = cam.x * (1 - opts.parallax);
     const rawOffsetY = cam.y * (1 - opts.parallax);
@@ -172,7 +174,7 @@ export function drawSprite(opts: SpriteOptions): void {
   }
 
   // Screen-space conversion: transform screen pixels to world coordinates
-  if (opts.screenSpace) {
+  if (ss) {
     const cam = getCamera();
     // World position = camera top-left + screen offset scaled by zoom
     x = cam.x + x / cam.zoom;

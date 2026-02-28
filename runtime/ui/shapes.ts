@@ -21,6 +21,7 @@ import type { Color, ShapeOptions, LineOptions, ArcOptions, SectorOptions, Ellip
 import { _logDrawCall } from "../testing/visual.ts";
 import { getCamera } from "../rendering/camera.ts";
 import { _warnColor } from "./colors.ts";
+import { resolveScreenSpace } from "../rendering/context.ts";
 
 // --- Detect geometry ops availability ---
 
@@ -69,7 +70,7 @@ export function drawCircle(
   options?: ShapeOptions,
 ): void {
   const layer = options?.layer ?? 0;
-  const ss = options?.screenSpace ?? false;
+  const ss = resolveScreenSpace(options?.screenSpace);
 
   _logDrawCall({
     type: "circle",
@@ -126,7 +127,7 @@ export function drawEllipse(
   options?: EllipseOptions,
 ): void {
   const layer = options?.layer ?? 0;
-  const ss = options?.screenSpace ?? false;
+  const ss = resolveScreenSpace(options?.screenSpace);
 
   _logDrawCall({
     type: "ellipse",
@@ -185,7 +186,7 @@ export function drawRing(
   options?: RingOptions,
 ): void {
   const layer = options?.layer ?? 0;
-  const ss = options?.screenSpace ?? false;
+  const ss = resolveScreenSpace(options?.screenSpace);
 
   _logDrawCall({
     type: "ring",
@@ -255,7 +256,7 @@ export function drawLine(
 ): void {
   const thickness = options?.thickness ?? 1;
   const layer = options?.layer ?? 0;
-  const ss = options?.screenSpace ?? false;
+  const ss = resolveScreenSpace(options?.screenSpace);
 
   _logDrawCall({
     type: "line",
@@ -307,7 +308,7 @@ export function drawTriangle(
   options?: ShapeOptions,
 ): void {
   const layer = options?.layer ?? 0;
-  const ss = options?.screenSpace ?? false;
+  const ss = resolveScreenSpace(options?.screenSpace);
 
   _logDrawCall({
     type: "triangle",
@@ -362,7 +363,7 @@ export function drawArc(
   options?: ArcOptions,
 ): void {
   const layer = options?.layer ?? 0;
-  const ss = options?.screenSpace ?? false;
+  const ss = resolveScreenSpace(options?.screenSpace);
   const thickness = options?.thickness ?? 2;
 
   _logDrawCall({
@@ -434,7 +435,7 @@ export function drawSector(
   options?: SectorOptions,
 ): void {
   const layer = options?.layer ?? 0;
-  const ss = options?.screenSpace ?? false;
+  const ss = resolveScreenSpace(options?.screenSpace);
 
   _logDrawCall({
     type: "sector",
@@ -499,7 +500,7 @@ export function drawCapsule(
   options?: CapsuleOptions,
 ): void {
   const layer = options?.layer ?? 0;
-  const ss = options?.screenSpace ?? false;
+  const ss = resolveScreenSpace(options?.screenSpace);
 
   _logDrawCall({
     type: "capsule",
@@ -615,7 +616,7 @@ export function drawRectangle(
   options?: ShapeOptions,
 ): void {
   const layer = options?.layer ?? 0;
-  const ss = options?.screenSpace ?? false;
+  const ss = resolveScreenSpace(options?.screenSpace);
 
   _logDrawCall({
     type: "rectangle",
@@ -664,7 +665,7 @@ export function drawPolygon(
   options?: PolygonOptions,
 ): void {
   const layer = options?.layer ?? 0;
-  const ss = options?.screenSpace ?? false;
+  const ss = resolveScreenSpace(options?.screenSpace);
 
   _logDrawCall({
     type: "polygon",

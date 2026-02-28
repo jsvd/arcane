@@ -11,6 +11,7 @@ import type {
   Emitter,
   EmitterConfig,
   Affector,
+  BurstOptions,
 } from "./types.ts";
 import { createSolidTexture } from "../rendering/texture.ts";
 import { drawSprite as _drawSprite } from "../rendering/sprites.ts";
@@ -415,6 +416,9 @@ export function updateParticles(dt: number): void {
       }
     }
   }
+
+  // Update managed bursts (self-destructing emitters)
+  _updateManagedBursts(dt);
 }
 
 /**
@@ -449,11 +453,20 @@ export function addAffector(emitter: Emitter, affector: Affector): void {
 
 /**
  * Remove all emitters and their particles from the global update list.
+ * Also clears all managed bursts.
  */
 export function clearEmitters(): void {
   emitters.length = 0;
   _totalAliveCount = 0;
   _warnedAt80Pct = false;
+
+  // Clean up managed bursts
+  for (const burst of _managedBursts.values()) {
+    if (burst.rustId > 0) {
+      destroyRustEmitter(burst.rustId);
+    }
+  }
+  _managedBursts.clear();
 }
 
 /**
@@ -1025,6 +1038,228 @@ export function stopContinuous(id: string): void {
   if (emitter) {
     removeEmitter(emitter);
     _managedContinuous.delete(id);
+  }
+}
+
+// --- Self-destructing burst API (spawnBurst) ---
+
+/** Internal state for a managed burst emitter. */
+interface ManagedBurst {
+  /** Rust emitter ID (0 in headless / TS fallback). */
+  rustId: number;
+  /** TS emitter (used in headless mode). */
+  tsEmitter: Emitter | null;
+  /** Remaining time until spawn rate is zeroed. */
+  timer: number;
+  /** Whether spawn rate has been set to 0. */
+  stopped: boolean;
+  /** Draw options. */
+  size: number;
+  layer: number;
+}
+
+/** Counter for managed burst IDs. */
+let _burstIdCounter = 0;
+
+/** Active managed bursts keyed by internal ID. */
+const _managedBursts: Map<number, ManagedBurst> = new Map();
+
+/**
+ * Spawn a self-destructing particle burst at a position.
+ *
+ * Creates an emitter that emits `count` particles over `duration` seconds,
+ * then automatically stops spawning and cleans up once all particles die.
+ * Uses the Rust particle backend when available; falls back to TS emitters
+ * in headless mode.
+ *
+ * Managed bursts are updated and drawn inside {@link updateParticles} —
+ * no per-frame bookkeeping needed.
+ *
+ * @param x - World X position.
+ * @param y - World Y position.
+ * @param opts - Burst configuration. See {@link BurstOptions}.
+ *
+ * @example
+ * // Explosion on hit
+ * spawnBurst(enemy.x, enemy.y, {
+ *   count: 30,
+ *   speedMax: 250,
+ *   gravityY: 400,
+ *   lifetime: [0.3, 1.0],
+ * });
+ */
+export function spawnBurst(x: number, y: number, opts?: BurstOptions): void {
+  const count = opts?.count ?? 20;
+  const duration = opts?.duration ?? 0.1;
+  const lifetimeMin = opts?.lifetime?.[0] ?? 0.5;
+  const lifetimeMax = opts?.lifetime?.[1] ?? 1.5;
+  const speedMin = opts?.speedMin ?? 50;
+  const speedMax = opts?.speedMax ?? 200;
+  const direction = opts?.direction ?? 0;
+  const spread = opts?.spread ?? Math.PI * 2;
+  const scaleMin = opts?.scaleMin ?? 0.5;
+  const scaleMax = opts?.scaleMax ?? 1.5;
+  const alphaStart = opts?.alphaStart ?? 1;
+  const alphaEnd = opts?.alphaEnd ?? 0;
+  const gravityX = opts?.gravityX ?? 0;
+  const gravityY = opts?.gravityY ?? 300;
+  const textureId = opts?.textureId ?? 0;
+  const size = opts?.size ?? 8;
+  const layer = opts?.layer ?? 5;
+
+  const spawnRate = count / Math.max(duration, 0.001);
+  const burstId = _burstIdCounter++;
+
+  if (hasParticleOps) {
+    // Rust backend
+    const id = createRustEmitter({
+      spawnRate,
+      lifetimeMin,
+      lifetimeMax,
+      speedMin,
+      speedMax,
+      direction,
+      spread,
+      scaleMin,
+      scaleMax,
+      alphaStart,
+      alphaEnd,
+      gravityX,
+      gravityY,
+      textureId,
+      x,
+      y,
+    });
+
+    _managedBursts.set(burstId, {
+      rustId: id,
+      tsEmitter: null,
+      timer: duration,
+      stopped: false,
+      size,
+      layer,
+    });
+  } else {
+    // TS fallback (headless)
+    // Convert radial params to velocity ranges for TS emitter
+    const halfSpread = spread / 2;
+    const minAngle = direction - halfSpread;
+    const maxAngle = direction + halfSpread;
+    // Approximate velocity range from speed/direction/spread
+    const vxMin = Math.min(
+      Math.cos(minAngle) * speedMin,
+      Math.cos(maxAngle) * speedMin,
+      Math.cos(minAngle) * speedMax,
+      Math.cos(maxAngle) * speedMax,
+      -speedMax,
+    );
+    const vxMax = Math.max(
+      Math.cos(minAngle) * speedMin,
+      Math.cos(maxAngle) * speedMin,
+      Math.cos(minAngle) * speedMax,
+      Math.cos(maxAngle) * speedMax,
+      speedMax,
+    );
+    const vyMin = Math.min(
+      Math.sin(minAngle) * speedMin,
+      Math.sin(maxAngle) * speedMin,
+      Math.sin(minAngle) * speedMax,
+      Math.sin(maxAngle) * speedMax,
+      -speedMax,
+    );
+    const vyMax = Math.max(
+      Math.sin(minAngle) * speedMin,
+      Math.sin(maxAngle) * speedMin,
+      Math.sin(minAngle) * speedMax,
+      Math.sin(maxAngle) * speedMax,
+      speedMax,
+    );
+
+    const emitter = spawnEmitter({
+      shape: "point",
+      x,
+      y,
+      mode: "continuous",
+      rate: spawnRate,
+      lifetime: [lifetimeMin, lifetimeMax],
+      velocityX: [vxMin, vxMax],
+      velocityY: [vyMin, vyMax],
+      startColor: { r: 1, g: 1, b: 1, a: alphaStart },
+      endColor: { r: 1, g: 1, b: 1, a: alphaEnd },
+      scale: [scaleMin, scaleMax],
+      textureId: textureId || undefined,
+    });
+
+    _managedBursts.set(burstId, {
+      rustId: 0,
+      tsEmitter: emitter,
+      timer: duration,
+      stopped: false,
+      size,
+      layer,
+    });
+  }
+}
+
+/**
+ * Get the number of active managed bursts.
+ * Useful for testing and debugging.
+ *
+ * @returns Number of active managed burst emitters.
+ */
+export function getManagedBurstCount(): number {
+  return _managedBursts.size;
+}
+
+/**
+ * Update and draw all managed bursts.
+ * Called internally from {@link updateParticles}.
+ *
+ * @param dt - Delta time in seconds.
+ * @internal
+ */
+function _updateManagedBursts(dt: number): void {
+  const toRemove: number[] = [];
+
+  for (const [id, burst] of _managedBursts) {
+    // Count down emission timer
+    if (!burst.stopped) {
+      burst.timer -= dt;
+      if (burst.timer <= 0) {
+        burst.stopped = true;
+        if (burst.rustId > 0) {
+          setRustEmitterSpawnRate(burst.rustId, 0);
+        } else if (burst.tsEmitter) {
+          burst.tsEmitter.active = false;
+        }
+      }
+    }
+
+    if (burst.rustId > 0) {
+      // Rust path: update + draw
+      updateRustEmitter(burst.rustId, dt);
+      drawRustEmitter(burst.rustId, { w: burst.size, h: burst.size, layer: burst.layer });
+
+      // Cleanup when stopped and all particles dead
+      if (burst.stopped && getRustEmitterParticleCount(burst.rustId) === 0) {
+        destroyRustEmitter(burst.rustId);
+        toRemove.push(id);
+      }
+    } else if (burst.tsEmitter) {
+      // TS path: the emitter is already in the global list so updateParticles
+      // handles its particles. We just need to check cleanup.
+      if (burst.stopped) {
+        const alive = burst.tsEmitter.particles.filter((p) => p.alive).length;
+        if (alive === 0) {
+          removeEmitter(burst.tsEmitter);
+          toRemove.push(id);
+        }
+      }
+    }
+  }
+
+  for (const id of toRemove) {
+    _managedBursts.delete(id);
   }
 }
 

@@ -166,6 +166,47 @@ declare module "@arcane/runtime/particles" {
       turbulence?: number;
   }
   /**
+   * Options for {@link spawnBurst}: a self-destructing particle burst.
+   *
+   * Creates a Rust-native (or TS-native in headless) emitter that emits
+   * `count` particles over `duration` seconds, then automatically cleans up
+   * once all particles have died.
+   */
+  export interface BurstOptions {
+      /** Number of particles to emit. Default: 20. */
+      count?: number;
+      /** Emission window in seconds. Default: 0.1. */
+      duration?: number;
+      /** Particle lifetime [min, max] in seconds. Default: [0.5, 1.5]. */
+      lifetime?: [number, number];
+      /** Minimum initial speed in pixels/second. Default: 50. */
+      speedMin?: number;
+      /** Maximum initial speed in pixels/second. Default: 200. */
+      speedMax?: number;
+      /** Emission direction in radians. Default: 0. */
+      direction?: number;
+      /** Spread angle in radians. Default: Math.PI * 2 (full circle). */
+      spread?: number;
+      /** Minimum scale. Default: 0.5. */
+      scaleMin?: number;
+      /** Maximum scale. Default: 1.5. */
+      scaleMax?: number;
+      /** Starting alpha. Default: 1. */
+      alphaStart?: number;
+      /** Ending alpha (at death). Default: 0. */
+      alphaEnd?: number;
+      /** Gravity X acceleration. Default: 0. */
+      gravityX?: number;
+      /** Gravity Y acceleration. Default: 300. */
+      gravityY?: number;
+      /** Texture ID for particle rendering. Default: 0. */
+      textureId?: number;
+      /** Sprite size in pixels. Default: 8. */
+      size?: number;
+      /** Draw layer. Default: 5. */
+      layer?: number;
+  }
+  /**
    * A particle emitter instance returned by {@link spawnEmitter}.
    *
    * Manages a pool of particles and spawns them according to its config.
@@ -283,6 +324,7 @@ declare module "@arcane/runtime/particles" {
   export declare function addAffector(emitter: Emitter, affector: Affector): void;
   /**
    * Remove all emitters and their particles from the global update list.
+   * Also clears all managed bursts.
    */
   export declare function clearEmitters(): void;
   /**
@@ -452,6 +494,38 @@ declare module "@arcane/runtime/particles" {
    * ```
    */
   export declare function stopContinuous(id: string): void;
+  /**
+   * Spawn a self-destructing particle burst at a position.
+   *
+   * Creates an emitter that emits `count` particles over `duration` seconds,
+   * then automatically stops spawning and cleans up once all particles die.
+   * Uses the Rust particle backend when available; falls back to TS emitters
+   * in headless mode.
+   *
+   * Managed bursts are updated and drawn inside {@link updateParticles} —
+   * no per-frame bookkeeping needed.
+   *
+   * @param x - World X position.
+   * @param y - World Y position.
+   * @param opts - Burst configuration. See {@link BurstOptions}.
+   *
+   * @example
+   * // Explosion on hit
+   * spawnBurst(enemy.x, enemy.y, {
+   *   count: 30,
+   *   speedMax: 250,
+   *   gravityY: 400,
+   *   lifetime: [0.3, 1.0],
+   * });
+   */
+  export declare function spawnBurst(x: number, y: number, opts?: BurstOptions): void;
+  /**
+   * Get the number of active managed bursts.
+   * Useful for testing and debugging.
+   *
+   * @returns Number of active managed burst emitters.
+   */
+  export declare function getManagedBurstCount(): number;
 
   /**
    * Particle preset configurations and convenience functions.

@@ -386,6 +386,65 @@ export function zoomToPoint(
   });
 }
 
+// --- Declarative camera tracking ---
+
+/** Module-level state for trackTarget(). */
+let _trackingTarget: (() => { x: number; y: number }) | null = null;
+let _trackingZoom: number | (() => number) = 1;
+let _trackingSmoothness = 0.1;
+
+/**
+ * Set up declarative camera tracking. The camera will automatically follow
+ * the target returned by `getTarget()` each frame using smooth interpolation.
+ *
+ * Call once during setup — no need to call every frame. The tracking runs
+ * inside the game loop via {@link updateCameraTracking}.
+ *
+ * @param getTarget - Getter returning the target position `{ x, y }`.
+ * @param opts - Optional zoom (number or getter) and smoothness.
+ *
+ * @example
+ * trackTarget(() => ({ x: player.x, y: player.y }), { zoom: 1, smoothness: 0.1 });
+ */
+export function trackTarget(
+  getTarget: () => { x: number; y: number },
+  opts?: { zoom?: number | (() => number); smoothness?: number },
+): void {
+  _trackingTarget = getTarget;
+  _trackingZoom = opts?.zoom ?? 1;
+  _trackingSmoothness = opts?.smoothness ?? 0.1;
+}
+
+/**
+ * Stop declarative camera tracking. The camera will remain at its
+ * current position.
+ */
+export function stopTracking(): void {
+  _trackingTarget = null;
+}
+
+/**
+ * Check whether declarative camera tracking is active.
+ *
+ * @returns `true` if {@link trackTarget} has been called and not yet stopped.
+ */
+export function isTracking(): boolean {
+  return _trackingTarget !== null;
+}
+
+/**
+ * Advance declarative camera tracking by one frame.
+ * Calls {@link followTargetSmooth} with the stored target and options.
+ *
+ * @internal Called automatically by createGame() after the user callback.
+ */
+export function updateCameraTracking(): void {
+  if (_trackingTarget === null) return;
+  const target = _trackingTarget();
+  const zoom = typeof _trackingZoom === "function" ? _trackingZoom() : _trackingZoom;
+  followTargetSmooth(target.x, target.y, zoom, _trackingSmoothness);
+}
+
 /**
  * Follow a target with smooth interpolation and automatic camera shake offset.
  * Wraps {@link followTargetSmooth} + {@link getCameraShakeOffset} into one call.

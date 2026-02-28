@@ -15,7 +15,7 @@
 
 import { onFrame, getDeltaTime } from "../rendering/loop.ts";
 import { clearSprites } from "../rendering/sprites.ts";
-import { setCamera } from "../rendering/camera.ts";
+import { setCamera, updateCameraTracking } from "../rendering/camera.ts";
 import { getViewportSize, setBackgroundColor } from "../rendering/input.ts";
 import { registerAgent } from "../agent/protocol.ts";
 import { updateTweens } from "../tweening/tween.ts";
@@ -102,6 +102,7 @@ export function createGame(config?: GameConfig): Game {
         callback(ctx);
 
         if (autoSubsystems) {
+          updateCameraTracking();
           drawScreenTransition();
           drawScreenFlash();
         }
