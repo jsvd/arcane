@@ -3,8 +3,15 @@ import {
   createButton,
   updateButton,
   hitTest,
+  drawButton,
   type ButtonState,
 } from "./button.ts";
+import {
+  enableDrawCallCapture,
+  disableDrawCallCapture,
+  getDrawCalls,
+  clearDrawCalls,
+} from "../testing/visual.ts";
 
 describe("hitTest", () => {
   it("returns true when point is inside rectangle", () => {
@@ -188,5 +195,122 @@ describe("updateButton", () => {
     const btn = makeBtn();
     updateButton(btn, 301, 125, false);
     assert.equal(btn.hovered, false);
+  });
+});
+
+describe("drawButton", () => {
+  it("produces rect calls for border and background", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const btn = createButton(10, 20, 100, 30, "Test");
+    drawButton(btn);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    assert.ok(rects.length >= 2, "expected at least 2 rect calls");
+    disableDrawCallCapture();
+  });
+
+  it("produces text call for label", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const btn = createButton(10, 20, 100, 30, "Click Me");
+    drawButton(btn);
+    const calls = getDrawCalls();
+    const textCalls = calls.filter((c: any) => c.type === "text");
+    assert.ok(textCalls.length >= 1, "expected text call");
+    assert.ok((textCalls[0] as any).content.includes("Click Me"));
+    disableDrawCallCapture();
+  });
+
+  it("all calls have screenSpace true", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const btn = createButton(10, 20, 100, 30, "Test");
+    drawButton(btn);
+    const calls = getDrawCalls();
+    for (const call of calls) {
+      assert.equal((call as any).screenSpace, true);
+    }
+    disableDrawCallCapture();
+  });
+
+  it("border at layer 90, background at 91", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const btn = createButton(10, 20, 100, 30, "Test");
+    drawButton(btn);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    const layers = rects.map((c: any) => c.layer);
+    assert.ok(layers.includes(90));
+    assert.ok(layers.includes(91));
+    disableDrawCallCapture();
+  });
+
+  it("focus indicator at layer 89 when focused", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const btn = createButton(10, 20, 100, 30, "Test");
+    btn.focused = true;
+    btn.visual = "normal";
+    drawButton(btn);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    const layers = rects.map((c: any) => c.layer);
+    assert.ok(layers.includes(89));
+    disableDrawCallCapture();
+  });
+
+  it("no focus indicator when not focused", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const btn = createButton(10, 20, 100, 30, "Test");
+    btn.focused = false;
+    drawButton(btn);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    const layers = rects.map((c: any) => c.layer);
+    assert.equal(layers.includes(89), false);
+    disableDrawCallCapture();
+  });
+
+  it("no focus indicator when disabled", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const btn = createButton(10, 20, 100, 30, "Test");
+    btn.focused = true;
+    btn.visual = "disabled";
+    drawButton(btn);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    const layers = rects.map((c: any) => c.layer);
+    assert.equal(layers.includes(89), false);
+    disableDrawCallCapture();
+  });
+
+  it("custom layer propagated", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const btn = createButton(10, 20, 100, 30, "Test", { layer: 50 });
+    drawButton(btn);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    const layers = rects.map((c: any) => c.layer);
+    assert.ok(layers.includes(50));
+    assert.ok(layers.includes(51));
+    const textCalls = calls.filter((c: any) => c.type === "text");
+    assert.equal((textCalls[0] as any).layer, 52);
+    disableDrawCallCapture();
+  });
+
+  it("text at default layer 92", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const btn = createButton(10, 20, 100, 30, "Test");
+    drawButton(btn);
+    const calls = getDrawCalls();
+    const textCalls = calls.filter((c: any) => c.type === "text");
+    assert.equal((textCalls[0] as any).layer, 92);
+    disableDrawCallCapture();
   });
 });

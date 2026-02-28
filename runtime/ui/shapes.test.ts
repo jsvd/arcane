@@ -5,7 +5,7 @@ import {
   getDrawCalls,
   clearDrawCalls,
 } from "../testing/visual.ts";
-import { drawCircle, drawEllipse, drawRing, drawLine, drawTriangle, drawArc, drawSector, drawCapsule, drawPolygon } from "./shapes.ts";
+import { drawCircle, drawEllipse, drawRing, drawLine, drawTriangle, drawArc, drawSector, drawCapsule, drawPolygon, drawRectangle } from "./shapes.ts";
 
 describe("shapes", () => {
   describe("drawCircle", () => {
@@ -365,6 +365,53 @@ describe("shapes", () => {
       drawPolygon([[0, 0], [10, 0], [5, 10]]);
       // If we get here without throwing, the test passes
       assert.ok(true, "all shapes returned without error in headless mode");
+    });
+  });
+
+  describe("drawRectangle", () => {
+    it("logs rectangle draw call with correct x, y, w, h", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      drawRectangle(100, 50, 200, 100);
+      const calls = getDrawCalls();
+      const rectCalls = calls.filter((c: any) => c.type === "rectangle");
+      assert.equal(rectCalls.length, 1, "expected one rectangle draw call");
+      const call = rectCalls[0] as any;
+      assert.equal(call.x, 100);
+      assert.equal(call.y, 50);
+      assert.equal(call.w, 200);
+      assert.equal(call.h, 100);
+      disableDrawCallCapture();
+    });
+
+    it("uses default layer 0 and screenSpace false", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      drawRectangle(10, 20, 30, 40);
+      const calls = getDrawCalls();
+      const rectCalls = calls.filter((c: any) => c.type === "rectangle");
+      assert.equal(rectCalls.length, 1);
+      const call = rectCalls[0] as any;
+      assert.equal(call.layer, 0);
+      assert.equal(call.screenSpace, false);
+      disableDrawCallCapture();
+    });
+
+    it("accepts custom options", () => {
+      enableDrawCallCapture();
+      clearDrawCalls();
+      drawRectangle(0, 0, 50, 50, {
+        color: { r: 1, g: 0, b: 0, a: 1 },
+        layer: 25,
+        screenSpace: true,
+      });
+      const calls = getDrawCalls();
+      const rectCalls = calls.filter((c: any) => c.type === "rectangle");
+      assert.equal(rectCalls.length, 1);
+      const call = rectCalls[0] as any;
+      assert.equal(call.layer, 25);
+      assert.equal(call.screenSpace, true);
+      disableDrawCallCapture();
     });
   });
 

@@ -2,8 +2,15 @@ import { describe, it, assert } from "../testing/harness.ts";
 import {
   createTextInput,
   updateTextInput,
+  drawTextInput,
   type TextInputKeyEvent,
 } from "./text-input.ts";
+import {
+  enableDrawCallCapture,
+  disableDrawCallCapture,
+  getDrawCalls,
+  clearDrawCalls,
+} from "../testing/visual.ts";
 
 function key(k: string): TextInputKeyEvent {
   return { key: k, pressed: true };
@@ -255,5 +262,139 @@ describe("updateTextInput - changed flag", () => {
     ti.cursorPos = 1;
     updateTextInput(ti, 50, 20, false, [key("ArrowLeft")]);
     assert.equal(ti.changed, false);
+  });
+});
+
+describe("drawTextInput", () => {
+  it("produces border and background rects", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const ti = createTextInput(10, 20, 200);
+    drawTextInput(ti);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    assert.ok(rects.length >= 2, "expected at least 2 rects (border + bg)");
+    disableDrawCallCapture();
+  });
+
+  it("border at layer 90, background at 91", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const ti = createTextInput(10, 20, 200);
+    drawTextInput(ti);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    const layers = rects.map((c: any) => c.layer);
+    assert.ok(layers.includes(90));
+    assert.ok(layers.includes(91));
+    disableDrawCallCapture();
+  });
+
+  it("shows text content when non-empty", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const ti = createTextInput(10, 20, 200);
+    ti.text = "hello";
+    drawTextInput(ti);
+    const calls = getDrawCalls();
+    const textCalls = calls.filter((c: any) => c.type === "text");
+    assert.ok(textCalls.length >= 1, "expected text call");
+    assert.ok((textCalls[0] as any).content.includes("hello"));
+    disableDrawCallCapture();
+  });
+
+  it("shows placeholder when empty", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const ti = createTextInput(10, 20, 200, "Enter name");
+    drawTextInput(ti);
+    const calls = getDrawCalls();
+    const textCalls = calls.filter((c: any) => c.type === "text");
+    assert.ok(textCalls.length >= 1, "expected placeholder text call");
+    assert.ok((textCalls[0] as any).content.includes("Enter name"));
+    disableDrawCallCapture();
+  });
+
+  it("no text calls when empty and no placeholder", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const ti = createTextInput(10, 20, 200);
+    drawTextInput(ti);
+    const calls = getDrawCalls();
+    const textCalls = calls.filter((c: any) => c.type === "text");
+    assert.equal(textCalls.length, 0, "no text when empty and no placeholder");
+    disableDrawCallCapture();
+  });
+
+  it("cursor rect when active and blink on (time=0)", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const ti = createTextInput(10, 20, 200);
+    ti.active = true;
+    // time=0 → Math.floor(0*2)%2 === 0 → blink on
+    drawTextInput(ti, 0);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    // border + bg + cursor = 3 rects
+    assert.ok(rects.length >= 3, `expected at least 3 rects with cursor, got ${rects.length}`);
+    const cursorRects = rects.filter((c: any) => c.layer === 93);
+    assert.equal(cursorRects.length, 1, "expected cursor rect at layer 93");
+    disableDrawCallCapture();
+  });
+
+  it("no cursor rect when blink off (time=0.5)", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const ti = createTextInput(10, 20, 200);
+    ti.active = true;
+    // time=0.5 → Math.floor(0.5*2)%2 === Math.floor(1)%2 === 1 → blink off
+    drawTextInput(ti, 0.5);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    const cursorRects = rects.filter((c: any) => c.layer === 93);
+    assert.equal(cursorRects.length, 0, "no cursor when blink is off");
+    disableDrawCallCapture();
+  });
+
+  it("no cursor rect when not active", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const ti = createTextInput(10, 20, 200);
+    ti.active = false;
+    drawTextInput(ti, 0);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    const cursorRects = rects.filter((c: any) => c.layer === 93);
+    assert.equal(cursorRects.length, 0, "no cursor when not active");
+    disableDrawCallCapture();
+  });
+
+  it("all calls have screenSpace true", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const ti = createTextInput(10, 20, 200);
+    ti.text = "test";
+    drawTextInput(ti);
+    const calls = getDrawCalls();
+    for (const call of calls) {
+      assert.equal((call as any).screenSpace, true);
+    }
+    disableDrawCallCapture();
+  });
+
+  it("custom layer propagated", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const ti = createTextInput(10, 20, 200, "", { layer: 50 });
+    ti.text = "x";
+    ti.active = true;
+    drawTextInput(ti, 0);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    const layers = rects.map((c: any) => c.layer);
+    assert.ok(layers.includes(50), "border at custom layer");
+    assert.ok(layers.includes(51), "bg at custom layer + 1");
+    assert.ok(layers.includes(53), "cursor at custom layer + 3");
+    disableDrawCallCapture();
   });
 });

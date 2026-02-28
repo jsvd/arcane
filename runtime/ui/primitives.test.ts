@@ -1,6 +1,12 @@
 import { describe, it, assert } from "../../runtime/testing/harness.ts";
 import { drawRect, drawPanel, drawBar, drawLabel } from "./primitives.ts";
 import { rgb } from "./types.ts";
+import {
+  enableDrawCallCapture,
+  disableDrawCallCapture,
+  getDrawCalls,
+  clearDrawCalls,
+} from "../testing/visual.ts";
 
 describe("rgb helper", () => {
   it("should normalize 0-255 values to 0.0-1.0 range", () => {
@@ -101,5 +107,164 @@ describe("ui primitives", () => {
       borderWidth: 2,
       padding: 6,
     });
+  });
+});
+
+describe("drawRect visual capture", () => {
+  it("logs rect with correct fields", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawRect(10, 20, 100, 50);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    assert.equal(rects.length, 1);
+    const call = rects[0] as any;
+    assert.equal(call.x, 10);
+    assert.equal(call.y, 20);
+    assert.equal(call.w, 100);
+    assert.equal(call.h, 50);
+    disableDrawCallCapture();
+  });
+
+  it("default layer 90 and screenSpace false", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawRect(0, 0, 50, 50);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    assert.equal(rects.length, 1);
+    const call = rects[0] as any;
+    assert.equal(call.layer, 90);
+    assert.equal(call.screenSpace, false);
+    disableDrawCallCapture();
+  });
+
+  it("custom layer and screenSpace", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawRect(0, 0, 50, 50, { layer: 42, screenSpace: true });
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    const call = rects[0] as any;
+    assert.equal(call.layer, 42);
+    assert.equal(call.screenSpace, true);
+    disableDrawCallCapture();
+  });
+});
+
+describe("drawPanel visual capture", () => {
+  it("logs panel with correct fields", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawPanel(10, 20, 200, 100);
+    const calls = getDrawCalls();
+    const panels = calls.filter((c: any) => c.type === "panel");
+    assert.equal(panels.length, 1);
+    const call = panels[0] as any;
+    assert.equal(call.x, 10);
+    assert.equal(call.y, 20);
+    assert.equal(call.w, 200);
+    assert.equal(call.h, 100);
+    assert.equal(call.borderWidth, 2);
+    disableDrawCallCapture();
+  });
+
+  it("custom borderWidth", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawPanel(0, 0, 100, 50, { borderWidth: 5 });
+    const calls = getDrawCalls();
+    const panels = calls.filter((c: any) => c.type === "panel");
+    assert.equal((panels[0] as any).borderWidth, 5);
+    disableDrawCallCapture();
+  });
+
+  it("default layer 90", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawPanel(0, 0, 100, 50);
+    const calls = getDrawCalls();
+    const panels = calls.filter((c: any) => c.type === "panel");
+    assert.equal((panels[0] as any).layer, 90);
+    disableDrawCallCapture();
+  });
+});
+
+describe("drawBar visual capture", () => {
+  it("logs bar with correct fields", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawBar(10, 20, 100, 16, 0.75);
+    const calls = getDrawCalls();
+    const bars = calls.filter((c: any) => c.type === "bar");
+    assert.equal(bars.length, 1);
+    const call = bars[0] as any;
+    assert.equal(call.x, 10);
+    assert.equal(call.y, 20);
+    assert.equal(call.w, 100);
+    assert.equal(call.h, 16);
+    assert.equal(call.fillRatio, 0.75);
+    disableDrawCallCapture();
+  });
+
+  it("fillRatio clamped to 0-1 in log", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawBar(0, 0, 100, 10, 2.0);
+    const calls = getDrawCalls();
+    const bars = calls.filter((c: any) => c.type === "bar");
+    assert.equal((bars[0] as any).fillRatio, 1.0, "fillRatio clamped to 1");
+    clearDrawCalls();
+    drawBar(0, 0, 100, 10, -0.5);
+    const calls2 = getDrawCalls();
+    const bars2 = calls2.filter((c: any) => c.type === "bar");
+    assert.equal((bars2[0] as any).fillRatio, 0, "fillRatio clamped to 0");
+    disableDrawCallCapture();
+  });
+
+  it("default layer 90 and screenSpace false", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawBar(0, 0, 100, 10, 0.5);
+    const calls = getDrawCalls();
+    const bars = calls.filter((c: any) => c.type === "bar");
+    assert.equal((bars[0] as any).layer, 90);
+    assert.equal((bars[0] as any).screenSpace, false);
+    disableDrawCallCapture();
+  });
+});
+
+describe("drawLabel visual capture", () => {
+  it("logs label with correct content", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawLabel("Score: 42", 10, 20);
+    const calls = getDrawCalls();
+    const labels = calls.filter((c: any) => c.type === "label");
+    assert.equal(labels.length, 1);
+    assert.equal((labels[0] as any).content, "Score: 42");
+    disableDrawCallCapture();
+  });
+
+  it("default scale 1, layer 90, screenSpace false", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawLabel("test", 0, 0);
+    const calls = getDrawCalls();
+    const labels = calls.filter((c: any) => c.type === "label");
+    assert.equal((labels[0] as any).scale, 1);
+    assert.equal((labels[0] as any).layer, 90);
+    assert.equal((labels[0] as any).screenSpace, false);
+    disableDrawCallCapture();
+  });
+
+  it("custom scale propagated", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    drawLabel("big", 0, 0, { scale: 3 });
+    const calls = getDrawCalls();
+    const labels = calls.filter((c: any) => c.type === "label");
+    assert.equal((labels[0] as any).scale, 3);
+    disableDrawCallCapture();
   });
 });

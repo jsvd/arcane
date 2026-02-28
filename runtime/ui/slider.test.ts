@@ -3,7 +3,14 @@ import {
   createSlider,
   updateSlider,
   getSliderHeight,
+  drawSlider,
 } from "./slider.ts";
+import {
+  enableDrawCallCapture,
+  disableDrawCallCapture,
+  getDrawCalls,
+  clearDrawCalls,
+} from "../testing/visual.ts";
 
 describe("createSlider", () => {
   it("creates slider with correct position and range", () => {
@@ -170,5 +177,116 @@ describe("updateSlider", () => {
     updateSlider(sl, 110, 15, true);
     assert.ok(sl.value > 0);
     assert.equal(sl.dragging, true);
+  });
+});
+
+describe("drawSlider", () => {
+  it("produces track border and background rects", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const sl = createSlider(10, 20, 200, 0, 100, 50);
+    drawSlider(sl);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    // track border + track bg + track fill + handle = 4 rects
+    assert.ok(rects.length >= 4, `expected at least 4 rects, got ${rects.length}`);
+    disableDrawCallCapture();
+  });
+
+  it("produces fill rect proportional to value", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const sl = createSlider(10, 20, 200, 0, 100, 50);
+    drawSlider(sl);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    // With value=50, fill should be present (layer 92)
+    const fillRects = rects.filter((c: any) => c.layer === 92);
+    assert.equal(fillRects.length, 1, "expected fill rect at layer 92");
+    disableDrawCallCapture();
+  });
+
+  it("no fill rect when value is at minimum", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const sl = createSlider(10, 20, 200, 0, 100, 0);
+    drawSlider(sl);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    const fillRects = rects.filter((c: any) => c.layer === 92);
+    assert.equal(fillRects.length, 0, "no fill rect when value is 0");
+    disableDrawCallCapture();
+  });
+
+  it("handle rect at layer 93", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const sl = createSlider(10, 20, 200, 0, 100, 50);
+    drawSlider(sl);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    const handleRects = rects.filter((c: any) => c.layer === 93);
+    assert.equal(handleRects.length, 1, "expected handle rect at layer 93");
+    disableDrawCallCapture();
+  });
+
+  it("all calls have screenSpace true", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const sl = createSlider(10, 20, 200, 0, 100, 50);
+    drawSlider(sl);
+    const calls = getDrawCalls();
+    for (const call of calls) {
+      assert.equal((call as any).screenSpace, true);
+    }
+    disableDrawCallCapture();
+  });
+
+  it("label text when label present", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const sl = createSlider(10, 20, 200, 0, 100, 50, "Volume");
+    drawSlider(sl);
+    const calls = getDrawCalls();
+    const textCalls = calls.filter((c: any) => c.type === "text");
+    assert.ok(textCalls.length >= 1, "expected label text call");
+    assert.ok((textCalls[0] as any).content.includes("Volume"));
+    disableDrawCallCapture();
+  });
+
+  it("no text calls when no label and showValue false", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const sl = createSlider(10, 20, 200, 0, 100, 50);
+    drawSlider(sl);
+    const calls = getDrawCalls();
+    const textCalls = calls.filter((c: any) => c.type === "text");
+    assert.equal(textCalls.length, 0, "no text calls without label or showValue");
+    disableDrawCallCapture();
+  });
+
+  it("value text when showValue is true", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const sl = createSlider(10, 20, 200, 0, 100, 42, "", { showValue: true });
+    drawSlider(sl);
+    const calls = getDrawCalls();
+    const textCalls = calls.filter((c: any) => c.type === "text");
+    assert.ok(textCalls.length >= 1, "expected value text call");
+    assert.ok((textCalls[0] as any).content.includes("42"));
+    disableDrawCallCapture();
+  });
+
+  it("focus indicator at layer 89 when focused", () => {
+    enableDrawCallCapture();
+    clearDrawCalls();
+    const sl = createSlider(10, 20, 200, 0, 100, 50);
+    sl.focused = true;
+    drawSlider(sl);
+    const calls = getDrawCalls();
+    const rects = calls.filter((c: any) => c.type === "rect");
+    const layers = rects.map((c: any) => c.layer);
+    assert.ok(layers.includes(89));
+    disableDrawCallCapture();
   });
 });
