@@ -176,56 +176,28 @@ onFrame(() => {
   // --- HUD ---
 
   // Effect name
-  drawText({
-    text: `Effect: ${current.name}`,
-    x: 20,
-    y: 20,
-    font,
-    scale: 2,
-    color: [1, 1, 1, 1],
-    screenSpace: true,
-    layer: 100,
+  drawText(`Effect: ${current.name}`, 20, 20, {
+    font, scale: 2, tint: { r: 1, g: 1, b: 1, a: 1 }, screenSpace: true, layer: 100,
   });
 
   // Description
-  drawText({
-    text: current.description,
-    x: 20,
-    y: 46,
-    font,
-    scale: 1,
-    color: [0.7, 0.7, 0.7, 1],
-    screenSpace: true,
-    layer: 100,
+  drawText(current.description, 20, 46, {
+    font, scale: 1, tint: { r: 0.7, g: 0.7, b: 0.7, a: 1 }, screenSpace: true, layer: 100,
   });
 
   // Controls
-  drawText({
-    text: "Keys 1-8: Select effect | Space: Reset",
-    x: 20,
-    y: vp.height - 30,
-    font,
-    scale: 1,
-    color: [0.5, 0.5, 0.5, 1],
-    screenSpace: true,
-    layer: 100,
+  drawText("Keys 1-8: Select effect | Space: Reset", 20, vp.height - 30, {
+    font, scale: 1, tint: { r: 0.5, g: 0.5, b: 0.5, a: 1 }, screenSpace: true, layer: 100,
   });
 
   // Effect list
   for (let i = 0; i < effects.length; i++) {
     const isActive = i === currentIndex;
-    const color: [number, number, number, number] = isActive
-      ? [1, 0.8, 0.2, 1]
-      : [0.4, 0.4, 0.4, 1];
-    drawText({
-      text: `${i + 1}. ${effects[i].name}`,
-      x: vp.width - 150,
-      y: 20 + i * 18,
-      font,
-      scale: 1,
-      color,
-      screenSpace: true,
-      layer: 100,
+    const tint = isActive
+      ? { r: 1, g: 0.8, b: 0.2, a: 1 }
+      : { r: 0.4, g: 0.4, b: 0.4, a: 1 };
+    drawText(`${i + 1}. ${effects[i].name}`, vp.width - 150, 20 + i * 18, {
+      font, scale: 1, tint, screenSpace: true, layer: 100,
     });
   }
 });
