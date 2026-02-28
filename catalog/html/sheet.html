@@ -339,6 +339,67 @@
     opacity: 1;
   }
 
+  /* Gallery view */
+  .gallery-grid {
+    display: none;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+    padding: 16px;
+    overflow-y: auto;
+    height: 100%;
+  }
+
+  .gallery-grid.active {
+    display: grid;
+  }
+
+  .sprite-card {
+    background: #16213e;
+    border: 2px solid #0f3460;
+    border-radius: 6px;
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .sprite-card:hover {
+    border-color: #e94560;
+    transform: translateY(-2px);
+  }
+
+  .sprite-card.selected {
+    border-color: #4ade80;
+    background: rgba(74, 222, 128, 0.1);
+  }
+
+  .sprite-card img {
+    max-width: 100%;
+    max-height: 70px;
+    image-rendering: pixelated;
+    object-fit: contain;
+  }
+
+  .sprite-card .name {
+    font-size: 10px;
+    color: #aaa;
+    text-align: center;
+    word-break: break-all;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .canvas-wrap.hidden {
+    display: none;
+  }
+
   /* Scrollbar styling */
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: #1a1a2e; }
@@ -351,7 +412,11 @@
 <header>
   <a href="/" class="back">&larr;</a>
   <h1 id="packTitle"></h1>
-  <div class="controls">
+  <div class="view-tabs" style="display: flex; gap: 4px; margin-right: 12px;">
+    <button class="view-tab active" data-view="sheet" style="padding: 4px 12px; background: #e94560; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit;">Sheet Grid</button>
+    <button class="view-tab" data-view="gallery" style="padding: 4px 12px; background: #0f3460; color: #8899aa; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit;">Individual (<span id="individualCount">0</span>)</button>
+  </div>
+  <div class="controls" id="sheetControls">
     <div class="control-group">
       <label for="sheetFile">File</label>
       <select id="sheetFile"><option value="">Loading...</option></select>
@@ -382,9 +447,10 @@
 
 <div class="main">
   <div class="canvas-area" id="canvasArea">
-    <div class="canvas-wrap">
+    <div class="canvas-wrap" id="canvasWrap">
       <canvas id="sheet"></canvas>
     </div>
+    <div class="gallery-grid" id="galleryGrid"></div>
   </div>
 
   <div class="sidebar">
@@ -416,6 +482,121 @@
 // ── Data from server ──
 const packMeta = {{PACK_META_JSON}};
 const initialImageData = '{{IMAGE_DATA}}';
+const individualSprites = {{SPRITES_JSON}} || [];
+
+// ── View Management ──
+let currentView = 'sheet';
+const canvasWrap = document.getElementById('canvasWrap');
+const galleryGrid = document.getElementById('galleryGrid');
+const sheetControls = document.getElementById('sheetControls');
+const individualCount = document.getElementById('individualCount');
+
+// Update individual sprite count
+if (individualCount) {
+  individualCount.textContent = individualSprites.length;
+}
+
+// View toggle tabs
+document.querySelectorAll('.view-tab').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var view = this.dataset.view;
+    document.querySelectorAll('.view-tab').forEach(function(b) {
+      b.style.background = '#0f3460';
+      b.style.color = '#8899aa';
+    });
+    this.style.background = '#e94560';
+    this.style.color = 'white';
+
+    if (view === 'sheet') {
+      currentView = 'sheet';
+      if (canvasWrap) canvasWrap.style.display = '';
+      if (galleryGrid) galleryGrid.classList.remove('active');
+      if (sheetControls) sheetControls.style.display = 'flex';
+    } else {
+      currentView = 'gallery';
+      if (canvasWrap) canvasWrap.style.display = 'none';
+      if (galleryGrid) galleryGrid.classList.add('active');
+      if (sheetControls) sheetControls.style.display = 'none';
+      renderGallery();
+    }
+  });
+});
+
+// Gallery rendering
+let selectedIndividualSprites = new Set();
+
+function renderGallery() {
+  galleryGrid.innerHTML = '';
+  if (individualSprites.length === 0) {
+    galleryGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #556677;">No individual sprites in this pack</div>';
+    return;
+  }
+
+  individualSprites.forEach(function(sprite) {
+    var card = document.createElement('div');
+    card.className = 'sprite-card';
+    if (selectedIndividualSprites.has(sprite.name)) card.classList.add('selected');
+
+    var img = document.createElement('img');
+    img.src = '/sprite/' + encodeURIComponent(packMeta.id) + '/' + encodeURIComponent(sprite.relativePath);
+    img.alt = sprite.name;
+    img.loading = 'lazy';
+
+    var nameEl = document.createElement('div');
+    nameEl.className = 'name';
+    nameEl.textContent = sprite.name;
+
+    card.appendChild(img);
+    card.appendChild(nameEl);
+
+    card.addEventListener('click', function() {
+      var spriteName = sprite.name;
+      if (selectedIndividualSprites.has(spriteName)) {
+        selectedIndividualSprites.delete(spriteName);
+        card.classList.remove('selected');
+        ArcaneCart.removeSprite(packMeta.id, spriteName);
+      } else {
+        selectedIndividualSprites.add(spriteName);
+        card.classList.add('selected');
+        ArcaneCart.addSprite(packMeta.id, packMeta.name, packMeta.source, 'individual', spriteName, {
+          type: 'individual',
+          path: sprite.relativePath,
+          cachePath: packMeta.cachePath
+        });
+      }
+      renderCart();
+    });
+
+    // Hover preview for individual sprites
+    card.addEventListener('mouseenter', function() {
+      if (img.complete && img.naturalWidth > 0) {
+        var w = img.naturalWidth;
+        var h = img.naturalHeight;
+        var scale = Math.min(96 / w, 96 / h);
+        var drawW = w * scale;
+        var drawH = h * scale;
+        var offsetX = (96 - drawW) / 2;
+        var offsetY = (96 - drawH) / 2;
+
+        previewCanvas.width = 96;
+        previewCanvas.height = 96;
+        previewCtx.imageSmoothingEnabled = false;
+        previewCtx.clearRect(0, 0, 96, 96);
+        previewCtx.drawImage(img, 0, 0, w, h, offsetX, offsetY, drawW, drawH);
+        previewInfo.textContent = sprite.name + ' (' + w + 'x' + h + ')';
+      }
+    });
+
+    card.addEventListener('mouseleave', function() {
+      previewCanvas.width = 96;
+      previewCanvas.height = 96;
+      previewCtx.clearRect(0, 0, 96, 96);
+      previewInfo.textContent = 'Hover a tile or sprite';
+    });
+
+    galleryGrid.appendChild(card);
+  });
+}
 
 // ══════════════════════════════════════════════════════════════════
 // ArcaneCart — persistent cart in localStorage
@@ -454,6 +635,29 @@ const ArcaneCart = (function() {
       save(cart);
     },
 
+    addSprite: function(packId, packName, source, type, spriteName, spriteData) {
+      var cart = load();
+      var entry = findPack(cart, packId);
+      if (!entry) {
+        entry = { packId: packId, packName: packName, source: source, type: type, sprites: {}, cachePath: spriteData.cachePath || '' };
+        cart.push(entry);
+      }
+      if (!entry.sprites) entry.sprites = {};
+      entry.sprites[spriteName] = spriteData;
+      save(cart);
+    },
+
+    removeSprite: function(packId, spriteName) {
+      var cart = load();
+      var entry = findPack(cart, packId);
+      if (!entry || !entry.sprites) return;
+      delete entry.sprites[spriteName];
+      if (Object.keys(entry.sprites).length === 0) {
+        cart = cart.filter(function(p) { return p.packId !== packId; });
+      }
+      save(cart);
+    },
+
     setPackSounds: function(packId, packName, source, soundData) {
       var cart = load();
       var entry = findPack(cart, packId);
@@ -465,6 +669,16 @@ const ArcaneCart = (function() {
       if (Object.keys(entry.sounds).length === 0) {
         cart = cart.filter(function(p) { return p.packId !== packId; });
       }
+      save(cart);
+    },
+
+    renameSprite: function(packId, oldName, newName) {
+      var cart = load();
+      var entry = findPack(cart, packId);
+      if (!entry || !entry.sprites || !entry.sprites[oldName]) return;
+      // Copy sprite data with new name
+      entry.sprites[newName] = entry.sprites[oldName];
+      delete entry.sprites[oldName];
       save(cart);
     },
 
@@ -617,6 +831,7 @@ function loadSheetImage(filePath) {
   imgLoaded = false;
   img.onload = function() {
     imgLoaded = true;
+    restoreFromCart();
     render();
   };
   img.onerror = function() {
@@ -649,8 +864,9 @@ fetch('/pack-files/' + encodeURIComponent(packMeta.id))
   });
 
 sheetFileSelect.addEventListener('change', function() {
-  selected.clear();
+  // Save current sheet's selections to cart BEFORE clearing
   syncCartFromLocal();
+  selected.clear();
   loadSheetImage(this.value);
 });
 
@@ -666,6 +882,9 @@ function restoreFromCart() {
   var cartSprites = ArcaneCart.getPackSprites(packMeta.id);
   for (var name in cartSprites) {
     var s = cartSprites[name];
+    // Only restore sprites from the current sheet (or legacy sprites without sheetPath)
+    if (s.sheetPath && s.sheetPath !== currentSheetPath) continue;
+
     if (s.x !== undefined && s.y !== undefined) {
       // Reverse cellToPixel to get col,row
       var cell = tileSize + spacingVal;
@@ -827,13 +1046,33 @@ function clearPreview() {
 // Cart UI
 // ══════════════════════════════════════════════════════════════════
 function syncCartFromLocal() {
-  // Push current local selected state to cart
-  var sprites = {};
+  // Push current local selected state to cart, preserving sprites from other sheets
+  var existingSprites = ArcaneCart.getPackSprites(packMeta.id) || {};
+
+  // Remove sprites that belong to the current sheet, but keep individual sprites and other sheets
+  var updatedSprites = {};
+  for (var name in existingSprites) {
+    var sprite = existingSprites[name];
+    // Keep individual sprites (no sheetPath) and sprites from other sheets
+    if (sprite.type === 'individual' || (sprite.sheetPath && sprite.sheetPath !== currentSheetPath)) {
+      updatedSprites[name] = sprite;
+    }
+  }
+
+  // Add current selections for this sheet
   for (const [, sel] of selected) {
     var p = cellToPixel(sel.col, sel.row);
-    sprites[sel.name] = { x: p.x, y: p.y, w: tileSize, h: tileSize };
+    updatedSprites[sel.name] = {
+      type: 'sheet',
+      sheetPath: currentSheetPath,
+      x: p.x,
+      y: p.y,
+      w: tileSize,
+      h: tileSize
+    };
   }
-  ArcaneCart.setPackSprites(packMeta.id, packMeta.name, packMeta.source, 'sheet', sprites, {
+
+  ArcaneCart.setPackSprites(packMeta.id, packMeta.name, packMeta.source, 'sheet', updatedSprites, {
     sheetPath: currentSheetPath,
     sheetWidth: imgLoaded ? img.naturalWidth : 0,
     sheetHeight: imgLoaded ? img.naturalHeight : 0,
@@ -875,47 +1114,68 @@ function renderCart() {
     names.forEach(function(name) {
       var row = document.createElement('div');
       row.className = 'cart-item';
+      var sp = items[name];
 
-      // For sheet sprites from current pack, show mini canvas
-      if (pack.type === 'sheet' && pack.packId === packMeta.id && imgLoaded) {
-        var sp = items[name];
-        if (sp && sp.x !== undefined) {
-          var mc = document.createElement('canvas');
-          mc.width = 24; mc.height = 24;
-          var mctx = mc.getContext('2d');
-          mctx.imageSmoothingEnabled = false;
+      // Check sprite type (not pack type) to support mixed sprite types in one pack
+      if (sp && sp.type === 'sheet' && sp.x !== undefined) {
+        var mc = document.createElement('canvas');
+        mc.width = 24; mc.height = 24;
+        var mctx = mc.getContext('2d');
+        mctx.imageSmoothingEnabled = false;
+
+        // If from current pack and current sheet, use the loaded image
+        if (pack.packId === packMeta.id && sp.sheetPath === currentSheetPath && imgLoaded) {
           mctx.drawImage(img, sp.x, sp.y, sp.w || tileSize, sp.h || tileSize, 0, 0, 24, 24);
           row.appendChild(mc);
         }
+        // Otherwise, load the sheet image dynamically
+        else if (sp.sheetPath) {
+          var sheetImg = new Image();
+          sheetImg.onload = function() {
+            mctx.drawImage(sheetImg, sp.x, sp.y, sp.w || 16, sp.h || 16, 0, 0, 24, 24);
+          };
+          sheetImg.src = '/sprite/' + encodeURIComponent(pack.packId) + '/' + encodeURIComponent(sp.sheetPath);
+          row.appendChild(mc);
+        }
+      }
+      // For individual sprites, show thumbnail image
+      else if (sp && sp.type === 'individual' && sp.path) {
+        var thumb = document.createElement('img');
+        thumb.src = '/sprite/' + encodeURIComponent(pack.packId) + '/' + encodeURIComponent(sp.path);
+        thumb.style.width = '24px';
+        thumb.style.height = '24px';
+        thumb.style.objectFit = 'contain';
+        thumb.style.imageRendering = 'pixelated';
+        row.appendChild(thumb);
       }
 
-      // Name — editable only for current sheet pack
-      if (pack.type === 'sheet' && pack.packId === packMeta.id) {
-        var inp = document.createElement('input');
-        inp.type = 'text';
-        inp.value = name;
-        inp.dataset.packId = pack.packId;
-        inp.dataset.oldName = name;
-        inp.addEventListener('change', function() {
-          var newName = this.value.trim();
-          if (!newName || newName === this.dataset.oldName) return;
-          // Rename in local selected
+      // Name — editable for all sprites
+      var inp = document.createElement('input');
+      inp.type = 'text';
+      inp.value = name;
+      inp.dataset.packId = pack.packId;
+      inp.dataset.oldName = name;
+      inp.addEventListener('change', function() {
+        var newName = this.value.trim();
+        if (!newName || newName === this.dataset.oldName) return;
+
+        // Rename in cart
+        ArcaneCart.renameSprite(this.dataset.packId, this.dataset.oldName, newName);
+
+        // If this is from the current pack, also update local selection
+        if (pack.packId === packMeta.id) {
           for (const [key, sel] of selected) {
             if (sel.name === this.dataset.oldName) {
               sel.name = newName;
               break;
             }
           }
-          syncCartFromLocal();
-          this.dataset.oldName = newName;
-        });
-        row.appendChild(inp);
-      } else {
-        var nameSpan = document.createElement('span');
-        nameSpan.className = 'item-name';
-        nameSpan.textContent = name;
-        row.appendChild(nameSpan);
-      }
+        }
+
+        this.dataset.oldName = newName;
+        renderCart();
+      });
+      row.appendChild(inp);
 
       var rmBtn = document.createElement('button');
       rmBtn.className = 'remove-btn';
@@ -1081,12 +1341,21 @@ function setZoom(newZoom) {
 document.getElementById('zoomIn').addEventListener('click', function() { setZoom(zoom + 1); });
 document.getElementById('zoomOut').addEventListener('click', function() { setZoom(zoom - 1); });
 
+// Smooth scroll zoom with threshold
+let scrollAccumulator = 0;
+const scrollThreshold = 100; // Require more scroll movement to zoom
+
 canvasArea.addEventListener('wheel', function(e) {
   e.preventDefault();
-  if (e.deltaY < 0) {
-    setZoom(zoom + 1);
-  } else {
-    setZoom(zoom - 1);
+  scrollAccumulator += e.deltaY;
+
+  if (Math.abs(scrollAccumulator) >= scrollThreshold) {
+    if (scrollAccumulator < 0) {
+      setZoom(zoom + 1);
+    } else {
+      setZoom(zoom - 1);
+    }
+    scrollAccumulator = 0;
   }
 }, { passive: false });
 

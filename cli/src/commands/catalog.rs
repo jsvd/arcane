@@ -251,65 +251,6 @@ fn image_to_base64(path: &Path) -> String {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Pack type detection
-// ---------------------------------------------------------------------------
-
-fn is_gallery_pack(pack_id: &str) -> bool {
-    let pack_dir = cache_dir().join(pack_id);
-    if !pack_dir.exists() {
-        return false;
-    }
-
-    // Check for known sheet paths
-    let sheet_paths = [
-        "Tilemap/tilemap_packed.png",
-        "Tilemap/tilemap.png",
-        "Spritesheet/sheet.png",
-        "Tilesheet/tilesheet.png",
-        "Tilesheet/monochrome_packed.png",
-    ];
-
-    for p in &sheet_paths {
-        if pack_dir.join(p).exists() {
-            return false; // Found a sheet, use sheet view
-        }
-    }
-
-    // Check for directories that typically contain sprite sheets
-    let sheet_dirs = ["Spritesheet", "Spritesheets", "Tilesheet", "Tilemap", "Tilesheets", "Tilemaps"];
-    for dir_name in &sheet_dirs {
-        let dir_path = pack_dir.join(dir_name);
-        if dir_path.exists() && dir_path.is_dir() {
-            // Check if this directory has any PNG files
-            if let Ok(entries) = fs::read_dir(&dir_path) {
-                for entry in entries.flatten() {
-                    if let Some(name) = entry.file_name().to_str() {
-                        if name.ends_with(".png") {
-                            return false; // Found sheets directory with PNGs, use sheet view
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Check for PNG files with "sheet" in the name
-    if let Ok(entries) = fs::read_dir(&pack_dir) {
-        for entry in entries.flatten() {
-            if let Some(name) = entry.file_name().to_str() {
-                let lower = name.to_lowercase();
-                if lower.contains("sheet") && lower.ends_with(".png") {
-                    return false; // Found a sheet file, use sheet view
-                }
-            }
-        }
-    }
-
-    // No sheets found - use gallery view only if there are many individual sprites
-    let sprites = scan_individual_sprites(pack_id);
-    sprites.len() > 20
-}
 
 fn get_sheet_path(pack_id: &str) -> String {
     let pack_dir = cache_dir().join(pack_id);
@@ -713,13 +654,9 @@ pub fn run(pack_id: Option<String>, sounds: bool, browser: Option<String>) -> Re
             ("GET", p) if p.starts_with("/pack/") => {
                 let id = p.strip_prefix("/pack/").unwrap_or("");
                 if is_pack_downloaded(id) {
-                    if is_gallery_pack(id) {
-                        let html = render_gallery(id, &catalog.packs);
-                        respond_html(&html)
-                    } else {
-                        let html = render_sheet(id, &catalog.packs);
-                        respond_html(&html)
-                    }
+                    // Always use unified view - supports both sheets and individual sprites
+                    let html = render_unified(id, &catalog.packs);
+                    respond_html(&html)
                 } else {
                     respond_404("Pack not found or not downloaded")
                 }
@@ -810,7 +747,7 @@ fn render_browse(packs: &[CatalogPack]) -> String {
     template.replace("{{PACKS_JSON}}", &packs_json)
 }
 
-fn render_sheet(pack_id: &str, packs: &[CatalogPack]) -> String {
+fn render_unified(pack_id: &str, packs: &[CatalogPack]) -> String {
     let pack = match packs.iter().find(|p| p.id == pack_id) {
         Some(p) => p,
         None => return "Pack not found".to_string(),
@@ -825,6 +762,11 @@ fn render_sheet(pack_id: &str, packs: &[CatalogPack]) -> String {
         String::new()
     };
 
+    // Get individual sprites
+    let sprites = scan_individual_sprites(pack_id);
+    let sprites_json = serde_json::to_string(&sprites).unwrap_or_else(|_| "[]".to_string());
+
+    // Pack metadata
     let meta = PackMeta {
         id: pack.id.clone(),
         name: pack.name.clone(),
@@ -838,36 +780,15 @@ fn render_sheet(pack_id: &str, packs: &[CatalogPack]) -> String {
 
     let meta_json = serde_json::to_string(&meta).unwrap_or_else(|_| "{}".to_string());
 
+    // Use sheet.html template with sprites data injected
     let template = load_html_template("sheet.html");
     template
         .replace("{{PACK_META_JSON}}", &meta_json)
         .replace("{{IMAGE_DATA}}", &image_data)
-}
-
-fn render_gallery(pack_id: &str, packs: &[CatalogPack]) -> String {
-    let pack = match packs.iter().find(|p| p.id == pack_id) {
-        Some(p) => p,
-        None => return "Pack not found".to_string(),
-    };
-
-    let sprites = scan_individual_sprites(pack_id);
-    let cache_path = cache_dir().join(pack_id);
-
-    let meta = serde_json::json!({
-        "id": pack.id,
-        "name": pack.name,
-        "source": pack.source,
-        "cachePath": cache_path.to_string_lossy(),
-    });
-
-    let sprites_json = serde_json::to_string(&sprites).unwrap_or_else(|_| "[]".to_string());
-    let meta_json = meta.to_string();
-
-    let template = load_html_template("gallery.html");
-    template
-        .replace("{{PACK_META_JSON}}", &meta_json)
         .replace("{{SPRITES_JSON}}", &sprites_json)
 }
+
+
 
 fn render_sounds(packs: &[CatalogPack]) -> String {
     let sound_packs_json = load_sound_packs(packs);
