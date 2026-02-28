@@ -21,7 +21,6 @@ import {
   isKeyDown,
   isKeyPressed,
   createSolidTexture,
-  getViewportSize,
 } from "../../runtime/rendering/index.ts";
 import {
   generate,
@@ -255,6 +254,7 @@ game.onFrame((ctx) => {
   }
 
   const dt = ctx.dt;
+  const { vpW, vpH } = ctx;
 
   // Input: regenerate
   if (isKeyPressed("r")) {
@@ -281,9 +281,8 @@ game.onFrame((ctx) => {
   // Draw dungeon grid
   if (currentResult?.grid) {
     const grid = currentResult.grid;
-    const vp = getViewportSize();
-    const offsetX = (vp.width - GRID_W * TILE_SIZE) / 2;
-    const offsetY = (vp.height - GRID_H * TILE_SIZE) / 2 + 20;
+    const offsetX = (vpW - GRID_W * TILE_SIZE) / 2;
+    const offsetY = (vpH - GRID_H * TILE_SIZE) / 2 + 20;
 
     for (let gy = 0; gy < grid.height; gy++) {
       for (let gx = 0; gx < grid.width; gx++) {
@@ -305,8 +304,7 @@ game.onFrame((ctx) => {
   hud.text("R: Regenerate | Arrows: Pan | Z/X: Zoom", 10, 26);
 
   // Draw legend
-  const vp2 = getViewportSize();
-  const legendX = vp2.width - 160;
+  const legendX = vpW - 160;
   hud.text("Legend:", legendX, 10);
   drawSprite({ textureId: texWall, x: legendX, y: 26, w: 12, h: 12, layer: 100 });
   hud.text("Wall", legendX + 16, 26);

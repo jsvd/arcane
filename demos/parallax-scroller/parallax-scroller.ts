@@ -25,7 +25,6 @@ import {
   isKeyDown,
   isKeyPressed,
   createSolidTexture,
-  getViewportSize,
   drawText,
   setCameraBounds,
   getCameraBounds,
@@ -230,8 +229,7 @@ function updateCamera(): void {
 }
 
 // --- Rendering ---
-function render(): void {
-  const vp = getViewportSize();
+function render(vpW: number, vpH: number): void {
   const cam = getCamera();
 
   // Layer 0: Far sky (fixed)
@@ -376,8 +374,8 @@ function render(): void {
     const dz = getCameraDeadzone();
     if (dz) {
       // Viewport center in world space = cam.x + vpW/(2*zoom)
-      const centerX = cam.x + (vp.width / 2) / cam.zoom;
-      const centerY = cam.y + (vp.height / 2) / cam.zoom;
+      const centerX = cam.x + (vpW / 2) / cam.zoom;
+      const centerY = cam.y + (vpH / 2) / cam.zoom;
       const dzX = centerX - dz.width / 2;
       const dzY = centerY - dz.height / 2;
       drawSprite({
@@ -398,11 +396,12 @@ const app = createGame({ name: "parallax-scroller" });
 
 // --- Frame loop ---
 app.onFrame((ctx) => {
+  const { vpW, vpH } = ctx;
   updateTweens(ctx.dt);
   handleInput();
   updatePlayer(ctx.dt);
   updateCamera();
-  render();
+  render(vpW, vpH);
 });
 
 // --- Agent state ---

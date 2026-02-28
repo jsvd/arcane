@@ -2,7 +2,7 @@ import { createRoguelikeGame, movePlayer } from "./roguelike.ts";
 import type { Direction, RoguelikeState } from "./roguelike.ts";
 import { WALL, FLOOR, CORRIDOR, STAIRS_DOWN } from "./dungeon.ts";
 import {
-  setCamera, isKeyPressed, getViewportSize,
+  setCamera, isKeyPressed,
   setAmbientLight, addPointLight, clearLights,
   drawSprite,
 } from "../../runtime/rendering/index.ts";
@@ -63,7 +63,9 @@ const KEY_MAP: Record<string, Direction> = {
   Space: "wait",
 };
 
-game.onFrame(() => {
+game.onFrame((ctx) => {
+  const { vpW, vpH } = ctx;
+
   // Handle input
   for (const [key, dir] of Object.entries(KEY_MAP)) {
     if (isKeyPressed(key)) {
@@ -73,13 +75,12 @@ game.onFrame(() => {
   }
 
   // Camera follows player (center player in viewport)
-  const rlVp = getViewportSize();
   const zoom = 2;
   const playerWorldX = state.player.pos.x * TILE_SIZE + TILE_SIZE / 2;
   const playerWorldY = state.player.pos.y * TILE_SIZE + TILE_SIZE / 2;
   setCamera(
-    playerWorldX - rlVp.width / (2 * zoom),
-    playerWorldY - rlVp.height / (2 * zoom),
+    playerWorldX - vpW / (2 * zoom),
+    playerWorldY - vpH / (2 * zoom),
     zoom,
   );
 

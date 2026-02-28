@@ -16,7 +16,6 @@ import {
   getCamera,
   isKeyPressed,
   createSolidTexture,
-  getViewportSize,
   drawText,
   followTargetSmooth,
   getMouseWorldPosition,
@@ -405,7 +404,6 @@ function drawHoverHighlight(): void {
 
 function drawHUD(): void {
   const cam = getCamera();
-  const vp = getViewportSize();
   const scale = 1 / cam.zoom;
   const hudX = cam.x;
   const hudY = cam.y;
