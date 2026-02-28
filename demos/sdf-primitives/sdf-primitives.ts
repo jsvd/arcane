@@ -52,8 +52,8 @@ const primitives: Array<{ label: string; shape: ReturnType<typeof sdfCircle> }> 
   { label: "box", shape: sdfBox(30, 20) },
   { label: "rounded_box", shape: sdfRoundedBox(30, 20, 5) },
   { label: "ellipse", shape: sdfEllipse(28, 14) },
-  { label: "segment", shape: sdfSegment([-15, -10], [15, 10]) },
-  { label: "triangle", shape: sdfTriangle([0, 18], [-16, -10], [16, -10]) },
+  { label: "segment", shape: sdfSegment({x: -15, y: -10}, {x: 15, y: 10}) },
+  { label: "triangle", shape: sdfTriangle({x: 0, y: 18}, {x: -16, y: -10}, {x: 16, y: -10}) },
   { label: "egg", shape: sdfEgg(16, 8) },
   { label: "heart", shape: sdfHeart(16) },
   { label: "moon", shape: sdfMoon(8, 18, 14) },
@@ -75,7 +75,7 @@ for (let i = 0; i < primitives.length; i++) {
   sdfEntity({
     shape: primitives[i].shape,
     fill: { type: "solid", color: COLORS[i % COLORS.length] },
-    position: [x, y],
+    position: { x, y },
     layer: 0,
   });
 }
