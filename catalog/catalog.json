@@ -387,33 +387,6 @@
       ]
     },
     {
-      "id": "topdown-shooter",
-      "name": "Topdown Shooter",
-      "source": "kenney",
-      "downloadUrl": "https://kenney.nl/media/pages/assets/topdown-shooter/8a3ad0f32b-1677695777/kenney_topdown-shooter.zip",
-      "tags": [
-        "shooter",
-        "topdown",
-        "weapons",
-        "tanks",
-        "soldiers",
-        "action"
-      ]
-    },
-    {
-      "id": "topdown-tanks-redux",
-      "name": "Topdown Tanks Redux",
-      "source": "kenney",
-      "downloadUrl": "https://kenney.nl/media/pages/assets/topdown-tanks-redux/1f27b0ec8a-1677693278/kenney_topdown-tanks-redux.zip",
-      "tags": [
-        "tanks",
-        "topdown",
-        "military",
-        "vehicles",
-        "hd"
-      ]
-    },
-    {
       "id": "sokoban",
       "name": "Sokoban",
       "source": "kenney",
@@ -491,19 +464,6 @@
         "racing",
         "3d",
         "low-poly"
-      ]
-    },
-    {
-      "id": "city-kit",
-      "name": "City Kit",
-      "source": "kenney",
-      "downloadUrl": "https://kenney.nl/media/pages/assets/city-kit/68ecb3f0fb-1677661494/kenney_city-kit.zip",
-      "tags": [
-        "city",
-        "buildings",
-        "urban",
-        "isometric",
-        "3d"
       ]
     },
     {
@@ -678,19 +638,6 @@
         "minimalist",
         "shooter",
         "asteroids"
-      ]
-    },
-    {
-      "id": "abstract-shooter",
-      "name": "Abstract Shooter",
-      "source": "kenney",
-      "downloadUrl": "https://kenney.nl/media/pages/assets/abstract-shooter/f00ab4450e-1677696757/kenney_abstract-shooter.zip",
-      "tags": [
-        "shooter",
-        "abstract",
-        "geometric",
-        "minimalist",
-        "enemies"
       ]
     }
   ]
