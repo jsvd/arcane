@@ -8,7 +8,9 @@ use anyhow::{Context, Result};
 use super::camera::Camera2D;
 use super::geometry::GeometryBatch;
 use super::postprocess::PostProcessPipeline;
+use super::radiance::RadiancePipeline;
 use super::rendertarget::RenderTargetStore;
+use super::sdf::SdfPipelineStore;
 use super::shader::ShaderStore;
 use super::sprite::SpritePipeline;
 use super::texture::TextureStore;
@@ -156,11 +158,22 @@ impl TestGpu {
         RenderTargetStore::new()
     }
 
+    /// Create an SdfPipelineStore for headless testing.
+    pub fn create_sdf_pipeline(&self) -> SdfPipelineStore {
+        SdfPipelineStore::new_headless(&self.device, self.format)
+    }
+
+    /// Create a RadiancePipeline for headless testing.
+    pub fn create_radiance_pipeline(&self) -> RadiancePipeline {
+        RadiancePipeline::new_headless(&self.device, self.format)
+    }
+
     /// Create a default Camera2D for testing.
+    /// Camera position is top-left origin (0,0), viewing the area (0..width, 0..height).
     pub fn create_camera(&self, width: f32, height: f32) -> Camera2D {
         Camera2D {
-            x: width / 2.0,
-            y: height / 2.0,
+            x: 0.0,
+            y: 0.0,
             zoom: 1.0,
             viewport_size: [width, height],
             ..Camera2D::default()

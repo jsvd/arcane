@@ -33,9 +33,39 @@ use crate::scripting::geometry_ops::GeoCommand;
 use crate::scripting::sdf_ops::SdfDrawCommand;
 use anyhow::Result;
 
+/// Convert a scripting-layer SdfDrawCommand to a rendering-layer SdfCommand.
+fn convert_sdf_draw_command(c: SdfDrawCommand) -> SdfCommand {
+    let fill = match c.fill_type {
+        0 => SdfFill::Solid { color: c.color },
+        1 => SdfFill::Outline { color: c.color, thickness: c.fill_param },
+        2 => SdfFill::SolidWithOutline { fill: c.color, outline: c.color2, thickness: c.fill_param },
+        3 => SdfFill::Gradient { from: c.color, to: c.color2, angle: c.fill_param, scale: c.gradient_scale },
+        4 => SdfFill::Glow { color: c.color, intensity: c.fill_param },
+        5 => SdfFill::CosinePalette {
+            a: [c.palette_params[0], c.palette_params[1], c.palette_params[2]],
+            b: [c.palette_params[3], c.palette_params[4], c.palette_params[5]],
+            c: [c.palette_params[6], c.palette_params[7], c.palette_params[8]],
+            d: [c.palette_params[9], c.palette_params[10], c.palette_params[11]],
+        },
+        _ => SdfFill::Solid { color: c.color },
+    };
+    SdfCommand {
+        sdf_expr: c.sdf_expr,
+        fill,
+        x: c.x,
+        y: c.y,
+        bounds: c.bounds,
+        layer: c.layer,
+        rotation: c.rotation,
+        scale: c.scale,
+        opacity: c.opacity,
+    }
+}
+
 /// A single step in the interleaved render schedule.
 /// Sprites, geometry, and SDF commands are merged by layer so that layer ordering
 /// is respected across all pipeline types.
+#[derive(Debug, PartialEq)]
 enum RenderOp {
     /// Render a contiguous range of sorted sprite commands.
     Sprites { start: usize, end: usize },
@@ -193,33 +223,7 @@ impl Renderer {
     /// Set SDF commands for the current frame.
     /// Converts SdfDrawCommand (from scripting ops) to SdfCommand (for rendering).
     pub fn set_sdf_commands(&mut self, cmds: Vec<SdfDrawCommand>) {
-        self.sdf_commands = cmds.into_iter().map(|c| {
-            let fill = match c.fill_type {
-                0 => SdfFill::Solid { color: c.color },
-                1 => SdfFill::Outline { color: c.color, thickness: c.fill_param },
-                2 => SdfFill::SolidWithOutline { fill: c.color, outline: c.color2, thickness: c.fill_param },
-                3 => SdfFill::Gradient { from: c.color, to: c.color2, angle: c.fill_param, scale: c.gradient_scale },
-                4 => SdfFill::Glow { color: c.color, intensity: c.fill_param },
-                5 => SdfFill::CosinePalette {
-                    a: [c.palette_params[0], c.palette_params[1], c.palette_params[2]],
-                    b: [c.palette_params[3], c.palette_params[4], c.palette_params[5]],
-                    c: [c.palette_params[6], c.palette_params[7], c.palette_params[8]],
-                    d: [c.palette_params[9], c.palette_params[10], c.palette_params[11]],
-                },
-                _ => SdfFill::Solid { color: c.color },
-            };
-            SdfCommand {
-                sdf_expr: c.sdf_expr,
-                fill,
-                x: c.x,
-                y: c.y,
-                bounds: c.bounds,
-                layer: c.layer,
-                rotation: c.rotation,
-                scale: c.scale,
-                opacity: c.opacity,
-            }
-        }).collect();
+        self.sdf_commands = cmds.into_iter().map(convert_sdf_draw_command).collect();
     }
 
     /// Render the current frame's sprite, geometry, and SDF commands, interleaved by layer.
@@ -567,5 +571,206 @@ impl Renderer {
         }
 
         self.gpu.queue.submit(std::iter::once(encoder.finish()));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── Test helpers ─────────────────────────────────────────────────────
+
+    fn sprite(layer: i32) -> SpriteCommand {
+        SpriteCommand {
+            texture_id: 1, x: 0.0, y: 0.0, w: 16.0, h: 16.0, layer,
+            uv_x: 0.0, uv_y: 0.0, uv_w: 1.0, uv_h: 1.0,
+            tint_r: 1.0, tint_g: 1.0, tint_b: 1.0, tint_a: 1.0,
+            rotation: 0.0, origin_x: 0.5, origin_y: 0.5,
+            flip_x: false, flip_y: false, opacity: 1.0,
+            blend_mode: 0, shader_id: 0,
+        }
+    }
+
+    fn geo(layer: i32) -> GeoCommand {
+        GeoCommand::Triangle {
+            x1: 0.0, y1: 0.0, x2: 16.0, y2: 0.0, x3: 8.0, y3: 16.0,
+            r: 1.0, g: 1.0, b: 1.0, a: 1.0, layer,
+        }
+    }
+
+    fn sdf(layer: i32) -> SdfCommand {
+        SdfCommand {
+            sdf_expr: "length(p) - 10.0".to_string(),
+            fill: SdfFill::Solid { color: [1.0, 0.0, 0.0, 1.0] },
+            x: 32.0, y: 32.0, bounds: 15.0, layer,
+            rotation: 0.0, scale: 1.0, opacity: 1.0,
+        }
+    }
+
+    fn sdf_draw(fill_type: u32) -> SdfDrawCommand {
+        SdfDrawCommand {
+            sdf_expr: "length(p) - 10.0".to_string(),
+            fill_type,
+            color: [1.0, 0.0, 0.0, 1.0],
+            color2: [0.0, 1.0, 0.0, 1.0],
+            fill_param: 2.0,
+            palette_params: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.0, 0.33, 0.67],
+            gradient_scale: 1.5,
+            x: 10.0, y: 20.0, bounds: 30.0, layer: 5,
+            rotation: 0.1, scale: 2.0, opacity: 0.8,
+        }
+    }
+
+    // ── build_render_schedule tests ──────────────────────────────────────
+
+    #[test]
+    fn test_schedule_empty_inputs() {
+        let schedule = build_render_schedule(&[], &[], &[]);
+        assert!(schedule.is_empty());
+    }
+
+    #[test]
+    fn test_schedule_sprites_only() {
+        let sprites = vec![sprite(0), sprite(1)];
+        let schedule = build_render_schedule(&sprites, &[], &[]);
+        assert_eq!(schedule, vec![RenderOp::Sprites { start: 0, end: 2 }]);
+    }
+
+    #[test]
+    fn test_schedule_geo_only() {
+        let geo_cmds = vec![geo(0), geo(1)];
+        let schedule = build_render_schedule(&[], &geo_cmds, &[]);
+        assert_eq!(schedule, vec![RenderOp::Geometry { start: 0, end: 2 }]);
+    }
+
+    #[test]
+    fn test_schedule_sdf_only() {
+        let sdf_cmds = vec![sdf(0), sdf(1)];
+        let schedule = build_render_schedule(&[], &[], &sdf_cmds);
+        assert_eq!(schedule, vec![RenderOp::Sdf { start: 0, end: 2 }]);
+    }
+
+    #[test]
+    fn test_schedule_same_layer_order() {
+        // All at layer 0: sprites first, then geo, then sdf
+        let sprites = vec![sprite(0)];
+        let geo_cmds = vec![geo(0)];
+        let sdf_cmds = vec![sdf(0)];
+        let schedule = build_render_schedule(&sprites, &geo_cmds, &sdf_cmds);
+        assert_eq!(schedule.len(), 3);
+        assert_eq!(schedule[0], RenderOp::Sprites { start: 0, end: 1 });
+        assert_eq!(schedule[1], RenderOp::Geometry { start: 0, end: 1 });
+        assert_eq!(schedule[2], RenderOp::Sdf { start: 0, end: 1 });
+    }
+
+    #[test]
+    fn test_schedule_interleaved_layers() {
+        // sprites at 0, geo at 1, sdf at 2
+        let sprites = vec![sprite(0)];
+        let geo_cmds = vec![geo(1)];
+        let sdf_cmds = vec![sdf(2)];
+        let schedule = build_render_schedule(&sprites, &geo_cmds, &sdf_cmds);
+        assert_eq!(schedule.len(), 3);
+        assert_eq!(schedule[0], RenderOp::Sprites { start: 0, end: 1 });
+        assert_eq!(schedule[1], RenderOp::Geometry { start: 0, end: 1 });
+        assert_eq!(schedule[2], RenderOp::Sdf { start: 0, end: 1 });
+    }
+
+    #[test]
+    fn test_schedule_mixed_layers() {
+        // sprites at 0 and 2, geo at 1
+        let sprites = vec![sprite(0), sprite(2)];
+        let geo_cmds = vec![geo(1)];
+        let schedule = build_render_schedule(&sprites, &geo_cmds, &[]);
+        // Sprite at layer 0 first, then geo at layer 1, then sprite at layer 2
+        assert!(schedule.len() >= 2);
+        assert!(matches!(schedule[0], RenderOp::Sprites { .. }));
+    }
+
+    #[test]
+    fn test_schedule_all_consumed() {
+        // Verify all commands are consumed (no gaps in ranges)
+        let sprites = vec![sprite(0), sprite(0), sprite(1)];
+        let geo_cmds = vec![geo(0), geo(2)];
+        let sdf_cmds = vec![sdf(1)];
+        let schedule = build_render_schedule(&sprites, &geo_cmds, &sdf_cmds);
+
+        let mut sprite_count = 0;
+        let mut geo_count = 0;
+        let mut sdf_count = 0;
+        for op in &schedule {
+            match op {
+                RenderOp::Sprites { start, end } => sprite_count += end - start,
+                RenderOp::Geometry { start, end } => geo_count += end - start,
+                RenderOp::Sdf { start, end } => sdf_count += end - start,
+            }
+        }
+        assert_eq!(sprite_count, 3, "all sprites consumed");
+        assert_eq!(geo_count, 2, "all geo consumed");
+        assert_eq!(sdf_count, 1, "all sdf consumed");
+    }
+
+    // ── convert_sdf_draw_command tests ───────────────────────────────────
+
+    #[test]
+    fn test_convert_sdf_solid() {
+        let cmd = convert_sdf_draw_command(sdf_draw(0));
+        assert!(matches!(cmd.fill, SdfFill::Solid { color } if color == [1.0, 0.0, 0.0, 1.0]));
+    }
+
+    #[test]
+    fn test_convert_sdf_outline() {
+        let cmd = convert_sdf_draw_command(sdf_draw(1));
+        assert!(matches!(cmd.fill, SdfFill::Outline { color, thickness }
+            if color == [1.0, 0.0, 0.0, 1.0] && thickness == 2.0));
+    }
+
+    #[test]
+    fn test_convert_sdf_solid_with_outline() {
+        let cmd = convert_sdf_draw_command(sdf_draw(2));
+        assert!(matches!(cmd.fill, SdfFill::SolidWithOutline { fill, outline, thickness }
+            if fill == [1.0, 0.0, 0.0, 1.0] && outline == [0.0, 1.0, 0.0, 1.0] && thickness == 2.0));
+    }
+
+    #[test]
+    fn test_convert_sdf_gradient() {
+        let cmd = convert_sdf_draw_command(sdf_draw(3));
+        assert!(matches!(cmd.fill, SdfFill::Gradient { from, to, angle, scale }
+            if from == [1.0, 0.0, 0.0, 1.0] && to == [0.0, 1.0, 0.0, 1.0]
+            && angle == 2.0 && scale == 1.5));
+    }
+
+    #[test]
+    fn test_convert_sdf_glow() {
+        let cmd = convert_sdf_draw_command(sdf_draw(4));
+        assert!(matches!(cmd.fill, SdfFill::Glow { color, intensity }
+            if color == [1.0, 0.0, 0.0, 1.0] && intensity == 2.0));
+    }
+
+    #[test]
+    fn test_convert_sdf_cosine_palette() {
+        let cmd = convert_sdf_draw_command(sdf_draw(5));
+        assert!(matches!(cmd.fill, SdfFill::CosinePalette { a, b, c, d }
+            if a == [0.5, 0.5, 0.5] && b == [0.5, 0.5, 0.5]
+            && c == [1.0, 1.0, 1.0] && d == [0.0, 0.33, 0.67]));
+    }
+
+    #[test]
+    fn test_convert_sdf_unknown_fallback() {
+        let cmd = convert_sdf_draw_command(sdf_draw(99));
+        assert!(matches!(cmd.fill, SdfFill::Solid { color } if color == [1.0, 0.0, 0.0, 1.0]));
+    }
+
+    #[test]
+    fn test_convert_sdf_field_passthrough() {
+        let cmd = convert_sdf_draw_command(sdf_draw(0));
+        assert_eq!(cmd.sdf_expr, "length(p) - 10.0");
+        assert_eq!(cmd.x, 10.0);
+        assert_eq!(cmd.y, 20.0);
+        assert_eq!(cmd.bounds, 30.0);
+        assert_eq!(cmd.layer, 5);
+        assert_eq!(cmd.rotation, 0.1);
+        assert_eq!(cmd.scale, 2.0);
+        assert_eq!(cmd.opacity, 0.8);
     }
 }

@@ -590,3 +590,74 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     return vec4<f32>(vec3<f32>(r, g, b) * scanline_effect * brightness, original.a);
 }
 "#;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_effect_type_from_str_bloom() {
+        assert!(matches!(EffectType::from_str("bloom"), Some(EffectType::Bloom)));
+    }
+
+    #[test]
+    fn test_effect_type_from_str_blur() {
+        assert!(matches!(EffectType::from_str("blur"), Some(EffectType::Blur)));
+    }
+
+    #[test]
+    fn test_effect_type_from_str_vignette() {
+        assert!(matches!(EffectType::from_str("vignette"), Some(EffectType::Vignette)));
+    }
+
+    #[test]
+    fn test_effect_type_from_str_crt() {
+        assert!(matches!(EffectType::from_str("crt"), Some(EffectType::Crt)));
+    }
+
+    #[test]
+    fn test_effect_type_from_str_unknown() {
+        assert!(EffectType::from_str("unknown").is_none());
+        assert!(EffectType::from_str("").is_none());
+        assert!(EffectType::from_str("Bloom").is_none()); // case-sensitive
+    }
+
+    #[test]
+    fn test_bloom_defaults() {
+        let d = EffectType::Bloom.defaults();
+        // resolution slots 0-3 are zero
+        assert_eq!(d[0], 0.0);
+        // values[0]: threshold=0.7, intensity=0.5, radius=3.0
+        assert_eq!(d[4], 0.7);
+        assert_eq!(d[5], 0.5);
+        assert_eq!(d[6], 3.0);
+    }
+
+    #[test]
+    fn test_blur_defaults() {
+        let d = EffectType::Blur.defaults();
+        assert_eq!(d[4], 1.0); // strength
+        assert_eq!(d[5], 0.0); // unused
+    }
+
+    #[test]
+    fn test_vignette_defaults() {
+        let d = EffectType::Vignette.defaults();
+        assert_eq!(d[4], 0.5); // intensity
+        assert_eq!(d[5], 0.8); // radius
+    }
+
+    #[test]
+    fn test_crt_defaults() {
+        let d = EffectType::Crt.defaults();
+        assert_eq!(d[4], 800.0); // scanline_freq
+        assert_eq!(d[5], 0.1);   // distortion
+        assert_eq!(d[6], 1.1);   // brightness
+    }
+
+    #[test]
+    fn test_defaults_array_size() {
+        let d = EffectType::Bloom.defaults();
+        assert_eq!(d.len(), PARAM_FLOATS);
+    }
+}

@@ -360,3 +360,54 @@ impl ShaderStore {
         self.shaders.get(&id).map(|e| &e.uniform_bind_group)
     }
 }
+
+/// Compute the param_data array index for a user slot index.
+/// User slot 0 → float index 8 (after 2 built-in vec4s).
+/// Clamped to MAX_PARAM_SLOTS - 1 to prevent out-of-bounds.
+#[cfg(test)]
+fn compute_param_offset(user_index: u32) -> usize {
+    let offset_index = (user_index as usize + BUILTIN_SLOTS).min(MAX_PARAM_SLOTS - 1);
+    offset_index * 4
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_param_offset_slot_0() {
+        // User slot 0 → offset by BUILTIN_SLOTS (2) → vec4 index 2 → float index 8
+        assert_eq!(compute_param_offset(0), 8);
+    }
+
+    #[test]
+    fn test_param_offset_slot_13() {
+        // User slot 13 → vec4 index 15 → float index 60
+        assert_eq!(compute_param_offset(13), 60);
+    }
+
+    #[test]
+    fn test_param_offset_slot_max_clamp() {
+        // User slot 14+ → clamped to MAX_PARAM_SLOTS-1 (15) → float index 60
+        assert_eq!(compute_param_offset(14), 60);
+        assert_eq!(compute_param_offset(100), 60);
+    }
+
+    #[test]
+    fn test_builtin_slots_consistency() {
+        assert_eq!(BUILTIN_SLOTS, 2);
+        assert_eq!(MAX_PARAM_SLOTS, 16);
+        assert_eq!(UNIFORM_BUFFER_SIZE, 256); // 16 * 16 bytes
+    }
+
+    #[test]
+    fn test_param_data_layout() {
+        // Verify the full layout: built-in slots 0-1 (8 floats), user slots 2-15 (56 floats)
+        let total_floats = MAX_PARAM_SLOTS * 4;
+        assert_eq!(total_floats, 64);
+        // First user slot starts at float index 8
+        assert_eq!(compute_param_offset(0), 8);
+        // Last user slot (13) starts at float index 60, ends at 63
+        assert_eq!(compute_param_offset(13) + 3, 63);
+    }
+}

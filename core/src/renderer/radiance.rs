@@ -197,14 +197,23 @@ struct LightTexture {
 
 impl RadiancePipeline {
     pub fn new(gpu: &GpuContext) -> Self {
-        let shader = gpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        Self::new_internal(&gpu.device, gpu.config.format)
+    }
+
+    /// Create for headless testing (no window/surface required).
+    pub fn new_headless(device: &wgpu::Device, format: wgpu::TextureFormat) -> Self {
+        Self::new_internal(device, format)
+    }
+
+    fn new_internal(device: &wgpu::Device, surface_format: wgpu::TextureFormat) -> Self {
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("radiance_compute_shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shaders/radiance.wgsl").into()),
         });
 
         // Bind group layout for compute passes
         let compute_bind_group_layout =
-            gpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("radiance_compute_bind_group_layout"),
                 entries: &[
                     // binding 0: uniform params
@@ -255,14 +264,14 @@ impl RadiancePipeline {
             });
 
         let compute_layout =
-            gpu.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("radiance_compute_layout"),
                 bind_group_layouts: &[&compute_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
         let ray_march_pipeline =
-            gpu.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
                 label: Some("radiance_ray_march"),
                 layout: Some(&compute_layout),
                 module: &shader,
@@ -272,7 +281,7 @@ impl RadiancePipeline {
             });
 
         let merge_pipeline =
-            gpu.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
                 label: Some("radiance_merge"),
                 layout: Some(&compute_layout),
                 module: &shader,
@@ -282,7 +291,7 @@ impl RadiancePipeline {
             });
 
         let finalize_pipeline =
-            gpu.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
                 label: Some("radiance_finalize"),
                 layout: Some(&compute_layout),
                 module: &shader,
@@ -292,7 +301,7 @@ impl RadiancePipeline {
             });
 
         // Params uniform buffer
-        let params_buffer = gpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let params_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("radiance_params_buffer"),
             contents: bytemuck::cast_slice(&[RadianceParams {
                 scene_dims: [0.0; 4],
@@ -305,7 +314,7 @@ impl RadiancePipeline {
 
         // Composition pass: renders light texture over the sprite output
         let compose_bind_group_layout =
-            gpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("radiance_compose_bind_group_layout"),
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
@@ -328,20 +337,20 @@ impl RadiancePipeline {
             });
 
         let compose_layout =
-            gpu.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("radiance_compose_layout"),
                 bind_group_layouts: &[&compose_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
         let compose_shader =
-            gpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("radiance_compose_shader"),
                 source: wgpu::ShaderSource::Wgsl(COMPOSE_WGSL.into()),
             });
 
         let compose_pipeline =
-            gpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: Some("radiance_compose_pipeline"),
                 layout: Some(&compose_layout),
                 vertex: wgpu::VertexState {
@@ -354,7 +363,7 @@ impl RadiancePipeline {
                     module: &compose_shader,
                     entry_point: Some("fs_main"),
                     targets: &[Some(wgpu::ColorTargetState {
-                        format: gpu.config.format,
+                        format: surface_format,
                         blend: Some(wgpu::BlendState {
                             // Additive: result = src * dst + dst * 1
                             // = dst * (1 + src) — GI adds light without darkening
@@ -379,7 +388,7 @@ impl RadiancePipeline {
                 cache: None,
             });
 
-        let sampler = gpu.device.create_sampler(&wgpu::SamplerDescriptor {
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("radiance_sampler"),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
@@ -404,7 +413,7 @@ impl RadiancePipeline {
             interval: DEFAULT_INTERVAL,
             cascade_count: 4,
             sampler,
-            surface_format: gpu.config.format,
+            surface_format,
         }
     }
 
