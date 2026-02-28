@@ -1713,38 +1713,40 @@ declare module "@arcane/runtime/rendering" {
    * Check if a key is currently held down (returns true every frame while held).
    * Returns false in headless mode.
    *
-   * Key names use winit's logical key representation (NOT DOM KeyboardEvent.code):
-   * - Letters: `"a"` - `"z"` (lowercase single characters, NOT `"KeyA"`)
-   * - Digits: `"0"` - `"9"` (single characters, NOT `"Digit1"`)
-   * - Arrow keys: `"ArrowUp"`, `"ArrowDown"`, `"ArrowLeft"`, `"ArrowRight"`
-   * - Function keys: `"F1"` - `"F12"`
-   * - Whitespace: `"Space"`, `"Tab"`, `"Enter"`
-   * - Modifiers: `"Shift"`, `"Control"`, `"Alt"`
-   * - Navigation: `"Escape"`, `"Backspace"`, `"Delete"`, `"Home"`, `"End"`, `"PageUp"`, `"PageDown"`
+   * Key names are normalized automatically, so you can use any of these formats:
+   * - Letters: `"a"`, `"A"`, `"KeyA"` → all normalize to `"a"`
+   * - Digits: `"1"`, `"Digit1"` → both normalize to `"1"`
+   * - Arrow keys: `"arrowup"`, `"ArrowUp"`, `"ARROWUP"` → all normalize to `"ArrowUp"`
+   * - Function keys: `"f1"`, `"F1"` → both normalize to `"F1"`
+   * - Special keys: `"space"`, `"Space"`, `"SPACE"` → all normalize to `"Space"`
    *
-   * @param key - Key name (see {@link KeyName} for valid values).
+   * @param key - Key name (automatically normalized to canonical format).
    * @returns true if the key is currently held down, false otherwise.
    *
    * @example
-   * if (isKeyDown("ArrowRight") || isKeyDown("d")) {
+   * // All of these work:
+   * if (isKeyDown("d") || isKeyDown("D") || isKeyDown("KeyD")) {
    *   player.x += speed * dt;
    * }
    */
-  export declare function isKeyDown(key: KeyName): boolean;
+  export declare function isKeyDown(key: string): boolean;
   /**
    * Check if a key was pressed this frame (transitioned from up to down).
    * Unlike {@link isKeyDown}, this returns true only on the first frame the key is pressed.
    * Returns false in headless mode.
    *
-   * Valid key names are the same as {@link isKeyDown}:
-   * `"ArrowUp"`, `"ArrowDown"`, `"ArrowLeft"`, `"ArrowRight"`, `"Space"`, `"Enter"`,
-   * `"Escape"`, `"Tab"`, `"Shift"`, `"Control"`, `"Alt"`, `"a"`-`"z"`, `"0"`-`"9"`, `"F1"`-`"F12"`,
-   * `"Backspace"`, `"Delete"`, `"Home"`, `"End"`, `"PageUp"`, `"PageDown"`.
+   * Valid key names are automatically normalized (see {@link isKeyDown} for details).
    *
-   * @param key - Key name string (case-sensitive, web standard).
+   * @param key - Key name (automatically normalized to canonical format).
    * @returns true if the key was just pressed this frame, false otherwise.
+   *
+   * @example
+   * // All of these work:
+   * if (isKeyPressed("r") || isKeyPressed("R") || isKeyPressed("KeyR")) {
+   *   restartGame();
+   * }
    */
-  export declare function isKeyPressed(key: KeyName): boolean;
+  export declare function isKeyPressed(key: string): boolean;
   /**
    * Get the current mouse position in screen/window coordinates (pixels).
    * (0, 0) is the top-left corner of the window.
@@ -3177,7 +3179,8 @@ declare module "@arcane/runtime/rendering" {
   export interface GlowFill {
       type: "glow";
       color: string;
-      intensity: number;
+      /** Glow spread radius in pixels. Higher values = bigger glow. */
+      spread: number;
   }
   /** Combined solid fill with outline stroke. */
   export interface SolidOutlineFill {
@@ -3211,16 +3214,15 @@ declare module "@arcane/runtime/rendering" {
   export declare function solid(color: string): SolidFill;
   /**
    * Create a glow fill effect.
-   * Note: Lower intensity = larger glow (counterintuitive but mathematically correct).
    * @param color - Hex color string.
-   * @param intensity - Glow intensity (0.1-1.0 typical, lower = bigger glow).
+   * @param spread - Glow spread radius in pixels. Higher values = bigger glow. Default: 20.
    * @returns GlowFill object.
    *
    * @example
-   * // Soft, wide glow
-   * sdfEntity({ shape: sdfHeart(30), fill: glow("#ff3366", 0.25), bounds: 90 });
+   * // Soft, wide glow (40px radius)
+   * sdfEntity({ shape: sdfHeart(30), fill: glow("#ff3366", 40), bounds: 90 });
    */
-  export declare function glow(color: string, intensity?: number): GlowFill;
+  export declare function glow(color: string, spread?: number): GlowFill;
   /**
    * Create a linear gradient fill.
    * @param from - Start color (hex string).
@@ -3857,6 +3859,67 @@ declare module "@arcane/runtime/rendering" {
    * then clears the Rust-side sprite command list.
    */
   export declare function clearSprites(): void;
+  /**
+   * Draw a tiled/repeated texture across a rectangular area.
+   *
+   * The texture is repeated to fill the specified width and height.
+   * Useful for backgrounds, floors, walls, and seamless patterns.
+   *
+   * @param opts - Tiling options.
+   * @param opts.textureId - The texture to tile.
+   * @param opts.x - Top-left X position.
+   * @param opts.y - Top-left Y position.
+   * @param opts.w - Total width of the tiled area.
+   * @param opts.h - Total height of the tiled area.
+   * @param opts.tileW - Width of one tile in pixels. If omitted, uses the full texture width.
+   * @param opts.tileH - Height of one tile in pixels. If omitted, uses the full texture height.
+   * @param opts.layer - Draw layer. Default: 0.
+   * @param opts.tint - Tint color. Default: white.
+   * @param opts.opacity - Opacity. Default: 1.
+   * @param opts.blendMode - Blend mode. Default: "alpha".
+   * @param opts.screenSpace - If true, coordinates are in screen space. Default: false.
+   *
+   * @example
+   * ```ts
+   * // Tile a 16x16 grass texture across a 320x240 area
+   * drawTiledSprite({
+   *   textureId: grassTex,
+   *   x: 0, y: 0,
+   *   w: 320, h: 240,
+   *   tileW: 16, tileH: 16,
+   * });
+   * ```
+   *
+   * @example
+   * ```ts
+   * // Tile a full texture (repeating it 4x3 times)
+   * drawTiledSprite({
+   *   textureId: patternTex,
+   *   x: 100, y: 100,
+   *   w: 256, h: 192,
+   *   tileW: 64, tileH: 64,
+   * });
+   * ```
+   */
+  export declare function drawTiledSprite(opts: {
+      textureId: number;
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      tileW?: number;
+      tileH?: number;
+      layer?: number;
+      tint?: {
+          r: number;
+          g: number;
+          b: number;
+          a: number;
+      };
+      opacity?: number;
+      blendMode?: "alpha" | "additive" | "multiply" | "screen";
+      screenSpace?: boolean;
+  }): void;
 
   /** Descriptor for a bitmap font backed by a texture atlas. */
   export type BitmapFont = {
