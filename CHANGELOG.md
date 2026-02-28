@@ -4,8 +4,26 @@ All notable changes to Arcane are documented here.
 
 ## [Unreleased]
 
+### Added
+- **`spawnBurst(x, y, opts)`** — self-destructing particle burst with automatic Rust emitter lifecycle management; emits `count` particles over `duration` seconds then cleans up when all particles die. Replaces ~70 lines of manual emitter bookkeeping.
+- **`getManagedBurstCount()`** — returns number of active managed bursts (for testing/debugging)
+- **`trackTarget(getTarget, opts)`** — declarative camera tracking; set once, runs automatically each frame via `createGame()`. Accepts `zoom` as number or getter function. Replaces per-frame `followTargetSmooth()` boilerplate.
+- **`stopTracking()` / `isTracking()`** — control and query declarative camera tracking state
+- **`withScreenSpace(fn)`** — push/pop screen-space context so all draw calls inside default to `screenSpace: true`. Explicit `screenSpace` on individual calls always wins. Wired into `drawSprite`, `drawText`, all 4 UI primitives, and all 10 shape functions.
+- **`isScreenSpaceActive()`** — query whether a `withScreenSpace` context is active
+- **`drawBody(bodyId, opts)`** — draws a sprite centered on a physics body's position/rotation; simplifies the common `getBodyState()` + `drawSprite()` pattern
+- **Auto-clamp delta time** — 250ms hard cap in Rust; optional `maxDeltaTime` in `GameConfig` for per-game tighter caps
+
 ### Changed (BREAKING)
 - **Coordinate system now top-left origin** — `(0, 0)` is the top-left corner of the screen, matching web canvas, Unity 2D, and Godot conventions. Camera position represents the viewport's top-left corner in world space. `autoCamera` option removed from `createGame()`. All screen↔world math simplified. All demos and documentation updated.
+- **`sdfOffset` / `sdfRepeat` now take Vec2** — `sdfOffset(shape, x, y)` → `sdfOffset(shape, {x, y})`; `sdfRepeat(shape, x, y)` → `sdfRepeat(shape, {x, y})` for consistency with the rest of the SDF API
+
+### Fixed
+- **Physics bounce** — restitution combining changed from `min()` to `max()` so the bouncier surface wins (matching Box2D/Rapier). Fixed speculative contact bias cancelling out bounce impulse.
+- **Glow shader** — moved spread→intensity conversion from WGSL to TypeScript layer; shader uses clean `exp(-d * intensity)` formula
+
+### Removed
+- **Legacy physics solver** — removed single-contact solver (~250 lines); manifold solver (TGS Soft) is now the only path
 
 ## [0.22.0] - 2026-02-28
 
