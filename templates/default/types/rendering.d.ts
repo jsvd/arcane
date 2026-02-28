@@ -3057,7 +3057,7 @@ declare module "@arcane/runtime/rendering" {
    * Route subsequent `drawSprite()` calls into this render target.
    *
    * Coordinate system inside the target: `(0, 0)` = top-left corner.
-   * This differs from the main surface where `(0, 0)` = screen center (after setCamera).
+   * Unlike the main surface, the camera transform is not applied inside a render target.
    *
    * Calls must be balanced: every `beginRenderTarget()` needs a matching `endRenderTarget()`.
    * Nesting is not supported.

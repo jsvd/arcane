@@ -61,7 +61,7 @@ When the user asks "which function should I use to draw X?", walk this tree:
 
 Proactively warn about these when they're relevant to the user's question:
 
-1. **No `setCamera()` call** — without it, camera is at (0,0) = screen center. Call `setCamera(VPW/2, VPH/2)` or use `followTargetSmooth()`.
+1. **No `setCamera()` call for scrolling games** — default camera at (0,0) shows the world from its top-left corner, which is correct for most games. For player-following, use `followTargetSmooth(player.x, player.y)` every frame.
 2. **Hardcoded viewport size** — never use `800`, `600`. Use `const { width: VPW, height: VPH } = getViewportSize();`
 3. **HUD in world space** — use `screenSpace: true` for health bars, scores, menus.
 4. **Missing re-draw every frame** — draw calls are NOT persisted. Redraw everything in `onFrame()`.

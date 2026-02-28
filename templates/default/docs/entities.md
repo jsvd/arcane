@@ -130,6 +130,5 @@ game.onFrame((ctx) => {
 
 What `createGame()` does:
 - `autoClear: true` (default) -- clears sprites at frame start
-- `autoCamera: true` (default) -- sets camera so (0,0) is top-left on first frame
 - `background: { r, g, b }` -- pass 0-255 values, converted internally
 - `game.state({ get, set })` -- wire up state for agent protocol
