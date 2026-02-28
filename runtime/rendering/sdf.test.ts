@@ -234,7 +234,7 @@ describe("SDF Composition", () => {
 
 describe("SDF Transforms", () => {
   it("offset creates a transform node with offset", () => {
-    const node = sdfOffset(sdfCircle(10), 5, 3);
+    const node = sdfOffset(sdfCircle(10), { x: 5, y: 3 });
     assert.equal(node.type, "transform");
     assert.deepEqual((node as any).offset, { x: 5, y: 3 });
   });
@@ -260,13 +260,13 @@ describe("SDF Transforms", () => {
   });
 
   it("repeat creates a transform node with repeatSpacing", () => {
-    const node = sdfRepeat(sdfCircle(5), 20, 20);
+    const node = sdfRepeat(sdfCircle(5), { x: 20, y: 20 });
     assert.equal(node.type, "transform");
     assert.deepEqual((node as any).repeatSpacing, { x: 20, y: 20 });
   });
 
   it("transforms can be nested", () => {
-    const node = sdfRotate(sdfOffset(sdfCircle(10), 5, 0), 45);
+    const node = sdfRotate(sdfOffset(sdfCircle(10), { x: 5, y: 0 }), 45);
     assert.equal(node.type, "transform");
     assert.equal((node as any).child.type, "transform");
     assert.equal((node as any).child.child.type, "primitive");
@@ -406,7 +406,7 @@ describe("SDF WGSL Code Generation", () => {
   });
 
   it("compiles offset transform", () => {
-    const wgsl = compileToWgsl(sdfOffset(sdfCircle(10), 20, 30));
+    const wgsl = compileToWgsl(sdfOffset(sdfCircle(10), { x: 20, y: 30 }));
     assert.equal(wgsl, "sd_circle((p - vec2<f32>(20.0, 30.0)), 10.0)");
   });
 
@@ -423,12 +423,12 @@ describe("SDF WGSL Code Generation", () => {
   });
 
   it("compiles nested offset + circle", () => {
-    const wgsl = compileToWgsl(sdfOffset(sdfCircle(10), 5, 0));
+    const wgsl = compileToWgsl(sdfOffset(sdfCircle(10), { x: 5, y: 0 }));
     assert.equal(wgsl, "sd_circle((p - vec2<f32>(5.0, 0.0)), 10.0)");
   });
 
   it("compiles nested rotate + offset + circle", () => {
-    const wgsl = compileToWgsl(sdfRotate(sdfOffset(sdfCircle(10), 5, 0), 90));
+    const wgsl = compileToWgsl(sdfRotate(sdfOffset(sdfCircle(10), { x: 5, y: 0 }), 90));
     // The outer rotate transforms the coordinate, then inner offset applies
     assert.ok(wgsl.includes("rotate_rad(p,"));
     assert.ok(wgsl.includes("vec2<f32>(5.0, 0.0)"));
@@ -463,7 +463,7 @@ describe("SDF Bounds Calculation", () => {
 
   it("offset increases bounds by distance", () => {
     const base = calculateBounds(sdfCircle(10));
-    const moved = calculateBounds(sdfOffset(sdfCircle(10), 30, 40));
+    const moved = calculateBounds(sdfOffset(sdfCircle(10), { x: 30, y: 40 }));
     // offset distance = sqrt(30^2 + 40^2) = 50
     assert.ok(Math.abs(moved - (base + 50)) < 0.001);
   });
@@ -516,7 +516,7 @@ describe("SDF Bounds Calculation", () => {
 
   it("repeat multiplies bounds by 3", () => {
     const base = calculateBounds(sdfCircle(5));
-    const repeated = calculateBounds(sdfRepeat(sdfCircle(5), 20, 20));
+    const repeated = calculateBounds(sdfRepeat(sdfCircle(5), { x: 20, y: 20 }));
     assert.ok(Math.abs(repeated - base * 3) < 0.001);
   });
 
@@ -783,7 +783,7 @@ describe("SDF Domain Transform WGSL", () => {
   });
 
   it("repeat generates op_repeat", () => {
-    const wgsl = compileToWgsl(sdfRepeat(sdfCircle(5), 20, 30));
+    const wgsl = compileToWgsl(sdfRepeat(sdfCircle(5), { x: 20, y: 30 }));
     assert.equal(
       wgsl,
       "sd_circle(op_repeat(p, vec2<f32>(20.0, 30.0)), 5.0)",
@@ -791,7 +791,7 @@ describe("SDF Domain Transform WGSL", () => {
   });
 
   it("mirrorX + offset nested correctly", () => {
-    const wgsl = compileToWgsl(sdfOffset(sdfMirrorX(sdfCircle(10)), 5, 0));
+    const wgsl = compileToWgsl(sdfOffset(sdfMirrorX(sdfCircle(10)), { x: 5, y: 0 }));
     // offset wraps the mirrorX result
     assert.ok(wgsl.includes("op_symmetry_x("));
     assert.ok(wgsl.includes("vec2<f32>(5.0, 0.0)"));
@@ -817,7 +817,7 @@ describe("SDF Modifier WGSL", () => {
   });
 
   it("round + offset composes correctly", () => {
-    const shape = sdfRound(sdfOffset(sdfBox(10, 10), 5, 5), 2);
+    const shape = sdfRound(sdfOffset(sdfBox(10, 10), { x: 5, y: 5 }), 2);
     const wgsl = compileToWgsl(shape);
     assert.ok(wgsl.includes("sd_box("));
     assert.ok(wgsl.includes("- 2.0"));
@@ -889,7 +889,7 @@ describe("SDF Cosine Palette Fill", () => {
 describe("SDF Recipes", () => {
   it("tree: circle crown + box trunk", () => {
     const tree = sdfUnion(
-      sdfOffset(sdfCircle(12), 0, -10),
+      sdfOffset(sdfCircle(12), { x: 0, y: -10 }),
       sdfBox(4, 10),
     );
     const wgsl = compileToWgsl(tree);
@@ -905,7 +905,7 @@ describe("SDF Recipes", () => {
   it("mountain: triangle base with snow circle on top", () => {
     const mountain = sdfUnion(
       sdfTriangle({ x: 0, y: -30 }, { x: -25, y: 20 }, { x: 25, y: 20 }),
-      sdfOffset(sdfCircle(8), 0, -25),
+      sdfOffset(sdfCircle(8), { x: 0, y: -25 }),
     );
     const wgsl = compileToWgsl(mountain);
     assert.ok(wgsl.includes("sd_triangle("));
@@ -919,7 +919,7 @@ describe("SDF Recipes", () => {
   it("house: box body + triangle roof", () => {
     const house = sdfUnion(
       sdfBox(15, 12),
-      sdfOffset(sdfTriangle({ x: -18, y: 0 }, { x: 18, y: 0 }, { x: 0, y: -16 }), 0, -12),
+      sdfOffset(sdfTriangle({ x: -18, y: 0 }, { x: 18, y: 0 }, { x: 0, y: -16 }), { x: 0, y: -12 }),
     );
     const wgsl = compileToWgsl(house);
     assert.ok(wgsl.length > 0);
@@ -947,8 +947,8 @@ describe("SDF Recipes", () => {
     const cloud = sdfSmoothUnion(
       5,
       sdfCircle(12),
-      sdfOffset(sdfCircle(10), -12, -3),
-      sdfOffset(sdfCircle(10), 12, -3),
+      sdfOffset(sdfCircle(10), { x: -12, y: -3 }),
+      sdfOffset(sdfCircle(10), { x: 12, y: -3 }),
     );
     const wgsl = compileToWgsl(cloud);
     assert.ok(wgsl.includes("op_smooth_union("));
@@ -971,7 +971,7 @@ describe("SDF Recipes", () => {
   it("shield: subtract circle from rounded box", () => {
     const shield = sdfSubtract(
       sdfRoundedBox(16, 20, 4),
-      sdfOffset(sdfCircle(10), 0, 12),
+      sdfOffset(sdfCircle(10), { x: 0, y: 12 }),
     );
     const wgsl = compileToWgsl(shield);
     assert.ok(wgsl.includes("max("));
@@ -1005,7 +1005,7 @@ describe("SDF Recipes", () => {
   });
 
   it("tiled pattern: circle repeated on grid", () => {
-    const pattern = sdfRepeat(sdfCircle(3), 10, 10);
+    const pattern = sdfRepeat(sdfCircle(3), { x: 10, y: 10 });
     const wgsl = compileToWgsl(pattern);
     assert.ok(wgsl.includes("op_repeat("));
     assert.ok(wgsl.includes("sd_circle("));
@@ -1016,7 +1016,7 @@ describe("SDF Recipes", () => {
   });
 
   it("symmetric butterfly: mirrorX of offset wing", () => {
-    const wing = sdfOffset(sdfEllipse(12, 8), 10, 0);
+    const wing = sdfOffset(sdfEllipse(12, 8), { x: 10, y: 0 });
     const butterfly = sdfMirrorX(wing);
     const wgsl = compileToWgsl(butterfly);
     assert.ok(wgsl.includes("op_symmetry_x("));
@@ -1031,9 +1031,9 @@ describe("SDF Recipes", () => {
     // A face: big circle with subtracted eyes and a mouth
     const face = sdfSubtract(
       sdfCircle(30),
-      sdfOffset(sdfCircle(5), -10, -8),
-      sdfOffset(sdfCircle(5), 10, -8),
-      sdfOffset(sdfBox(10, 2), 0, 10),
+      sdfOffset(sdfCircle(5), { x: -10, y: -8 }),
+      sdfOffset(sdfCircle(5), { x: 10, y: -8 }),
+      sdfOffset(sdfBox(10, 2), { x: 0, y: 10 }),
     );
     const wgsl = compileToWgsl(face);
     assert.ok(wgsl.length > 0);
@@ -1057,7 +1057,7 @@ describe("SDF Edge Cases", () => {
   });
 
   it("negative offset compiles", () => {
-    const wgsl = compileToWgsl(sdfOffset(sdfCircle(5), -10, -20));
+    const wgsl = compileToWgsl(sdfOffset(sdfCircle(5), { x: -10, y: -20 }));
     assert.equal(wgsl, "sd_circle((p - vec2<f32>(-10.0, -20.0)), 5.0)");
   });
 
@@ -1080,7 +1080,7 @@ describe("SDF Edge Cases", () => {
   it("deeply nested transforms compile without error", () => {
     let shape: SdfNode = sdfCircle(5);
     for (let i = 0; i < 10; i++) {
-      shape = sdfOffset(shape, 1, 0);
+      shape = sdfOffset(shape, { x: 1, y: 0 });
     }
     const wgsl = compileToWgsl(shape);
     assert.ok(wgsl.length > 0);
