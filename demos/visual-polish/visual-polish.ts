@@ -10,6 +10,9 @@
  * - Typewriter dialogue text
  * - Sprite shadows
  *
+ * NOTE: This demo uses only createSolidTexture() (not loadTexture()), so there's
+ * no texture filtering to toggle. See sprite-demo for filtering demonstration.
+ *
  * Controls:
  *   1-5 = Trigger different transition types
  *   SPACE = Hit the target (impact + damage number)

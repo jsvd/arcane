@@ -14,15 +14,32 @@ const hasUploadOp =
  * Caches by path -- loading the same path twice returns the same handle.
  * Returns 0 (no texture) in headless mode.
  *
- * @param path - File path to a PNG image (relative to game entry file or absolute).
+ * @param path - File path to a PNG image (relative to project root).
+ * @param options - Optional texture loading options.
+ * @param options.filtering - Texture filtering mode. Default: "nearest" (crisp pixels).
  * @returns Texture handle for use with drawSprite(), createTilemap(), etc.
  *
- * @example
- * const playerTex = loadTexture("assets/player.png");
- * drawSprite({ textureId: playerTex, x: 0, y: 0, w: 32, h: 32 });
+ * **Filtering modes:**
+ * - `"nearest"` (default) — Crisp, pixel-perfect. Use for pixel art, retro games, UI.
+ * - `"linear"` — Smooth, blended. Use for gradients, photos, pre-rendered 3D sprites.
+ *
+ * @example Pixel art (crisp edges, default)
+ * const heroTex = loadTexture("assets/hero.png");
+ * drawSprite({ textureId: heroTex, x: 0, y: 0, w: 32, h: 32 });
+ *
+ * @example Smooth gradient
+ * const skyTex = loadTexture("assets/sky-gradient.png", { filtering: "linear" });
+ * drawSprite({ textureId: skyTex, x: 0, y: 0, w: 800, h: 600 });
  */
-export function loadTexture(path: string): TextureId {
+export function loadTexture(
+  path: string,
+  options?: { filtering?: "nearest" | "linear" }
+): TextureId {
   if (!hasRenderOps) return 0;
+  const filtering = options?.filtering ?? "nearest";
+  if (filtering === "linear") {
+    return (globalThis as any).Deno.core.ops.op_load_texture_linear(path);
+  }
   return (globalThis as any).Deno.core.ops.op_load_texture(path);
 }
 

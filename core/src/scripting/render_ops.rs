@@ -91,6 +91,8 @@ pub struct RenderBridgeState {
     pub touch_count: u32,
     /// Pending texture load requests (path → result channel).
     pub texture_load_queue: Vec<(String, u32)>,
+    /// Pending texture load requests with linear filtering.
+    pub texture_load_queue_linear: Vec<(String, u32)>,
     /// Base directory for resolving relative texture paths.
     pub base_dir: PathBuf,
     /// Next texture ID to assign (for pre-registration before GPU load).
@@ -199,6 +201,7 @@ impl RenderBridgeState {
             touch_points: Vec::new(),
             touch_count: 0,
             texture_load_queue: Vec::new(),
+            texture_load_queue_linear: Vec::new(),
             base_dir,
             next_texture_id: 1,
             texture_path_to_id: std::collections::HashMap::new(),
@@ -434,6 +437,33 @@ pub fn op_load_texture(state: &mut OpState, #[string] path: &str) -> u32 {
     b.next_texture_id += 1;
     b.texture_path_to_id.insert(resolved.clone(), id);
     b.texture_load_queue.push((resolved, id));
+    id
+}
+
+/// Load a texture with linear filtering (smooth, blended).
+/// Use for gradients, photos, or pre-rendered 3D sprites.
+/// For pixel art, use op_load_texture (nearest filtering).
+#[deno_core::op2(fast)]
+pub fn op_load_texture_linear(state: &mut OpState, #[string] path: &str) -> u32 {
+    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
+    let mut b = bridge.borrow_mut();
+
+    // Resolve relative paths against base_dir
+    let resolved = if std::path::Path::new(path).is_absolute() {
+        path.to_string()
+    } else {
+        b.base_dir.join(path).to_string_lossy().to_string()
+    };
+
+    // Check cache (note: linear textures share the same ID space but use separate queue)
+    if let Some(&id) = b.texture_path_to_id.get(&resolved) {
+        return id;
+    }
+
+    let id = b.next_texture_id;
+    b.next_texture_id += 1;
+    b.texture_path_to_id.insert(resolved.clone(), id);
+    b.texture_load_queue_linear.push((resolved, id));
     id
 }
 
@@ -1495,6 +1525,7 @@ deno_core::extension!(
         op_set_camera,
         op_get_camera,
         op_load_texture,
+        op_load_texture_linear,
         op_upload_rgba_texture,
         op_is_key_down,
         op_is_key_pressed,

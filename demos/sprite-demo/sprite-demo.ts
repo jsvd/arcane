@@ -33,6 +33,7 @@ type State = {
   walkAnim: AnimationState;
   isWalking: boolean;
   assetsLoaded: boolean;
+  filtering: "nearest" | "linear";
 };
 
 // --- Asset Loading ---
@@ -105,6 +106,7 @@ const state: State = {
   walkAnim: playAnimation(walkAnimDef),
   isWalking: false,
   assetsLoaded: assetsExist,
+  filtering: "nearest",
 };
 
 // --- Game Bootstrap ---
@@ -215,6 +217,25 @@ game.onFrame((ctx) => {
     state.y = 300;
   }
 
+  // Toggle texture filtering
+  if (isKeyPressed("f") || isKeyPressed("F")) {
+    state.filtering = state.filtering === "nearest" ? "linear" : "nearest";
+    // Reload texture with new filtering
+    if (state.assetsLoaded) {
+      characterTexture = loadTexture(SPRITE_PATH, { filtering: state.filtering });
+      // Recreate animation with new texture
+      const newAnimDef = createAnimation(
+        characterTexture,
+        FRAME_SIZE,
+        FRAME_SIZE,
+        8,
+        WALK_FPS,
+        { loop: true }
+      );
+      state.walkAnim = playAnimation(newAnimDef);
+    }
+  }
+
   // --- Render ---
 
   // Draw character (3x bigger than spritesheet size)
@@ -288,21 +309,29 @@ game.onFrame((ctx) => {
     });
   }
 
-  hud.text("Arrow Keys: Move  |  Space: Sound  |  R: Reset", 10, 60, {
+  hud.text("Arrow Keys: Move  |  Space: Sound  |  R: Reset  |  F: Toggle Filtering", 10, 60, {
     scale: 1.5,
     tint: Colors.LIGHT_GRAY,
   });
 
+  // Show current filtering mode
+  if (state.assetsLoaded) {
+    const filteringText = state.filtering === "nearest" ? "Nearest (pixel-perfect)" : "Linear (smooth)";
+    hud.text(`Filtering: ${filteringText}`, 10, 85, {
+      tint: Colors.INFO,
+    });
+  }
+
   const dirText = state.dirY === -1 ? "Up" : state.dirY === 1 ? "Down" : state.dirX === -1 ? "Left" : state.dirX === 1 ? "Right" : "Idle";
   const statusText = state.isWalking ? `Walking ${dirText}` : `Idle (${dirText})`;
-  hud.text(`Status: ${statusText}`, 10, 85, {
+  hud.text(`Status: ${statusText}`, 10, 110, {
     tint: Colors.INFO,
   });
 
   if (state.assetsLoaded && state.isWalking) {
     const frameNum = state.walkAnim.frame;
     const dirRow = state.dirY === -1 ? 0 : state.dirY === 1 ? 1 : state.dirX === -1 ? 2 : 3;
-    hud.text(`Frame: ${frameNum + 1}/${COLS} from Row ${dirRow}`, 10, 110, {
+    hud.text(`Frame: ${frameNum + 1}/${COLS} from Row ${dirRow}`, 10, 135, {
       scale: 1.5,
       tint: Colors.LIGHT_GRAY,
     });

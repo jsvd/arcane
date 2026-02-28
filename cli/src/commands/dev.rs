@@ -22,10 +22,12 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
         type_check::check_types(&entry_path)?;
     }
 
-    // Use current working directory as base for asset resolution
-    // This allows assets/... paths instead of ../assets/... regardless of entry file location
-    let base_dir = std::env::current_dir()
-        .unwrap_or_else(|_| Path::new(".").to_path_buf());
+    // Resolve asset paths relative to the entry script's directory
+    // This allows demos to have their own assets/ directories
+    let base_dir = entry_path
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .to_path_buf();
 
     let title = format!(
         "Arcane — {}",
@@ -332,6 +334,54 @@ pub fn run(entry: String, inspector_port: Option<u16>, mcp_port: Option<u16>) ->
                                 let rgba = img.to_rgba8();
                                 let (w, h) = rgba.dimensions();
                                 renderer.textures.upload_raw(
+                                    &renderer.gpu.device, &renderer.gpu.queue,
+                                    &renderer.sprites.texture_bind_group_layout,
+                                    id,
+                                    &rgba,
+                                    w,
+                                    h,
+                                );
+                            }
+                            Err(e) => eprintln!("Failed to decode texture {path}: {e}"),
+                        },
+                        Err(e) => eprintln!("Failed to read texture {path}: {e}"),
+                    }
+                }
+            }
+        }
+
+        // Process pending texture loads with linear filtering
+        let pending_textures_linear: Vec<(String, u32)> = {
+            let mut bridge = bridge_for_loop.borrow_mut();
+            std::mem::take(&mut bridge.texture_load_queue_linear)
+        };
+
+        if let Some(ref mut renderer) = state.renderer {
+            for (path, id) in pending_textures_linear {
+                if path.starts_with("__solid__:") {
+                    // Parse solid color: __solid__:name:r:g:b:a
+                    let parts: Vec<&str> = path.splitn(6, ':').collect();
+                    if parts.len() == 6 {
+                        let r = parts[2].parse::<u8>().unwrap_or(255);
+                        let g = parts[3].parse::<u8>().unwrap_or(255);
+                        let b = parts[4].parse::<u8>().unwrap_or(255);
+                        let a = parts[5].parse::<u8>().unwrap_or(255);
+                        renderer.textures.upload_raw_linear(
+                            &renderer.gpu.device, &renderer.gpu.queue,
+                            &renderer.sprites.texture_bind_group_layout,
+                            id,
+                            &[r, g, b, a],
+                            1,
+                            1,
+                        );
+                    }
+                } else {
+                    match std::fs::read(&path) {
+                        Ok(img_data) => match image::load_from_memory(&img_data) {
+                            Ok(img) => {
+                                let rgba = img.to_rgba8();
+                                let (w, h) = rgba.dimensions();
+                                renderer.textures.upload_raw_linear(
                                     &renderer.gpu.device, &renderer.gpu.queue,
                                     &renderer.sprites.texture_bind_group_layout,
                                     id,
@@ -995,6 +1045,7 @@ fn reload_runtime(
         b.sprite_commands.clear();
         b.point_lights.clear();
         b.texture_load_queue.clear();
+        b.texture_load_queue_linear.clear();
         b.raw_texture_upload_queue.clear();
         b.font_texture_queue.clear();
         b.audio_commands.clear();
