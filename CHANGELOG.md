@@ -2,7 +2,7 @@
 
 All notable changes to Arcane are documented here.
 
-## [Unreleased]
+## [0.23.0] - 2026-02-28
 
 ### Added
 - **`spawnBurst(x, y, opts)`** — self-destructing particle burst with automatic Rust emitter lifecycle management; emits `count` particles over `duration` seconds then cleans up when all particles die. Replaces ~70 lines of manual emitter bookkeeping.

@@ -19,7 +19,6 @@ import type { GameState } from "./game.ts";
 const game = createGame({
   name: "{{PROJECT_NAME}}",
   zoom: ZOOM,
-  autoCamera: false,   // we drive the camera via followTargetWithShake below
   background: BG_COLOR,
   // autoSubsystems: true (default) — updateTweens, updateParticles,
   // updateScreenTransition, drawScreenTransition, drawScreenFlash are automatic.
