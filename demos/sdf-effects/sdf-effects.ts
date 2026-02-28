@@ -111,7 +111,7 @@ game.onFrame((_ctx) => {
       position: { x: GRID[2][0], y: GRID[2][1] },
       scale: pulse(time, 3, 1.0, 1.15),
       opacity: breathe(time, 3, 0.7, 1.0),
-      bounds: 90,
+      // bounds auto-calculated: heart size + glow spread * 2 for proper glow rendering
       layer: LAYERS.ENTITIES,
     });
 

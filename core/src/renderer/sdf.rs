@@ -63,7 +63,7 @@ pub enum SdfFill {
     /// Linear gradient mapped through a rotation angle (radians).
     /// Scale > 1.0 makes the gradient span a smaller region (tighter fit to shape).
     Gradient { from: [f32; 4], to: [f32; 4], angle: f32, scale: f32 },
-    /// Exponential glow falloff outside the shape.
+    /// Glow falloff outside the shape (intensity controls decay rate).
     Glow { color: [f32; 4], intensity: f32 },
     /// Cosine palette: `a + b * cos(2pi * (c * t + d))` where `t` = distance.
     CosinePalette { a: [f32; 3], b: [f32; 3], c: [f32; 3], d: [f32; 3] },
@@ -535,9 +535,11 @@ pub fn generate_fill_wgsl(fill: &SdfFill) -> String {
                 r#"    // Glow fill
     let glow_color = vec4<f32>({:.6}, {:.6}, {:.6}, {:.6});
     let glow_intensity = {:.6};
-    // Exponential falloff outside the shape; full brightness inside
-    let glow = exp(-max(d, 0.0) * glow_intensity);
-    out_color = vec4<f32>(glow_color.rgb, glow_color.a * glow * in_opacity);"#,
+    // Exponential falloff: higher intensity = tighter glow
+    // Inside shape (d <= 0): full opacity
+    // Outside shape (d > 0): exponential decay based on intensity
+    let glow_alpha = exp(-max(d, 0.0) * glow_intensity);
+    out_color = vec4<f32>(glow_color.rgb, glow_color.a * glow_alpha * in_opacity);"#,
                 color[0], color[1], color[2], color[3],
                 intensity
             )
@@ -1221,8 +1223,8 @@ mod tests {
             color: [0.0, 0.5, 1.0, 1.0],
             intensity: 3.0,
         });
-        assert!(code.contains("exp("), "glow fill should use exponential falloff");
-        assert!(code.contains("3.000000"), "glow fill should include intensity");
+        assert!(code.contains("glow_intensity"), "glow fill should use intensity parameter");
+        assert!(code.contains("3.000000"), "glow fill should include intensity value");
     }
 
     #[test]

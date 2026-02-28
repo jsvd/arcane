@@ -698,14 +698,13 @@ export function sdfSmoothSubtract(
 // -------------------------------------------------------------------------
 
 /**
- * Translate an SDF shape by (x, y).
+ * Translate an SDF shape by a Vec2 offset.
  * @param shape - The shape to translate.
- * @param x - Horizontal offset.
- * @param y - Vertical offset.
+ * @param offset - Translation offset as Vec2 object.
  * @returns SDF node with the translation applied.
  */
-export function sdfOffset(shape: SdfNode, x: number, y: number): SdfNode {
-  return { type: "transform", child: shape, offset: { x, y } };
+export function sdfOffset(shape: SdfNode, offset: Vec2): SdfNode {
+  return { type: "transform", child: shape, offset };
 }
 
 /**
@@ -741,16 +740,14 @@ export function sdfMirrorX(shape: SdfNode): SdfNode {
 /**
  * Repeat an SDF shape infinitely on a 2D grid.
  * @param shape - The shape to repeat.
- * @param spacingX - Horizontal spacing between repetitions.
- * @param spacingY - Vertical spacing between repetitions.
+ * @param spacing - Grid spacing as Vec2 object.
  * @returns SDF node with the repeat pattern applied.
  */
 export function sdfRepeat(
   shape: SdfNode,
-  spacingX: number,
-  spacingY: number,
+  spacing: Vec2,
 ): SdfNode {
-  return { type: "transform", child: shape, repeatSpacing: { x: spacingX, y: spacingY } };
+  return { type: "transform", child: shape, repeatSpacing: spacing };
 }
 
 // -------------------------------------------------------------------------
@@ -834,7 +831,7 @@ export function sdfRepeatBounded(
   countY: number,
 ): SdfNode {
   // Use infinite repeat but clip with a box intersection
-  const repeatedShape = sdfRepeat(shape, spacingX, spacingY);
+  const repeatedShape = sdfRepeat(shape, { x: spacingX, y: spacingY });
   const halfWidth = (spacingX * countX) / 2;
   const halfHeight = (spacingY * countY) / 2;
   return sdfIntersect(repeatedShape, sdfBox(halfWidth, halfHeight));
@@ -1456,8 +1453,15 @@ function generateFillWgsl(fill: SdfFill): string {
     case "glow": {
       const [r, g, b, a] = parseColor(fill.color);
       const spread = fill.spread;
-      // Glow fades with distance: at d=0, alpha=1; at d=spread, alpha=0.5; at d→∞, alpha→0
-      return `vec4<f32>(${f(r)}, ${f(g)}, ${f(b)}, ${f(a)} * clamp(${f(spread)} / (abs(d) + ${f(spread)}), 0.0, 1.0))`;
+      if (typeof spread !== "number") {
+        console.error("Glow spread is not a number:", { fill, spread });
+        throw new Error(`Glow spread must be a number, got: ${typeof spread}`);
+      }
+      // Glow: solid inside (d<0), fades outside (d>0) based on spread
+      // At d=0: alpha=1.0, at d=spread: alpha=0.5, at d→∞: alpha→0
+      const wgsl = `vec4<f32>(${f(r)}, ${f(g)}, ${f(b)}, ${f(a)} * clamp(${f(spread)} / (max(d, 0.0) + ${f(spread)}), 0.0, 1.0))`;
+      console.log("Glow WGSL:", { color: fill.color, spread, wgsl });
+      return wgsl;
     }
 
     case "solid_outline": {
@@ -1563,6 +1567,7 @@ export function sdfEntity(config: {
   }
 
   const wgsl = compileToWgsl(config.shape);
+
   const rotation = ((config.rotation ?? 0) * Math.PI) / 180; // Convert to radians
   const scaleVal = config.scale ?? 1;
   const opacity = config.opacity ?? 1;
@@ -1683,7 +1688,10 @@ export function flushSdfEntities(): void {
     } else if (fill.type === "glow") {
       fillType = 4;
       color = parseColor((fill as GlowFill).color);
-      fillParam = (fill as GlowFill).spread;
+      // Convert spread (pixels) to intensity (decay rate)
+      // intensity = 30.0 / spread for tighter glow (exp(-1) at spread/30 pixels)
+      const spread = (fill as GlowFill).spread;
+      fillParam = 30.0 / spread;
     } else if (fill.type === "cosine_palette") {
       fillType = 5;
     }
