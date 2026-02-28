@@ -897,20 +897,6 @@ fn process_audio_command(
                 eprintln!("[audio] Failed to read sound file {path}: {e}");
             }
         },
-        BridgeAudioCommand::PlaySound {
-            id,
-            volume,
-            looping,
-        } => {
-            let _ = audio_tx.send(AudioCommand::PlaySound {
-                id,
-                volume,
-                looping,
-            });
-        }
-        BridgeAudioCommand::StopSound { id } => {
-            let _ = audio_tx.send(AudioCommand::StopSound { id });
-        }
         BridgeAudioCommand::StopAll => {
             let _ = audio_tx.send(AudioCommand::StopAll);
         }

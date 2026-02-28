@@ -138,33 +138,33 @@ The engine must serve the breadth of 2D games, not just RPGs. These initial demo
 
 ### Code Cleanup & Technical Debt
 
-**Status: Backlog**
+**Status: Complete**
 
 Remove backward-compatibility shims and legacy code paths that are no longer needed after Phase 20 and Phase 26 completion.
 
 ### Deliverables
-- [ ] **Remove audio legacy sink system** (~150 lines, `core/src/audio/mod.rs`)
-  - [ ] Remove `legacy_sinks` HashMap and all legacy sink tracking
-  - [ ] Remove `PlaySound` command handling (lines 146-173)
-  - [ ] Remove `StopSound` legacy command handling (lines 175-179)
-  - [ ] Remove volume updates for legacy sinks (lines 196-199)
-  - [ ] All code now uses Phase 20 instance-based API (`op_play_sound_ex`)
-- [ ] **Remove sprite rendering fallback** (~100 lines total)
-  - [ ] Remove `op_draw_sprite` fallback in `runtime/rendering/sprites.ts` (lines 238-263)
-  - [ ] Remove `op_draw_sprite` op definition in `core/src/scripting/render_ops.rs`
-  - [ ] Remove `hasRenderOps` detection in sprites.ts (only `hasBatchOp` needed)
-  - [ ] All code now uses Phase 26 batch API (`op_submit_sprite_batch`)
-- [ ] **Remove audio playSound fallback** (~3 lines, `runtime/rendering/audio.ts`)
-  - [ ] Remove `op_play_sound` fallback (lines 190-192)
-  - [ ] Remove `hasPlaySoundEx` detection (always true in Phase 20+)
-  - [ ] Remove old `op_play_sound` op from `core/src/scripting/render_ops.rs`
+- [x] **Remove audio legacy sink system** (~150 lines, `core/src/audio/mod.rs`)
+  - [x] Remove `legacy_sinks` HashMap and all legacy sink tracking
+  - [x] Remove `PlaySound` command handling
+  - [x] Remove `StopSound` legacy command handling
+  - [x] Remove volume updates for legacy sinks
+  - [x] All code now uses Phase 20 instance-based API (`op_play_sound_ex`)
+- [x] **Remove sprite rendering fallback** (~100 lines total)
+  - [x] Remove `op_draw_sprite` fallback in `runtime/rendering/sprites.ts`
+  - [x] Remove `op_draw_sprite` op definition in `core/src/scripting/render_ops.rs`
+  - [x] Remove `hasRenderOps` (op_draw_sprite) detection in sprites.ts (only `hasBatchOp` needed)
+  - [x] All code now uses Phase 26 batch API (`op_submit_sprite_batch`)
+- [x] **Remove audio playSound fallback** (~3 lines, `runtime/rendering/audio.ts`)
+  - [x] Remove `op_play_sound` fallback
+  - [x] Remove `hasPlaySoundEx` detection (always true in Phase 20+)
+  - [x] Remove old `op_play_sound` op from `core/src/scripting/render_ops.rs`
 
 ### Success Criteria
-- [ ] All tests still pass (Node, V8, Rust)
-- [ ] No demos or examples break
-- [ ] ~250 lines of legacy code removed
-- [ ] Code is simpler and easier to maintain
-- [ ] No backward-compatibility burden for future changes
+- [x] All tests still pass (Node, V8, Rust)
+- [x] No demos or examples break
+- [x] ~250 lines of legacy code removed
+- [x] Code is simpler and easier to maintain
+- [x] No backward-compatibility burden for future changes
 
 ---
 

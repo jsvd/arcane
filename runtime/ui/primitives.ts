@@ -9,7 +9,7 @@ import { resolveScreenSpace } from "../rendering/context.ts";
 
 const hasRenderOps =
   typeof (globalThis as any).Deno !== "undefined" &&
-  typeof (globalThis as any).Deno?.core?.ops?.op_draw_sprite === "function";
+  typeof (globalThis as any).Deno?.core?.ops?.op_submit_sprite_batch === "function";
 
 /** Cache solid textures by color key to avoid re-creating them every frame. */
 const textureCache = new Map<string, number>();
