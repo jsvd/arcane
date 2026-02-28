@@ -54,14 +54,14 @@ const platforms: Array<[number, number, number]> = [
 ];
 
 // Gem positions (above each platform)
-const gems: Array<[number, number]> = [
-  [150, 410],
-  [380, 350],
-  [600, 390],
-  [280, 270],
-  [520, 230],
-  [180, 190],
-  [420, 150],
+const gems: Array<{ x: number; y: number }> = [
+  { x: 150, y: 410 },
+  { x: 380, y: 350 },
+  { x: 600, y: 390 },
+  { x: 280, y: 270 },
+  { x: 520, y: 230 },
+  { x: 180, y: 190 },
+  { x: 420, y: 150 },
 ];
 
 // Cloud positions [x, y, scale]
@@ -87,9 +87,9 @@ const cloudShape = (scale: number) =>
   sdfSmoothUnion(
     8 * scale,
     sdfCircle(20 * scale),
-    sdfOffset(sdfCircle(28 * scale), 24 * scale, 4 * scale),
-    sdfOffset(sdfCircle(18 * scale), -20 * scale, -2 * scale),
-    sdfOffset(sdfCircle(22 * scale), 10 * scale, 12 * scale),
+    sdfOffset(sdfCircle(28 * scale), { x: 24 * scale, y: 4 * scale }),
+    sdfOffset(sdfCircle(18 * scale), { x: -20 * scale, y: -2 * scale }),
+    sdfOffset(sdfCircle(22 * scale), { x: 10 * scale, y: 12 * scale }),
   );
 
 // Mountain range - rounded peaks with sharp valleys, overlapping bases
@@ -98,17 +98,17 @@ const cloudShape = (scale: number) =>
 const MOUNTAIN_BASE = -120; // Bottom of mountains (below screen)
 const mountainPeaks = sdfUnion(
   // Tallest peak (center-left) - height 180, most rounded, wide base
-  sdfOffset(sdfRound(sdfTriangle([0, 180], [-140, MOUNTAIN_BASE], [140, MOUNTAIN_BASE]), 25), -60, 0),
+  sdfOffset(sdfRound(sdfTriangle({ x: 0, y: 180 }, { x: -140, y: MOUNTAIN_BASE }, { x: 140, y: MOUNTAIN_BASE }), 25), { x: -60, y: 0 }),
   // Second tallest (center-right) - height 160, medium-high roundness
-  sdfOffset(sdfRound(sdfTriangle([0, 160], [-130, MOUNTAIN_BASE], [130, MOUNTAIN_BASE]), 20), 120, 0),
+  sdfOffset(sdfRound(sdfTriangle({ x: 0, y: 160 }, { x: -130, y: MOUNTAIN_BASE }, { x: 130, y: MOUNTAIN_BASE }), 20), { x: 120, y: 0 }),
   // Medium peak (far left) - height 130, subtle roundness
-  sdfOffset(sdfRound(sdfTriangle([0, 130], [-120, MOUNTAIN_BASE], [120, MOUNTAIN_BASE]), 12), -250, 0),
+  sdfOffset(sdfRound(sdfTriangle({ x: 0, y: 130 }, { x: -120, y: MOUNTAIN_BASE }, { x: 120, y: MOUNTAIN_BASE }), 12), { x: -250, y: 0 }),
   // Medium peak (far right) - height 140, moderate roundness
-  sdfOffset(sdfRound(sdfTriangle([0, 140], [-125, MOUNTAIN_BASE], [125, MOUNTAIN_BASE]), 16), 300, 0),
+  sdfOffset(sdfRound(sdfTriangle({ x: 0, y: 140 }, { x: -125, y: MOUNTAIN_BASE }, { x: 125, y: MOUNTAIN_BASE }), 16), { x: 300, y: 0 }),
   // Left edge peak - height 100, minimal roundness, extends past screen
-  sdfOffset(sdfRound(sdfTriangle([0, 100], [-130, MOUNTAIN_BASE], [130, MOUNTAIN_BASE]), 8), -400, 0),
+  sdfOffset(sdfRound(sdfTriangle({ x: 0, y: 100 }, { x: -130, y: MOUNTAIN_BASE }, { x: 130, y: MOUNTAIN_BASE }), 8), { x: -400, y: 0 }),
   // Right edge peak - height 110, light roundness, extends past screen
-  sdfOffset(sdfRound(sdfTriangle([0, 110], [-130, MOUNTAIN_BASE], [130, MOUNTAIN_BASE]), 10), 420, 0),
+  sdfOffset(sdfRound(sdfTriangle({ x: 0, y: 110 }, { x: -130, y: MOUNTAIN_BASE }, { x: 130, y: MOUNTAIN_BASE }), 10), { x: 420, y: 0 }),
 );
 // Mountain vertical extent: from MOUNTAIN_BASE (-120) to tallest peak (180) = 300 units
 // Bounds must cover half the screen width (400) to render the full range
@@ -120,11 +120,11 @@ const foliageShape = (scale: number) =>
   sdfSmoothUnion(
     10 * scale, // Larger blend for softer, bushier look
     sdfCircle(26 * scale),                              // Center
-    sdfOffset(sdfCircle(20 * scale), -22 * scale, 0),      // Left
-    sdfOffset(sdfCircle(20 * scale), 22 * scale, 0),       // Right
-    sdfOffset(sdfCircle(18 * scale), -12 * scale, 16 * scale),  // Upper-left
-    sdfOffset(sdfCircle(18 * scale), 12 * scale, 16 * scale),   // Upper-right
-    sdfOffset(sdfCircle(16 * scale), 0, 22 * scale),       // Top
+    sdfOffset(sdfCircle(20 * scale), { x: -22 * scale, y: 0 }),      // Left
+    sdfOffset(sdfCircle(20 * scale), { x: 22 * scale, y: 0 }),       // Right
+    sdfOffset(sdfCircle(18 * scale), { x: -12 * scale, y: 16 * scale }),  // Upper-left
+    sdfOffset(sdfCircle(18 * scale), { x: 12 * scale, y: 16 * scale }),   // Upper-right
+    sdfOffset(sdfCircle(16 * scale), { x: 0, y: 22 * scale }),       // Top
   );
 
 // =============================================
@@ -151,7 +151,7 @@ game.onFrame((_ctx) => {
   sdfEntity({
     shape: sdfBox(W, H),
     fill: gradient("#1C3A5F", "#87CEEB", 90),
-    position: [W / 2, H / 2],
+    position: { x: W / 2, y: H / 2 },
     layer: LAYERS.BACKGROUND - 10,
   });
 
@@ -160,8 +160,8 @@ game.onFrame((_ctx) => {
   // =============================================
   sdfEntity({
     shape: sdfCircle(45),
-    fill: glow("#FFD700", 0.15), // Lower intensity = bigger glow
-    position: [680, 80],
+    fill: glow("#FFD700", 333), // spread ≈ 50 / 0.15
+    position: { x: 680, y: 80 },
     scale: pulse(time, 0.5, 0.95, 1.05), // Subtle pulse
     opacity: breathe(time, 0.3, 0.85, 1.0),
     bounds: 200, // Large bounds for sun glow
@@ -177,7 +177,7 @@ game.onFrame((_ctx) => {
     sdfEntity({
       shape: cloudShape(scale),
       fill: solid("#ffffffee"),
-      position: [driftX, cy],
+      position: { x: driftX, y: cy },
       layer: LAYERS.BACKGROUND + 4, // In front of mountains (2), behind trees (8)
     });
   }
@@ -190,7 +190,7 @@ game.onFrame((_ctx) => {
     // Forest green at base, snow white at peaks
     // Scale = bounds / actual_half_height to fit gradient properly
     fill: gradient("#2d5a27", "#f8f8ff", 90, MOUNTAIN_BOUNDS / (MOUNTAIN_HEIGHT / 2)),
-    position: [W / 2, H - 120],
+    position: { x: W / 2, y: H - 120 },
     bounds: MOUNTAIN_BOUNDS,
     layer: LAYERS.BACKGROUND + 2,
   });
@@ -203,14 +203,14 @@ game.onFrame((_ctx) => {
     sdfEntity({
       shape: sdfRoundedBox(10 * scale, 50 * scale, 4),
       fill: solid("#3a2510"),
-      position: [tx, ty + 25 * scale],
+      position: { x: tx, y: ty + 25 * scale },
       layer: LAYERS.GROUND - 2,
     });
     // Foliage - bright green, bushy shape
     sdfEntity({
       shape: foliageShape(scale),
       fill: solidOutline("#3a9a4a", "#1a6a2a", 2), // Brighter green with outline
-      position: [tx, ty - 20 * scale],
+      position: { x: tx, y: ty - 20 * scale },
       bounds: 50 * scale, // Explicit bounds for larger foliage
       layer: LAYERS.GROUND - 1,
     });
@@ -222,7 +222,7 @@ game.onFrame((_ctx) => {
   sdfEntity({
     shape: sdfBox(W, 60),
     fill: solidOutline("#5a8a3e", "#3d6b2a", 3),
-    position: [W / 2, H - 30],
+    position: { x: W / 2, y: H - 30 },
     layer: LAYERS.GROUND,
   });
 
@@ -230,7 +230,7 @@ game.onFrame((_ctx) => {
   sdfEntity({
     shape: sdfBox(W, 8),
     fill: solid("#6a9a4e"),
-    position: [W / 2, H - 64],
+    position: { x: W / 2, y: H - 64 },
     layer: LAYERS.GROUND + 1,
   });
 
@@ -241,7 +241,7 @@ game.onFrame((_ctx) => {
     sdfEntity({
       shape: sdfRound(sdfBox(pw, 12), 4),
       fill: solidOutline("#8B7355", "#5C4033", 2),
-      position: [px, py],
+      position: { x: px, y: py },
       layer: LAYERS.ENTITIES,
     });
   }
@@ -252,13 +252,13 @@ game.onFrame((_ctx) => {
 
   // Gems - spinning and pulsing with visible glow
   for (let i = 0; i < gems.length; i++) {
-    const [gx, gy] = gems[i];
+    const { x: gx, y: gy } = gems[i];
     // Stagger animation phase for each gem
     const phase = i * 0.7;
     sdfEntity({
       shape: sdfStar(14, 4, 0.5),
-      fill: glow("#00ffaa", 0.2), // Lower intensity = bigger glow
-      position: [gx, gy + bob(time + phase, 2, 3)], // Gentle bobbing
+      fill: glow("#00ffaa", 250), // spread ≈ 50 / 0.2
+      position: { x: gx, y: gy + bob(time + phase, 2, 3) }, // Gentle bobbing
       rotation: spin(time + phase, 45), // Slow spin
       scale: pulse(time + phase, 3, 0.9, 1.1),
       bounds: 50, // Explicit bounds for glow
@@ -267,17 +267,17 @@ game.onFrame((_ctx) => {
   }
 
   // Heart pickups - pulsing with breathing glow
-  const heartPositions: Array<[number, number]> = [
-    [480, 320],
-    [220, 250],
+  const heartPositions: Array<{ x: number; y: number }> = [
+    { x: 480, y: 320 },
+    { x: 220, y: 250 },
   ];
   for (let i = 0; i < heartPositions.length; i++) {
-    const [hx, hy] = heartPositions[i];
+    const { x: hx, y: hy } = heartPositions[i];
     const phase = i * 1.2;
     sdfEntity({
       shape: sdfHeart(18),
-      fill: glow("#ff3366", 0.15), // Lower intensity = bigger glow
-      position: [hx, hy],
+      fill: glow("#ff3366", 333), // spread ≈ 50 / 0.15
+      position: { x: hx, y: hy },
       scale: pulse(time + phase, 2.5, 0.95, 1.15),
       opacity: breathe(time + phase, 2.5, 0.75, 1.0),
       bounds: 70, // Large bounds for heart glow
@@ -288,8 +288,8 @@ game.onFrame((_ctx) => {
   // Big star bonus - prominent glow and spin
   sdfEntity({
     shape: sdfStar(22, 5, 0.4),
-    fill: glow("#FFD700", 0.12), // Even lower intensity for big glow
-    position: [420, 120],
+    fill: glow("#FFD700", 417), // spread ≈ 50 / 0.12
+    position: { x: 420, y: 120 },
     rotation: spin(time, 30),
     scale: pulse(time, 2, 0.9, 1.2),
     opacity: breathe(time, 1.5, 0.8, 1.0),
@@ -306,7 +306,7 @@ game.onFrame((_ctx) => {
   sdfEntity({
     shape: sdfCircle(12),
     fill: playerFill,
-    position: [120, 490],
+    position: { x: 120, y: 490 },
     layer: LAYERS.ENTITIES + 10,
   });
 
@@ -314,7 +314,7 @@ game.onFrame((_ctx) => {
   sdfEntity({
     shape: sdfRoundedBox(8, 22, 3),
     fill: playerFill,
-    position: [120, 520],
+    position: { x: 120, y: 520 },
     layer: LAYERS.ENTITIES + 10,
   });
 
@@ -322,7 +322,7 @@ game.onFrame((_ctx) => {
   sdfEntity({
     shape: sdfRoundedBox(5, 18, 2),
     fill: playerFill,
-    position: [112, 555],
+    position: { x: 112, y: 555 },
     layer: LAYERS.ENTITIES + 9,
   });
 
@@ -330,7 +330,7 @@ game.onFrame((_ctx) => {
   sdfEntity({
     shape: sdfRoundedBox(5, 18, 2),
     fill: playerFill,
-    position: [128, 555],
+    position: { x: 128, y: 555 },
     layer: LAYERS.ENTITIES + 9,
   });
 
@@ -338,7 +338,7 @@ game.onFrame((_ctx) => {
   sdfEntity({
     shape: sdfRoundedBox(4, 14, 2),
     fill: playerFill,
-    position: [100, 518],
+    position: { x: 100, y: 518 },
     layer: LAYERS.ENTITIES + 9,
   });
 
@@ -346,7 +346,7 @@ game.onFrame((_ctx) => {
   sdfEntity({
     shape: sdfRoundedBox(4, 14, 2),
     fill: playerFill,
-    position: [140, 518],
+    position: { x: 140, y: 518 },
     layer: LAYERS.ENTITIES + 9,
   });
 
