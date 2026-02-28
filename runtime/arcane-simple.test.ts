@@ -7,7 +7,7 @@ import { it } from "./testing/harness.ts";
 // This test only works in V8 where the import map is configured
 const hasRenderOps =
   typeof (globalThis as any).Deno !== "undefined" &&
-  typeof (globalThis as any).Deno?.core?.ops?.op_draw_sprite === "function";
+  typeof (globalThis as any).Deno?.core?.ops?.op_submit_sprite_batch === "function";
 
 if (hasRenderOps) {
   // Try importing from arcane (V8 only)

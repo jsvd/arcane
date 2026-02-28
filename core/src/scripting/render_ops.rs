@@ -14,8 +14,6 @@ use crate::renderer::msdf::MsdfFontStore;
 #[derive(Clone, Debug)]
 pub enum BridgeAudioCommand {
     LoadSound { id: u32, path: String },
-    PlaySound { id: u32, volume: f32, looping: bool },
-    StopSound { id: u32 },
     StopAll,
     SetMasterVolume { volume: f32 },
 
@@ -244,78 +242,6 @@ impl RenderBridgeState {
             frame_time_ms: 0.0,
             draw_call_count: 0,
         }
-    }
-}
-
-/// Queue a sprite draw command for this frame.
-/// Accepts f64 (JavaScript's native number type), converts to f32 for GPU.
-#[deno_core::op2(fast)]
-pub fn op_draw_sprite(
-    state: &mut OpState,
-    texture_id: u32,
-    x: f64,
-    y: f64,
-    w: f64,
-    h: f64,
-    layer: i32,
-    uv_x: f64,
-    uv_y: f64,
-    uv_w: f64,
-    uv_h: f64,
-    tint_r: f64,
-    tint_g: f64,
-    tint_b: f64,
-    tint_a: f64,
-    rotation: f64,
-    origin_x: f64,
-    origin_y: f64,
-    flip_x: f64,
-    flip_y: f64,
-    opacity: f64,
-    blend_mode: f64,
-    shader_id: f64,
-) {
-    let cmd = SpriteCommand {
-        texture_id,
-        x: x as f32,
-        y: y as f32,
-        w: w as f32,
-        h: h as f32,
-        layer,
-        uv_x: uv_x as f32,
-        uv_y: uv_y as f32,
-        uv_w: uv_w as f32,
-        uv_h: uv_h as f32,
-        tint_r: tint_r as f32,
-        tint_g: tint_g as f32,
-        tint_b: tint_b as f32,
-        tint_a: tint_a as f32,
-        rotation: rotation as f32,
-        origin_x: origin_x as f32,
-        origin_y: origin_y as f32,
-        flip_x: flip_x != 0.0,
-        flip_y: flip_y != 0.0,
-        opacity: opacity as f32,
-        blend_mode: (blend_mode as u8).min(3),
-        shader_id: shader_id as u32,
-    };
-    // Route to active render target, or the main surface
-    let active_target = {
-        use super::target_ops::TargetState;
-        let ts = state.borrow::<Rc<RefCell<TargetState>>>();
-        ts.borrow().active_target
-    };
-    if let Some(target_id) = active_target {
-        use super::target_ops::TargetState;
-        let ts = state.borrow::<Rc<RefCell<TargetState>>>();
-        ts.borrow_mut()
-            .target_sprite_queues
-            .entry(target_id)
-            .or_default()
-            .push(cmd);
-    } else {
-        let bridge = state.borrow::<Rc<RefCell<RenderBridgeState>>>();
-        bridge.borrow_mut().sprite_commands.push(cmd);
     }
 }
 
@@ -694,21 +620,6 @@ pub fn op_load_sound(state: &mut OpState, #[string] path: &str) -> u32 {
     b.sound_path_to_id.insert(resolved.clone(), id);
     b.audio_commands.push(BridgeAudioCommand::LoadSound { id, path: resolved });
     id
-}
-
-/// Play a loaded sound.
-/// Accepts f64 (JavaScript's native number type), converts to f32 for audio.
-#[deno_core::op2(fast)]
-pub fn op_play_sound(state: &mut OpState, id: u32, volume: f64, looping: bool) {
-    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
-    bridge.borrow_mut().audio_commands.push(BridgeAudioCommand::PlaySound { id, volume: volume as f32, looping });
-}
-
-/// Stop a specific sound.
-#[deno_core::op2(fast)]
-pub fn op_stop_sound(state: &mut OpState, id: u32) {
-    let bridge = state.borrow_mut::<Rc<RefCell<RenderBridgeState>>>();
-    bridge.borrow_mut().audio_commands.push(BridgeAudioCommand::StopSound { id });
 }
 
 /// Stop all sounds.
@@ -1519,7 +1430,6 @@ pub fn op_is_touch_active(state: &mut OpState) -> bool {
 deno_core::extension!(
     render_ext,
     ops = [
-        op_draw_sprite,
         op_clear_sprites,
         op_submit_sprite_batch,
         op_set_camera,
@@ -1542,8 +1452,6 @@ deno_core::extension!(
         op_add_point_light,
         op_clear_lights,
         op_load_sound,
-        op_play_sound,
-        op_stop_sound,
         op_stop_all_sounds,
         op_set_master_volume,
         op_play_sound_ex,

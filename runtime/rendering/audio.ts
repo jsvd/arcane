@@ -67,10 +67,6 @@ const hasRenderOps =
   typeof (globalThis as any).Deno !== "undefined" &&
   typeof (globalThis as any).Deno?.core?.ops?.op_load_sound === "function";
 
-const hasPlaySoundEx =
-  typeof (globalThis as any).Deno !== "undefined" &&
-  typeof (globalThis as any).Deno?.core?.ops?.op_play_sound_ex === "function";
-
 /** Bus string to u32 mapping */
 const BUS_MAP: Record<AudioBus, number> = {
   sfx: 0,
@@ -149,9 +145,7 @@ export function playSound(id: SoundId, options?: PlayOptions): InstanceId {
         if (oldestId !== null) {
           activeInstances.delete(oldestId);
           spatialInstances.delete(oldestId);
-          if (hasPlaySoundEx) {
-            (globalThis as any).Deno.core.ops.op_stop_instance(oldestId);
-          }
+          (globalThis as any).Deno.core.ops.op_stop_instance(oldestId);
         }
       }
     }
@@ -173,23 +167,18 @@ export function playSound(id: SoundId, options?: PlayOptions): InstanceId {
   const reverbDelay = options?.reverbDelay ?? 50;
   const busId = BUS_MAP[bus];
 
-  if (hasPlaySoundEx) {
-    (globalThis as any).Deno.core.ops.op_play_sound_ex(
-      id,
-      instanceId,
-      volume,
-      loop_,
-      busId,
-      pan,
-      pitch,
-      lowPassFreq,
-      reverb,
-      reverbDelay
-    );
-  } else {
-    // Fallback to old op for backward compatibility
-    (globalThis as any).Deno.core.ops.op_play_sound(id, volume, loop_);
-  }
+  (globalThis as any).Deno.core.ops.op_play_sound_ex(
+    id,
+    instanceId,
+    volume,
+    loop_,
+    busId,
+    pan,
+    pitch,
+    lowPassFreq,
+    reverb,
+    reverbDelay
+  );
 
   return instanceId;
 }
@@ -210,14 +199,15 @@ export function playMusic(path: string, volume: number = 1.0): InstanceId {
 }
 
 /**
- * Stop a specific playing sound.
- * No-op in headless mode.
+ * Stop a specific playing sound by sound ID.
+ * Deprecated: use stopInstance() with an instance ID returned by playSound() instead.
+ * This function is now a no-op; stop individual sounds using stopInstance().
  *
- * @param id - Sound handle from loadSound().
+ * @param id - Sound handle from loadSound() (unused).
+ * @deprecated Use stopInstance() with the InstanceId from playSound().
  */
-export function stopSound(id: SoundId): void {
-  if (!hasRenderOps) return;
-  (globalThis as any).Deno.core.ops.op_stop_sound(id);
+export function stopSound(_id: SoundId): void {
+  // Legacy sound-id-keyed stop removed. Use stopInstance(instanceId) instead.
 }
 
 /**
@@ -273,20 +263,18 @@ export function playSoundAt(id: SoundId, options: SpatialOptions): InstanceId {
   const x = options.x;
   const y = options.y;
 
-  if (hasPlaySoundEx) {
-    (globalThis as any).Deno.core.ops.op_play_sound_spatial(
-      id,
-      instanceId,
-      volume,
-      loop_,
-      busId,
-      pitch,
-      x,
-      y,
-      listenerX,
-      listenerY
-    );
-  }
+  (globalThis as any).Deno.core.ops.op_play_sound_spatial(
+    id,
+    instanceId,
+    volume,
+    loop_,
+    busId,
+    pitch,
+    x,
+    y,
+    listenerX,
+    listenerY
+  );
 
   return instanceId;
 }
@@ -347,9 +335,7 @@ export function stopInstance(instanceId: InstanceId): void {
   spatialInstances.delete(instanceId);
 
   if (!hasRenderOps) return;
-  if (hasPlaySoundEx) {
-    (globalThis as any).Deno.core.ops.op_stop_instance(instanceId);
-  }
+  (globalThis as any).Deno.core.ops.op_stop_instance(instanceId);
 }
 
 /**
@@ -364,10 +350,8 @@ export function setBusVolume(bus: AudioBus, volume: number): void {
   busVolumes.set(bus, volume);
 
   if (!hasRenderOps) return;
-  if (hasPlaySoundEx) {
-    const busId = BUS_MAP[bus];
-    (globalThis as any).Deno.core.ops.op_set_bus_volume(busId, volume);
-  }
+  const busId = BUS_MAP[bus];
+  (globalThis as any).Deno.core.ops.op_set_bus_volume(busId, volume);
 }
 
 /**
@@ -399,7 +383,7 @@ export function setListenerPosition(x: number, y: number): void {
  * No-op in headless mode.
  */
 export function updateSpatialAudio(): void {
-  if (!hasRenderOps || !hasPlaySoundEx) return;
+  if (!hasRenderOps) return;
 
   if (spatialInstances.size === 0) return;
 
@@ -439,7 +423,5 @@ export function setPoolConfig(id: SoundId, config: PoolConfig): void {
  */
 export function setInstanceVolume(instanceId: InstanceId, volume: number): void {
   if (!hasRenderOps) return;
-  if (hasPlaySoundEx) {
-    (globalThis as any).Deno.core.ops.op_set_instance_volume(instanceId, volume);
-  }
+  (globalThis as any).Deno.core.ops.op_set_instance_volume(instanceId, volume);
 }

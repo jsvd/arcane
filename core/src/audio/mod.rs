@@ -28,8 +28,6 @@ impl AudioBus {
 /// Commands sent from the main thread to the audio thread.
 pub enum AudioCommand {
     LoadSound { id: u32, data: Vec<u8> },
-    PlaySound { id: u32, volume: f32, looping: bool },
-    StopSound { id: u32 },
     StopAll,
     SetMasterVolume { volume: f32 },
 
@@ -117,7 +115,7 @@ pub fn start_audio_thread(rx: AudioReceiver) -> std::thread::JoinHandle<()> {
         // Sound data storage (Arc for sharing across concurrent plays)
         let mut sounds: HashMap<u32, Arc<Vec<u8>>> = HashMap::new();
 
-        // Instance-based sinks (new Phase 20 architecture)
+        // Instance-based sinks (Phase 20+ architecture)
         let mut sinks: HashMap<u64, rodio::Sink> = HashMap::new();
         let mut spatial_sinks: HashMap<u64, rodio::SpatialSink> = HashMap::new();
         let mut instance_metadata: HashMap<u64, InstanceMetadata> = HashMap::new();
@@ -125,9 +123,6 @@ pub fn start_audio_thread(rx: AudioReceiver) -> std::thread::JoinHandle<()> {
         // Volume state
         let mut master_volume: f32 = 1.0;
         let mut bus_volumes: [f32; 4] = [1.0, 1.0, 1.0, 1.0]; // Sfx, Music, Ambient, Voice
-
-        // Legacy sink tracking (old sound_id-keyed sinks for backward compat)
-        let mut legacy_sinks: HashMap<u32, rodio::Sink> = HashMap::new();
 
         // Cleanup counter for periodic sink cleanup
         let mut cleanup_counter = 0;
@@ -143,45 +138,7 @@ pub fn start_audio_thread(rx: AudioReceiver) -> std::thread::JoinHandle<()> {
                     sounds.insert(id, Arc::new(data));
                 }
 
-                AudioCommand::PlaySound { id, volume, looping } => {
-                    // Legacy command: route through old sink system for backward compat
-                    if let Some(data) = sounds.get(&id) {
-                        match rodio::Sink::try_new(&stream_handle) {
-                            Ok(sink) => {
-                                sink.set_volume(volume * master_volume);
-                                let cursor = Cursor::new((**data).clone());
-                                match rodio::Decoder::new(cursor) {
-                                    Ok(source) => {
-                                        if looping {
-                                            sink.append(rodio::source::Source::repeat_infinite(source));
-                                        } else {
-                                            sink.append(source);
-                                        }
-                                        sink.play();
-                                        legacy_sinks.insert(id, sink);
-                                    }
-                                    Err(e) => {
-                                        eprintln!("[audio] Failed to decode sound {id}: {e}");
-                                    }
-                                }
-                            }
-                            Err(e) => {
-                                eprintln!("[audio] Failed to create sink for sound {id}: {e}");
-                            }
-                        }
-                    }
-                }
-
-                AudioCommand::StopSound { id } => {
-                    if let Some(sink) = legacy_sinks.remove(&id) {
-                        sink.stop();
-                    }
-                }
-
                 AudioCommand::StopAll => {
-                    for (_, sink) in legacy_sinks.drain() {
-                        sink.stop();
-                    }
                     for (_, sink) in sinks.drain() {
                         sink.stop();
                     }
@@ -193,11 +150,6 @@ pub fn start_audio_thread(rx: AudioReceiver) -> std::thread::JoinHandle<()> {
 
                 AudioCommand::SetMasterVolume { volume } => {
                     master_volume = volume;
-                    // Update all legacy sinks
-                    for sink in legacy_sinks.values() {
-                        sink.set_volume(volume);
-                    }
-                    // Update all instance sinks
                     update_all_volumes(&sinks, &spatial_sinks, &instance_metadata, &bus_volumes, master_volume);
                 }
 
@@ -414,7 +366,6 @@ pub fn start_audio_thread(rx: AudioReceiver) -> std::thread::JoinHandle<()> {
                     }
                     keep
                 });
-                legacy_sinks.retain(|_, sink| !sink.empty());
             }
         }
     })

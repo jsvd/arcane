@@ -5,12 +5,7 @@ import { createSolidTexture } from "./texture.ts";
 import { _warnColor } from "../ui/colors.ts";
 import { resolveScreenSpace } from "./context.ts";
 
-// Detect if we're running inside the Arcane renderer (V8 with render ops).
-const hasRenderOps =
-  typeof (globalThis as any).Deno !== "undefined" &&
-  typeof (globalThis as any).Deno?.core?.ops?.op_draw_sprite === "function";
-
-// Detect if the bulk sprite batch op is available (Phase 26+).
+// Detect if the sprite batch op is available (renderer active).
 const hasBatchOp =
   typeof (globalThis as any).Deno !== "undefined" &&
   typeof (globalThis as any).Deno?.core?.ops?.op_submit_sprite_batch === "function";
@@ -150,7 +145,7 @@ export function drawSprite(opts: SpriteOptions): void {
     blendMode: opts.blendMode ?? "alpha",
     shaderId: opts.shaderId ?? 0,
   });
-  if (!hasRenderOps) return;
+  if (!hasBatchOp) return;
 
   const uv = resolvedUV ?? { x: 0, y: 0, w: 1, h: 1 };
   const tint = opts.tint ?? { r: 1, g: 1, b: 1, a: 1 };
@@ -199,67 +194,38 @@ export function drawSprite(opts: SpriteOptions): void {
   const blendMode = blendModeMap[opts.blendMode ?? "alpha"] ?? 0;
   const shaderId = opts.shaderId ?? 0;
 
-  // If batch op available, write into the batch buffer
-  if (hasBatchOp) {
-    if (_batchCount >= MAX_BATCH_SPRITES) {
-      // Buffer full — flush before writing more
-      _flushSpriteBatch();
-    }
-    const base = _batchCount * SPRITE_STRIDE;
-    // texture_id and layer are stored as f32 bit patterns of their u32/i32 values
-    // This matches the Rust side which reads them with f32::to_bits()
-    const view = new DataView(_batchBuffer.buffer);
-    view.setUint32(base * 4, texId, true); // texture_id as u32 bits in f32 slot
-    _batchBuffer[base + 1] = x;
-    _batchBuffer[base + 2] = y;
-    _batchBuffer[base + 3] = w;
-    _batchBuffer[base + 4] = h;
-    view.setInt32((base + 5) * 4, layer, true); // layer as i32 bits in f32 slot
-    _batchBuffer[base + 6] = uvX;
-    _batchBuffer[base + 7] = uvY;
-    _batchBuffer[base + 8] = uvW;
-    _batchBuffer[base + 9] = uvH;
-    _batchBuffer[base + 10] = tintR;
-    _batchBuffer[base + 11] = tintG;
-    _batchBuffer[base + 12] = tintB;
-    _batchBuffer[base + 13] = tintA;
-    _batchBuffer[base + 14] = rotation;
-    _batchBuffer[base + 15] = originX;
-    _batchBuffer[base + 16] = originY;
-    _batchBuffer[base + 17] = flipX;
-    _batchBuffer[base + 18] = flipY;
-    _batchBuffer[base + 19] = opacity;
-    _batchBuffer[base + 20] = blendMode;
-    view.setUint32((base + 21) * 4, shaderId, true); // shader_id as u32 bits in f32 slot
-    _batchCount++;
-    return;
+  // Write sprite into the batch buffer
+  if (_batchCount >= MAX_BATCH_SPRITES) {
+    // Buffer full — flush before writing more
+    _flushSpriteBatch();
   }
-
-  // Fallback: individual op call
-  (globalThis as any).Deno.core.ops.op_draw_sprite(
-    texId,
-    x,
-    y,
-    w,
-    h,
-    layer,
-    uvX,
-    uvY,
-    uvW,
-    uvH,
-    tintR,
-    tintG,
-    tintB,
-    tintA,
-    rotation,
-    originX,
-    originY,
-    flipX,
-    flipY,
-    opacity,
-    blendMode,
-    shaderId,
-  );
+  const base = _batchCount * SPRITE_STRIDE;
+  // texture_id and layer are stored as f32 bit patterns of their u32/i32 values
+  // This matches the Rust side which reads them with f32::to_bits()
+  const view = new DataView(_batchBuffer.buffer);
+  view.setUint32(base * 4, texId, true); // texture_id as u32 bits in f32 slot
+  _batchBuffer[base + 1] = x;
+  _batchBuffer[base + 2] = y;
+  _batchBuffer[base + 3] = w;
+  _batchBuffer[base + 4] = h;
+  view.setInt32((base + 5) * 4, layer, true); // layer as i32 bits in f32 slot
+  _batchBuffer[base + 6] = uvX;
+  _batchBuffer[base + 7] = uvY;
+  _batchBuffer[base + 8] = uvW;
+  _batchBuffer[base + 9] = uvH;
+  _batchBuffer[base + 10] = tintR;
+  _batchBuffer[base + 11] = tintG;
+  _batchBuffer[base + 12] = tintB;
+  _batchBuffer[base + 13] = tintA;
+  _batchBuffer[base + 14] = rotation;
+  _batchBuffer[base + 15] = originX;
+  _batchBuffer[base + 16] = originY;
+  _batchBuffer[base + 17] = flipX;
+  _batchBuffer[base + 18] = flipY;
+  _batchBuffer[base + 19] = opacity;
+  _batchBuffer[base + 20] = blendMode;
+  view.setUint32((base + 21) * 4, shaderId, true); // shader_id as u32 bits in f32 slot
+  _batchCount++;
 }
 
 /**
@@ -287,7 +253,7 @@ export function _flushSpriteBatch(): void {
  * then clears the Rust-side sprite command list.
  */
 export function clearSprites(): void {
-  if (!hasRenderOps) return;
+  if (!hasBatchOp) return;
 
   // Flush any pending batched sprites before clearing
   _flushSpriteBatch();
