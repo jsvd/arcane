@@ -4,8 +4,18 @@ All notable changes to Arcane are documented here.
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-02-28
+
+### Added
+- **Texture filtering modes** — `loadTexture()` accepts optional `filtering` parameter: `"nearest"` (default, pixel-perfect) for pixel art and UI, `"linear"` (smooth, blended) for gradients and photos
+- **Asset catalog expansion** — 23 additional Kenney asset packs added to `arcane catalog` browser
+
 ### Changed
 - **Unified sprite API** — `drawColorSprite()`, `drawParallaxSprite()`, and `drawTiledSprite()` merged into `drawSprite()`. Use `color:` for solid-color sprites, `parallax:` for depth scrolling, and `tileW:`/`tileH:` for repeating textures. The old functions and their types (`ColorSpriteOptions`, `ParallaxSpriteOptions`) have been removed.
+- **Catalog view unification** — `arcane catalog` now supports both sprite sheets and individual sprite galleries in a single unified interface
+
+### Fixed
+- **Asset path resolution** — paths now resolve relative to the entry script's directory instead of current working directory; demos can have their own `assets/` directories and work regardless of where the command is run from
 
 ## [0.21.0] - 2026-02-27
 
