@@ -7,7 +7,6 @@
 
 import { createGame, hud } from "@arcane-engine/runtime/game";
 import { drawRectangle, rgb } from "@arcane-engine/runtime/ui";
-import { getViewportSize } from "@arcane-engine/runtime/rendering";
 import { createGame as createGameState } from "./game.ts";
 import type { GameState } from "./game.ts";
 
@@ -30,19 +29,17 @@ game.state<GameState>({
 
 // --- Game Loop ---
 
-game.onFrame(() => {
-  const { width, height } = getViewportSize();
-
+game.onFrame(({ vpW, vpH }) => {
   // Centered colored rectangle
   const size = 64;
   drawRectangle(
-    (width - size) / 2,
-    (height - size) / 2,
+    (vpW - size) / 2,
+    (vpH - size) / 2,
     size,
     size,
     { color: rgb(60, 180, 255) },
   );
 
   // Title text
-  hud.text("Hello, Arcane!", width / 2 - 80, height / 2 + 60, { scale: 2.5 });
+  hud.text("Hello, Arcane!", vpW / 2 - 80, vpH / 2 + 60, { scale: 2.5 });
 });

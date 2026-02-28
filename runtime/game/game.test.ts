@@ -104,6 +104,21 @@ describe("createGame", () => {
     assert.ok(receivedCtx.frame >= 1, "frame counter should start at 1");
   });
 
+  it("should provide vpW and vpH shorthand fields on GameContext", () => {
+    const game = createGame({ autoClear: false });
+    let receivedCtx: any = null;
+    game.onFrame((ctx) => { receivedCtx = ctx; });
+
+    const cb = (globalThis as any).__frameCallback;
+    cb();
+
+    assert.ok(receivedCtx !== null, "ctx should be passed");
+    assert.equal(typeof receivedCtx.vpW, "number", "vpW should be a number");
+    assert.equal(typeof receivedCtx.vpH, "number", "vpH should be a number");
+    assert.equal(receivedCtx.vpW, receivedCtx.viewport.width, "vpW should equal viewport.width");
+    assert.equal(receivedCtx.vpH, receivedCtx.viewport.height, "vpH should equal viewport.height");
+  });
+
   it("should increment frame counter on successive calls", () => {
     const game = createGame({ autoClear: false });
     const frames: number[] = [];

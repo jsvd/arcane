@@ -291,6 +291,10 @@ declare module "@arcane/runtime/game" {
           readonly width: number;
           readonly height: number;
       };
+      /** Viewport width in screen pixels. Shorthand for `ctx.viewport.width`. */
+      readonly vpW: number;
+      /** Viewport height in screen pixels. Shorthand for `ctx.viewport.height`. */
+      readonly vpH: number;
       /** Total elapsed time in seconds since game start. */
       readonly elapsed: number;
       /** Frame counter since game start. */

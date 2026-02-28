@@ -86,9 +86,12 @@ export function createGame(config?: GameConfig): Game {
           setCamera(0, 0, zoom);
         }
 
+        const viewport = getViewportSize();
         const ctx: GameContext = {
           dt,
-          viewport: getViewportSize(),
+          viewport,
+          vpW: viewport.width,
+          vpH: viewport.height,
           elapsed,
           frame,
         };
