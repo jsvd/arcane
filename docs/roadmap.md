@@ -175,6 +175,106 @@ Managed subsystem features — the engine owns a particle emitter or post-proces
 
 ---
 
+### Sprite API Unification
+
+**Status: Backlog**
+
+Merge all sprite-drawing functions into a single unified `drawSprite()` API for consistency and discoverability. Currently, sprite rendering is split across multiple functions with overlapping functionality.
+
+#### Current State
+- `drawSprite(opts)` — core sprite rendering
+- `drawAnimatedSprite(anim, x, y, opts)` — animated sprites with frame management
+- `drawColorSprite(color, x, y, w, h, opts)` — solid color rectangles (auto-caches textures)
+- `drawParallaxSprite(opts, factor)` — depth-based scrolling
+- `drawTiledSprite(opts)` — repeating textures (added in v0.21)
+
+#### Goal
+One function with optional properties that handles all sprite rendering use cases:
+```typescript
+drawSprite({
+  // Core (existing)
+  textureId, x, y, w, h, layer, uv, tint, opacity, rotation, blendMode, shaderId,
+
+  // Animation (merge drawAnimatedSprite)
+  animation?: Animation,
+
+  // Color fill (merge drawColorSprite)
+  color?: Color,  // auto-creates cached 1x1 texture
+
+  // Parallax (merge drawParallaxSprite)
+  parallax?: number,  // depth factor for camera scrolling
+
+  // Tiling (merge drawTiledSprite)
+  tileW?: number, tileH?: number,  // enables UV repeat
+});
+```
+
+#### Migration Impact
+- **Breaking:** All existing sprite functions would be deprecated
+- **Scope:** 25+ demos, runtime library code, all documentation examples
+- **Benefit:** Single consistent API, better autocomplete, easier to learn
+
+#### Deliverables
+- [ ] Design unified API signature (validate with demos first)
+- [ ] Implement unified `drawSprite()` with all features
+- [ ] Add backwards-compatible shims for old functions (deprecation warnings)
+- [ ] Update all 25+ demos to use new API
+- [ ] Update documentation and migration guide
+- [ ] Remove deprecated functions in v1.0
+
+#### Success Criteria
+- [ ] One `drawSprite()` function handles all rendering cases
+- [ ] All demos updated and passing tests
+- [ ] Performance unchanged (no regression from unification)
+- [ ] Migration guide shows 1:1 mappings for all old functions
+
+---
+
+### Coordinate System Clarification
+
+**Status: Backlog**
+
+Make camera origin positioning explicit instead of implicit. Currently, `setCamera(0, 0)` places the camera center at world (0,0), which is counterintuitive for developers expecting top-left origin (web/canvas convention).
+
+#### Current Behavior
+- `setCamera(x, y)` positions the camera **center** at world (x, y)
+- Screen (0, 0) maps to world (camX - vpWidth/2, camY - vpHeight/2)
+- To make world (0, 0) = screen top-left, you must call `setCamera(vpWidth/2, vpHeight/2)`
+
+#### Proposed Solution
+Add explicit origin mode selection:
+```typescript
+// Option A: Global setting
+setCameraOrigin("center" | "top-left");
+
+// Option B: Per-camera property
+setCamera(x, y, { origin: "center" | "top-left" });
+
+// Option C: Separate functions
+setCameraCenter(x, y);      // current behavior
+setCameraTopLeft(x, y);     // new web-style behavior
+```
+
+#### Migration Impact
+- **Breaking:** Default behavior must remain "center" for backwards compatibility
+- **Scope:** All demos rely on current camera behavior
+- **Benefit:** No more confusion about "why is everything offset?", matches web canvas conventions
+
+#### Deliverables
+- [ ] Design API (choose between Option A/B/C above)
+- [ ] Implement coordinate transform logic
+- [ ] Add explicit origin selection to all demos
+- [ ] Update documentation with clear coordinate system explanation
+- [ ] Migration guide for upgrading from implicit center origin
+
+#### Success Criteria
+- [ ] Camera origin is explicitly chosen in code (no implicit default guessing)
+- [ ] All demos specify their coordinate system preference
+- [ ] Documentation clearly explains both modes with visual diagrams
+- [ ] No performance impact from coordinate transform
+
+---
+
 ### Community Building
 
 **Status: Backlog**
