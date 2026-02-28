@@ -385,6 +385,313 @@
         "ui",
         "prompts"
       ]
+    },
+    {
+      "id": "topdown-shooter",
+      "name": "Topdown Shooter",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/topdown-shooter/8a3ad0f32b-1677695777/kenney_topdown-shooter.zip",
+      "tags": [
+        "shooter",
+        "topdown",
+        "weapons",
+        "tanks",
+        "soldiers",
+        "action"
+      ]
+    },
+    {
+      "id": "topdown-tanks-redux",
+      "name": "Topdown Tanks Redux",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/topdown-tanks-redux/1f27b0ec8a-1677693278/kenney_topdown-tanks-redux.zip",
+      "tags": [
+        "tanks",
+        "topdown",
+        "military",
+        "vehicles",
+        "hd"
+      ]
+    },
+    {
+      "id": "sokoban",
+      "name": "Sokoban",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/sokoban/c7c9804838-1677579209/kenney_sokoban.zip",
+      "tileSize": 64,
+      "tags": [
+        "sokoban",
+        "puzzle",
+        "boxes",
+        "warehouse",
+        "pixel-art"
+      ]
+    },
+    {
+      "id": "board-game-icons",
+      "name": "Board Game Icons",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/board-game-icons/83bb98f9d0-1677661428/kenney_board-game-icons.zip",
+      "tags": [
+        "board-game",
+        "cards",
+        "dice",
+        "meeples",
+        "tokens",
+        "tabletop"
+      ]
+    },
+    {
+      "id": "shape-characters",
+      "name": "Shape Characters",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/shape-characters/98fb7ce4a6-1677579174/kenney_shape-characters.zip",
+      "tags": [
+        "characters",
+        "geometric",
+        "simple",
+        "minimalist",
+        "shapes"
+      ]
+    },
+    {
+      "id": "voxel-pack",
+      "name": "Voxel Pack",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/voxel-pack/01de88f16f-1677693423/kenney_voxel-pack.zip",
+      "tags": [
+        "voxel",
+        "isometric",
+        "3d",
+        "blocks",
+        "terrain"
+      ]
+    },
+    {
+      "id": "building-kit",
+      "name": "Building Kit",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/building-kit/95d48cd84f-1677661460/kenney_building-kit.zip",
+      "tags": [
+        "buildings",
+        "construction",
+        "isometric",
+        "3d",
+        "modular"
+      ]
+    },
+    {
+      "id": "car-kit",
+      "name": "Car Kit",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/car-kit/06e98c8bf8-1677578666/kenney_car-kit.zip",
+      "tags": [
+        "cars",
+        "vehicles",
+        "racing",
+        "3d",
+        "low-poly"
+      ]
+    },
+    {
+      "id": "city-kit",
+      "name": "City Kit",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/city-kit/68ecb3f0fb-1677661494/kenney_city-kit.zip",
+      "tags": [
+        "city",
+        "buildings",
+        "urban",
+        "isometric",
+        "3d"
+      ]
+    },
+    {
+      "id": "furniture-kit",
+      "name": "Furniture Kit",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/furniture-kit/d92f729b75-1677661514/kenney_furniture-kit.zip",
+      "tags": [
+        "furniture",
+        "interior",
+        "objects",
+        "3d",
+        "props"
+      ]
+    },
+    {
+      "id": "sci-fi-rts",
+      "name": "Sci-Fi RTS",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/sci-fi-rts/a72e8d8b39-1677579134/kenney_sci-fi-rts.zip",
+      "tags": [
+        "sci-fi",
+        "rts",
+        "strategy",
+        "futuristic",
+        "isometric",
+        "units"
+      ]
+    },
+    {
+      "id": "platformer-art-deluxe",
+      "name": "Platformer Art Deluxe",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/platformer-art-deluxe/a20ba24d32-1677698683/kenney_platformer-art-deluxe.zip",
+      "tags": [
+        "platformer",
+        "tiles",
+        "backgrounds",
+        "characters",
+        "hd",
+        "detailed"
+      ]
+    },
+    {
+      "id": "platformer-art-pixel-redux",
+      "name": "Platformer Art Pixel Redux",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/platformer-art-pixel-redux/2a09f2b4c2-1677695641/kenney_platformer-art-pixel-redux.zip",
+      "tileSize": 16,
+      "tags": [
+        "platformer",
+        "pixel-art",
+        "16x16",
+        "tiles",
+        "characters"
+      ]
+    },
+    {
+      "id": "abstract-platformer",
+      "name": "Abstract Platformer",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/abstract-platformer/a1ad61be6a-1677696303/kenney_abstract-platformer.zip",
+      "tags": [
+        "platformer",
+        "abstract",
+        "geometric",
+        "minimalist",
+        "shapes"
+      ]
+    },
+    {
+      "id": "jumper-pack",
+      "name": "Jumper Pack",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/jumper-pack/52d6b6b901-1677698810/kenney_jumper-pack.zip",
+      "tags": [
+        "platformer",
+        "characters",
+        "aliens",
+        "enemies",
+        "hd"
+      ]
+    },
+    {
+      "id": "hexagon-pack",
+      "name": "Hexagon Pack",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/hexagon-pack/ef5f488a2c-1677579031/kenney_hexagon-pack.zip",
+      "tags": [
+        "hexagon",
+        "tiles",
+        "strategy",
+        "terrain",
+        "modular"
+      ]
+    },
+    {
+      "id": "tower-defense-kit",
+      "name": "Tower Defense Kit",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/tower-defense-kit/d40db07a4f-1677693233/kenney_tower-defense-kit.zip",
+      "tags": [
+        "tower-defense",
+        "towers",
+        "enemies",
+        "topdown",
+        "strategy"
+      ]
+    },
+    {
+      "id": "micro-roguelike",
+      "name": "Micro Roguelike",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/micro-roguelike/54f2ce2ca1-1677695513/kenney_micro-roguelike.zip",
+      "tileSize": 8,
+      "tags": [
+        "roguelike",
+        "micro",
+        "8x8",
+        "pixel-art",
+        "minimalist",
+        "dungeon"
+      ]
+    },
+    {
+      "id": "rolling-ball-assets",
+      "name": "Rolling Ball Assets",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/rolling-ball-assets/8adfd55fae-1677695732/kenney_rolling-ball-assets.zip",
+      "tags": [
+        "balls",
+        "physics",
+        "3d",
+        "marble",
+        "puzzle"
+      ]
+    },
+    {
+      "id": "food-kit",
+      "name": "Food Kit",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/food-kit/54b56fe9f4-1677661551/kenney_food-kit.zip",
+      "tags": [
+        "food",
+        "items",
+        "cooking",
+        "3d",
+        "props"
+      ]
+    },
+    {
+      "id": "alien-ufo-pack",
+      "name": "Alien UFO Pack",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/alien-ufo-pack/e4b9d37e24-1677696869/kenney_alien-ufo-pack.zip",
+      "tags": [
+        "aliens",
+        "ufo",
+        "space",
+        "sci-fi",
+        "hd"
+      ]
+    },
+    {
+      "id": "simple-space",
+      "name": "Simple Space",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/simple-space/10f7e3aaed-1677579185/kenney_simple-space.zip",
+      "tags": [
+        "space",
+        "simple",
+        "minimalist",
+        "shooter",
+        "asteroids"
+      ]
+    },
+    {
+      "id": "abstract-shooter",
+      "name": "Abstract Shooter",
+      "source": "kenney",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/abstract-shooter/f00ab4450e-1677696757/kenney_abstract-shooter.zip",
+      "tags": [
+        "shooter",
+        "abstract",
+        "geometric",
+        "minimalist",
+        "enemies"
+      ]
     }
   ]
 }
