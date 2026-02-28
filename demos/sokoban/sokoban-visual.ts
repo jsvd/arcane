@@ -12,7 +12,6 @@ import type { Direction, SokobanState } from "./sokoban.ts";
 import type { Vec2 } from "../../runtime/state/index.ts";
 import {
   isKeyPressed,
-  getViewportSize,
   drawSprite,
 } from "../../runtime/rendering/index.ts";
 import { Colors, HUDLayout } from "../../runtime/ui/index.ts";
@@ -92,7 +91,7 @@ app.onFrame((ctx) => {
   const current = game.store.getState() as SokobanState;
 
   // Get viewport size for HUD layout
-  const { width: vpW, height: vpH } = getViewportSize();
+  const { vpW, vpH } = ctx;
 
   // Draw tiles
   for (let y = 0; y < current.height; y++) {

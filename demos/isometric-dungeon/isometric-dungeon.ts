@@ -17,7 +17,6 @@ import {
   getCamera,
   isKeyPressed,
   createSolidTexture,
-  getViewportSize,
   drawText,
   setCameraBounds,
   trackTarget,
@@ -610,7 +609,6 @@ function render(): void {
 
   // 6. HUD
   const cam = getCamera();
-  const vp = getViewportSize();
   const scale = 1 / cam.zoom;
   const hudX = cam.x;
   const hudY = cam.y;

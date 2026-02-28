@@ -3,7 +3,6 @@
 
 import {
   isKeyPressed,
-  getViewportSize,
   drawText,
   getDefaultFont,
   getDefaultMSDFFont,
@@ -53,24 +52,22 @@ function drawTitle(title: string) {
   });
 }
 
-function drawHelpBar() {
-  const { height } = getViewportSize();
+function drawHelpBar(vpH: number) {
   drawText(
     `[1-7] Switch section  Current: ${currentSection}/${totalSections}`,
     20,
-    height - 24,
+    vpH - 24,
     { font: getDefaultFont(), scale: 2, tint: gray, screenSpace: true, layer: 200 },
   );
 }
 
 // --- Section Renderers ---
 
-function drawSection1_Comparison() {
+function drawSection1_Comparison(vpW: number) {
   drawTitle("1: Bitmap vs MSDF Comparison");
 
   const bitmap = getDefaultFont();
   const msdf = getDefaultMSDFFont();
-  const { width: vpW } = getViewportSize();
   const halfW = vpW / 2;
 
   // Column headers
@@ -595,6 +592,8 @@ const game = createGame({ name: "msdf-text-showcase", background: { r: 38 / 255,
 // --- Main Frame Loop ---
 
 game.onFrame((ctx) => {
+  const { vpW, vpH } = ctx;
+
   // Section switching with number keys
   if (isKeyPressed("1")) currentSection = 1;
   if (isKeyPressed("2")) currentSection = 2;
@@ -607,7 +606,7 @@ game.onFrame((ctx) => {
   // Draw active section
   switch (currentSection) {
     case 1:
-      drawSection1_Comparison();
+      drawSection1_Comparison(vpW);
       break;
     case 2:
       drawSection2_Outlines();
@@ -630,7 +629,7 @@ game.onFrame((ctx) => {
   }
 
   // Always draw the help bar
-  drawHelpBar();
+  drawHelpBar(vpH);
 });
 
 // --- Agent Registration ---

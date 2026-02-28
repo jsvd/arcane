@@ -14,7 +14,6 @@
  */
 
 import {
-  getViewportSize,
   drawText,
   isKeyPressed,
   isKeyDown,
@@ -134,9 +133,7 @@ function updateScene1(dt: number) {
   updateSpatialAudio();
 }
 
-function drawScene1() {
-  const vp = getViewportSize();
-
+function drawScene1(vpH: number) {
   // Draw sound sources
   for (const source of soundSources) {
     drawSprite({ textureId: source.color, x: source.x, y: source.y, w: 32, h: 32 });
@@ -158,7 +155,7 @@ function drawScene1() {
   hud.text("Click: Place sound source", 10, 50, { scale: 1 });
   hud.text(`Listener: (${Math.floor(listenerPos.x)}, ${Math.floor(listenerPos.y)})`, 10, 70, { scale: 1 });
   hud.text(`Sources: ${soundSources.length}`, 10, 90, { scale: 1 });
-  hud.text("Press 2 or 3 to switch scenes", 10, vp.height - 20, { scale: 1 });
+  hud.text("Press 2 or 3 to switch scenes", 10, vpH - 20, { scale: 1 });
 }
 
 //=============================================================================
@@ -243,9 +240,7 @@ function updateScene2(dt: number) {
   }
 }
 
-function drawScene2() {
-  const vp = getViewportSize();
-
+function drawScene2(vpH: number) {
   // Draw zones
   for (const zone of zones) {
     drawSprite({
@@ -289,7 +284,7 @@ function drawScene2() {
     opacity: 0.8,
   });
 
-  hud.text("Press 1 or 3 to switch scenes", 10, vp.height - 20, { scale: 1 });
+  hud.text("Press 1 or 3 to switch scenes", 10, vpH - 20, { scale: 1 });
 }
 
 //=============================================================================
@@ -354,9 +349,7 @@ function updateScene3() {
   }
 }
 
-function drawScene3() {
-  const vp = getViewportSize();
-
+function drawScene3(vpH: number) {
   // HUD
   hud.text("Scene 3: Mixer Panel", 10, 10, { scale: 2 });
   hud.text("Adjust bus volumes and test sounds", 10, 30, { scale: 1 });
@@ -381,7 +374,7 @@ function drawScene3() {
   drawButton(testAmbientButton);
   drawButton(testVoiceButton);
 
-  hud.text("Press 1 or 2 to switch scenes", 10, vp.height - 20, { scale: 1 });
+  hud.text("Press 1 or 2 to switch scenes", 10, vpH - 20, { scale: 1 });
 }
 
 //=============================================================================
@@ -395,6 +388,7 @@ const game = createGame({ background: { r: 30 / 255, g: 30 / 255, b: 40 / 255 } 
 
 game.onFrame((ctx) => {
   const dt = ctx.dt;
+  const { vpH } = ctx;
 
   // Scene switching
   if (isKeyPressed("1") && currentScene !== 1) {
@@ -414,12 +408,12 @@ game.onFrame((ctx) => {
   // Update current scene
   if (currentScene === 1) {
     updateScene1(dt);
-    drawScene1();
+    drawScene1(vpH);
   } else if (currentScene === 2) {
     updateScene2(dt);
-    drawScene2();
+    drawScene2(vpH);
   } else if (currentScene === 3) {
     updateScene3();
-    drawScene3();
+    drawScene3(vpH);
   }
 });

@@ -12,7 +12,6 @@
 import {
   drawSprite,
   createSolidTexture,
-  getViewportSize,
   drawText,
   getDefaultFont,
   isKeyPressed,

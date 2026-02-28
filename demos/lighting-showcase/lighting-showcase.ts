@@ -26,7 +26,6 @@ import {
   isKeyDown,
   isKeyPressed,
   createSolidTexture,
-  getViewportSize,
   drawText,
   setAmbientLight,
   addPointLight,
@@ -81,8 +80,7 @@ setGIQuality({ probeSpacing: 4, cascadeCount: 5 });
 
 // --- Scene builders ---
 
-function drawDungeonScene(dt: number) {
-  const { width: VPW, height: VPH } = getViewportSize();
+function drawDungeonScene(dt: number, VPW: number, VPH: number) {
   setBackgroundColor({ r: 0.02, g: 0.02, b: 0.05 });
   setAmbientLight(0.05, 0.05, 0.08);
 
@@ -155,8 +153,7 @@ function drawDungeonScene(dt: number) {
   addPointLight(VPW - 72, 408, 120, torchColor[0], torchColor[1], torchColor[2], flicker * 0.5);
 }
 
-function drawLavaScene(dt: number) {
-  const { width: VPW, height: VPH } = getViewportSize();
+function drawLavaScene(dt: number, VPW: number, VPH: number) {
   setBackgroundColor({ r: 0.05, g: 0.01, b: 0.0 });
   setAmbientLight(0.08, 0.03, 0.02);
 
@@ -197,8 +194,7 @@ function drawLavaScene(dt: number) {
   }
 }
 
-function drawOutdoorScene(dt: number) {
-  const { width: VPW, height: VPH } = getViewportSize();
+function drawOutdoorScene(dt: number, VPW: number, VPH: number) {
 
   // Use day/night cycle
   setDayNightCycle({ timeOfDay });
@@ -257,8 +253,7 @@ function drawOutdoorScene(dt: number) {
   }
 }
 
-function drawNeonScene(dt: number) {
-  const { width: VPW, height: VPH } = getViewportSize();
+function drawNeonScene(dt: number, VPW: number, VPH: number) {
   setBackgroundColor({ r: 0.02, g: 0.02, b: 0.04 });
   setAmbientLight(0.03, 0.03, 0.05);
 
@@ -303,8 +298,7 @@ function drawNeonScene(dt: number) {
   }
 }
 
-function drawComparisonScene(dt: number) {
-  const { width: VPW, height: VPH } = getViewportSize();
+function drawComparisonScene(dt: number, VPW: number, VPH: number) {
   setBackgroundColor({ r: 0.02, g: 0.02, b: 0.05 });
   setAmbientLight(0.05, 0.05, 0.08);
 
@@ -375,7 +369,7 @@ game.onFrame((ctx) => {
   const dt = ctx.dt;
   frameCount++;
 
-  const { width: VPW, height: VPH } = getViewportSize();
+  const { vpW: VPW, vpH: VPH } = ctx;
 
   clearLights();
   clearEmissives();
@@ -414,7 +408,6 @@ game.onFrame((ctx) => {
 
   // Player movement with collision
   const speed = 200 * dt;
-  const { width: VPW2, height: VPH2 } = getViewportSize();
   let newX = playerX;
   let newY = playerY;
   if (isKeyDown("ArrowLeft")) newX -= speed;
@@ -427,14 +420,14 @@ game.onFrame((ctx) => {
   // Wall thickness on each side
   const wallW = 64;
   // Pillar bounds (scene 1 only)
-  const pillarL = VPW2 / 2 - 32;
-  const pillarR = VPW2 / 2 + 32;
-  const pillarT = VPH2 / 2 - 64;
+  const pillarL = VPW / 2 - 32;
+  const pillarR = VPW / 2 + 32;
+  const pillarT = VPH / 2 - 64;
   const pillarB = pillarT + 128;
 
   // Clamp to walls
-  newX = Math.max(wallW + ph, Math.min(VPW2 - wallW - ph, newX));
-  newY = Math.max(ph, Math.min(VPH2 - ph, newY));
+  newX = Math.max(wallW + ph, Math.min(VPW - wallW - ph, newX));
+  newY = Math.max(ph, Math.min(VPH - ph, newY));
 
   // Pillar collision (dungeon scene)
   if (currentScene === 1) {
@@ -459,19 +452,19 @@ game.onFrame((ctx) => {
   // Draw current scene
   switch (currentScene) {
     case 1:
-      drawDungeonScene(dt);
+      drawDungeonScene(dt, VPW, VPH);
       break;
     case 2:
-      drawLavaScene(dt);
+      drawLavaScene(dt, VPW, VPH);
       break;
     case 3:
-      drawOutdoorScene(dt);
+      drawOutdoorScene(dt, VPW, VPH);
       break;
     case 4:
-      drawNeonScene(dt);
+      drawNeonScene(dt, VPW, VPH);
       break;
     case 5:
-      drawComparisonScene(dt);
+      drawComparisonScene(dt, VPW, VPH);
       break;
   }
 
