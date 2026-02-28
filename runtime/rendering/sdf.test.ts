@@ -616,7 +616,7 @@ describe("SDF Fill Validation", () => {
   it("glow fill WGSL generation", () => {
     const wgsl = generateFillWgsl({ type: "glow", color: "#00ff00", spread: 30 });
     assert.ok(wgsl.includes("30.0"));
-    assert.ok(wgsl.includes("abs(d)"));
+    assert.ok(wgsl.includes("max(d, 0.0)"));
   });
 
   it("solid_outline fill WGSL generation", () => {

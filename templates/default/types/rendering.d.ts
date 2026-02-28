@@ -3418,13 +3418,12 @@ declare module "@arcane/runtime/rendering" {
    */
   export declare function sdfSmoothSubtract(k: number, base: SdfNode, ...cutouts: SdfNode[]): SdfNode;
   /**
-   * Translate an SDF shape by (x, y).
+   * Translate an SDF shape by a Vec2 offset.
    * @param shape - The shape to translate.
-   * @param x - Horizontal offset.
-   * @param y - Vertical offset.
+   * @param offset - Translation offset as Vec2 object.
    * @returns SDF node with the translation applied.
    */
-  export declare function sdfOffset(shape: SdfNode, x: number, y: number): SdfNode;
+  export declare function sdfOffset(shape: SdfNode, offset: Vec2): SdfNode;
   /**
    * Rotate an SDF shape by the given angle in degrees.
    * @param shape - The shape to rotate.
@@ -3448,11 +3447,10 @@ declare module "@arcane/runtime/rendering" {
   /**
    * Repeat an SDF shape infinitely on a 2D grid.
    * @param shape - The shape to repeat.
-   * @param spacingX - Horizontal spacing between repetitions.
-   * @param spacingY - Vertical spacing between repetitions.
+   * @param spacing - Grid spacing as Vec2 object.
    * @returns SDF node with the repeat pattern applied.
    */
-  export declare function sdfRepeat(shape: SdfNode, spacingX: number, spacingY: number): SdfNode;
+  export declare function sdfRepeat(shape: SdfNode, spacing: Vec2): SdfNode;
   /**
    * Round the edges of an SDF shape by expanding the boundary outward.
    * @param shape - The shape to round.
