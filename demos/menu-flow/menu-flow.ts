@@ -27,6 +27,7 @@ import {
 import {
   getViewportSize,
   isKeyPressed,
+  isMouseButtonPressed,
   getMousePosition,
   drawText,
 } from "../../runtime/rendering/index.ts";
@@ -261,7 +262,7 @@ const GameplayScene = createScene<GameplayState>({
     const vp = getViewportSize();
     let score = state.score;
     const mouse = getMousePosition();
-    const clicked = isKeyPressed("MouseLeft");
+    const clicked = isMouseButtonPressed(0);
 
     // Update targets
     let targets = state.targets

@@ -15,10 +15,12 @@ import {
   setCamera,
   getCamera,
   isKeyPressed,
+  isMouseButtonPressed,
   createSolidTexture,
   drawText,
   followTargetSmooth,
   getMouseWorldPosition,
+  getViewportSize,
   hex,
   hexEqual,
   hexToWorld,
@@ -185,7 +187,8 @@ function getGrid(): HexPathGrid {
 }
 
 // --- Camera ---
-setCamera(0, 0, 1.0);
+const { width: vpW, height: vpH } = getViewportSize();
+setCamera(-vpW / 2, -vpH / 2, 1.0);
 
 // --- Input ---
 function handleInput(): void {
@@ -193,7 +196,7 @@ function handleInput(): void {
   if (isKeyPressed("x")) currentZoom = Math.max(currentZoom / 1.3, 0.4);
   if (isKeyPressed("r")) resetGame();
 
-  if (isKeyPressed("MouseLeft")) {
+  if (isMouseButtonPressed(0)) {
     const mouseWorld = getMouseWorldPosition();
     const clickedHex = worldToHex(mouseWorld.x, mouseWorld.y, CONFIG);
 

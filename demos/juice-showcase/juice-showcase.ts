@@ -17,6 +17,7 @@ import {
   setCamera,
   getCamera,
   isKeyPressed,
+  isMouseButtonPressed,
   createSolidTexture,
   getMousePosition,
   getMouseWorldPosition,
@@ -363,7 +364,7 @@ game.onFrame((ctx) => {
 
   // Check button clicks (screen space coordinates)
   const mouse = getMousePosition();
-  if (isKeyPressed("MouseLeft")) {
+  if (isMouseButtonPressed(0)) {
     let clickedButton = false;
     for (const button of state.buttons) {
       if (

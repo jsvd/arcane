@@ -16,11 +16,13 @@ import {
   setCamera,
   getCamera,
   isKeyPressed,
+  isMouseButtonPressed,
   createSolidTexture,
   drawText,
   setCameraBounds,
   trackTarget,
   getMouseWorldPosition,
+  getViewportSize,
 } from "../../runtime/rendering/index.ts";
 import { findPath } from "../../runtime/pathfinding/index.ts";
 import type { PathGrid } from "../../runtime/pathfinding/index.ts";
@@ -223,7 +225,7 @@ let currentZoom = 1.0;
 
 // --- Input handling ---
 function handleInput(): void {
-  if (isKeyPressed("MouseLeft")) {
+  if (isMouseButtonPressed(0)) {
     const mouseWorld = getMouseWorldPosition();
     const grid = worldToGrid(mouseWorld.x, mouseWorld.y);
     if (grid.x >= 0 && grid.x < MAP_W && grid.y >= 0 && grid.y < MAP_H) {
