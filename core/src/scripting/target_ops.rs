@@ -14,7 +14,7 @@
 /// - `op_create_render_target` allocates an ID from the shared `next_texture_id` counter
 ///   (avoiding any collision with regular textures) and queues GPU resource creation.
 /// - `op_begin_render_target` sets `active_target = Some(id)`. While active,
-///   `op_draw_sprite` and `op_submit_sprite_batch` route commands to the target's
+///   `op_submit_sprite_batch` routes commands to the target's
 ///   queue instead of the main bridge sprite list.
 /// - `op_end_render_target` clears `active_target`.
 /// - dev.rs drains `create_queue`, `target_sprite_queues`, and `destroy_queue`
