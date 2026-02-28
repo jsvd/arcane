@@ -261,6 +261,7 @@ fn is_gallery_pack(pack_id: &str) -> bool {
         return false;
     }
 
+    // Check for known sheet paths
     let sheet_paths = [
         "Tilemap/tilemap_packed.png",
         "Tilemap/tilemap.png",
@@ -271,10 +272,41 @@ fn is_gallery_pack(pack_id: &str) -> bool {
 
     for p in &sheet_paths {
         if pack_dir.join(p).exists() {
-            return false;
+            return false; // Found a sheet, use sheet view
         }
     }
 
+    // Check for directories that typically contain sprite sheets
+    let sheet_dirs = ["Spritesheet", "Spritesheets", "Tilesheet", "Tilemap", "Tilesheets", "Tilemaps"];
+    for dir_name in &sheet_dirs {
+        let dir_path = pack_dir.join(dir_name);
+        if dir_path.exists() && dir_path.is_dir() {
+            // Check if this directory has any PNG files
+            if let Ok(entries) = fs::read_dir(&dir_path) {
+                for entry in entries.flatten() {
+                    if let Some(name) = entry.file_name().to_str() {
+                        if name.ends_with(".png") {
+                            return false; // Found sheets directory with PNGs, use sheet view
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Check for PNG files with "sheet" in the name
+    if let Ok(entries) = fs::read_dir(&pack_dir) {
+        for entry in entries.flatten() {
+            if let Some(name) = entry.file_name().to_str() {
+                let lower = name.to_lowercase();
+                if lower.contains("sheet") && lower.ends_with(".png") {
+                    return false; // Found a sheet file, use sheet view
+                }
+            }
+        }
+    }
+
+    // No sheets found - use gallery view only if there are many individual sprites
     let sprites = scan_individual_sprites(pack_id);
     sprites.len() > 20
 }
