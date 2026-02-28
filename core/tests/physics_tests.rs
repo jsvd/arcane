@@ -3,7 +3,6 @@
 use arcane_core::physics::broadphase::SpatialHash;
 use arcane_core::physics::integrate::integrate;
 use arcane_core::physics::narrowphase::test_collision;
-use arcane_core::physics::resolve::resolve_contacts;
 use arcane_core::physics::sleep::update_sleep;
 use arcane_core::physics::types::*;
 use arcane_core::physics::world::PhysicsWorld;
@@ -361,55 +360,134 @@ fn test_polygon_polygon_no_overlap() {
 
 #[test]
 fn test_ball_bounces_off_static_ground() {
-    // Dynamic circle falling onto static AABB
-    let mut bodies: Vec<Option<RigidBody>> = vec![
-        Some(make_body(0, BodyType::Dynamic, Shape::Circle { radius: 1.0 }, 0.0, -0.5, 1.0)),
-        Some(make_body(1, BodyType::Static, Shape::AABB { half_w: 100.0, half_h: 1.0 }, 0.0, 1.0, 0.0)),
-    ];
+    // Use PhysicsWorld: drop a bouncy ball onto a static ground
+    let mut world = PhysicsWorld::new(0.0, 400.0);
 
-    // Give the ball downward velocity
-    bodies[0].as_mut().unwrap().vy = 5.0;
+    // Static ground at y=200
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 200.0, half_h: 10.0 },
+        0.0, 200.0, 0.0,
+        Material { restitution: 0.5, friction: 0.3 },
+        0xFFFF, 0xFFFF,
+    );
 
-    // Create a contact manually (ball touching ground)
-    let mut contacts = vec![Contact {
-        body_a: 0,
-        body_b: 1,
-        normal: (0.0, 1.0),
-        penetration: 0.5,
-        contact_point: (0.0, 0.0),
-        accumulated_jn: 0.0,
-        accumulated_jt: 0.0,
-        velocity_bias: 0.0,
-        tangent: (0.0, 0.0),
-    }];
+    // Dynamic ball above ground with restitution=1.0 (perfectly elastic)
+    let ball_id = world.add_body(
+        BodyType::Dynamic,
+        Shape::Circle { radius: 5.0 },
+        0.0, 100.0, 1.0,
+        Material { restitution: 1.0, friction: 0.3 },
+        0xFFFF, 0xFFFF,
+    );
 
-    resolve_contacts(&mut bodies, &mut contacts, 6);
+    // Give it downward velocity
+    world.set_velocity(ball_id, 0.0, 200.0);
 
-    let ball = bodies[0].as_ref().unwrap();
-    // Ball should have bounced (velocity reversed or reduced)
-    assert!(ball.vy < 5.0, "Ball velocity should be reduced after collision");
+    // Step until contact occurs
+    for _ in 0..60 {
+        world.step(1.0 / 60.0);
+    }
+
+    let body = world.get_body(ball_id).unwrap();
+    // Ball should have bounced: y-velocity should be negative (upward) or
+    // ball position should be above ground
+    assert!(
+        body.vy < 0.0 || body.y < 190.0,
+        "Ball should bounce: vy={}, y={}",
+        body.vy, body.y,
+    );
 }
 
 #[test]
 fn test_solver_does_not_move_two_static_bodies() {
-    let mut bodies: Vec<Option<RigidBody>> = vec![
-        Some(make_body(0, BodyType::Static, Shape::AABB { half_w: 5.0, half_h: 5.0 }, 0.0, 0.0, 0.0)),
-        Some(make_body(1, BodyType::Static, Shape::AABB { half_w: 5.0, half_h: 5.0 }, 3.0, 0.0, 0.0)),
-    ];
-    let mut contacts = vec![Contact {
-        body_a: 0,
-        body_b: 1,
-        normal: (1.0, 0.0),
-        penetration: 7.0,
-        contact_point: (1.5, 0.0),
-        accumulated_jn: 0.0,
-        accumulated_jt: 0.0,
-        velocity_bias: 0.0,
-        tangent: (0.0, 0.0),
-    }];
-    resolve_contacts(&mut bodies, &mut contacts, 6);
-    assert_eq!(bodies[0].as_ref().unwrap().x, 0.0);
-    assert_eq!(bodies[1].as_ref().unwrap().x, 3.0);
+    // Use PhysicsWorld: two overlapping static bodies should not move
+    let mut world = PhysicsWorld::new(0.0, 0.0);
+
+    let id_a = world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 5.0, half_h: 5.0 },
+        0.0, 0.0, 0.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+    let id_b = world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 5.0, half_h: 5.0 },
+        3.0, 0.0, 0.0,
+        Material::default(),
+        0xFFFF, 0xFFFF,
+    );
+
+    world.step(1.0 / 60.0);
+
+    assert_eq!(world.get_body(id_a).unwrap().x, 0.0);
+    assert_eq!(world.get_body(id_b).unwrap().x, 3.0);
+}
+
+#[test]
+fn test_bouncy_ball_rebounds_to_visible_height() {
+    // A ball with restitution 0.6 dropped from height 200 onto a ground
+    // with restitution 0.2 should bounce visibly.
+    // With max() combining: effective e = 0.6
+    // Expected bounce height ≈ 0.36 * 200 = 72 pixels
+    let mut world = PhysicsWorld::new(0.0, 400.0);
+
+    // Static ground at y=400
+    world.add_body(
+        BodyType::Static,
+        Shape::AABB { half_w: 400.0, half_h: 20.0 },
+        400.0, 400.0, 0.0,
+        Material { restitution: 0.2, friction: 0.8 },
+        0xFFFF, 0xFFFF,
+    );
+
+    // Ball at y=200 (200px above ground surface at y=380)
+    let ball_id = world.add_body(
+        BodyType::Dynamic,
+        Shape::Circle { radius: 10.0 },
+        400.0, 200.0, 0.5,
+        Material { restitution: 0.6, friction: 0.3 },
+        0xFFFF, 0xFFFF,
+    );
+
+    // Step for 2 seconds: ball should fall, hit ground, bounce back up
+    let mut was_falling = false;
+    let mut max_bounce_vy = 0.0_f32; // most negative vy (strongest upward)
+    let mut min_y_after_bounce = 400.0_f32;
+
+    for _ in 0..120 {
+        world.step(1.0 / 60.0);
+        let body = world.get_body(ball_id).unwrap();
+
+        // Ball starts falling when vy > 50
+        if body.vy > 50.0 {
+            was_falling = true;
+        }
+
+        // After falling, track the strongest upward velocity (bounce)
+        if was_falling && body.vy < max_bounce_vy {
+            max_bounce_vy = body.vy;
+        }
+
+        // Track highest position after first bounce
+        if max_bounce_vy < -10.0 {
+            min_y_after_bounce = min_y_after_bounce.min(body.y);
+        }
+    }
+
+    assert!(was_falling, "Ball should have been falling");
+    assert!(
+        max_bounce_vy < -50.0,
+        "Ball should have bounced with significant upward velocity, got vy={}",
+        max_bounce_vy,
+    );
+    // With e=0.6, bounce height should be visible (ball reaches well above ground)
+    assert!(
+        min_y_after_bounce < 360.0,
+        "Ball should bounce to visible height, but min_y after bounce was {:.1}",
+        min_y_after_bounce,
+    );
 }
 
 // =========================================================================
