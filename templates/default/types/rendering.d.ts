@@ -13,9 +13,9 @@ declare module "@arcane/runtime/rendering" {
   /**
    * Options for drawing a sprite via {@link drawSprite}.
    *
-   * Positions are in **world space**. The camera determines what's visible:
-   * - Default camera (0, 0): screen center = world (0, 0). Top-left = (-vpW/2, -vpH/2).
-   * - After `setCamera(vpW/2, vpH/2)`: screen top-left = world (0, 0) — web-like coords.
+   * Positions are in **world space**. The camera position represents the
+   * viewport's top-left corner in world space. Camera (0, 0) means the
+   * top-left of the screen shows world (0, 0) — web-like coords by default.
    *
    * Y increases downward. The sprite's (x, y) is its top-left corner.
    */
@@ -1047,26 +1047,23 @@ declare module "@arcane/runtime/rendering" {
   };
   /**
    * Set the camera position and zoom level.
-   * The camera determines which part of the world is visible on screen.
-   * The camera center appears at the center of the viewport.
+   * The camera position is the world coordinate that appears at the viewport top-left corner.
    * No-op in headless mode.
    *
-   * **Default camera is (0, 0)** — world origin is at screen center, NOT top-left.
-   * For web-like coordinates where (0, 0) is top-left:
-   * `setCamera(vpW / 2, vpH / 2)` (use getViewportSize() for vpW/vpH).
+   * **Default camera is (0, 0)** — world origin at the top-left of the screen.
+   * `setCamera(0, 0)` gives standard web-like coordinates.
    *
-   * @param x - Camera center X in world units.
-   * @param y - Camera center Y in world units.
+   * @param x - Camera top-left X in world units.
+   * @param y - Camera top-left Y in world units.
    * @param zoom - Zoom level. 1.0 = default, >1.0 = zoomed in, <1.0 = zoomed out. Default: 1.
    *
    * @example
-   * // Web-like coords: (0, 0) at top-left
-   * const { width, height } = getViewportSize();
-   * setCamera(width / 2, height / 2);
+   * // Default: (0, 0) at top-left
+   * setCamera(0, 0);
    *
    * @example
-   * // Center camera on the player (scrolling game)
-   * setCamera(player.x, player.y);
+   * // Scroll to show a region starting at (500, 300)
+   * setCamera(500, 300);
    *
    * @example
    * // Zoomed-in camera
@@ -1075,13 +1072,15 @@ declare module "@arcane/runtime/rendering" {
   export declare function setCamera(x: number, y: number, zoom?: number): void;
   /**
    * Get the current camera state (position and zoom).
+   * Returns the viewport top-left position and zoom.
    * Returns `{ x: 0, y: 0, zoom: 1 }` in headless mode.
    *
-   * @returns Current camera position and zoom level.
+   * @returns Current camera top-left position and zoom level.
    */
   export declare function getCamera(): CameraState;
   /**
    * Center the camera on a target position. Convenience wrapper around {@link setCamera}.
+   * Computes the top-left camera position that places the target at viewport center.
    * Call every frame to follow a moving target.
    *
    * @param targetX - Target X position in world units to center on.

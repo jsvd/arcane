@@ -11,7 +11,6 @@ import { createSokobanGame } from "./sokoban.ts";
 import type { Direction, SokobanState } from "./sokoban.ts";
 import type { Vec2 } from "../../runtime/state/index.ts";
 import {
-  setCamera,
   isKeyPressed,
   getViewportSize,
   drawSprite,
@@ -92,9 +91,8 @@ app.onFrame((ctx) => {
   // Get fresh state after potential move
   const current = game.store.getState() as SokobanState;
 
-  // Center camera on the grid using viewport size
+  // Get viewport size for HUD layout
   const { width: vpW, height: vpH } = getViewportSize();
-  setCamera(vpW / 2, vpH / 2, 1);
 
   // Draw tiles
   for (let y = 0; y < current.height; y++) {

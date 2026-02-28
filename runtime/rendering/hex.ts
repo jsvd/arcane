@@ -343,8 +343,8 @@ export function screenToHex(
   viewportHeight: number,
 ): HexCoord {
   const scale = 1 / camera.zoom;
-  const wx = camera.x + (sx - viewportWidth / 2) * scale;
-  const wy = camera.y + (sy - viewportHeight / 2) * scale;
+  const wx = camera.x + sx * scale;
+  const wy = camera.y + sy * scale;
   return worldToHex(wx, wy, config);
 }
 

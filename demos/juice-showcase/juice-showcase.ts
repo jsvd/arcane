@@ -448,11 +448,9 @@ game.onFrame((ctx) => {
   // Apply camera shake
   const camera = getCamera();
   const shakeOffset = getCameraShakeOffset();
-  setCamera(
-    VPW / 2 + shakeOffset.x,
-    VPH / 2 + shakeOffset.y,
-    camera.zoom
-  );
+  if (shakeOffset.x !== 0 || shakeOffset.y !== 0) {
+    setCamera(shakeOffset.x, shakeOffset.y, camera.zoom);
+  }
 
   // --- Render ---
 

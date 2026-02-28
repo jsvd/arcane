@@ -47,7 +47,7 @@ Imports use `@arcane/runtime/{module}`:
 
 ## Coordinate System
 
-**Not a web canvas.** Camera-based coordinates, not screen-based. `drawSprite({x, y})` positions the sprite's **top-left corner** in world space. Y increases downward. See [docs/coordinates.md](docs/coordinates.md) for full details.
+**(0, 0) = top-left corner**, matching web canvas, Unity 2D, and Godot conventions. `drawSprite({x, y})` positions the sprite's **top-left corner** in world space. X increases right, Y increases down. See [docs/coordinates.md](docs/coordinates.md) for full details.
 
 ## Common Mistakes
 
@@ -55,7 +55,7 @@ Imports use `@arcane/runtime/{module}`:
 
 **0. Using `npx arcane`** — `arcane` is a native Rust binary, not an npm package. Always use `arcane` directly: `arcane dev`, `arcane test`.
 
-**1. Forgetting `setCamera()`** — Without it, camera is at (0,0) = screen center. Fix: call `setCamera(VPW/2, VPH/2)` every frame for web-like coordinates, or use `followTargetSmooth()`.
+**1. Camera setup for scrolling games** — Default camera at (0,0) shows world from top-left. For player-following games, use `followTargetSmooth(player.x, player.y)` every frame.
 
 **2. Hardcoding viewport size** — Never use `800`, `600`. Always: `const { width: VPW, height: VPH } = getViewportSize();`
 

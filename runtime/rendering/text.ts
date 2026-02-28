@@ -604,9 +604,8 @@ export function drawText(
 
     if (screenSpace) {
       const cam = getCamera();
-      const { width: viewportW, height: viewportH } = getViewportSize();
-      worldX = drawX / cam.zoom + cam.x - viewportW / (2 * cam.zoom);
-      worldY = y / cam.zoom + cam.y - viewportH / (2 * cam.zoom);
+      worldX = cam.x + drawX / cam.zoom;
+      worldY = cam.y + y / cam.zoom;
       spriteW = (font.glyphW * scale) / cam.zoom;
       spriteH = (font.glyphH * scale) / cam.zoom;
       // Round to prevent sub-pixel jitter from camera interpolation
@@ -748,12 +747,8 @@ function drawMSDFTextInternal(
 
     if (screenSpace) {
       const cam = getCamera();
-      const { width: viewportW, height: viewportH } = getViewportSize();
-      // Use consistent screenSpace conversion: offset from camera center
-      const halfVpW = Math.floor(viewportW / 2);
-      const halfVpH = Math.floor(viewportH / 2);
-      worldX = cam.x + (drawX - halfVpW) / cam.zoom;
-      worldY = cam.y + (drawY - halfVpH) / cam.zoom;
+      worldX = cam.x + drawX / cam.zoom;
+      worldY = cam.y + drawY / cam.zoom;
       wW = spriteW / cam.zoom;
       wH = spriteH / cam.zoom;
     } else {

@@ -205,7 +205,8 @@ player.y = startWorld.y;
 // --- Camera setup ---
 
 const mapCenter = isoToWorld(MAP_W / 2, MAP_H / 2);
-setCamera(mapCenter.x, mapCenter.y, 1.0);
+const isoVp = getViewportSize();
+setCamera(mapCenter.x - isoVp.width / 2, mapCenter.y - isoVp.height / 2, 1.0);
 
 const topCorner = isoToWorld(0, 0);
 const rightCorner = isoToWorld(MAP_W, 0);
@@ -612,8 +613,8 @@ function render(): void {
   const cam = getCamera();
   const vp = getViewportSize();
   const scale = 1 / cam.zoom;
-  const hudX = cam.x - (vp.width / 2) * scale;
-  const hudY = cam.y - (vp.height / 2) * scale;
+  const hudX = cam.x;
+  const hudY = cam.y;
 
   // HUD background with border
   const bgX = hudX + 6 * scale;
@@ -652,7 +653,6 @@ function render(): void {
 const game = createGame({
   name: "isometric-dungeon",
   background: { r: 15 / 255, g: 10 / 255, b: 26 / 255 },
-  autoCamera: false,
 });
 
 game.state({

@@ -218,21 +218,9 @@ export function setBackgroundColor(color: { r: number; g: number; b: number }): 
  * @returns Corresponding world-space position.
  */
 export function screenToWorld(screenX: number, screenY: number): MousePosition {
-  const viewport = getViewportSize();
   const camera = getCamera();
-
-  // Calculate the world space bounds visible on screen
-  const halfW = viewport.width / (2.0 * camera.zoom);
-  const halfH = viewport.height / (2.0 * camera.zoom);
-
-  // Normalize screen position to 0..1
-  const normX = screenX / viewport.width;
-  const normY = screenY / viewport.height;
-
-  // Map to world space
-  const worldX = (camera.x - halfW) + normX * (2 * halfW);
-  const worldY = (camera.y - halfH) + normY * (2 * halfH);
-
+  const worldX = camera.x + screenX / camera.zoom;
+  const worldY = camera.y + screenY / camera.zoom;
   return { x: worldX, y: worldY };
 }
 

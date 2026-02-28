@@ -1,43 +1,24 @@
 # Coordinates, Camera & Viewport
 
-## Which Camera Pattern?
+## Coordinate System
 
-| Pattern | Camera call | World (0,0) is | Best for |
-|---------|-------------|----------------|----------|
-| Centered-world (default) | `followTargetSmooth(state.x, state.y, ...)` | Screen center | Most games |
-| Web-like | `followTargetSmooth(vpW/2, vpH/2, ...)` | Top-left | Fixed-viewport |
+**(0, 0) = top-left corner.** X increases right, Y increases down. Matches web canvas, Unity 2D, and Godot conventions.
 
-**Centered-world** — objects at (0,0) appear at screen center. The scaffold default:
-```typescript
-followTargetSmooth(state.x + shake.x, state.y + shake.y, ZOOM, 0.08);
 ```
-
-**Web-like** — shifts the camera so (0,0) is the top-left corner:
-```typescript
-const { width: VPW, height: VPH } = getViewportSize();
-followTargetSmooth(VPW / 2, VPH / 2, ZOOM, 0.08);
+  (0,0) -------- +x
+    |
+    |
+   +y
 ```
 
 ## Camera Basics
 
-The camera defines what part of the world is visible. By default it is at `(0, 0)` which is the **center** of the screen. This is not a web canvas.
+The camera defines what part of the world is visible. `setCamera(x, y)` positions the viewport's **top-left** at world (x, y).
 
 ```
-  World space (where sprites live):
-  VPW = viewport width, VPH = viewport height
-
   Default camera at (0, 0):
   +-----------------------------------+
-  | (-VPW/2, -VPH/2)  (VPW/2, -VPH/2) |
-  |                                   |
-  |            (0, 0)                 |  <- center of screen, NOT top-left
-  |                                   |
-  | (-VPW/2,  VPH/2)  (VPW/2,  VPH/2) |
-  +-----------------------------------+
-
-  After setCamera(VPW/2, VPH/2):
-  +-----------------------------------+
-  | (0, 0)                  (VPW, 0)  |  <- now (0,0) is top-left!
+  | (0, 0)                  (VPW, 0)  |
   |                                   |
   |          (VPW/2, VPH/2)           |
   |                                   |
@@ -45,18 +26,17 @@ The camera defines what part of the world is visible. By default it is at `(0, 0
   +-----------------------------------+
 ```
 
+No setup needed — sprites at positive coordinates appear on screen by default.
+
 ```typescript
 import { setCamera, getCamera, getViewportSize } from "@arcane/runtime/rendering";
 
-// Follow a player character (centered-world)
-setCamera(player.x, player.y, 2.0);  // 2x zoom
+// Draw a sprite 10px from the top-left corner — just works
+drawSprite({ textureId: tex, x: 10, y: 10, w: 32, h: 32 });
 
-// Alternative: make (0, 0) the top-left corner (web-like)
-const { width: VPW, height: VPH } = getViewportSize();
-setCamera(VPW / 2, VPH / 2);
+// Scroll the camera to show a different part of the world
+setCamera(200, 100);  // viewport top-left now at world (200, 100)
 ```
-
-Call `setCamera()` every frame. Without it, sprites at positive coordinates appear bottom-right of center.
 
 ## Viewport Size
 
@@ -87,6 +67,8 @@ let state = createGame(width, height);
 ```
 
 ## Smooth Camera Follow
+
+`followTargetSmooth()` centers the target on screen automatically (handles the half-viewport offset internally).
 
 ```typescript
 import {
@@ -124,7 +106,7 @@ const cam = getCamera();
 const { width: VPW, height: VPH } = getViewportSize();
 
 // Sky (fixed, never scrolls)
-drawSprite({ textureId: sky, x: cam.x - VPW / 2, y: cam.y - VPH / 2,
+drawSprite({ textureId: sky, x: cam.x, y: cam.y,
   w: VPW, h: VPH, layer: 0, parallax: 0 });
 
 // Distant mountains (slow scroll)
@@ -141,6 +123,6 @@ drawSprite({ textureId: trees, x: 0, y: 300,
 The world region visible on screen at any time:
 
 ```
-camera.x +/- viewport.width  / (2 * zoom)
-camera.y +/- viewport.height / (2 * zoom)
+x: camera.x  to  camera.x + viewport.width  / zoom
+y: camera.y  to  camera.y + viewport.height / zoom
 ```

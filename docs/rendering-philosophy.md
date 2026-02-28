@@ -25,28 +25,19 @@ Both pipelines share the same camera uniform (view-projection matrix). Since v0.
 
 ### World Space (default)
 
-Camera (0, 0) means the screen center corresponds to world position (0, 0). This is a center-origin system, not a top-left-origin system.
+**(0, 0) = top-left corner.** Matches web canvas, Unity 2D, and Godot conventions.
 
 ```
-         -y
-          |
-    -x ---+--- +x    (0,0) is screen center
-          |
-         +y
+  (0,0) -------- +x
+    |
+    |               Y increases downward
+    |
+   +y
 ```
 
-Y increases downward (screen convention, not math convention).
+`setCamera(x, y)` positions the viewport's top-left at world (x, y). Default camera at (0, 0) means world (0, 0) is at the top-left of the screen — no setup needed.
 
-### Making (0,0) = Top-Left
-
-Most games want web-like coordinates where (0, 0) is the top-left corner. The pattern:
-
-```ts
-const vp = getViewportSize(); // returns { width, height }
-setCamera(vp.width / 2, vp.height / 2);
-```
-
-`createGame()` does this automatically when `autoCamera: true` (the default). **Most demo code was written before createGame() existed**, so demos do this manually with varying patterns — don't copy those patterns.
+`followTargetSmooth(player.x, player.y)` centers the player on screen automatically (handles the half-viewport offset internally).
 
 ### Screen Space vs World Space
 

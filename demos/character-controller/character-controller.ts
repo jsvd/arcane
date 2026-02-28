@@ -10,10 +10,8 @@
  */
 import {
   drawSprite,
-  setCamera,
   isKeyDown,
   isKeyPressed,
-  getViewportSize,
   createSolidTexture,
   createAnimation,
   onFrameEvent,
@@ -140,14 +138,8 @@ function rectOverlap(
   return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
 }
 
-// --- Camera setup ---
-const vpSize = getViewportSize();
-const vpW = vpSize.width || 800;
-const vpH = vpSize.height || 600;
-setCamera(vpW / 2, vpH / 2, 1);
-
 // --- Game bootstrap ---
-const game = createGame({ name: "character-controller", autoCamera: false });
+const game = createGame({ name: "character-controller" });
 
 game.state({
   get: () => ({

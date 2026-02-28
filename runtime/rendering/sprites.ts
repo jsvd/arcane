@@ -1,6 +1,5 @@
 import type { SpriteOptions } from "./types.ts";
 import { getCamera } from "./camera.ts";
-import { getViewportSize } from "./input.ts";
 import { _logDrawCall } from "../testing/visual.ts";
 import { createSolidTexture } from "./texture.ts";
 import { _warnColor } from "../ui/colors.ts";
@@ -175,14 +174,9 @@ export function drawSprite(opts: SpriteOptions): void {
   // Screen-space conversion: transform screen pixels to world coordinates
   if (opts.screenSpace) {
     const cam = getCamera();
-    const { width: vpW, height: vpH } = getViewportSize();
-    // Compute world position that corresponds to screen pixel position.
-    // Round intermediate values to ensure pixel-perfect screen alignment.
-    const halfVpW = Math.floor(vpW / 2);
-    const halfVpH = Math.floor(vpH / 2);
-    // World position = screen position offset from camera center, scaled by zoom
-    x = cam.x + (x - halfVpW) / cam.zoom;
-    y = cam.y + (y - halfVpH) / cam.zoom;
+    // World position = camera top-left + screen offset scaled by zoom
+    x = cam.x + x / cam.zoom;
+    y = cam.y + y / cam.zoom;
     w = w / cam.zoom;
     h = h / cam.zoom;
   }

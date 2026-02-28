@@ -4,6 +4,9 @@ All notable changes to Arcane are documented here.
 
 ## [Unreleased]
 
+### Changed (BREAKING)
+- **Coordinate system now top-left origin** — `(0, 0)` is the top-left corner of the screen, matching web canvas, Unity 2D, and Godot conventions. Camera position represents the viewport's top-left corner in world space. `autoCamera` option removed from `createGame()`. All screen↔world math simplified. All demos and documentation updated.
+
 ## [0.22.0] - 2026-02-28
 
 ### Added

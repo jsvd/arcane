@@ -117,10 +117,10 @@ export function screenToIso(
   viewportWidth: number,
   viewportHeight: number,
 ): { x: number; y: number } {
-  // Unproject screen to world: screen center = camera position
+  // Unproject screen to world: camera position = top-left
   const scale = 1 / camera.zoom;
-  const wx = camera.x + (sx - viewportWidth / 2) * scale;
-  const wy = camera.y + (sy - viewportHeight / 2) * scale;
+  const wx = camera.x + sx * scale;
+  const wy = camera.y + sy * scale;
   return worldToGrid(wx, wy, config);
 }
 
@@ -215,8 +215,8 @@ export function screenToStaggeredIso(
   viewportHeight: number,
 ): { x: number; y: number } {
   const scale = 1 / camera.zoom;
-  const wx = camera.x + (sx - viewportWidth / 2) * scale;
-  const wy = camera.y + (sy - viewportHeight / 2) * scale;
+  const wx = camera.x + sx * scale;
+  const wy = camera.y + sy * scale;
   return worldToStaggeredIso(wx, wy, config);
 }
 

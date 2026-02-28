@@ -257,8 +257,10 @@ function applyWallAutotiling(): void {
 // Camera state
 // ---------------------------------------------------------------------------
 
-let cameraX = MAP_W * TILE_SIZE / 2;
-let cameraY = MAP_H * TILE_SIZE / 2;
+// Camera position = viewport top-left in world space; start centered on map
+const tmVp = getViewportSize();
+let cameraX = MAP_W * TILE_SIZE / 2 - tmVp.width / (2 * 2.0); // zoom=2.0
+let cameraY = MAP_H * TILE_SIZE / 2 - tmVp.height / (2 * 2.0);
 let cameraZoom = 2.0;
 let parallaxEnabled = true;
 
@@ -286,7 +288,7 @@ generateMap();
 // Game bootstrap
 // ---------------------------------------------------------------------------
 
-const game = createGame({ name: "tilemap-showcase", autoCamera: false });
+const game = createGame({ name: "tilemap-showcase" });
 
 // ---------------------------------------------------------------------------
 // Frame callback

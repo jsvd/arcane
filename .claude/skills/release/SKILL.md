@@ -110,13 +110,21 @@ Change TWO things:
 #### c. `README.md`
 Update the crate link in the Status section if it contains a version number.
 
-### 6. Update Cargo.lock
+### 6. Regenerate API declarations
+
+```bash
+scripts/generate-declarations.sh
+```
+
+If `templates/default/types/` has changes (check with `git diff --stat templates/default/types/`), they must be committed along with the version bump.
+
+### 7. Update Cargo.lock
 
 ```bash
 cargo check 2>&1 | tail -5
 ```
 
-### 7. Verify no stale versions
+### 8. Verify no stale versions
 
 ```bash
 grep -rn 'OLD_VERSION' --include='*.toml' --include='*.md' | grep -v node_modules | grep -v target/ | grep -v CHANGELOG
@@ -124,10 +132,10 @@ grep -rn 'OLD_VERSION' --include='*.toml' --include='*.md' | grep -v node_module
 
 If any results appear, fix them before proceeding.
 
-### 8. Commit, tag, and push
+### 9. Commit, tag, and push
 
 ```bash
-git add core/Cargo.toml cli/Cargo.toml Cargo.lock README.md CLAUDE.md CHANGELOG.md
+git add core/Cargo.toml cli/Cargo.toml Cargo.lock README.md CLAUDE.md CHANGELOG.md templates/default/types/
 ```
 
 Also stage any other files that were updated (MEMORY.md is outside the repo, doesn't need staging).
@@ -145,7 +153,7 @@ git tag vX.Y.Z
 git push origin main --tags
 ```
 
-### 9. Publish to crates.io
+### 10. Publish to crates.io
 
 Publish in dependency order, waiting for indexing between each:
 
@@ -162,7 +170,7 @@ cargo publish -p arcane-engine --allow-dirty
 
 If the second publish fails with "arcane-core X.Y.Z not found", wait longer and retry.
 
-### 10. Create GitHub Release
+### 11. Create GitHub Release
 
 ```bash
 gh release create vX.Y.Z --title "Arcane vX.Y.Z" --notes "$(cat <<'RELEASE_EOF'
@@ -177,7 +185,7 @@ RELEASE_EOF
 
 Use the CHANGELOG entry as the release body. Add the install command at the bottom.
 
-### 11. Print summary
+### 12. Print summary
 
 ```
 ## Release X.Y.Z Complete

@@ -124,13 +124,10 @@ game.onFrame((ctx) => {
   const dt = ctx.dt;
   const { width: vpW, height: vpH } = ctx.viewport;
 
-  // Position camera for web-like coords (0,0 = top-left)
-  setCamera(vpW / 2, vpH / 2);
-
   // Apply camera shake
   const shake = getCameraShakeOffset();
   if (shake.x !== 0 || shake.y !== 0) {
-    setCamera(vpW / 2 + shake.x, vpH / 2 + shake.y);
+    setCamera(shake.x, shake.y);
   }
 
   // -- Input --

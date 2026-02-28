@@ -408,14 +408,14 @@ describe("screenToHex", () => {
   const vpW = 800;
   const vpH = 600;
 
-  it("screen center maps to origin hex", () => {
-    const h = screenToHex(400, 300, cam, POINTY, vpW, vpH);
+  it("screen top-left maps to origin hex", () => {
+    const h = screenToHex(0, 0, cam, POINTY, vpW, vpH);
     assert.ok(hexEqual(h, hex(0, 0)));
   });
 
-  it("zoomed camera still maps screen center to origin", () => {
+  it("zoomed camera still maps screen top-left to origin", () => {
     const zoomed: CameraState = { ...cam, zoom: 2 };
-    const h = screenToHex(400, 300, zoomed, POINTY, vpW, vpH);
+    const h = screenToHex(0, 0, zoomed, POINTY, vpW, vpH);
     assert.ok(hexEqual(h, hex(0, 0)));
   });
 });

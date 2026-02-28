@@ -25,7 +25,6 @@ import {
   updateAutoSave,
 } from "../../runtime/persistence/index.ts";
 import {
-  setCamera,
   getViewportSize,
   isKeyPressed,
   getMousePosition,
@@ -535,9 +534,6 @@ registerAgent({
   setState: (s) => { currentGameState = s; },
   describe: (s) => `Menu Flow Demo | Score: ${s.score} | Time: ${Math.ceil(s.timeLeft)}s`,
 });
-
-const vp = getViewportSize();
-setCamera(vp.width / 2, vp.height / 2);
 
 startSceneManager(createSceneInstance(TitleScene), {
   onUpdate: (dt) => { updateAutoSave(dt); },

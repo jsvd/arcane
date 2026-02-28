@@ -69,8 +69,8 @@ function frame(): void {
   // Clamp zoom
   zoom = Math.max(0.25, Math.min(zoom, 8.0));
 
-  // Set camera
-  setCamera(200, 180, zoom);
+  // Set camera (top-left origin; content starts near origin)
+  setCamera(0, 0, zoom);
 
   // Clear SDF entities for this frame
   clearSdfEntities();

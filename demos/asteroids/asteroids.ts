@@ -21,7 +21,6 @@
 import {
   isKeyDown,
   isKeyPressed,
-  setCamera,
   getViewportSize,
   drawText,
   addPostProcessEffect,
@@ -618,11 +617,8 @@ function drawHudLabel(text: string, x: number, y: number, _w: number): void {
   drawText(text, x, y, { tint: { r: 0.8, g: 0.8, b: 0.9, a: 1 } });
 }
 
-// --- Setup camera ---
-setCamera(vpW / 2, vpH / 2);
-
 // --- Game loop ---
-const game = createGame({ autoCamera: false, autoClear: true });
+const game = createGame({ autoClear: true });
 
 game.onFrame((ctx) => {
   update(state, Math.min(ctx.dt, 0.05));

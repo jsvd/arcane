@@ -40,26 +40,23 @@ let currentBounds: CameraBounds | null = null;
 
 /**
  * Set the camera position and zoom level.
- * The camera determines which part of the world is visible on screen.
- * The camera center appears at the center of the viewport.
+ * The camera position is the world coordinate that appears at the viewport top-left corner.
  * No-op in headless mode.
  *
- * **Default camera is (0, 0)** — world origin is at screen center, NOT top-left.
- * For web-like coordinates where (0, 0) is top-left:
- * `setCamera(vpW / 2, vpH / 2)` (use getViewportSize() for vpW/vpH).
+ * **Default camera is (0, 0)** — world origin at the top-left of the screen.
+ * `setCamera(0, 0)` gives standard web-like coordinates.
  *
- * @param x - Camera center X in world units.
- * @param y - Camera center Y in world units.
+ * @param x - Camera top-left X in world units.
+ * @param y - Camera top-left Y in world units.
  * @param zoom - Zoom level. 1.0 = default, >1.0 = zoomed in, <1.0 = zoomed out. Default: 1.
  *
  * @example
- * // Web-like coords: (0, 0) at top-left
- * const { width, height } = getViewportSize();
- * setCamera(width / 2, height / 2);
+ * // Default: (0, 0) at top-left
+ * setCamera(0, 0);
  *
  * @example
- * // Center camera on the player (scrolling game)
- * setCamera(player.x, player.y);
+ * // Scroll to show a region starting at (500, 300)
+ * setCamera(500, 300);
  *
  * @example
  * // Zoomed-in camera
@@ -77,28 +74,24 @@ export function setCamera(x: number, y: number, zoom: number = 1): void {
   // uses the clamped value, causing screenSpace/parallax sprites to jitter.
   if (currentBounds !== null) {
     const vp = getViewportInternal();
-    const halfW = vp.width / (2 * zoom);
-    const halfH = vp.height / (2 * zoom);
+    const visW = vp.width / zoom;
+    const visH = vp.height / zoom;
 
     const boundsW = currentBounds.maxX - currentBounds.minX;
     const boundsH = currentBounds.maxY - currentBounds.minY;
 
     // If visible area wider than bounds, center on bounds
-    if (halfW * 2 >= boundsW) {
-      finalX = Math.round(currentBounds.minX + boundsW / 2);
+    if (visW >= boundsW) {
+      finalX = Math.round(currentBounds.minX + (boundsW - visW) / 2);
     } else {
-      const minX = currentBounds.minX + halfW;
-      const maxX = currentBounds.maxX - halfW;
-      finalX = Math.round(Math.max(minX, Math.min(maxX, finalX)));
+      finalX = Math.round(Math.max(currentBounds.minX, Math.min(currentBounds.maxX - visW, finalX)));
     }
 
     // If visible area taller than bounds, center on bounds
-    if (halfH * 2 >= boundsH) {
-      finalY = Math.round(currentBounds.minY + boundsH / 2);
+    if (visH >= boundsH) {
+      finalY = Math.round(currentBounds.minY + (boundsH - visH) / 2);
     } else {
-      const minY = currentBounds.minY + halfH;
-      const maxY = currentBounds.maxY - halfH;
-      finalY = Math.round(Math.max(minY, Math.min(maxY, finalY)));
+      finalY = Math.round(Math.max(currentBounds.minY, Math.min(currentBounds.maxY - visH, finalY)));
     }
   }
 
@@ -107,9 +100,10 @@ export function setCamera(x: number, y: number, zoom: number = 1): void {
 
 /**
  * Get the current camera state (position and zoom).
+ * Returns the viewport top-left position and zoom.
  * Returns `{ x: 0, y: 0, zoom: 1 }` in headless mode.
  *
- * @returns Current camera position and zoom level.
+ * @returns Current camera top-left position and zoom level.
  */
 export function getCamera(): CameraState {
   if (!hasRenderOps) return { x: 0, y: 0, zoom: 1 };
@@ -120,6 +114,7 @@ export function getCamera(): CameraState {
 
 /**
  * Center the camera on a target position. Convenience wrapper around {@link setCamera}.
+ * Computes the top-left camera position that places the target at viewport center.
  * Call every frame to follow a moving target.
  *
  * @param targetX - Target X position in world units to center on.
@@ -135,12 +130,20 @@ export function followTarget(
   targetY: number,
   zoom: number = 1,
 ): void {
+  const vp = getViewportInternal();
+  const halfVisW = vp.width / (2 * zoom);
+  const halfVisH = vp.height / (2 * zoom);
+
   if (currentDeadzone) {
     const cam = getCamera();
+    // Viewport center in world space
+    const viewCenterX = cam.x + halfVisW;
+    const viewCenterY = cam.y + halfVisH;
+
     const halfW = currentDeadzone.width / 2;
     const halfH = currentDeadzone.height / 2;
-    let cx = cam.x;
-    let cy = cam.y;
+    let cx = viewCenterX;
+    let cy = viewCenterY;
 
     if (targetX < cx - halfW) cx = targetX + halfW;
     else if (targetX > cx + halfW) cx = targetX - halfW;
@@ -148,10 +151,11 @@ export function followTarget(
     if (targetY < cy - halfH) cy = targetY + halfH;
     else if (targetY > cy + halfH) cy = targetY - halfH;
 
-    // Snap to pixel boundaries to prevent sub-pixel oscillation
-    setCamera(Math.round(cx), Math.round(cy), zoom);
+    // Convert viewport center back to top-left for setCamera
+    setCamera(Math.round(cx - halfVisW), Math.round(cy - halfVisH), zoom);
   } else {
-    setCamera(targetX, targetY, zoom);
+    // Center target on screen: top-left = target - half visible area
+    setCamera(targetX - halfVisW, targetY - halfVisH, zoom);
   }
 }
 
@@ -247,21 +251,34 @@ export function followTargetSmooth(
   smoothness: number = 0.1,
 ): void {
   const cam = getCamera();
-  let desiredX = targetX;
-  let desiredY = targetY;
+  const vp = getViewportInternal();
+  const halfVisW = vp.width / (2 * zoom);
+  const halfVisH = vp.height / (2 * zoom);
+
+  // Desired camera top-left that centers the target
+  let desiredX = targetX - halfVisW;
+  let desiredY = targetY - halfVisH;
 
   // Apply deadzone logic
   if (currentDeadzone) {
+    // Viewport center in world space
+    const viewCenterX = cam.x + halfVisW;
+    const viewCenterY = cam.y + halfVisH;
+
     const halfW = currentDeadzone.width / 2;
     const halfH = currentDeadzone.height / 2;
-    desiredX = cam.x;
-    desiredY = cam.y;
+    let cx = viewCenterX;
+    let cy = viewCenterY;
 
-    if (targetX < cam.x - halfW) desiredX = targetX + halfW;
-    else if (targetX > cam.x + halfW) desiredX = targetX - halfW;
+    if (targetX < cx - halfW) cx = targetX + halfW;
+    else if (targetX > cx + halfW) cx = targetX - halfW;
 
-    if (targetY < cam.y - halfH) desiredY = targetY + halfH;
-    else if (targetY > cam.y + halfH) desiredY = targetY - halfH;
+    if (targetY < cy - halfH) cy = targetY + halfH;
+    else if (targetY > cy + halfH) cy = targetY - halfH;
+
+    // Convert viewport center back to top-left
+    desiredX = cx - halfVisW;
+    desiredY = cy - halfVisH;
   }
 
   // Round the desired position to prevent chasing sub-pixel targets

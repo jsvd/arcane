@@ -3,7 +3,6 @@
  *
  * Provides a minimal wrapper that handles common boilerplate:
  * - Auto-clearing sprites each frame
- * - Optional auto-centering the camera on the viewport (web-like top-left origin)
  * - Setting background color
  * - Wiring up agent protocol for AI interaction
  *
@@ -30,7 +29,6 @@ import type { GameConfig, GameContext, FrameCallback, GameStateConfig, Game } fr
  *
  * Defaults:
  * - `autoClear: true` -- clears all sprites at the start of each frame.
- * - `autoCamera: true` -- on the first frame, sets camera so (0,0) is top-left. Set false when using followTargetSmooth.
  * - `zoom: 1` -- default zoom level.
  *
  * If `background` is provided (0.0-1.0 RGB), calls setBackgroundColor().
@@ -58,7 +56,6 @@ import type { GameConfig, GameContext, FrameCallback, GameStateConfig, Game } fr
 export function createGame(config?: GameConfig): Game {
   const cfg = config ?? {};
   const autoClear = cfg.autoClear !== false;
-  const autoCamera = cfg.autoCamera !== false;
   const autoSubsystems = cfg.autoSubsystems !== false;
   const zoom = cfg.zoom ?? 1;
   const name = cfg.name;
@@ -82,10 +79,9 @@ export function createGame(config?: GameConfig): Game {
           clearSprites();
         }
 
-        // On the first frame, auto-center the camera so (0,0) is the top-left corner.
-        if (autoCamera && frame === 1) {
-          const vp = getViewportSize();
-          setCamera(vp.width / 2, vp.height / 2, zoom);
+        // On the first frame, apply zoom if not default.
+        if (zoom !== 1 && frame === 1) {
+          setCamera(0, 0, zoom);
         }
 
         const ctx: GameContext = {

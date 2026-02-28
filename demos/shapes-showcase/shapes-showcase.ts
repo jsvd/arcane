@@ -12,7 +12,6 @@
  */
 
 import {
-  setCamera,
   getViewportSize,
   drawText,
   drawSprite,
@@ -91,13 +90,11 @@ function starPolygon(
 }
 
 // --- Game setup ---
-const game = createGame({ name: "shapes-showcase", autoCamera: false });
+const game = createGame({ name: "shapes-showcase" });
 
 game.onFrame((ctx) => {
   const dt = ctx.dt;
   time += dt;
-
-  setCamera(VPW / 2, VPH / 2, 1);
 
   // Background
   drawSprite({ color: COL_BG, x: 0, y: 0, w: VPW, h: VPH, layer: 0 });

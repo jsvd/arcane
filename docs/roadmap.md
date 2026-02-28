@@ -203,46 +203,9 @@ The old functions (`drawColorSprite`, `drawParallaxSprite`, `drawTiledSprite`) a
 
 ### Coordinate System Clarification
 
-**Status: Backlog**
+**Status: COMPLETE**
 
-Make camera origin positioning explicit instead of implicit. Currently, `setCamera(0, 0)` places the camera center at world (0,0), which is counterintuitive for developers expecting top-left origin (web/canvas convention).
-
-#### Current Behavior
-- `setCamera(x, y)` positions the camera **center** at world (x, y)
-- Screen (0, 0) maps to world (camX - vpWidth/2, camY - vpHeight/2)
-- To make world (0, 0) = screen top-left, you must call `setCamera(vpWidth/2, vpHeight/2)`
-
-#### Proposed Solution
-Add explicit origin mode selection:
-```typescript
-// Option A: Global setting
-setCameraOrigin("center" | "top-left");
-
-// Option B: Per-camera property
-setCamera(x, y, { origin: "center" | "top-left" });
-
-// Option C: Separate functions
-setCameraCenter(x, y);      // current behavior
-setCameraTopLeft(x, y);     // new web-style behavior
-```
-
-#### Migration Impact
-- **Breaking:** Default behavior must remain "center" for backwards compatibility
-- **Scope:** All demos rely on current camera behavior
-- **Benefit:** No more confusion about "why is everything offset?", matches web canvas conventions
-
-#### Deliverables
-- [ ] Design API (choose between Option A/B/C above)
-- [ ] Implement coordinate transform logic
-- [ ] Add explicit origin selection to all demos
-- [ ] Update documentation with clear coordinate system explanation
-- [ ] Migration guide for upgrading from implicit center origin
-
-#### Success Criteria
-- [ ] Camera origin is explicitly chosen in code (no implicit default guessing)
-- [ ] All demos specify their coordinate system preference
-- [ ] Documentation clearly explains both modes with visual diagrams
-- [ ] No performance impact from coordinate transform
+Changed to universal top-left origin: `(0, 0)` is the top-left corner of the screen, matching web canvas, Unity 2D, and Godot conventions. Camera position represents the viewport's top-left corner in world space. `autoCamera` option removed from `createGame()`. All screen↔world math simplified. All demos and documentation updated.
 
 ---
 
@@ -333,13 +296,6 @@ Items discovered during development that don't block current work but should be 
 - `runtime/agent/` — protocol (1 file, though agent.test.ts covers it partially)
 
 These modules are exercised indirectly by demo tests and integration tests.
-
-### MCP Screenshot / Frame Capture Tool
-
-**Status:** Open
-**Severity:** Medium — biggest gap for non-visual AI iteration
-
-A `capture_frame` MCP tool that returns a base64-encoded image of the current game window would enable AI agents to visually verify game state. This is the single most impactful missing feature for agent-driven development workflows.
 
 ### World Authoring DSL
 

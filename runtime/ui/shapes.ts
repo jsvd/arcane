@@ -20,7 +20,6 @@
 import type { Color, ShapeOptions, LineOptions, ArcOptions, SectorOptions, EllipseOptions, RingOptions, CapsuleOptions, PolygonOptions } from "./types.ts";
 import { _logDrawCall } from "../testing/visual.ts";
 import { getCamera } from "../rendering/camera.ts";
-import { getViewportSize } from "../rendering/input.ts";
 import { _warnColor } from "./colors.ts";
 
 // --- Detect geometry ops availability ---
@@ -35,10 +34,9 @@ const WHITE: Color = { r: 1, g: 1, b: 1, a: 1 };
 function toWorldPoint(sx: number, sy: number, screenSpace: boolean): { x: number; y: number } {
   if (!screenSpace) return { x: sx, y: sy };
   const cam = getCamera();
-  const { width: vpW, height: vpH } = getViewportSize();
   return {
-    x: sx / cam.zoom + cam.x - vpW / (2 * cam.zoom),
-    y: sy / cam.zoom + cam.y - vpH / (2 * cam.zoom),
+    x: cam.x + sx / cam.zoom,
+    y: cam.y + sy / cam.zoom,
   };
 }
 

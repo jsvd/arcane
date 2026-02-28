@@ -7,7 +7,6 @@
 
 import {
   drawSprite,
-  setCamera,
   isKeyDown,
   isKeyPressed,
   loadTexture,
@@ -110,9 +109,7 @@ const state: State = {
 };
 
 // --- Game Bootstrap ---
-const game = createGame({ name: "sprite-demo", autoCamera: false, zoom: 1 });
-
-setCamera(400, 300, 1);
+const game = createGame({ name: "sprite-demo", zoom: 1 });
 
 // --- Agent Protocol ---
 game.state<State>({

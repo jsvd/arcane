@@ -3,7 +3,6 @@ import { drawSprite } from "../rendering/sprites.ts";
 import { createSolidTexture } from "../rendering/texture.ts";
 import { drawText, measureText } from "../rendering/text.ts";
 import { getCamera } from "../rendering/camera.ts";
-import { getViewportSize } from "../rendering/input.ts";
 import { _logDrawCall } from "../testing/visual.ts";
 import { _warnColor } from "./colors.ts";
 
@@ -39,10 +38,9 @@ function toWorld(
 ): { x: number; y: number; w: number; h: number } {
   if (!screenSpace) return { x: sx, y: sy, w: sw, h: sh };
   const cam = getCamera();
-  const { width: vpW, height: vpH } = getViewportSize();
   // Round positions to prevent sub-pixel jitter from camera interpolation
-  const rawX = sx / cam.zoom + cam.x - vpW / (2 * cam.zoom);
-  const rawY = sy / cam.zoom + cam.y - vpH / (2 * cam.zoom);
+  const rawX = cam.x + sx / cam.zoom;
+  const rawY = cam.y + sy / cam.zoom;
   return {
     x: Math.round(rawX * cam.zoom) / cam.zoom,
     y: Math.round(rawY * cam.zoom) / cam.zoom,

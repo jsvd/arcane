@@ -15,7 +15,6 @@
 
 import {
   getViewportSize,
-  setCamera,
   drawText,
   isKeyPressed,
   isKeyDown,
@@ -137,7 +136,6 @@ function updateScene1(dt: number) {
 
 function drawScene1() {
   const vp = getViewportSize();
-  setCamera(vp.width / 2, vp.height / 2);
 
   // Draw sound sources
   for (const source of soundSources) {
@@ -247,7 +245,6 @@ function updateScene2(dt: number) {
 
 function drawScene2() {
   const vp = getViewportSize();
-  setCamera(vp.width / 2, vp.height / 2);
 
   // Draw zones
   for (const zone of zones) {
@@ -359,7 +356,6 @@ function updateScene3() {
 
 function drawScene3() {
   const vp = getViewportSize();
-  setCamera(vp.width / 2, vp.height / 2);
 
   // HUD
   hud.text("Scene 3: Mixer Panel", 10, 10, { scale: 2 });

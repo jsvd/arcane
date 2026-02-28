@@ -2,7 +2,7 @@ import { createRoguelikeGame, movePlayer } from "./roguelike.ts";
 import type { Direction, RoguelikeState } from "./roguelike.ts";
 import { WALL, FLOOR, CORRIDOR, STAIRS_DOWN } from "./dungeon.ts";
 import {
-  setCamera, isKeyPressed,
+  setCamera, isKeyPressed, getViewportSize,
   setAmbientLight, addPointLight, clearLights,
   drawSprite,
 } from "../../runtime/rendering/index.ts";
@@ -25,7 +25,7 @@ const COL_EXPLORED = rgb(40, 40, 55);
 let state = createRoguelikeGame(SEED);
 
 // --- Game setup ---
-const game = createGame({ name: "roguelike", autoCamera: false, autoClear: true });
+const game = createGame({ name: "roguelike", autoClear: true });
 
 game.state<RoguelikeState>({
   get: () => state,
@@ -72,11 +72,15 @@ game.onFrame(() => {
     }
   }
 
-  // Camera follows player
+  // Camera follows player (center player in viewport)
+  const rlVp = getViewportSize();
+  const zoom = 2;
+  const playerWorldX = state.player.pos.x * TILE_SIZE + TILE_SIZE / 2;
+  const playerWorldY = state.player.pos.y * TILE_SIZE + TILE_SIZE / 2;
   setCamera(
-    state.player.pos.x * TILE_SIZE + TILE_SIZE / 2,
-    state.player.pos.y * TILE_SIZE + TILE_SIZE / 2,
-    2,
+    playerWorldX - rlVp.width / (2 * zoom),
+    playerWorldY - rlVp.height / (2 * zoom),
+    zoom,
   );
 
   // Lighting

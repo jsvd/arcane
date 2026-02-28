@@ -8,6 +8,7 @@ pub struct CameraBounds {
 }
 
 /// 2D camera with position, zoom, and viewport.
+/// Camera position represents the top-left corner of the visible area.
 pub struct Camera2D {
     pub x: f32,
     pub y: f32,
@@ -34,40 +35,40 @@ impl Camera2D {
     pub fn clamp_to_bounds(&mut self) {
         let Some(bounds) = self.bounds else { return };
 
-        let half_w = self.viewport_size[0] / (2.0 * self.zoom);
-        let half_h = self.viewport_size[1] / (2.0 * self.zoom);
+        let vis_w = self.viewport_size[0] / self.zoom;
+        let vis_h = self.viewport_size[1] / self.zoom;
 
         let bounds_w = bounds.max_x - bounds.min_x;
         let bounds_h = bounds.max_y - bounds.min_y;
 
         // If visible area wider than bounds, center on bounds
-        if half_w * 2.0 >= bounds_w {
-            self.x = bounds.min_x + bounds_w / 2.0;
+        if vis_w >= bounds_w {
+            self.x = bounds.min_x + (bounds_w - vis_w) / 2.0;
         } else {
-            self.x = self.x.clamp(bounds.min_x + half_w, bounds.max_x - half_w);
+            self.x = self.x.clamp(bounds.min_x, bounds.max_x - vis_w);
         }
 
-        if half_h * 2.0 >= bounds_h {
-            self.y = bounds.min_y + bounds_h / 2.0;
+        if vis_h >= bounds_h {
+            self.y = bounds.min_y + (bounds_h - vis_h) / 2.0;
         } else {
-            self.y = self.y.clamp(bounds.min_y + half_h, bounds.max_y - half_h);
+            self.y = self.y.clamp(bounds.min_y, bounds.max_y - vis_h);
         }
     }
 
     /// Compute the view-projection matrix as a column-major 4x4 array.
     ///
     /// Maps world coordinates to clip space:
-    /// - Camera position is centered on screen
+    /// - Camera position is the top-left corner of the visible area
     /// - Zoom scales the view (larger zoom = more zoomed in)
     /// - Y-axis points down (screen coordinates)
     pub fn view_proj(&self) -> [f32; 16] {
-        let half_w = self.viewport_size[0] / (2.0 * self.zoom);
-        let half_h = self.viewport_size[1] / (2.0 * self.zoom);
+        let vis_w = self.viewport_size[0] / self.zoom;
+        let vis_h = self.viewport_size[1] / self.zoom;
 
-        let left = self.x - half_w;
-        let right = self.x + half_w;
-        let top = self.y - half_h;
-        let bottom = self.y + half_h;
+        let left = self.x;
+        let right = self.x + vis_w;
+        let top = self.y;
+        let bottom = self.y + vis_h;
 
         // Orthographic projection (column-major)
         let sx = 2.0 / (right - left);
@@ -108,16 +109,17 @@ mod tests {
         };
         let mat = cam.view_proj();
 
-        // At origin with zoom=1, the camera should see:
-        // left=-400, right=400, top=-300, bottom=300
-        // Orthographic matrix: sx = 2/(right-left), sy = 2/(top-bottom)
-        let expected_sx = 2.0 / 800.0; // 0.0025
-        let expected_sy = 2.0 / -600.0; // -0.00333...
+        // At origin with zoom=1, top-left origin:
+        // left=0, right=800, top=0, bottom=600
+        let expected_sx = 2.0 / 800.0;
+        let expected_sy = 2.0 / -600.0;
 
         assert!((mat[0] - expected_sx).abs() < 1e-6, "sx mismatch");
         assert!((mat[5] - expected_sy).abs() < 1e-6, "sy mismatch");
-        assert_eq!(mat[12], 0.0, "tx should be 0 at origin");
-        assert_eq!(mat[13], 0.0, "ty should be 0 at origin");
+        // tx = -(800 + 0) / (800 - 0) = -1.0
+        assert!((mat[12] - -1.0).abs() < 1e-6, "tx should be -1 at origin");
+        // ty = -(0 + 600) / (0 - 600) = 1.0
+        assert!((mat[13] - 1.0).abs() < 1e-6, "ty should be 1 at origin");
     }
 
     #[test]
@@ -131,15 +133,13 @@ mod tests {
         };
         let mat = cam.view_proj();
 
-        // Camera at (100, 50) should translate the world
-        // tx = -(right + left) / (right - left)
-        // left=100-400=-300, right=100+400=500
-        // tx = -(500 + -300) / 800 = -200/800 = -0.25
-        assert!((mat[12] - -0.25).abs() < 1e-6, "tx mismatch for offset camera");
+        // Camera top-left at (100, 50):
+        // left=100, right=900, top=50, bottom=650
+        // tx = -(900 + 100) / 800 = -1.25
+        assert!((mat[12] - -1.25).abs() < 1e-6, "tx mismatch for offset camera");
 
-        // top=50-300=-250, bottom=50+300=350
-        // ty = -(top + bottom) / (top - bottom) = -(-250+350)/(-250-350) = -100/-600 = 0.1666...
-        assert!((mat[13] - (100.0 / 600.0)).abs() < 1e-5, "ty mismatch for offset camera");
+        // ty = -(50 + 650) / (50 - 650) = -700 / -600 = 1.1666...
+        assert!((mat[13] - (700.0 / 600.0)).abs() < 1e-5, "ty mismatch for offset camera");
     }
 
     #[test]
@@ -153,12 +153,11 @@ mod tests {
         };
         let mat = cam.view_proj();
 
-        // Zoom=2 means we see half the area
-        // half_w = 800 / (2 * 2) = 200
-        // half_h = 600 / (2 * 2) = 150
-        // left=-200, right=200, top=-150, bottom=150
-        let expected_sx = 2.0 / 400.0; // 0.005
-        let expected_sy = 2.0 / -300.0; // -0.00666...
+        // Zoom=2, top-left origin:
+        // vis_w = 400, vis_h = 300
+        // left=0, right=400, top=0, bottom=300
+        let expected_sx = 2.0 / 400.0;
+        let expected_sy = 2.0 / -300.0;
 
         assert!((mat[0] - expected_sx).abs() < 1e-6, "sx mismatch with zoom");
         assert!((mat[5] - expected_sy).abs() < 1e-6, "sy mismatch with zoom");
@@ -187,13 +186,6 @@ mod tests {
         let cam = Camera2D::default();
         let mat = cam.view_proj();
 
-        // Column-major means:
-        // mat[0..3] = first column (x scale)
-        // mat[4..7] = second column (y scale)
-        // mat[8..11] = third column (z scale)
-        // mat[12..15] = fourth column (translation)
-
-        // Check that the matrix has the right structure
         assert_eq!(mat[10], 1.0, "z scale should be 1.0");
         assert_eq!(mat[15], 1.0, "w component should be 1.0");
         assert_eq!(mat[2], 0.0, "unused z component");
@@ -211,11 +203,9 @@ mod tests {
         };
         let mat = cam.view_proj();
 
-        // Zoom=10 means we see 1/10th the area
-        // half_w = 800 / (2 * 10) = 40
-        // half_h = 600 / (2 * 10) = 30
-        let expected_sx = 2.0 / 80.0; // 0.025
-        let expected_sy = 2.0 / -60.0; // -0.0333...
+        // Zoom=10: vis_w=80, vis_h=60
+        let expected_sx = 2.0 / 80.0;
+        let expected_sy = 2.0 / -60.0;
 
         assert!((mat[0] - expected_sx).abs() < 1e-6);
         assert!((mat[5] - expected_sy).abs() < 1e-5);
@@ -232,11 +222,9 @@ mod tests {
         };
         let mat = cam.view_proj();
 
-        // Zoom=0.1 means we see 10x the area
-        // half_w = 800 / (2 * 0.1) = 4000
-        // half_h = 600 / (2 * 0.1) = 3000
-        let expected_sx = 2.0 / 8000.0; // 0.00025
-        let expected_sy = 2.0 / -6000.0; // -0.000333...
+        // Zoom=0.1: vis_w=8000, vis_h=6000
+        let expected_sx = 2.0 / 8000.0;
+        let expected_sy = 2.0 / -6000.0;
 
         assert!((mat[0] - expected_sx).abs() < 1e-7);
         assert!((mat[5] - expected_sy).abs() < 1e-6);
@@ -253,10 +241,10 @@ mod tests {
         };
         let mat = cam.view_proj();
 
-        // Camera at (-100, -50)
-        // left=-100-400=-500, right=-100+400=300
-        // tx = -(300 + -500) / 800 = 200/800 = 0.25
-        assert!((mat[12] - 0.25).abs() < 1e-6);
+        // Camera top-left at (-100, -50):
+        // left=-100, right=700
+        // tx = -(700 + -100) / (700 - (-100)) = -600 / 800 = -0.75
+        assert!((mat[12] - -0.75).abs() < 1e-6);
     }
 
     #[test]
@@ -269,9 +257,9 @@ mod tests {
             bounds: Some(CameraBounds { min_x: 0.0, min_y: 0.0, max_x: 1600.0, max_y: 1200.0 }),
         };
         cam.clamp_to_bounds();
-        // half_w=400, half_h=300 → x clamped to 400, y clamped to 300
-        assert_eq!(cam.x, 400.0);
-        assert_eq!(cam.y, 300.0);
+        // vis_w=800, vis_h=600 → x clamped to [0, 800], y to [0, 600]
+        assert_eq!(cam.x, 0.0);
+        assert_eq!(cam.y, 0.0);
     }
 
     #[test]
@@ -284,9 +272,9 @@ mod tests {
             bounds: Some(CameraBounds { min_x: 0.0, min_y: 0.0, max_x: 1600.0, max_y: 1200.0 }),
         };
         cam.clamp_to_bounds();
-        // half_w=400, half_h=300 → x clamped to 1200, y clamped to 900
-        assert_eq!(cam.x, 1200.0);
-        assert_eq!(cam.y, 900.0);
+        // vis_w=800, vis_h=600 → x clamped to max-vis=800, y to 600
+        assert_eq!(cam.x, 800.0);
+        assert_eq!(cam.y, 600.0);
     }
 
     #[test]
@@ -294,14 +282,14 @@ mod tests {
         let mut cam = Camera2D {
             x: 0.0,
             y: 0.0,
-            zoom: 0.5, // zoomed out: half_w = 800, half_h = 600
+            zoom: 0.5, // vis_w=1600, vis_h=1200
             viewport_size: [800.0, 600.0],
             bounds: Some(CameraBounds { min_x: 0.0, min_y: 0.0, max_x: 400.0, max_y: 300.0 }),
         };
         cam.clamp_to_bounds();
-        // bounds is 400×300, visible is 1600×1200 → centers
-        assert_eq!(cam.x, 200.0);
-        assert_eq!(cam.y, 150.0);
+        // bounds 400×300, visible 1600×1200 → center: x = (400-1600)/2 = -600
+        assert_eq!(cam.x, -600.0);
+        assert_eq!(cam.y, -450.0);
     }
 
     #[test]
@@ -323,13 +311,14 @@ mod tests {
         let mut cam = Camera2D {
             x: 10.0,
             y: 10.0,
-            zoom: 2.0, // half_w = 200, half_h = 150
+            zoom: 2.0, // vis_w=400, vis_h=300
             viewport_size: [800.0, 600.0],
             bounds: Some(CameraBounds { min_x: 0.0, min_y: 0.0, max_x: 1000.0, max_y: 800.0 }),
         };
         cam.clamp_to_bounds();
-        assert_eq!(cam.x, 200.0);
-        assert_eq!(cam.y, 150.0);
+        // x clamped to [0, 600], y to [0, 500] → 10 is in range
+        assert_eq!(cam.x, 10.0);
+        assert_eq!(cam.y, 10.0);
     }
 
     #[test]

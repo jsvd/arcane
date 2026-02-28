@@ -217,7 +217,7 @@ function tileTexture(tileId: number): number {
 
 let initialized = false;
 
-const game = createGame({ name: "wfc-dungeon", autoCamera: false });
+const game = createGame({ name: "wfc-dungeon" });
 
 game.state({
   get: () => ({
@@ -251,8 +251,6 @@ game.onFrame((ctx) => {
   if (!initialized) {
     initTextures();
     generateDungeon();
-    const vp = getViewportSize();
-    setCamera(vp.width / 2, vp.height / 2);
     initialized = true;
   }
 

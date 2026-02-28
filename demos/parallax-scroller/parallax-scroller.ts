@@ -21,7 +21,6 @@
 
 import {
   drawSprite,
-  setCamera,
   getCamera,
   isKeyDown,
   isKeyPressed,
@@ -376,8 +375,11 @@ function render(): void {
   if (useDeadzone) {
     const dz = getCameraDeadzone();
     if (dz) {
-      const dzX = cam.x - dz.width / 2;
-      const dzY = cam.y - dz.height / 2;
+      // Viewport center in world space = cam.x + vpW/(2*zoom)
+      const centerX = cam.x + (vp.width / 2) / cam.zoom;
+      const centerY = cam.y + (vp.height / 2) / cam.zoom;
+      const dzX = centerX - dz.width / 2;
+      const dzY = centerY - dz.height / 2;
       drawSprite({
         textureId: TEX_STAR,
         x: dzX,
@@ -392,7 +394,7 @@ function render(): void {
 }
 
 // --- Game bootstrap ---
-const app = createGame({ name: "parallax-scroller", autoCamera: false });
+const app = createGame({ name: "parallax-scroller" });
 
 // --- Frame loop ---
 app.onFrame((ctx) => {

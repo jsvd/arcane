@@ -222,10 +222,9 @@ export function _resetScreenTransition(): void {
 /** Convert screen-space rect to world-space for drawSprite. */
 function screenToWorld(sx: number, sy: number, sw: number, sh: number) {
   const cam = getCamera();
-  const { width: vpW, height: vpH } = getViewportSize();
   return {
-    x: sx / cam.zoom + cam.x - vpW / (2 * cam.zoom),
-    y: sy / cam.zoom + cam.y - vpH / (2 * cam.zoom),
+    x: cam.x + sx / cam.zoom,
+    y: cam.y + sy / cam.zoom,
     w: sw / cam.zoom,
     h: sh / cam.zoom,
   };

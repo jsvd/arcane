@@ -23,7 +23,7 @@ const COL_BG = rgb(30, 30, 50);
 let state = createPlatformerGame();
 
 // --- Game setup ---
-const game = createGame({ name: "platformer", autoCamera: false });
+const game = createGame({ name: "platformer" });
 
 game.state<PlatformerState>({
   get: () => state,

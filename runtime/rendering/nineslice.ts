@@ -24,7 +24,6 @@
 import type { TextureId } from "./types.ts";
 import { drawSprite } from "./sprites.ts";
 import { getCamera } from "./camera.ts";
-import { getViewportSize } from "./input.ts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -86,10 +85,9 @@ function toWorld(
 ): { x: number; y: number; w: number; h: number } {
   if (!screenSpace) return { x: sx, y: sy, w: sw, h: sh };
   const cam = getCamera();
-  const { width: vpW, height: vpH } = getViewportSize();
   return {
-    x: sx / cam.zoom + cam.x - vpW / (2 * cam.zoom),
-    y: sy / cam.zoom + cam.y - vpH / (2 * cam.zoom),
+    x: cam.x + sx / cam.zoom,
+    y: cam.y + sy / cam.zoom,
     w: sw / cam.zoom,
     h: sh / cam.zoom,
   };

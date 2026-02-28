@@ -5,7 +5,7 @@ import {
 import type { TDState, TowerType } from "./tower-defense.ts";
 import {
   setCamera, isKeyPressed, getMouseWorldPosition,
-  drawSprite,
+  drawSprite, getViewportSize,
 } from "../../runtime/rendering/index.ts";
 import { drawBar, Colors } from "../../runtime/ui/index.ts";
 import { rgb } from "../../runtime/ui/types.ts";
@@ -42,13 +42,14 @@ const ENEMY_COLOR: Record<string, Color> = {
 let state = createTDGame();
 let selectedTower: TowerType = "arrow";
 
-// --- Camera ---
-const camX = (state.mapWidth * TILE_SIZE) / 2;
-const camY = (state.mapHeight * TILE_SIZE) / 2;
+// --- Camera (center the map in viewport) ---
+const tdVp = getViewportSize();
+const camX = (state.mapWidth * TILE_SIZE - tdVp.width) / 2;
+const camY = (state.mapHeight * TILE_SIZE - tdVp.height) / 2;
 setCamera(camX, camY, 1);
 
 // --- Game setup ---
-const game = createGame({ name: "tower-defense", autoCamera: false, autoClear: true });
+const game = createGame({ name: "tower-defense", autoClear: true });
 
 game.state<TDState>({
   get: () => state,

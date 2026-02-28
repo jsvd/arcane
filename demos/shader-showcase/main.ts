@@ -13,7 +13,6 @@
  */
 
 import {
-  setCamera,
   getViewportSize,
   loadTexture,
   drawSprite,
@@ -41,7 +40,6 @@ import { rgb } from "../../runtime/ui/types.ts";
 
 // --- Setup ---
 const vp = getViewportSize();
-setCamera(vp.width / 2, vp.height / 2);
 setBackgroundColor(0.08, 0.08, 0.12);
 
 // Load a sprite to apply effects to

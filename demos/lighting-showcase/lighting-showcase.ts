@@ -23,8 +23,6 @@
 
 import {
   drawSprite,
-  setCamera,
-  getCamera,
   isKeyDown,
   isKeyPressed,
   createSolidTexture,
@@ -359,7 +357,7 @@ function drawComparisonScene(dt: number) {
 
 // --- Game bootstrap ---
 
-const game = createGame({ name: "lighting-showcase", autoCamera: false });
+const game = createGame({ name: "lighting-showcase" });
 
 game.state({
   get: () => ({
@@ -378,9 +376,6 @@ game.onFrame((ctx) => {
   frameCount++;
 
   const { width: VPW, height: VPH } = getViewportSize();
-
-  // Center camera
-  setCamera(VPW / 2, VPH / 2, 1);
 
   clearLights();
   clearEmissives();

@@ -7,9 +7,9 @@ export type TextureId = number;
 /**
  * Options for drawing a sprite via {@link drawSprite}.
  *
- * Positions are in **world space**. The camera determines what's visible:
- * - Default camera (0, 0): screen center = world (0, 0). Top-left = (-vpW/2, -vpH/2).
- * - After `setCamera(vpW/2, vpH/2)`: screen top-left = world (0, 0) — web-like coords.
+ * Positions are in **world space**. The camera position represents the
+ * viewport's top-left corner in world space. Camera (0, 0) means the
+ * top-left of the screen shows world (0, 0) — web-like coords by default.
  *
  * Y increases downward. The sprite's (x, y) is its top-left corner.
  */

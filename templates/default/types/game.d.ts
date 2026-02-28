@@ -222,8 +222,6 @@ declare module "@arcane/runtime/game" {
   export type GameConfig = {
       /** Name for agent registration. If set, enables agent protocol. */
       name?: string;
-      /** Auto-center camera on viewport? Default: true. */
-      autoCamera?: boolean;
       /** Camera zoom level. Default: 1. */
       zoom?: number;
       /** Auto-clear sprites each frame? Default: true. */
@@ -410,7 +408,6 @@ declare module "@arcane/runtime/game" {
    *
    * Provides a minimal wrapper that handles common boilerplate:
    * - Auto-clearing sprites each frame
-   * - Optional auto-centering the camera on the viewport (web-like top-left origin)
    * - Setting background color
    * - Wiring up agent protocol for AI interaction
    *
@@ -425,7 +422,6 @@ declare module "@arcane/runtime/game" {
    *
    * Defaults:
    * - `autoClear: true` -- clears all sprites at the start of each frame.
-   * - `autoCamera: true` -- on the first frame, sets camera so (0,0) is top-left. Set false when using followTargetSmooth.
    * - `zoom: 1` -- default zoom level.
    *
    * If `background` is provided (0.0-1.0 RGB), calls setBackgroundColor().

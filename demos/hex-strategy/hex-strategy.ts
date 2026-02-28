@@ -407,8 +407,8 @@ function drawHUD(): void {
   const cam = getCamera();
   const vp = getViewportSize();
   const scale = 1 / cam.zoom;
-  const hudX = cam.x - (vp.width / 2) * scale;
-  const hudY = cam.y - (vp.height / 2) * scale;
+  const hudX = cam.x;
+  const hudY = cam.y;
 
   // HUD background
   const bgW = 280 * scale;
@@ -480,7 +480,6 @@ function updateCamera(): void {
 const game = createGame({
   name: "hex-strategy",
   background: { r: 13 / 255, g: 20 / 255, b: 38 / 255 },
-  autoCamera: false,
 });
 
 game.state({

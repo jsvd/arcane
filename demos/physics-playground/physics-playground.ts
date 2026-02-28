@@ -21,7 +21,6 @@
  */
 
 import {
-  setCamera,
   isKeyPressed,
   isMouseButtonPressed,
   getMouseWorldPosition,
@@ -367,7 +366,7 @@ function getPlaygroundState(): PlaygroundState {
 }
 
 // Game setup
-const game = createGame({ name: "physics-playground", autoCamera: false });
+const game = createGame({ name: "physics-playground" });
 
 game.state<PlaygroundState>({
   get: getPlaygroundState,
@@ -448,8 +447,6 @@ function drawContactsFromManifolds(manifolds: ContactManifold[]): void {
 }
 
 game.onFrame((ctx) => {
-  setCamera(VPW / 2, VPH / 2, 1);
-
   // Input: mode selection
   if (isKeyPressed("1")) spawnMode = 1;
   if (isKeyPressed("2")) spawnMode = 2;

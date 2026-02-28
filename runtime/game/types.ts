@@ -245,8 +245,6 @@ export type EntityOptions = {
 export type GameConfig = {
   /** Name for agent registration. If set, enables agent protocol. */
   name?: string;
-  /** Auto-center camera on viewport? Default: true. */
-  autoCamera?: boolean;
   /** Camera zoom level. Default: 1. */
   zoom?: number;
   /** Auto-clear sprites each frame? Default: true. */

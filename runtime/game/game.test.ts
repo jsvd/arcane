@@ -11,7 +11,6 @@ describe("createGame", () => {
   it("should accept config options", () => {
     const game = createGame({
       name: "test-game",
-      autoCamera: false,
       autoClear: false,
       zoom: 2,
       background: { r: 30, g: 30, b: 50 },
@@ -77,7 +76,7 @@ describe("createGame", () => {
   });
 
   it("should install frame callback via onFrame", () => {
-    const game = createGame({ autoCamera: false, autoClear: false });
+    const game = createGame({ autoClear: false });
     let called = false;
     game.onFrame(() => { called = true; });
     // The callback is stored on globalThis.__frameCallback; invoke it to test
@@ -88,7 +87,7 @@ describe("createGame", () => {
   });
 
   it("should pass GameContext with dt, viewport, elapsed, frame to callback", () => {
-    const game = createGame({ autoCamera: false, autoClear: false });
+    const game = createGame({ autoClear: false });
     let receivedCtx: any = null;
     game.onFrame((ctx) => { receivedCtx = ctx; });
 
@@ -106,7 +105,7 @@ describe("createGame", () => {
   });
 
   it("should increment frame counter on successive calls", () => {
-    const game = createGame({ autoCamera: false, autoClear: false });
+    const game = createGame({ autoClear: false });
     const frames: number[] = [];
     game.onFrame((ctx) => { frames.push(ctx.frame); });
 
@@ -130,7 +129,7 @@ describe("createGame", () => {
   });
 
   it("should support autoSubsystems: true (default) without error", () => {
-    const game = createGame({ autoCamera: false, autoClear: false });
+    const game = createGame({ autoClear: false });
     let called = false;
     game.onFrame(() => { called = true; });
     const cb = (globalThis as any).__frameCallback;
@@ -139,7 +138,7 @@ describe("createGame", () => {
   });
 
   it("should support autoSubsystems: false without error", () => {
-    const game = createGame({ autoCamera: false, autoClear: false, autoSubsystems: false });
+    const game = createGame({ autoClear: false, autoSubsystems: false });
     let called = false;
     game.onFrame(() => { called = true; });
     const cb = (globalThis as any).__frameCallback;
@@ -150,7 +149,7 @@ describe("createGame", () => {
   it("should default autoSubsystems to true", () => {
     // Verify that createGame with no config still runs subsystem updates
     // (they are no-ops in headless, so we just verify it doesn't crash)
-    const game = createGame({ autoCamera: false, autoClear: false });
+    const game = createGame({ autoClear: false });
     let frameCount = 0;
     game.onFrame(() => { frameCount++; });
     const cb = (globalThis as any).__frameCallback;
