@@ -6,18 +6,18 @@
 /// ## Integration (Phase 2 — renderer/mod.rs + dev.rs)
 ///
 /// In `Renderer`:
-/// ```ignore
+/// ```text
 /// pub geometry: GeometryBatch,
 /// ```
 ///
 /// In `Renderer::new()`:
-/// ```ignore
+/// ```text
 /// let geometry = GeometryBatch::new(&gpu, sprites.camera_bind_group_layout());
 /// // NOTE: GeometryBatch shares the camera bind group from SpritePipeline.
 /// ```
 ///
 /// In the frame callback (dev.rs), after sprite render:
-/// ```ignore
+/// ```text
 /// // Drain GeoState commands
 /// let geo_cmds: Vec<GeoCommand> = {
 ///     let geo = op_state.borrow::<Rc<RefCell<GeoState>>>();
