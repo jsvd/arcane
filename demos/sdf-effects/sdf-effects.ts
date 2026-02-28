@@ -81,8 +81,8 @@ game.onFrame((_ctx) => {
       shape: sdfSmoothUnion(
         8,
         sdfCircle(40),
-        sdfOffset(sdfCircle(30), 30, 10),
-        sdfOffset(sdfCircle(25), -20, 20),
+        sdfOffset(sdfCircle(30), { x: 30, y: 10 }),
+        sdfOffset(sdfCircle(25), { x: -20, y: 20 }),
       ),
       fill: cosinePalette(
         [0.5, 0.5, 0.5],
@@ -90,16 +90,16 @@ game.onFrame((_ctx) => {
         [1.0, 1.0, 1.0],
         [0.0, 0.33, 0.67],
       ),
-      position: [GRID[0][0], GRID[0][1]],
+      position: { x: GRID[0][0], y: GRID[0][1] },
       layer: LAYERS.ENTITIES,
     });
 
     // 2. Gradient Fill - equilateral triangle (blue to red)
     // bounds=43 for width, but triangle Y extent is ±37, so scale=43/37
     sdfEntity({
-      shape: sdfTriangle([0, 37], [-43, -37], [43, -37]),
+      shape: sdfTriangle({ x: 0, y: 37 }, { x: -43, y: -37 }, { x: 43, y: -37 }),
       fill: gradient("#000066", "#ff0000", 90, 43 / 37),
-      position: [GRID[1][0], GRID[1][1]],
+      position: { x: GRID[1][0], y: GRID[1][1] },
       bounds: 43,
       layer: LAYERS.ENTITIES,
     });
@@ -107,8 +107,8 @@ game.onFrame((_ctx) => {
     // 3. Glow Heart - pulsing glow effect (using breathe() helper)
     sdfEntity({
       shape: sdfHeart(30),
-      fill: glow("#ff3366", 0.25),
-      position: [GRID[2][0], GRID[2][1]],
+      fill: glow("#ff3366", 200),
+      position: { x: GRID[2][0], y: GRID[2][1] },
       scale: pulse(time, 3, 1.0, 1.15),
       opacity: breathe(time, 3, 0.7, 1.0),
       bounds: 90,
@@ -120,8 +120,8 @@ game.onFrame((_ctx) => {
     // 4. Pulsing Star - animated scale (using pulse() helper)
     sdfEntity({
       shape: sdfStar(30, 5, 0.4),
-      fill: glow("#FFD700", 0.8),
-      position: [GRID[3][0], GRID[3][1]],
+      fill: glow("#FFD700", 63),
+      position: { x: GRID[3][0], y: GRID[3][1] },
       scale: pulse(time, 4, 0.7, 1.3),
       layer: LAYERS.ENTITIES,
     });
@@ -130,7 +130,7 @@ game.onFrame((_ctx) => {
     sdfEntity({
       shape: sdfStar(35, 6, 0.5),
       fill: solid("#e74c3c"),
-      position: [GRID[4][0], GRID[4][1]],
+      position: { x: GRID[4][0], y: GRID[4][1] },
       rotation: spin(time, 60),
       layer: LAYERS.ENTITIES,
     });
@@ -138,8 +138,8 @@ game.onFrame((_ctx) => {
     // 6. Breathing Circle - glow pulse (using breathe() helper)
     sdfEntity({
       shape: sdfCircle(25),
-      fill: glow("#3498db", 0.25),
-      position: [GRID[5][0], GRID[5][1]],
+      fill: glow("#3498db", 200),
+      position: { x: GRID[5][0], y: GRID[5][1] },
       scale: pulse(time, 2, 1.0, 1.2),
       opacity: breathe(time, 2, 0.7, 1.0),
       bounds: 80,
@@ -150,9 +150,9 @@ game.onFrame((_ctx) => {
 
     // 7. Repeat Pattern - infinite tiling (using spin() helper)
     sdfEntity({
-      shape: sdfRepeat(sdfCircle(8), 30, 30),
+      shape: sdfRepeat(sdfCircle(8), { x: 30, y: 30 }),
       fill: solid("#2ecc71"),
-      position: [GRID[6][0], GRID[6][1]],
+      position: { x: GRID[6][0], y: GRID[6][1] },
       rotation: spin(time, 20),
       bounds: 100,
       layer: LAYERS.ENTITIES,
@@ -160,9 +160,9 @@ game.onFrame((_ctx) => {
 
     // 8. Mirror X - symmetry transform (using spin() helper)
     sdfEntity({
-      shape: sdfMirrorX(sdfOffset(sdfStar(20, 5, 0.4), 30, 0)),
+      shape: sdfMirrorX(sdfOffset(sdfStar(20, 5, 0.4), { x: 30, y: 0 })),
       fill: solid("#9b59b6"),
-      position: [GRID[7][0], GRID[7][1]],
+      position: { x: GRID[7][0], y: GRID[7][1] },
       rotation: spin(time, 30),
       layer: LAYERS.ENTITIES,
     });
@@ -171,7 +171,7 @@ game.onFrame((_ctx) => {
     sdfEntity({
       shape: sdfOutlineN(sdfCircle(45), 8, 3),
       fill: solid("#e67e22"),
-      position: [GRID[8][0], GRID[8][1]],
+      position: { x: GRID[8][0], y: GRID[8][1] },
       scale: pulse(time, 2.5, 0.85, 1.15),
       layer: LAYERS.ENTITIES,
     });
