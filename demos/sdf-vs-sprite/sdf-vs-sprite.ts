@@ -115,7 +115,7 @@ function frame(): void {
   sdfEntity({
     shape: sdfCircle(baseSize),
     fill: { type: "solid", color: "#e74c3c" },
-    position: [START_X, row1Y],
+    position: { x: START_X, y: row1Y },
     layer: 10,
   });
 
@@ -140,7 +140,7 @@ function frame(): void {
   sdfEntity({
     shape: sdfBox(baseSize * 1.5, baseSize),
     fill: { type: "solid", color: "#3498db" },
-    position: [START_X, row2Y],
+    position: { x: START_X, y: row2Y },
     layer: 10,
   });
 
@@ -172,7 +172,7 @@ function frame(): void {
   sdfEntity({
     shape: sdfStar(baseSize, 5, 0.4),
     fill: { type: "solid", color: "#2ecc71" },
-    position: [START_X, row3Y],
+    position: { x: START_X, y: row3Y },
     layer: 10,
   });
 
@@ -205,7 +205,7 @@ function frame(): void {
   sdfEntity({
     shape: sdfHeart(baseSize * 0.8),
     fill: { type: "solid", color: "#e91e63" },
-    position: [START_X, row4Y],
+    position: { x: START_X, y: row4Y },
     layer: 10,
   });
 
