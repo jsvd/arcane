@@ -788,12 +788,14 @@ declare module "@arcane/runtime/rendering" {
    */
   export declare function playMusic(path: string, volume?: number): InstanceId;
   /**
-   * Stop a specific playing sound.
-   * No-op in headless mode.
+   * Stop a specific playing sound by sound ID.
+   * Deprecated: use stopInstance() with an instance ID returned by playSound() instead.
+   * This function is now a no-op; stop individual sounds using stopInstance().
    *
-   * @param id - Sound handle from loadSound().
+   * @param id - Sound handle from loadSound() (unused).
+   * @deprecated Use stopInstance() with the InstanceId from playSound().
    */
-  export declare function stopSound(id: SoundId): void;
+  export declare function stopSound(_id: SoundId): void;
   /**
    * Stop all currently playing sounds and music.
    * No-op in headless mode.

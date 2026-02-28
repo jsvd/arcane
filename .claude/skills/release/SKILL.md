@@ -155,20 +155,30 @@ git push origin main --tags
 
 ### 10. Publish to crates.io
 
-Publish in dependency order, waiting for indexing between each:
+Publish in dependency order. Run each command **separately** — do not chain them with `&&`.
 
 ```bash
 # 1. Core library
 cargo publish -p arcane-core
+```
 
-# Wait ~60s for crates.io to index
+```bash
+# Wait for crates.io to index before publishing the CLI
 sleep 60
+```
 
+```bash
 # 2. CLI binary (--allow-dirty because cli/data/ is gitignored but included in crate)
 cargo publish -p arcane-engine --allow-dirty
 ```
 
-If the second publish fails with "arcane-core X.Y.Z not found", wait longer and retry.
+- If `arcane-engine` fails with **"arcane-core X.Y.Z not found"**: wait longer and retry the last command only.
+- If either publish fails with **"already exists on crates.io index"**: **do not assume success — investigate first**:
+  1. Run `cargo search arcane-core` / `cargo search arcane-engine` to confirm the published version matches X.Y.Z.
+  2. Check `gh release list` to see if a GitHub release for vX.Y.Z already exists.
+  3. If both match the intended version and all prior steps (CHANGELOG, git tag, CI) completed correctly, the duplicate was harmless — continue.
+  4. If the published version matches X.Y.Z but earlier steps (CHANGELOG, tag, CI) are incomplete, complete those steps before finishing.
+  5. If the published version is wrong (e.g. stale from a failed prior run), a new crates.io publish is impossible for that version — bump to a patch version (X.Y.Z+1), fix the root cause, and restart the release.
 
 ### 11. Create GitHub Release
 

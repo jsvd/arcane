@@ -388,6 +388,25 @@ GPU pipeline code (`renderer/mod.rs`, `sprite.rs`, `gpu.rs`, `texture.rs`, `shad
 | **Tier 1+2+3 done** | +5 more test files | TS coverage ~95%, Rust unchanged |
 | **Tier 4 done** | Rust test harness + integration tests | Rust coverage 60-70% (up from 41%) |
 
+### Shader Showcase Effects Audit
+
+**Status:** Open
+**Severity:** Medium — demo launches but multiple effects are visually broken
+
+Several effect presets in `demos/shader-showcase/` produce incorrect or no visual output. The demo structure is now fixed (correct `drawText` calls, `setBackgroundColor` object form) but the underlying shader/uniform wiring for individual effects needs investigation.
+
+**Known symptoms:**
+- Multiple effects appear broken or identical (likely uniform not being set correctly per-effect)
+
+**Suggested investigation:**
+- [ ] Run each of the 8 effect presets and note which produce expected output vs. no change
+- [ ] Check `runtime/rendering/effects.ts` — verify each preset sets the correct named uniforms via `setShaderUniform()`
+- [ ] Check `runtime/rendering/shader.ts` — verify `createShader()` and `setShaderUniform()` correctly map names to slots and flush per-frame
+- [ ] Check the demo's per-effect `animate()` callbacks pass correct uniform names and value ranges
+- [ ] Cross-reference with `demos/shader-showcase/main.ts` effect definitions
+
+---
+
 ### World Authoring DSL
 
 **Status:** Open (Design in docs/world-authoring.md, not yet implemented)
