@@ -20,9 +20,10 @@ import {
   createSolidTexture,
   getMousePosition,
   getMouseWorldPosition,
+  drawSprite,
 } from "../../runtime/rendering/index.ts";
 import { Colors, HUDLayout, drawPanel, rgb, drawRing, drawSector } from "../../runtime/ui/index.ts";
-import { createGame, hud, drawColorSprite } from "../../runtime/game/index.ts";
+import { createGame, hud } from "../../runtime/game/index.ts";
 import {
   tween,
   updateTweens,
@@ -456,12 +457,12 @@ game.onFrame((ctx) => {
   // --- Render ---
 
   // Background
-  drawColorSprite({ color: { r: 0.157, g: 0.157, b: 0.196, a: 1 }, x: 0, y: 0, w: VPW, h: VPH, layer: 0 });
+  drawSprite({ color: { r: 0.157, g: 0.157, b: 0.196, a: 1 }, x: 0, y: 0, w: VPW, h: VPH, layer: 0 });
 
   // Boxes (tween targets)
   for (const box of state.boxes) {
     const size = 64 * box.scale;
-    drawColorSprite({
+    drawSprite({
       color: { r: 0.392, g: 0.588, b: 1, a: 1 },
       x: box.x - size / 2,
       y: box.y - size / 2,

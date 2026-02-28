@@ -133,9 +133,8 @@ arcane/
 │   ├── rendering/
 │   │   ├── types.ts               — TextureId, SpriteOptions, CameraState, TilemapId
 │   │   ├── atlas.ts               — SpriteAtlas: loadAtlasFromDef(), UV normalization, tag queries
-│   │   ├── sprites.ts             — drawSprite(), clearSprites()
+│   │   ├── sprites.ts             — drawSprite() (unified: color, parallax, tiling), clearSprites()
 │   │   ├── camera.ts              — setCamera(), getCamera(), followTarget(), followTargetSmooth(), setCameraBounds(), setCameraDeadzone(), zoomTo(), zoomToPoint()
-│   │   ├── parallax.ts            — drawParallaxSprite() multi-layer depth scrolling
 │   │   ├── autotile.ts            — 4-bit/8-bit bitmask auto-tiling
 │   │   ├── animation-fsm.ts       — Animation state machine (states, transitions, blending)
 │   │   ├── input.ts               — isKeyDown(), isKeyPressed(), getMousePosition()
@@ -187,7 +186,6 @@ arcane/
 │   │   └── agent.test.ts          — Agent protocol tests (~37 tests)
 │   └── game/
 │       ├── types.ts               — Convenience layer type definitions
-│       ├── color-sprite.ts        — drawColorSprite() with auto-cached textures
 │       ├── hud.ts                 — hud.text(), hud.bar(), hud.label() shortcuts
 │       ├── widgets.ts             — captureInput(), autoUpdate* widget helpers
 │       ├── collision.ts           — Collision event registry + callbacks

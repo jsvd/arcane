@@ -71,15 +71,15 @@ drawSprite({ textureId: TEX, x, y, w: 32, h: 32, flipX: facingLeft, opacity: 0.5
 drawSprite({ textureId: TEX, x, y, w: 8, h: 8, blendMode: "additive", layer: 5 });
 ```
 
-### drawColorSprite (Convenience)
+### Color Sprites (No Texture Needed)
 
-Skip `createSolidTexture()` -- pass a color inline. Textures are auto-cached.
+Pass a `color` option to `drawSprite()` instead of `textureId`. Solid textures are auto-cached internally.
 
 ```typescript
-import { drawColorSprite } from "@arcane/runtime/game";
+import { drawSprite } from "@arcane/runtime/rendering";
 import { rgb } from "@arcane/runtime/ui";
 
-drawColorSprite({ color: rgb(255, 0, 0), x: 100, y: 200, w: 32, h: 32, layer: 1 });
+drawSprite({ color: rgb(255, 0, 0), x: 100, y: 200, w: 32, h: 32, layer: 1 });
 ```
 
 `rgb()` takes 0-255 integers. Alpha defaults to 255; pass a fourth arg for transparency: `rgb(255, 0, 0, 128)`.

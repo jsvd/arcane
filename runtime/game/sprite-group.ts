@@ -20,7 +20,6 @@
 
 import type { Color } from "../ui/types.ts";
 import type { TextureId } from "../rendering/types.ts";
-import { drawColorSprite } from "./color-sprite.ts";
 import { drawSprite } from "../rendering/sprites.ts";
 
 /** A single sprite part within a group. */
@@ -112,20 +111,9 @@ export function drawSpriteGroup(
     }
     const partY = y + part.offsetY;
 
-    if (part.textureId !== undefined) {
+    if (part.textureId !== undefined || part.color) {
       drawSprite({
         textureId: part.textureId,
-        x: partX,
-        y: partY,
-        w: part.w,
-        h: part.h,
-        layer: partLayer,
-        flipX: partFlip,
-        opacity: partOpacity,
-        blendMode: part.blendMode,
-      });
-    } else if (part.color) {
-      drawColorSprite({
         color: part.color,
         x: partX,
         y: partY,

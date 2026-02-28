@@ -5,10 +5,11 @@ import {
 import type { TDState, TowerType } from "./tower-defense.ts";
 import {
   setCamera, isKeyPressed, getMouseWorldPosition,
+  drawSprite,
 } from "../../runtime/rendering/index.ts";
 import { drawBar, Colors } from "../../runtime/ui/index.ts";
 import { rgb } from "../../runtime/ui/types.ts";
-import { createGame, drawColorSprite, hud } from "../../runtime/game/index.ts";
+import { createGame, hud } from "../../runtime/game/index.ts";
 import type { Color } from "../../runtime/ui/types.ts";
 
 // --- Colors ---
@@ -137,7 +138,7 @@ game.onFrame((ctx) => {
       let col = COL_BLOCKED;
       if (cell === 0) col = COL_PATH;
       else if (cell === 1) col = COL_BUILDABLE;
-      drawColorSprite({
+      drawSprite({
         color: col,
         x: x * TILE_SIZE, y: y * TILE_SIZE,
         w: TILE_SIZE - 1, h: TILE_SIZE - 1,
@@ -150,7 +151,7 @@ game.onFrame((ctx) => {
   if ((state.phase === "build" || state.phase === "between-waves") && validGrid) {
     if (state.cells[gridY][gridX] === 1) {
       const range = TOWER_STATS[selectedTower].range * TILE_SIZE;
-      drawColorSprite({
+      drawSprite({
         color: COL_RANGE,
         x: gridX * TILE_SIZE + TILE_SIZE / 2 - range,
         y: gridY * TILE_SIZE + TILE_SIZE / 2 - range,
@@ -163,7 +164,7 @@ game.onFrame((ctx) => {
 
   // Towers
   for (const tower of state.towers) {
-    drawColorSprite({
+    drawSprite({
       color: TOWER_COLOR[tower.type],
       x: tower.pos.x * TILE_SIZE + 4,
       y: tower.pos.y * TILE_SIZE + 4,
@@ -177,7 +178,7 @@ game.onFrame((ctx) => {
     if (!enemy.alive) continue;
     const size = enemy.type === "tank" ? 32 : enemy.type === "fast" ? 20 : 24;
     const offset = (TILE_SIZE - size) / 2;
-    drawColorSprite({
+    drawSprite({
       color: ENEMY_COLOR[enemy.type],
       x: enemy.pos.x * TILE_SIZE + offset,
       y: enemy.pos.y * TILE_SIZE + offset,

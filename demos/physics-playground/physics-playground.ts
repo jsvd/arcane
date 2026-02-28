@@ -27,9 +27,10 @@ import {
   getMouseWorldPosition,
   getViewportSize,
   drawTextWrapped,
+  drawSprite,
 } from "../../runtime/rendering/index.ts";
 import { Colors, HUDLayout, rgb, drawCircle, drawRing, drawCapsule, drawLine, drawPolygon } from "../../runtime/ui/index.ts";
-import { createGame, drawColorSprite, hud } from "../../runtime/game/index.ts";
+import { createGame, hud } from "../../runtime/game/index.ts";
 import { createRng } from "../../runtime/state/index.ts";
 import {
   createPhysicsWorld,
@@ -544,7 +545,7 @@ game.onFrame((ctx) => {
   // Render
 
   // Background
-  drawColorSprite({ color: COL_BG, x: 0, y: 0, w: VPW, h: VPH, layer: 0 });
+  drawSprite({ color: COL_BG, x: 0, y: 0, w: VPW, h: VPH, layer: 0 });
 
   // Draw joint/constraint connections
   for (const joint of joints) {
@@ -610,7 +611,7 @@ game.onFrame((ctx) => {
       drawRotatedPolygon(bs.x, bs.y, bs.angle, tracked.vertices, col, 2);
     } else {
       // Fallback AABB: draw from center with rotation
-      drawColorSprite({
+      drawSprite({
         color: col,
         x: bs.x - tracked.halfW,
         y: bs.y - tracked.halfH,
@@ -625,7 +626,7 @@ game.onFrame((ctx) => {
   }
 
   // Ground highlight
-  drawColorSprite({
+  drawSprite({
     color: COL_GROUND,
     x: 0,
     y: VPH - 40,

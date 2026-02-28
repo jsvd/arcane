@@ -9,10 +9,10 @@ import {
 } from "./breakout.ts";
 import type { BreakoutState } from "./breakout.ts";
 import {
-  isKeyDown, isKeyPressed,
+  isKeyDown, isKeyPressed, drawSprite,
 } from "../../runtime/rendering/index.ts";
 import { Colors, HUDLayout, rgb, drawCircle } from "../../runtime/ui/index.ts";
-import { createGame, drawColorSprite, hud } from "../../runtime/game/index.ts";
+import { createGame, hud } from "../../runtime/game/index.ts";
 
 // Colors
 const COL_PADDLE = rgb(220, 220, 240);
@@ -92,13 +92,13 @@ game.onFrame((ctx) => {
   // Render
 
   // Background
-  drawColorSprite({ color: COL_BG, x: 0, y: 0, w: state.fieldW, h: state.fieldH, layer: 0 });
+  drawSprite({ color: COL_BG, x: 0, y: 0, w: state.fieldW, h: state.fieldH, layer: 0 });
 
   // Bricks
   for (const brick of state.bricks) {
     if (brick.hp <= 0) continue;
     const colorIdx = brick.row % BRICK_COLORS.length;
-    drawColorSprite({
+    drawSprite({
       color: BRICK_COLORS[colorIdx],
       x: brick.x, y: brick.y, w: brick.w, h: brick.h,
       layer: 1,
@@ -106,7 +106,7 @@ game.onFrame((ctx) => {
   }
 
   // Paddle
-  drawColorSprite({
+  drawSprite({
     color: COL_PADDLE,
     x: state.paddleX, y: state.paddleY, w: PADDLE_W, h: PADDLE_H,
     layer: 2,

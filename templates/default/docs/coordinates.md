@@ -118,22 +118,22 @@ zoomToPoint(3.0, bossX, bossY, 1.0, easeInOutCubic);       // zoom centered on b
 Multi-layer depth scrolling. Factor 0 = fixed background, 1 = foreground (same as normal sprites).
 
 ```typescript
-import { drawParallaxSprite, getCamera, getViewportSize } from "@arcane/runtime/rendering";
+import { drawSprite, getCamera, getViewportSize } from "@arcane/runtime/rendering";
 
 const cam = getCamera();
 const { width: VPW, height: VPH } = getViewportSize();
 
 // Sky (fixed, never scrolls)
-drawParallaxSprite({ textureId: sky, x: cam.x - VPW / 2, y: cam.y - VPH / 2,
-  w: VPW, h: VPH, layer: 0, parallaxFactor: 0 });
+drawSprite({ textureId: sky, x: cam.x - VPW / 2, y: cam.y - VPH / 2,
+  w: VPW, h: VPH, layer: 0, parallax: 0 });
 
 // Distant mountains (slow scroll)
-drawParallaxSprite({ textureId: mountains, x: 0, y: 200,
-  w: 1600, h: 200, layer: 1, parallaxFactor: 0.3 });
+drawSprite({ textureId: mountains, x: 0, y: 200,
+  w: 1600, h: 200, layer: 1, parallax: 0.3 });
 
 // Trees (medium scroll)
-drawParallaxSprite({ textureId: trees, x: 0, y: 300,
-  w: 1600, h: 150, layer: 2, parallaxFactor: 0.6 });
+drawSprite({ textureId: trees, x: 0, y: 300,
+  w: 1600, h: 150, layer: 2, parallax: 0.6 });
 ```
 
 ## Visible Area Formula

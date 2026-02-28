@@ -4,23 +4,8 @@
 
 import type { Entity, EntityOptions, EntitySprite } from "./types.ts";
 import type { BodyId } from "../physics/types.ts";
-import type { Color } from "../ui/types.ts";
-import type { SpriteOptions } from "../rendering/types.ts";
 import { createBody, getBodyState, destroyBody } from "../physics/body.ts";
 import { drawSprite } from "../rendering/sprites.ts";
-import { createSolidTexture } from "../rendering/texture.ts";
-
-/** @internal Color texture cache for entity sprites. */
-const _entityColorTexCache = new Map<string, number>();
-
-function getEntityColorTex(color: Color): number {
-  const key = `${color.r}_${color.g}_${color.b}_${color.a ?? 1}`;
-  let tex = _entityColorTexCache.get(key);
-  if (tex !== undefined) return tex;
-  tex = createSolidTexture(`_ent_${key}`, { r: color.r, g: color.g, b: color.b, a: color.a ?? 1 });
-  _entityColorTexCache.set(key, tex);
-  return tex;
-}
 
 /**
  * Create a lightweight game entity.
@@ -96,17 +81,15 @@ export function drawEntities(entities: Entity[]): void {
     if (!ent.active || !ent.sprite) continue;
     const s = ent.sprite;
 
-    let textureId = s.textureId ?? 0;
-    if (!s.textureId && s.color) {
-      textureId = getEntityColorTex(s.color);
-    }
-    if (textureId === 0) continue;
+    // Need either a textureId or a color
+    if (!s.textureId && !s.color) continue;
 
     const offsetX = s.offsetX ?? -(s.w / 2);
     const offsetY = s.offsetY ?? -(s.h / 2);
 
     drawSprite({
-      textureId,
+      textureId: s.textureId,
+      color: s.color,
       x: ent.x + offsetX,
       y: ent.y + offsetY,
       w: s.w,

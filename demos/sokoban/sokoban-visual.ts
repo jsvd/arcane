@@ -14,9 +14,10 @@ import {
   setCamera,
   isKeyPressed,
   getViewportSize,
+  drawSprite,
 } from "../../runtime/rendering/index.ts";
 import { Colors, HUDLayout } from "../../runtime/ui/index.ts";
-import { createGame, hud, drawColorSprite } from "../../runtime/game/index.ts";
+import { createGame, hud } from "../../runtime/game/index.ts";
 import { rgb } from "../../runtime/ui/types.ts";
 
 // --- Constants ---
@@ -103,7 +104,7 @@ app.onFrame((ctx) => {
       const tile = current.tiles[y][x];
 
       if (tile === "wall") {
-        drawColorSprite({
+        drawSprite({
           color: COL_WALL,
           x: px,
           y: py,
@@ -112,7 +113,7 @@ app.onFrame((ctx) => {
           layer: 0,
         });
       } else {
-        drawColorSprite({
+        drawSprite({
           color: COL_FLOOR,
           x: px,
           y: py,
@@ -126,7 +127,7 @@ app.onFrame((ctx) => {
 
   // Draw goals (layer 1, behind boxes/player)
   for (const goal of current.goals) {
-    drawColorSprite({
+    drawSprite({
       color: COL_GOAL,
       x: goal.x * TILE_SIZE + 4,
       y: goal.y * TILE_SIZE + 4,
@@ -141,7 +142,7 @@ app.onFrame((ctx) => {
     const onGoal = current.goals.some(
       (g: Vec2) => g.x === box_.x && g.y === box_.y,
     );
-    drawColorSprite({
+    drawSprite({
       color: onGoal ? COL_BOX_ON_GOAL : COL_BOX,
       x: box_.x * TILE_SIZE + 2,
       y: box_.y * TILE_SIZE + 2,
@@ -152,7 +153,7 @@ app.onFrame((ctx) => {
   }
 
   // Draw player (layer 3, on top)
-  drawColorSprite({
+  drawSprite({
     color: COL_PLAYER,
     x: current.player.x * TILE_SIZE + 4,
     y: current.player.y * TILE_SIZE + 4,

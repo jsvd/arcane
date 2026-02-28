@@ -8,7 +8,7 @@ export type {
 } from "./types.ts";
 
 // Sprites
-export { drawSprite, clearSprites, drawTiledSprite } from "./sprites.ts";
+export { drawSprite, clearSprites, _resetColorTexCache } from "./sprites.ts";
 
 // Camera
 export type { CameraBounds, CameraDeadzone } from "./camera.ts";
@@ -272,10 +272,6 @@ export {
   getRenderTargetTextureId,
   destroyRenderTarget,
 } from "./rendertarget.ts";
-
-// Parallax
-export type { ParallaxSpriteOptions } from "./parallax.ts";
-export { drawParallaxSprite } from "./parallax.ts";
 
 // Post-Processing
 export type { EffectId } from "./postprocess.ts";

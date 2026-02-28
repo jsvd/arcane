@@ -15,6 +15,7 @@ import {
   setCamera,
   getViewportSize,
   drawText,
+  drawSprite,
 } from "../../runtime/rendering/index.ts";
 import {
   rgb,
@@ -29,7 +30,7 @@ import {
   drawPolygon,
   drawRectangle,
 } from "../../runtime/ui/index.ts";
-import { createGame, drawColorSprite } from "../../runtime/game/index.ts";
+import { createGame } from "../../runtime/game/index.ts";
 
 // --- Layout ---
 const { width: VPW, height: VPH } = getViewportSize();
@@ -99,7 +100,7 @@ game.onFrame((ctx) => {
   setCamera(VPW / 2, VPH / 2, 1);
 
   // Background
-  drawColorSprite({ color: COL_BG, x: 0, y: 0, w: VPW, h: VPH, layer: 0 });
+  drawSprite({ color: COL_BG, x: 0, y: 0, w: VPW, h: VPH, layer: 0 });
 
   // Grid lines
   for (let col = 1; col < 4; col++) {

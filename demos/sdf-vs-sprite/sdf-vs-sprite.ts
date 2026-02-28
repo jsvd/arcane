@@ -18,7 +18,7 @@ import { drawText } from "../../runtime/rendering/text.ts";
 import { setCamera } from "../../runtime/rendering/camera.ts";
 import { isKeyPressed, isKeyDown } from "../../runtime/rendering/input.ts";
 import { drawCircle, drawLine } from "../../runtime/ui/shapes.ts";
-import { drawColorSprite } from "../../runtime/game/color-sprite.ts";
+import { drawSprite } from "../../runtime/rendering/sprites.ts";
 import {
   sdfCircle,
   sdfBox,
@@ -123,7 +123,7 @@ function frame(): void {
   drawCircle(START_X + COL_WIDTH, row1Y, baseSize, { color: RED, layer: 10 });
 
   // Sprite (square approximation)
-  drawColorSprite({
+  drawSprite({
     color: RED,
     x: START_X + 2 * COL_WIDTH - baseSize,
     y: row1Y - baseSize,
@@ -155,7 +155,7 @@ function frame(): void {
   drawLine(geoBoxX - geoBoxW, row2Y + geoBoxH, geoBoxX - geoBoxW, row2Y - geoBoxH, { color: BLUE, thickness: 2, layer: 10 });
 
   // Sprite box
-  drawColorSprite({
+  drawSprite({
     color: BLUE,
     x: START_X + 2 * COL_WIDTH - geoBoxW,
     y: row2Y - geoBoxH,

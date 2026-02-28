@@ -6,9 +6,10 @@ import type { PlatformerState } from "./platformer.ts";
 import {
   followTargetSmooth,
   isKeyDown, isKeyPressed,
+  drawSprite,
 } from "../../runtime/rendering/index.ts";
 import { Colors, HUDLayout } from "../../runtime/ui/index.ts";
-import { createGame, drawColorSprite, hud } from "../../runtime/game/index.ts";
+import { createGame, hud } from "../../runtime/game/index.ts";
 import { rgb } from "../../runtime/ui/index.ts";
 
 // --- Colors ---
@@ -86,12 +87,12 @@ game.onFrame((ctx) => {
   // --- Render ---
 
   // Background
-  drawColorSprite({ color: COL_BG, x: -100, y: -100, w: 1000, h: 800, layer: 0 });
+  drawSprite({ color: COL_BG, x: -100, y: -100, w: 1000, h: 800, layer: 0 });
 
   // Platforms
   for (const plat of state.platforms) {
     const col = plat.h >= 40 ? COL_GROUND : COL_PLATFORM;
-    drawColorSprite({
+    drawSprite({
       color: col,
       x: plat.x, y: plat.y, w: plat.w, h: plat.h,
       layer: 1,
@@ -101,7 +102,7 @@ game.onFrame((ctx) => {
   // Coins
   for (const coin of state.coins) {
     if (coin.collected) continue;
-    drawColorSprite({
+    drawSprite({
       color: COL_COIN,
       x: coin.x, y: coin.y, w: 16, h: 16,
       layer: 2,
@@ -112,7 +113,7 @@ game.onFrame((ctx) => {
   const playerTint = state.facing === "left"
     ? { r: 0.8, g: 0.9, b: 1, a: 1 }
     : { r: 1, g: 1, b: 1, a: 1 };
-  drawColorSprite({
+  drawSprite({
     color: COL_PLAYER,
     x: state.playerX, y: state.playerY, w: PLAYER_W, h: PLAYER_H,
     layer: 3,

@@ -27,9 +27,10 @@ import {
   addPostProcessEffect,
   removeEffect,
   setEffectParam,
+  drawSprite,
 } from "../../runtime/rendering/index.ts";
 import { rgb, drawPolygon, drawTriangle, drawCircle } from "../../runtime/ui/index.ts";
-import { createGame, drawColorSprite } from "../../runtime/game/index.ts";
+import { createGame } from "../../runtime/game/index.ts";
 import { registerAgent } from "../../runtime/agent/index.ts";
 import { createRng } from "../../runtime/state/index.ts";
 
@@ -482,14 +483,14 @@ function render(s: GameState): void {
   const fh = s.fieldH;
 
   // Background
-  drawColorSprite({ color: COL_BG, x: 0, y: 0, w: fw, h: fh, layer: -10 });
+  drawSprite({ color: COL_BG, x: 0, y: 0, w: fw, h: fh, layer: -10 });
 
   // Stars (twinkle with opacity)
   for (const star of s.stars) {
     const twinkle =
       0.5 + 0.5 * Math.sin(s.time * 2 + star.twinklePhase);
     const alpha = star.brightness * twinkle;
-    drawColorSprite({
+    drawSprite({
       color: COL_STAR,
       x: star.x - 1,
       y: star.y - 1,
@@ -504,7 +505,7 @@ function render(s: GameState): void {
   for (const p of s.particles) {
     const t = p.life / p.maxLife;
     const col = p.isExplosion ? COL_EXPLOSION : COL_PARTICLE;
-    drawColorSprite({
+    drawSprite({
       color: col,
       x: p.x - p.size / 2,
       y: p.y - p.size / 2,
@@ -552,7 +553,7 @@ function render(s: GameState): void {
         const glowX = ship.x + Math.cos(backAngle) * SHIP_SIZE * 0.5;
         const glowY = ship.y + Math.sin(backAngle) * SHIP_SIZE * 0.5;
         const glowSize = SHIP_SIZE * (0.8 + Math.sin(s.time * 20) * 0.2);
-        drawColorSprite({
+        drawSprite({
           color: COL_THRUST,
           x: glowX - glowSize / 2,
           y: glowY - glowSize / 2,

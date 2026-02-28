@@ -85,7 +85,7 @@ if (isActionPressed("jump", input)) player = platformerJump(player, config);
 player = platformerStep(player, dt, platforms, config);
 
 // Render at player.x, player.y — facingRight available for sprite flip
-drawColorSprite({
+drawSprite({
   color: rgb(60, 180, 255),
   x: player.x, y: player.y, w: config.playerWidth, h: config.playerHeight,
   flipX: !player.facingRight, layer: 1,

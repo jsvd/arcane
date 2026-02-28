@@ -20,8 +20,8 @@ declare module "@arcane/runtime/rendering" {
    * Y increases downward. The sprite's (x, y) is its top-left corner.
    */
   export type SpriteOptions = {
-      /** Texture handle from loadTexture() or createSolidTexture(). */
-      textureId: TextureId;
+      /** Texture handle from loadTexture() or createSolidTexture(). Optional if `color` is set. */
+      textureId?: TextureId;
       /** World X position (top-left corner of sprite). See type docs for coordinate system. */
       x: number;
       /** World Y position (top-left corner of sprite). Y increases downward. */
@@ -30,6 +30,30 @@ declare module "@arcane/runtime/rendering" {
       w: number;
       /** Height in world units (pixels at zoom 1). */
       h: number;
+      /**
+       * Inline color — auto-creates and caches a 1×1 solid texture.
+       * Ignored if `textureId` is also set (textureId takes priority).
+       * Safe to combine with `tileW`/`tileH` (tiling a solid color is a no-op visually).
+       */
+      color?: {
+          r: number;
+          g: number;
+          b: number;
+          a: number;
+      };
+      /**
+       * Parallax scroll factor relative to the camera.
+       * - 0: fixed to screen (e.g., distant stars)
+       * - 0.5: half speed (midground)
+       * - 1.0: normal speed (same as no parallax)
+       * Values > 1.0 create a foreground parallax effect (scrolls faster).
+       * Ignored when `screenSpace` is true.
+       */
+      parallax?: number;
+      /** Tile width for UV repeat. The texture repeats `w / tileW` times horizontally. */
+      tileW?: number;
+      /** Tile height for UV repeat. The texture repeats `h / tileH` times vertically. */
+      tileH?: number;
       /** Draw order layer. Lower values are drawn first (behind). Default: 0. Use 100+ for HUD elements. */
       layer?: number;
       /**
@@ -2750,44 +2774,6 @@ declare module "@arcane/runtime/rendering" {
    */
 
   /**
-   * Parallax scrolling support.
-   *
-   * Draw sprites at different scroll speeds to create a depth illusion.
-   * Parallax transforms are applied on the CPU side before calling drawSprite(),
-   * so no Rust/GPU changes are needed.
-   */
-  /** Options for parallax sprites. Extends SpriteOptions with a parallax factor. */
-  export type ParallaxSpriteOptions = SpriteOptions & {
-      /**
-       * Parallax scroll factor relative to the camera.
-       * - 0: fixed to screen (e.g., HUD, distant stars)
-       * - 0.2: slow scroll (far background)
-       * - 0.5: half speed (midground)
-       * - 1.0: normal speed (same as drawSprite)
-       *
-       * Values > 1.0 create a foreground parallax effect (scrolls faster than camera).
-       */
-      parallaxFactor: number;
-  };
-  /**
-   * Draw a sprite with parallax scrolling. The sprite's position is offset
-   * based on the camera position and the parallax factor, creating a depth
-   * illusion where background layers scroll slower than foreground layers.
-   *
-   * @param options - Sprite options with a parallaxFactor field.
-   *
-   * @example
-   * // Far background (slow scroll)
-   * drawParallaxSprite({ textureId: bgFar, x: 0, y: 0, w: 1600, h: 600, parallaxFactor: 0.2, layer: 0 });
-   *
-   * // Midground (medium scroll)
-   * drawParallaxSprite({ textureId: bgMid, x: 0, y: 0, w: 1600, h: 600, parallaxFactor: 0.5, layer: 1 });
-   *
-   * // Foreground sprites use normal drawSprite (parallaxFactor = 1.0 implicitly)
-   */
-  export declare function drawParallaxSprite(options: ParallaxSpriteOptions): void;
-
-  /**
    * Placeholder sprite generation for rapid prototyping.
    * Creates simple colored shapes as textures without needing real art assets.
    *
@@ -3818,6 +3804,7 @@ declare module "@arcane/runtime/rendering" {
    */
   export declare function getShaderUniformNames(id: ShaderId): string[];
 
+  /** @internal Reset color texture cache (for tests). */
   /**
    * Queue a sprite to be drawn this frame.
    * Must be called every frame -- sprites are not persisted between frames.
@@ -3859,67 +3846,6 @@ declare module "@arcane/runtime/rendering" {
    * then clears the Rust-side sprite command list.
    */
   export declare function clearSprites(): void;
-  /**
-   * Draw a tiled/repeated texture across a rectangular area.
-   *
-   * The texture is repeated to fill the specified width and height.
-   * Useful for backgrounds, floors, walls, and seamless patterns.
-   *
-   * @param opts - Tiling options.
-   * @param opts.textureId - The texture to tile.
-   * @param opts.x - Top-left X position.
-   * @param opts.y - Top-left Y position.
-   * @param opts.w - Total width of the tiled area.
-   * @param opts.h - Total height of the tiled area.
-   * @param opts.tileW - Width of one tile in pixels. If omitted, uses the full texture width.
-   * @param opts.tileH - Height of one tile in pixels. If omitted, uses the full texture height.
-   * @param opts.layer - Draw layer. Default: 0.
-   * @param opts.tint - Tint color. Default: white.
-   * @param opts.opacity - Opacity. Default: 1.
-   * @param opts.blendMode - Blend mode. Default: "alpha".
-   * @param opts.screenSpace - If true, coordinates are in screen space. Default: false.
-   *
-   * @example
-   * ```ts
-   * // Tile a 16x16 grass texture across a 320x240 area
-   * drawTiledSprite({
-   *   textureId: grassTex,
-   *   x: 0, y: 0,
-   *   w: 320, h: 240,
-   *   tileW: 16, tileH: 16,
-   * });
-   * ```
-   *
-   * @example
-   * ```ts
-   * // Tile a full texture (repeating it 4x3 times)
-   * drawTiledSprite({
-   *   textureId: patternTex,
-   *   x: 100, y: 100,
-   *   w: 256, h: 192,
-   *   tileW: 64, tileH: 64,
-   * });
-   * ```
-   */
-  export declare function drawTiledSprite(opts: {
-      textureId: number;
-      x: number;
-      y: number;
-      w: number;
-      h: number;
-      tileW?: number;
-      tileH?: number;
-      layer?: number;
-      tint?: {
-          r: number;
-          g: number;
-          b: number;
-          a: number;
-      };
-      opacity?: number;
-      blendMode?: "alpha" | "additive" | "multiply" | "screen";
-      screenSpace?: boolean;
-  }): void;
 
   /** Descriptor for a bitmap font backed by a texture atlas. */
   export type BitmapFont = {

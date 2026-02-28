@@ -27,7 +27,8 @@ Rails for games. Rails didn't beat Java by being more powerful — it beat it by
 ## What It Looks Like
 
 ```typescript
-import { createGame, drawColorSprite, hud } from "@arcane/runtime/game";
+import { createGame, hud } from "@arcane/runtime/game";
+import { drawSprite } from "@arcane/runtime/rendering";
 import { rgb } from "@arcane/runtime/ui";
 import { isActionDown, createInputMap, WASD_ARROWS } from "@arcane/runtime/input";
 
@@ -41,7 +42,7 @@ game.onFrame((ctx) => {
   if (isActionDown("right", input)) player.x += 200 * ctx.dt;
 
   // Render — sprites, shapes, text
-  drawColorSprite({ color: rgb(60, 180, 255), x: player.x, y: player.y, w: 32, h: 32 });
+  drawSprite({ color: rgb(60, 180, 255), x: player.x, y: player.y, w: 32, h: 32 });
   hud.text(`Score: ${player.score}`, 10, 10);
 });
 ```

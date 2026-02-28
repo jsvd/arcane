@@ -105,7 +105,7 @@ Pick the right function for what you're rendering:
 ├── A colored rectangle
 │   ├── Game world (layer 0) -> drawRectangle(x, y, w, h, { color })
 │   ├── HUD / UI (layer 90) -> drawRect(x, y, w, h, { color, screenSpace: true })
-│   └── With rotation/blend -> drawColorSprite({ color, x, y, w, h, rotation })
+│   └── With rotation/blend -> drawSprite({ color, x, y, w, h, rotation })
 ├── Shapes (see docs/visual-composition.md for examples)
 │   ├── Pointed -> drawTriangle() (ships, arrows, crystals)
 │   ├── Irregular -> drawPolygon() (asteroids, terrain, shields)

@@ -2,6 +2,11 @@
 
 All notable changes to Arcane are documented here.
 
+## [Unreleased]
+
+### Changed
+- **Unified sprite API** — `drawColorSprite()`, `drawParallaxSprite()`, and `drawTiledSprite()` merged into `drawSprite()`. Use `color:` for solid-color sprites, `parallax:` for depth scrolling, and `tileW:`/`tileH:` for repeating textures. The old functions and their types (`ColorSpriteOptions`, `ParallaxSpriteOptions`) have been removed.
+
 ## [0.21.0] - 2026-02-27
 
 ### Added

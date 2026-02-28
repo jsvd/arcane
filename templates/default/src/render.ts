@@ -17,8 +17,8 @@ const GOLD = rgb(255, 215, 0);
 /** Draw the game world. Called every frame from visual.ts. */
 export function renderWorld(_state: GameState, _vpw: number, _vph: number): void {
   // Draw your game objects here
-  // import { drawColorSprite } from "@arcane/runtime/game";
-  // drawColorSprite({ color: WHITE, x: _state.x - 16, y: _state.y - 16, w: 32, h: 32, layer: 1 });
+  // import { drawSprite } from "@arcane/runtime/rendering";
+  // drawSprite({ color: WHITE, x: _state.x - 16, y: _state.y - 16, w: 32, h: 32, layer: 1 });
 }
 
 /** Draw HUD elements. Called every frame from visual.ts. */

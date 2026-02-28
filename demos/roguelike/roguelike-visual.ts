@@ -4,10 +4,11 @@ import { WALL, FLOOR, CORRIDOR, STAIRS_DOWN } from "./dungeon.ts";
 import {
   setCamera, isKeyPressed,
   setAmbientLight, addPointLight, clearLights,
+  drawSprite,
 } from "../../runtime/rendering/index.ts";
 import { Colors } from "../../runtime/ui/index.ts";
 import { rgb } from "../../runtime/ui/types.ts";
-import { createGame, drawColorSprite, hud } from "../../runtime/game/index.ts";
+import { createGame, hud } from "../../runtime/game/index.ts";
 
 const TILE_SIZE = 16;
 const SEED = 12345;
@@ -107,10 +108,10 @@ game.onFrame(() => {
         else if (tile === CORRIDOR) col = COL_CORRIDOR;
         else if (tile === STAIRS_DOWN) col = COL_STAIRS;
 
-        drawColorSprite({ color: col, x: px, y: py, w: TILE_SIZE, h: TILE_SIZE, layer: 0 });
+        drawSprite({ color: col, x: px, y: py, w: TILE_SIZE, h: TILE_SIZE, layer: 0 });
       } else if (fov.explored[y][x]) {
         // Explored but not visible -- dark tint
-        drawColorSprite({
+        drawSprite({
           color: COL_EXPLORED,
           x: px, y: py, w: TILE_SIZE, h: TILE_SIZE,
           layer: 0,
@@ -125,7 +126,7 @@ game.onFrame(() => {
     if (entity.hp <= 0) continue;
     if (!fov.visible[entity.pos.y]?.[entity.pos.x]) continue;
 
-    drawColorSprite({
+    drawSprite({
       color: COL_ENEMY,
       x: entity.pos.x * TILE_SIZE + 2,
       y: entity.pos.y * TILE_SIZE + 2,
@@ -136,7 +137,7 @@ game.onFrame(() => {
   }
 
   // Draw player
-  drawColorSprite({
+  drawSprite({
     color: COL_PLAYER,
     x: player.pos.x * TILE_SIZE + 2,
     y: player.pos.y * TILE_SIZE + 2,

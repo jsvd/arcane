@@ -8,13 +8,6 @@ declare module "@arcane/runtime/game" {
   /**
    * Convenience layer types for the Arcane game module.
    */
-  /** Sprite options with inline color instead of textureId. */
-  export type ColorSpriteOptions = Omit<SpriteOptions, "textureId"> & {
-      /** Color to render. Auto-creates and caches a solid texture internally. */
-      color: Color;
-      /** Optional textureId override. If set, color is ignored. */
-      textureId?: TextureId;
-  };
   /** Options for hud.text(). All optional with sensible defaults. */
   export type HUDTextOptions = {
       /** Text tint color. Default: Colors.WHITE */
@@ -325,28 +318,6 @@ declare module "@arcane/runtime/game" {
    * Call once per frame after stepPhysics().
    */
   export declare function processCollisions(registry: CollisionRegistry): void;
-
-  /**
-   * Draw sprites with inline color — no manual createSolidTexture() needed.
-   *
-   * Internally caches solid textures by RGBA value so repeated calls
-   * with the same color reuse the same GPU texture.
-   */
-  /**
-   * Draw a sprite using an inline color instead of a pre-created texture.
-   * Textures are cached by color value — safe to call every frame.
-   *
-   * @param opts - Sprite options with `color` instead of `textureId`.
-   *
-   * @example
-   * drawColorSprite({
-   *   color: rgb(255, 0, 0),
-   *   x: 100, y: 200, w: 32, h: 32,
-   *   layer: 1,
-   * });
-   */
-  export declare function drawColorSprite(opts: ColorSpriteOptions): void;
-  /** @internal Reset color texture cache (for tests). */
 
   /**
    * Lightweight entity handles binding position + sprite + physics body.

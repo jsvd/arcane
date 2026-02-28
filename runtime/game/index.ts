@@ -8,7 +8,6 @@
 
 // Types
 export type {
-  ColorSpriteOptions,
   HUDTextOptions,
   HUDBarOptions,
   HUDLabelOptions,
@@ -31,9 +30,6 @@ export type {
   GameStateConfig,
   Game,
 } from "./types.ts";
-
-// Color sprites
-export { drawColorSprite } from "./color-sprite.ts";
 
 // HUD helpers
 export { hud } from "./hud.ts";

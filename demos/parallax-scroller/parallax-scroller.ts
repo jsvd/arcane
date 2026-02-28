@@ -35,11 +35,10 @@ import {
   followTarget,
   followTargetSmooth,
   zoomTo,
-  drawParallaxSprite,
 } from "../../runtime/rendering/index.ts";
 import { updateTweens, easeOutCubic } from "../../runtime/tweening/index.ts";
 import {
-  createGame, drawColorSprite,
+  createGame,
   createPlatformerState, platformerMove, platformerJump, platformerStep,
 } from "../../runtime/game/index.ts";
 import type { PlatformerState, Platform as PlatPlatform } from "../../runtime/game/index.ts";
@@ -61,7 +60,7 @@ const PLAT_CONFIG = {
 };
 
 // --- Textures (solid colors for prototyping) ---
-// Textures used by drawParallaxSprite (require real textureId)
+// Textures used by drawSprite with parallax (require real textureId)
 const TEX_SKY_FAR = createSolidTexture("sky_far", rgb(20, 10, 60));
 const TEX_MOUNTAINS = createSolidTexture("mountains", rgb(40, 30, 80));
 const TEX_TREES = createSolidTexture("trees", rgb(20, 60, 30));
@@ -237,25 +236,25 @@ function render(): void {
   const cam = getCamera();
 
   // Layer 0: Far sky (fixed)
-  drawParallaxSprite({
+  drawSprite({
     textureId: TEX_SKY_FAR,
     x: -MAP_WIDTH,
     y: -MAP_HEIGHT,
     w: MAP_WIDTH * 4,
     h: MAP_HEIGHT * 3,
-    parallaxFactor: 0,
+    parallax: 0,
     layer: 0,
   });
 
   // Layer 1: Stars (very slow parallax)
   for (const star of stars) {
-    drawParallaxSprite({
+    drawSprite({
       textureId: TEX_STAR,
       x: star.x,
       y: star.y,
       w: star.size,
       h: star.size,
-      parallaxFactor: 0.1,
+      parallax: 0.1,
       layer: 1,
       tint: { r: 1, g: 1, b: 0.9, a: star.brightness },
     });
@@ -263,32 +262,32 @@ function render(): void {
 
   // Layer 2: Mountains (slow parallax)
   for (const m of mountains) {
-    drawParallaxSprite({
+    drawSprite({
       textureId: TEX_MOUNTAINS,
       x: m.x,
       y: m.y,
       w: m.w,
       h: m.h,
-      parallaxFactor: 0.3,
+      parallax: 0.3,
       layer: 2,
     });
   }
 
   // Layer 3: Trees (medium parallax)
   for (const t of trees) {
-    drawParallaxSprite({
+    drawSprite({
       textureId: TEX_TREES,
       x: t.x,
       y: t.y,
       w: t.w,
       h: t.h,
-      parallaxFactor: 0.6,
+      parallax: 0.6,
       layer: 3,
     });
   }
 
   // Layer 4: Ground (moves with camera — factor 1.0, use normal drawSprite)
-  drawColorSprite({
+  drawSprite({
     color: COL_GROUND,
     x: 0,
     y: GROUND_Y,
@@ -299,7 +298,7 @@ function render(): void {
 
   // Layer 5: Platforms
   for (const p of floatingPlats) {
-    drawColorSprite({
+    drawSprite({
       color: COL_PLATFORM,
       x: p.x,
       y: p.y,
@@ -314,7 +313,7 @@ function render(): void {
   for (const coin of coins) {
     if (coin.collected) continue;
     const bobY = Math.sin(time * 3 + coin.x * 0.1) * 4;
-    drawColorSprite({
+    drawSprite({
       color: COL_COIN,
       x: coin.x,
       y: coin.y + bobY,
@@ -325,7 +324,7 @@ function render(): void {
   }
 
   // Layer 7: Player
-  drawColorSprite({
+  drawSprite({
     color: COL_PLAYER,
     x: pState.x,
     y: pState.y,

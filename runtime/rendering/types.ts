@@ -14,8 +14,8 @@ export type TextureId = number;
  * Y increases downward. The sprite's (x, y) is its top-left corner.
  */
 export type SpriteOptions = {
-  /** Texture handle from loadTexture() or createSolidTexture(). */
-  textureId: TextureId;
+  /** Texture handle from loadTexture() or createSolidTexture(). Optional if `color` is set. */
+  textureId?: TextureId;
   /** World X position (top-left corner of sprite). See type docs for coordinate system. */
   x: number;
   /** World Y position (top-left corner of sprite). Y increases downward. */
@@ -24,6 +24,25 @@ export type SpriteOptions = {
   w: number;
   /** Height in world units (pixels at zoom 1). */
   h: number;
+  /**
+   * Inline color — auto-creates and caches a 1×1 solid texture.
+   * Ignored if `textureId` is also set (textureId takes priority).
+   * Safe to combine with `tileW`/`tileH` (tiling a solid color is a no-op visually).
+   */
+  color?: { r: number; g: number; b: number; a: number };
+  /**
+   * Parallax scroll factor relative to the camera.
+   * - 0: fixed to screen (e.g., distant stars)
+   * - 0.5: half speed (midground)
+   * - 1.0: normal speed (same as no parallax)
+   * Values > 1.0 create a foreground parallax effect (scrolls faster).
+   * Ignored when `screenSpace` is true.
+   */
+  parallax?: number;
+  /** Tile width for UV repeat. The texture repeats `w / tileW` times horizontally. */
+  tileW?: number;
+  /** Tile height for UV repeat. The texture repeats `h / tileH` times vertically. */
+  tileH?: number;
   /** Draw order layer. Lower values are drawn first (behind). Default: 0. Use 100+ for HUD elements. */
   layer?: number;
   /**

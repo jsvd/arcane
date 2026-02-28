@@ -38,7 +38,7 @@ When the user asks "which function should I use to draw X?", walk this tree:
 ├── A colored rectangle
 │   ├── Game world (layer 0) -> drawRectangle(x, y, w, h, { color })
 │   ├── HUD / UI (layer 90) -> drawRect(x, y, w, h, { color, screenSpace: true })
-│   └── With rotation/blend -> drawColorSprite({ color, x, y, w, h, rotation })
+│   └── With rotation/blend -> drawSprite({ color, x, y, w, h, rotation })
 ├── Shapes
 │   ├── Pointed -> drawTriangle() (ships, arrows, crystals)
 │   ├── Irregular -> drawPolygon() (asteroids, terrain, shields)

@@ -3,18 +3,8 @@
  */
 
 import type { Color } from "../ui/types.ts";
-import type { SpriteOptions, TextureId } from "../rendering/types.ts";
+import type { TextureId } from "../rendering/types.ts";
 import type { BodyId, BodyDef, Contact } from "../physics/types.ts";
-
-// --- Color Sprite ---
-
-/** Sprite options with inline color instead of textureId. */
-export type ColorSpriteOptions = Omit<SpriteOptions, "textureId"> & {
-  /** Color to render. Auto-creates and caches a solid texture internally. */
-  color: Color;
-  /** Optional textureId override. If set, color is ignored. */
-  textureId?: TextureId;
-};
 
 // --- HUD ---
 

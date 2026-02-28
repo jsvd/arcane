@@ -177,56 +177,27 @@ Managed subsystem features — the engine owns a particle emitter or post-proces
 
 ### Sprite API Unification
 
-**Status: Backlog**
+**Status: COMPLETE**
 
-Merge all sprite-drawing functions into a single unified `drawSprite()` API for consistency and discoverability. Currently, sprite rendering is split across multiple functions with overlapping functionality.
+Merged `drawColorSprite()`, `drawParallaxSprite()`, and `drawTiledSprite()` into the unified `drawSprite()` API. One function handles all sprite rendering use cases:
 
-#### Current State
-- `drawSprite(opts)` — core sprite rendering
-- `drawAnimatedSprite(anim, x, y, opts)` — animated sprites with frame management
-- `drawColorSprite(color, x, y, w, h, opts)` — solid color rectangles (auto-caches textures)
-- `drawParallaxSprite(opts, factor)` — depth-based scrolling
-- `drawTiledSprite(opts)` — repeating textures (added in v0.21)
-
-#### Goal
-One function with optional properties that handles all sprite rendering use cases:
 ```typescript
 drawSprite({
-  // Core (existing)
+  // Core
   textureId, x, y, w, h, layer, uv, tint, opacity, rotation, blendMode, shaderId,
 
-  // Animation (merge drawAnimatedSprite)
-  animation?: Animation,
-
-  // Color fill (merge drawColorSprite)
+  // Color fill (replaces drawColorSprite)
   color?: Color,  // auto-creates cached 1x1 texture
 
-  // Parallax (merge drawParallaxSprite)
+  // Parallax (replaces drawParallaxSprite)
   parallax?: number,  // depth factor for camera scrolling
 
-  // Tiling (merge drawTiledSprite)
+  // Tiling (replaces drawTiledSprite)
   tileW?: number, tileH?: number,  // enables UV repeat
 });
 ```
 
-#### Migration Impact
-- **Breaking:** All existing sprite functions would be deprecated
-- **Scope:** 25+ demos, runtime library code, all documentation examples
-- **Benefit:** Single consistent API, better autocomplete, easier to learn
-
-#### Deliverables
-- [ ] Design unified API signature (validate with demos first)
-- [ ] Implement unified `drawSprite()` with all features
-- [ ] Add backwards-compatible shims for old functions (deprecation warnings)
-- [ ] Update all 25+ demos to use new API
-- [ ] Update documentation and migration guide
-- [ ] Remove deprecated functions in v1.0
-
-#### Success Criteria
-- [ ] One `drawSprite()` function handles all rendering cases
-- [ ] All demos updated and passing tests
-- [ ] Performance unchanged (no regression from unification)
-- [ ] Migration guide shows 1:1 mappings for all old functions
+The old functions (`drawColorSprite`, `drawParallaxSprite`, `drawTiledSprite`) and their associated types (`ColorSpriteOptions`, `ParallaxSpriteOptions`) have been removed. All demos and documentation updated to use the unified API.
 
 ---
 

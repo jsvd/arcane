@@ -233,7 +233,6 @@ arcane/
 │   │   ├── hud.ts           # hud.text(), hud.bar(), hud.label() shortcuts
 │   │   ├── widgets.ts       # captureInput(), autoUpdate* widget helpers
 │   │   ├── transform.ts     # Scene node hierarchy, world transforms
-│   │   ├── color-sprite.ts  # drawColorSprite() with auto-cached textures
 │   │   ├── sprite-group.ts  # Sprite grouping utilities
 │   │   └── platformer.ts    # Platformer-specific helpers
 │   ├── physics/             # Physics world, body, constraint, query wrappers

@@ -2,6 +2,8 @@ import type { SpriteOptions } from "./types.ts";
 import { getCamera } from "./camera.ts";
 import { getViewportSize } from "./input.ts";
 import { _logDrawCall } from "../testing/visual.ts";
+import { createSolidTexture } from "./texture.ts";
+import { _warnColor } from "../ui/colors.ts";
 
 // Detect if we're running inside the Arcane renderer (V8 with render ops).
 const hasRenderOps =
@@ -19,6 +21,28 @@ const SPRITE_STRIDE = 22;
 const MAX_BATCH_SPRITES = 16384;
 const _batchBuffer = new Float32Array(MAX_BATCH_SPRITES * SPRITE_STRIDE);
 let _batchCount = 0;
+
+// --- Color texture cache (moved from game/color-sprite.ts) ---
+/** @internal Color texture cache. Keyed by "r_g_b_a" string. */
+const _colorTexCache = new Map<string, number>();
+
+/** @internal Get or create a cached solid texture for a color. */
+function getColorTex(color: { r: number; g: number; b: number; a: number }): number {
+  const key = `${color.r}_${color.g}_${color.b}_${color.a ?? 1}`;
+  let tex = _colorTexCache.get(key);
+  if (tex !== undefined) return tex;
+  tex = createSolidTexture(`_color_${key}`, { r: color.r, g: color.g, b: color.b, a: color.a ?? 1 });
+  _colorTexCache.set(key, tex);
+  return tex;
+}
+
+/** @internal Reset color texture cache (for tests). */
+export function _resetColorTexCache(): void {
+  _colorTexCache.clear();
+}
+
+/** @internal Deduplicated warning for missing textureId/color. */
+const _noTexWarned = new Set<string>();
 
 const blendModeMap: Record<string, number> = {
   alpha: 0,
@@ -54,6 +78,30 @@ const blendModeMap: Record<string, number> = {
  * });
  */
 export function drawSprite(opts: SpriteOptions): void {
+  // --- Resolve texture from color if needed ---
+  let resolvedTexId = opts.textureId;
+  if (resolvedTexId === undefined && opts.color) {
+    _warnColor(opts.color, "drawSprite");
+    resolvedTexId = getColorTex(opts.color);
+  }
+  if (resolvedTexId === undefined) {
+    // No texture and no color — no-op with a one-time warning
+    const key = `${opts.x}_${opts.y}`;
+    if (!_noTexWarned.has(key)) {
+      _noTexWarned.add(key);
+      console.warn("[arcane] drawSprite(): neither textureId nor color provided — call ignored.");
+    }
+    return;
+  }
+
+  // --- Tiling: compute UV repeat if tileW/tileH set ---
+  let resolvedUV = opts.uv;
+  if (opts.tileW || opts.tileH) {
+    const tw = opts.tileW ?? opts.w;
+    const th = opts.tileH ?? opts.h;
+    resolvedUV = { x: 0, y: 0, w: opts.w / tw, h: opts.h / th };
+  }
+
   // Draw shadow first (behind the main sprite) if requested
   if (opts.shadow) {
     const s = opts.shadow;
@@ -67,13 +115,14 @@ export function drawSprite(opts: SpriteOptions): void {
 
     // Recursively call drawSprite without shadow to avoid infinite loop
     drawSprite({
-      textureId: opts.textureId,
+      textureId: resolvedTexId,
+      color: opts.color,
       x: opts.x + shadowOffsetX,
       y: shadowY,
       w: opts.w,
       h: shadowH,
       layer: shadowLayer,
-      uv: opts.uv,
+      uv: resolvedUV,
       tint: shadowColor,
       rotation: opts.rotation,
       originX: opts.originX,
@@ -88,7 +137,7 @@ export function drawSprite(opts: SpriteOptions): void {
 
   _logDrawCall({
     type: "sprite",
-    textureId: opts.textureId,
+    textureId: resolvedTexId,
     x: opts.x,
     y: opts.y,
     w: opts.w,
@@ -103,16 +152,25 @@ export function drawSprite(opts: SpriteOptions): void {
   });
   if (!hasRenderOps) return;
 
-  const uv = opts.uv ?? { x: 0, y: 0, w: 1, h: 1 };
+  const uv = resolvedUV ?? { x: 0, y: 0, w: 1, h: 1 };
   const tint = opts.tint ?? { r: 1, g: 1, b: 1, a: 1 };
 
   // Extract ALL properties to temp variables to work around V8 object literal property access bug
-  const texId = opts.textureId;
+  const texId = resolvedTexId;
   let x = opts.x;
   let y = opts.y;
   let w = opts.w;
   let h = opts.h;
   const layer = opts.layer ?? 0;
+
+  // --- Parallax: offset position based on camera and factor ---
+  if (opts.parallax !== undefined && opts.parallax !== 1 && !opts.screenSpace) {
+    const cam = getCamera();
+    const rawOffsetX = cam.x * (1 - opts.parallax);
+    const rawOffsetY = cam.y * (1 - opts.parallax);
+    x = x + Math.floor(rawOffsetX);
+    y = y + Math.floor(rawOffsetY);
+  }
 
   // Screen-space conversion: transform screen pixels to world coordinates
   if (opts.screenSpace) {
@@ -241,81 +299,3 @@ export function clearSprites(): void {
   (globalThis as any).Deno.core.ops.op_clear_sprites();
 }
 
-/**
- * Draw a tiled/repeated texture across a rectangular area.
- *
- * The texture is repeated to fill the specified width and height.
- * Useful for backgrounds, floors, walls, and seamless patterns.
- *
- * @param opts - Tiling options.
- * @param opts.textureId - The texture to tile.
- * @param opts.x - Top-left X position.
- * @param opts.y - Top-left Y position.
- * @param opts.w - Total width of the tiled area.
- * @param opts.h - Total height of the tiled area.
- * @param opts.tileW - Width of one tile in pixels. If omitted, uses the full texture width.
- * @param opts.tileH - Height of one tile in pixels. If omitted, uses the full texture height.
- * @param opts.layer - Draw layer. Default: 0.
- * @param opts.tint - Tint color. Default: white.
- * @param opts.opacity - Opacity. Default: 1.
- * @param opts.blendMode - Blend mode. Default: "alpha".
- * @param opts.screenSpace - If true, coordinates are in screen space. Default: false.
- *
- * @example
- * ```ts
- * // Tile a 16x16 grass texture across a 320x240 area
- * drawTiledSprite({
- *   textureId: grassTex,
- *   x: 0, y: 0,
- *   w: 320, h: 240,
- *   tileW: 16, tileH: 16,
- * });
- * ```
- *
- * @example
- * ```ts
- * // Tile a full texture (repeating it 4x3 times)
- * drawTiledSprite({
- *   textureId: patternTex,
- *   x: 100, y: 100,
- *   w: 256, h: 192,
- *   tileW: 64, tileH: 64,
- * });
- * ```
- */
-export function drawTiledSprite(opts: {
-  textureId: number;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  tileW?: number;
-  tileH?: number;
-  layer?: number;
-  tint?: { r: number; g: number; b: number; a: number };
-  opacity?: number;
-  blendMode?: "alpha" | "additive" | "multiply" | "screen";
-  screenSpace?: boolean;
-}): void {
-  const tileW = opts.tileW ?? opts.w;
-  const tileH = opts.tileH ?? opts.h;
-
-  // Calculate how many times to repeat the texture
-  const repeatX = opts.w / tileW;
-  const repeatY = opts.h / tileH;
-
-  // Draw a single sprite with UV coordinates extended to cover the repeated area
-  drawSprite({
-    textureId: opts.textureId,
-    x: opts.x,
-    y: opts.y,
-    w: opts.w,
-    h: opts.h,
-    uv: { x: 0, y: 0, w: repeatX, h: repeatY },
-    layer: opts.layer,
-    tint: opts.tint,
-    opacity: opts.opacity,
-    blendMode: opts.blendMode,
-    screenSpace: opts.screenSpace,
-  });
-}

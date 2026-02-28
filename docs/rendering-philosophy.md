@@ -16,7 +16,7 @@ Both pipelines share the same camera uniform (view-projection matrix). Since v0.
 
 | Pipeline | Functions | Notes |
 |----------|-----------|-------|
-| Sprite | drawSprite, drawColorSprite, drawRect, drawPanel, drawBar, drawLabel, drawText, drawAnimatedSprite, drawNineSlice, drawParallaxSprite, drawTilemap, drawTrail, drawFloatingTexts, drawTypewriter | Everything texture-based |
+| Sprite | drawSprite, drawRect, drawPanel, drawBar, drawLabel, drawText, drawAnimatedSprite, drawNineSlice, drawTilemap, drawTrail, drawFloatingTexts, drawTypewriter | Everything texture-based |
 | Geometry | drawCircle, drawEllipse, drawRing, drawLine, drawTriangle, drawArc, drawSector, drawCapsule, drawPolygon | Everything shape-based |
 
 **Key consequence:** Shapes look different from sprites. They are flat-colored triangles with no texture support, no tint, no blend modes, no shaders. A circle drawn with `drawCircle()` is a 64-triangle fan — visually clean but limited. There is no way to apply a texture or gradient to a shape.
@@ -101,11 +101,11 @@ drawRectangle(100, 100, 50, 50, { color: rgb(255, 0, 0), layer: 5 });
 - Supports screenSpace
 - Flat color only, no rotation/blend mode
 
-### 2. `drawColorSprite()` — Game world with sprite features
+### 2. `drawSprite()` with `color` — Game world with sprite features
 ```ts
-drawColorSprite({ color: rgb(255, 0, 0), x: 100, y: 100, w: 50, h: 50, layer: 5 });
+drawSprite({ color: rgb(255, 0, 0), x: 100, y: 100, w: 50, h: 50, layer: 5 });
 ```
-- Creates/caches a 1x1 solid texture per color
+- Pass `color` instead of `textureId`; a 1x1 solid texture is auto-cached per color
 - Default layer: 0
 - Supports screenSpace, rotation, flip, opacity, blend mode
 
@@ -138,7 +138,7 @@ drawSprite({ textureId: tex, x: 100, y: 100, w: 50, h: 50, layer: 5, screenSpace
 ### When to Use Which
 
 - **Simple colored rect** (game world) → `drawRectangle()`
-- **Colored rect with rotation/blend** → `drawColorSprite()`
+- **Colored rect with rotation/blend** → `drawSprite({ color })` with rotation/blend options
 - **HUD elements** (health bars, menus) → `drawRect()` with `screenSpace: true`
 - **Textured sprites** → `drawSprite()` with a loaded texture
 - **Debug/wireframe** → `drawPolygon()` or `drawLine()`
@@ -179,7 +179,7 @@ MSDF is significantly higher quality. Use it for anything player-facing that sho
 
 Games built by agents often look like simple colored polygons because:
 
-1. **No textures loaded** — Agent defaults to `drawColorSprite()` which creates 1x1 solid textures. Everything is flat rectangles.
+1. **No textures loaded** — Agent defaults to `drawSprite({ color })` which creates 1x1 solid textures. Everything is flat rectangles.
 
 2. **No MSDF text** — Default bitmap font is 8x8 pixels. At scale 1 it's tiny. At scale 4 it's blocky. Switching to MSDF makes text crisp instantly.
 

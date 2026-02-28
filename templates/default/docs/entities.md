@@ -112,7 +112,8 @@ destroyEntity(bullet);
 `createGame()` handles `clearSprites()`, `setCamera()`, agent registration, and provides `ctx.dt`/`ctx.viewport`/`ctx.elapsed`/`ctx.frame` in the callback.
 
 ```typescript
-import { createGame, drawColorSprite, hud } from "@arcane/runtime/game";
+import { createGame, hud } from "@arcane/runtime/game";
+import { drawSprite } from "@arcane/runtime/rendering";
 import { rgb } from "@arcane/runtime/ui";
 
 const game = createGame({ name: "my-game", zoom: 2 });
@@ -122,7 +123,7 @@ game.state({ get: () => state, set: (s) => { state = s; } });
 
 game.onFrame((ctx) => {
   state = update(state, ctx.dt);
-  drawColorSprite({ color: rgb(60, 180, 255), x: state.x - 16, y: state.y - 16, w: 32, h: 32, layer: 1 });
+  drawSprite({ color: rgb(60, 180, 255), x: state.x - 16, y: state.y - 16, w: 32, h: 32, layer: 1 });
   hud.text(`Score: ${state.score}`, 10, 10);
 });
 ```

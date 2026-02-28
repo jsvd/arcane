@@ -47,8 +47,9 @@ import {
   createAutotileMapping4,
   createAutotileRule,
   applyAutotile,
+  drawSprite,
 } from "../../runtime/rendering/index.ts";
-import { createGame, hud, drawColorSprite } from "../../runtime/game/index.ts";
+import { createGame, hud } from "../../runtime/game/index.ts";
 import { rgb } from "../../runtime/ui/types.ts";
 
 // ---------------------------------------------------------------------------
@@ -351,7 +352,7 @@ game.onFrame((ctx) => {
   // Draw cursor highlight
   const cursorWorldX = cursorGX * TILE_SIZE;
   const cursorWorldY = cursorGY * TILE_SIZE;
-  drawColorSprite({
+  drawSprite({
     color: COL_CURSOR,
     x: cursorWorldX,
     y: cursorWorldY,
