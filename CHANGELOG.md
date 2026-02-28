@@ -2,6 +2,21 @@
 
 All notable changes to Arcane are documented here.
 
+## [0.23.1] - 2026-02-28
+
+### Added
+- **`ctx.vpW` / `ctx.vpH`** — shorthand viewport dimensions on the frame context; eliminates the `getViewportSize()` call at the top of every `onFrame` callback
+
+### Fixed
+- **Demo regressions** — `isometric-dungeon` crash (`getViewportSize` import removed by cleanup agent), `hex-strategy` camera clipped to top-left (coordinate system migration), mouse clicks broken in `juice-showcase` / `hex-strategy` / `isometric-dungeon` / `menu-flow` (`isKeyPressed("MouseLeft")` → `isMouseButtonPressed(0)`)
+- **`shader-showcase`** — `setBackgroundColor` called with three positional args instead of `{r,g,b}` object; `drawText` called with options object as first arg instead of `(text, x, y, options)` positional form; `color` field renamed to `tint` with `Color` object instead of array
+- **Stale declarations** — `rendering.d.ts` regenerated after `stopSound` JSDoc/signature update from legacy code cleanup
+- **Legacy code removal** — removed ~250 lines: `op_draw_sprite` fallback, `op_play_sound` / `op_stop_sound` legacy ops, `legacy_sinks` HashMap and `PlaySound`/`StopSound` audio commands
+- **Template** — removed stale `autoCamera: false` from scaffolded `visual.ts` (option removed in 0.23.0 coordinate system change)
+
+### Changed
+- All demos updated to use `ctx.vpW` / `ctx.vpH` instead of `getViewportSize()` inside frame callbacks
+
 ## [0.23.0] - 2026-02-28
 
 ### Added
