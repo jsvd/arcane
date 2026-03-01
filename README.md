@@ -139,7 +139,7 @@ Scaffolded projects include:
 
 **v0.23.1** — 2346 TS (Node) + 2349 (V8) + 387 Rust tests passing.
 
-**Next:** See [roadmap](docs/roadmap.md) backlog.
+**Next:** See [roadmap](https://github.com/jsvd/arcane/blob/main/docs/roadmap.md) backlog.
 
 ## Development
 
@@ -155,11 +155,11 @@ cargo check --no-default-features  # Verify headless
 
 ## Documentation
 
-- [Architecture](docs/architecture.md) — Two-layer design, Rust core, TypeScript runtime
-- [API Design](docs/api-design.md) — Naming conventions, error handling
-- [Glossary](docs/glossary.md) — Canonical definitions for all terms
-- [Roadmap](docs/roadmap.md) — Development plan and backlog
-- [Contributing](CONTRIBUTING.md) — How to contribute (humans and agents)
+- [Architecture](https://github.com/jsvd/arcane/blob/main/docs/architecture.md) — Two-layer design, Rust core, TypeScript runtime
+- [API Design](https://github.com/jsvd/arcane/blob/main/docs/api-design.md) — Naming conventions, error handling
+- [Glossary](https://github.com/jsvd/arcane/blob/main/docs/glossary.md) — Canonical definitions for all terms
+- [Roadmap](https://github.com/jsvd/arcane/blob/main/docs/roadmap.md) — Development plan and backlog
+- [Contributing](https://github.com/jsvd/arcane/blob/main/CONTRIBUTING.md) — How to contribute (humans and agents)
 
 ## License
 
